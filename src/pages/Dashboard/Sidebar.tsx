@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Film, FileText, Calendar, ClipboardList,
-  Users, Video, Settings, ChevronLeft, ChevronRight,
-  ArrowLeft
+  Video, ChevronLeft, ChevronRight, Settings,
+  ArrowLeft, MapPin, Shirt, Car, Package,
+  Zap, PersonStanding, Sparkles, MessageSquare, Users
 } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -12,6 +13,7 @@ interface NavItem {
   label: string
   path: string
   ready: boolean
+  group?: string
 }
 
 export default function Sidebar() {
@@ -24,12 +26,23 @@ export default function Sidebar() {
   if (!project) return null
 
   const navItems: NavItem[] = [
-    { icon: <Film size={20} />, label: 'Обзор', path: `/project/${project.id}`, ready: true },
-    { icon: <FileText size={20} />, label: 'Сценарий', path: `/project/${project.id}/script`, ready: false },
-    { icon: <Calendar size={20} />, label: 'Планирование', path: `/project/${project.id}/schedule`, ready: false },
-    { icon: <ClipboardList size={20} />, label: 'Вызывные', path: `/project/${project.id}/callsheets`, ready: false },
-    { icon: <Users size={20} />, label: 'Пре-продакшн', path: `/project/${project.id}/preproduction`, ready: false },
-    { icon: <Video size={20} />, label: 'Продакшн', path: `/project/${project.id}/production`, ready: false },
+    // Основные
+    { icon: <Film size={20} />,        label: 'Обзор',        path: `/project/${project.id}`,           ready: true },
+    { icon: <FileText size={20} />,    label: 'Сценарий',     path: `/project/${project.id}/script`,    ready: false },
+    { icon: <Calendar size={20} />,    label: 'Планирование', path: `/project/${project.id}/schedule`,  ready: false },
+    { icon: <ClipboardList size={20}/>,label: 'Вызывные',     path: `/project/${project.id}/callsheets`,ready: false },
+    // Пре-продакшн
+    { icon: <Users size={20} />,       label: 'Кастинг',      path: `/project/${project.id}/casting`,   ready: false, group: 'Пре-продакшн' },
+    { icon: <MapPin size={20} />,      label: 'Локации',      path: `/project/${project.id}/locations`, ready: false, group: 'Пре-продакшн' },
+    { icon: <Shirt size={20} />,       label: 'Костюмы',      path: `/project/${project.id}/costumes`,  ready: false, group: 'Пре-продакшн' },
+    { icon: <Car size={20} />,         label: 'Транспорт',    path: `/project/${project.id}/transport`, ready: false, group: 'Пре-продакшн' },
+    { icon: <Package size={20} />,     label: 'Реквизит',     path: `/project/${project.id}/props`,     ready: false, group: 'Пре-продакшн' },
+    { icon: <Zap size={20} />,         label: 'Пиротехника',  path: `/project/${project.id}/sfx`,       ready: false, group: 'Пре-продакшн' },
+    { icon: <PersonStanding size={20}/>,label: 'Каскадёры',   path: `/project/${project.id}/stunts`,    ready: false, group: 'Пре-продакшн' },
+    { icon: <Sparkles size={20} />,    label: 'VFX / CG',     path: `/project/${project.id}/vfx`,       ready: false, group: 'Пре-продакшн' },
+    { icon: <MessageSquare size={20}/>,label: 'Собрания',     path: `/project/${project.id}/meetings`,  ready: false, group: 'Пре-продакшн' },
+    // Продакшн
+    { icon: <Video size={20} />,       label: 'Продакшн',     path: `/project/${project.id}/production`,ready: false, group: 'Продакшн' },
   ]
 
   return (
@@ -58,10 +71,22 @@ export default function Sidebar() {
       </div>
 
       {/* Навигация */}
-      <nav className="flex-1 py-4 space-y-1" style={{ padding: '16px 10px' }}>
-        {navItems.map((item) => {
+      <nav className="flex-1 overflow-y-auto" style={{ padding: '12px 10px' }}>
+        {navItems.map((item, idx) => {
           const isActive = location.pathname === item.path
+          const prevItem = navItems[idx - 1]
+          const showGroupLabel = item.group && item.group !== prevItem?.group
           return (
+            <div key={item.path}>
+              {/* Разделитель группы */}
+              {showGroupLabel && (
+                <div className="mt-3 mb-1" style={{ padding: sidebarExpanded ? '0 4px' : '0' }}>
+                  {sidebarExpanded
+                    ? <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#374151' }}>{item.group}</p>
+                    : <div className="h-px mx-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                  }
+                </div>
+              )}
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
@@ -102,6 +127,7 @@ export default function Sidebar() {
                 </>
               )}
             </button>
+            </div>
           )
         })}
       </nav>
