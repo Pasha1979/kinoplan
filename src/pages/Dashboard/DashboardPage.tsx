@@ -1,0 +1,897 @@
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Calendar, FileText, ClipboardList, Users, TrendingUp, AlertCircle, CheckCircle2, Circle, Clock, Zap } from 'lucide-react'
+import { useProjectStore } from '../../store/projectStore'
+import type { ShootingDayType } from '../../store/projectStore'
+import { useUiStore } from '../../store/uiStore'
+import { useTaskStore } from '../../store/taskStore'
+
+const STATUS_LABELS: Record<string, string> = {
+  preproduction: 'Пре-продакшн',
+  shooting: 'В съёмке',
+  postproduction: 'Пост-продакшн',
+  completed: 'Завершён',
+}
+
+function ShootingChart({ total, shot, scheduled, isDark }: {
+  total: number; shot: number; scheduled: number; isDark: boolean
+}) {
+  const r = 72
+  const cx = 96
+  const cy = 96
+  const stroke = 14
+  const circ = 2 * Math.PI * r
+
+  const safeTotal = total || 1
+  const shotPct   = Math.min(shot / safeTotal, 1)
+  const schedPct  = Math.min(scheduled / safeTotal, 1)
+  const freePct   = Math.max(1 - schedPct, 0)
+
+  // Сегменты: снято (оранжевый) → запланировано (фиолетовый) → не запланировано (серый)
+  const shotLen   = circ * shotPct
+  const schedLen  = circ * (schedPct - shotPct)
+  const freeLen   = circ * freePct
+
+  const gap = 0
+  const rotate = -90 // начало с 12 часов
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative" style={{ width: 192, height: 192 }}>
+        <svg width={192} height={192}>
+          <g transform={`rotate(${rotate} ${cx} ${cy})`}>
+            {/* Фоновое кольцо */}
+            <circle cx={cx} cy={cy} r={r} fill="none"
+              stroke={isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}
+              strokeWidth={stroke}
+            />
+            {/* Не запланировано (серый) — рисуем первым */}
+            {freeLen > 0 && (
+              <circle cx={cx} cy={cy} r={r} fill="none"
+                stroke={isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db'}
+                strokeWidth={stroke}
+                strokeDasharray={`${freeLen - gap} ${circ - freeLen + gap}`}
+                strokeDashoffset={-(shotLen + schedLen)}
+                strokeLinecap="round"
+              />
+            )}
+            {/* Запланировано (фиолетовый) */}
+            {schedLen > 0 && (
+              <circle cx={cx} cy={cy} r={r} fill="none"
+                stroke="#a78bfa"
+                strokeWidth={stroke}
+                strokeDasharray={`${schedLen - gap} ${circ - schedLen + gap}`}
+                strokeDashoffset={-shotLen}
+                strokeLinecap="round"
+              />
+            )}
+            {/* Снято (оранжевый) */}
+            {shotLen > 0 && (
+              <circle cx={cx} cy={cy} r={r} fill="none"
+                stroke="#f97316"
+                strokeWidth={stroke}
+                strokeDasharray={`${shotLen - gap} ${circ - shotLen + gap}`}
+                strokeDashoffset={0}
+                strokeLinecap="round"
+              />
+            )}
+          </g>
+        </svg>
+        {/* Центральный текст */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-black" style={{ color: isDark ? '#fff' : '#111' }}>{shot}</span>
+          <span className="text-xs mt-0.5" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>из {total} дней</span>
+        </div>
+      </div>
+
+      {/* Легенда */}
+      <div className="flex flex-col gap-2.5 mt-4 w-full">
+        {[
+          { color: '#f97316', label: 'Снято', value: shot },
+          { color: '#a78bfa', label: 'Запланировано', value: scheduled - shot },
+          { color: isDark ? 'rgba(255,255,255,0.18)' : '#d1d5db', label: 'Не запланировано', value: Math.max(total - scheduled, 0) },
+        ].map((item) => (
+          <div key={item.label} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
+              <span className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>{item.label}</span>
+            </div>
+            <span className="text-sm font-bold" style={{ color: isDark ? '#e5e7eb' : '#111' }}>{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Week at a Glance ────────────────────────────────────────────────────────
+
+const DAY_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб']
+
+const DAY_TYPE_CONFIG: Record<ShootingDayType, { label: string; color: string; bg: string; darkBg: string }> = {
+  // Съёмочные
+  shoot:           { label: 'Съёмка',       color: '#f97316', bg: 'rgba(249,115,22,0.15)',  darkBg: 'rgba(249,115,22,0.2)' },
+  conflict:        { label: 'Конфликт',     color: '#f87171', bg: 'rgba(248,113,113,0.15)', darkBg: 'rgba(248,113,113,0.2)' },
+  // Пре-продакшн — люди
+  rehearsal:       { label: 'Репетиция',    color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', darkBg: 'rgba(167,139,250,0.2)' },
+  stunt_rehearsal: { label: 'Трюки',        color: '#c084fc', bg: 'rgba(192,132,252,0.15)', darkBg: 'rgba(192,132,252,0.2)' },
+  casting_session: { label: 'Кастинг',      color: '#facc15', bg: 'rgba(250,204,21,0.15)',  darkBg: 'rgba(250,204,21,0.2)' },
+  fitting:         { label: 'Примерка',     color: '#4ade80', bg: 'rgba(74,222,128,0.15)',  darkBg: 'rgba(74,222,128,0.2)' },
+  // Пре-продакшн — подготовка
+  scouting:        { label: 'Скаутинг',     color: '#fb923c', bg: 'rgba(251,146,60,0.15)',  darkBg: 'rgba(251,146,60,0.2)' },
+  tech_survey:     { label: 'Осмотр',       color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', darkBg: 'rgba(148,163,184,0.2)' },
+  vfx_prep:        { label: 'VFX-подг.',    color: '#67e8f9', bg: 'rgba(103,232,249,0.15)', darkBg: 'rgba(103,232,249,0.2)' },
+  table_read:      { label: 'Читка',        color: '#818cf8', bg: 'rgba(129,140,248,0.15)', darkBg: 'rgba(129,140,248,0.2)' },
+  meeting:         { label: 'Собрание',     color: '#fbbf24', bg: 'rgba(251,191,36,0.15)',  darkBg: 'rgba(251,191,36,0.2)' },
+  // Логистика / прочее
+  travel:          { label: 'Переезд',      color: '#38bdf8', bg: 'rgba(56,189,248,0.15)',  darkBg: 'rgba(56,189,248,0.2)' },
+  holiday:         { label: 'Праздник',     color: '#86efac', bg: 'rgba(134,239,172,0.15)', darkBg: 'rgba(134,239,172,0.2)' },
+  day_off:         { label: 'Выходной',     color: '#6b7280', bg: 'rgba(107,114,128,0.1)',  darkBg: 'rgba(107,114,128,0.15)' },
+}
+
+function WeekAtAGlance({ shootingDays, isDark }: {
+  shootingDays: import('../../store/projectStore').ShootingDay[]
+  isDark: boolean
+}) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    const iso = d.toISOString().slice(0, 10)
+    const found = shootingDays.find(s => s.date === iso)
+    return { date: d, iso, data: found ?? null }
+  })
+
+  const textPrimary   = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const cardBg        = isDark ? '#1a1a35' : '#ffffff'
+  const border        = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+  const emptyBg       = isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb'
+
+  return (
+    <div className="rounded-2xl p-6"
+      style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}
+    >
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-sm" style={{ color: textPrimary }}>Ближайшие 7 дней</h3>
+        <span className="text-xs" style={{ color: textSecondary }}>
+          {days.filter(d => d.data?.type === 'shoot').length} съёмочных
+        </span>
+      </div>
+
+      <div className="grid grid-cols-7 gap-2">
+        {days.map(({ date, iso, data }) => {
+          const isToday = iso === today.toISOString().slice(0, 10)
+          const cfg = data ? DAY_TYPE_CONFIG[data.type] : null
+          const dayNum = date.getDate()
+          const dayName = DAY_SHORT[date.getDay()]
+          const isWeekend = date.getDay() === 0 || date.getDay() === 6
+
+          return (
+            <div key={iso}
+              className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-1 transition-all"
+              title={data ? `${data.title ?? cfg!.label}${data.location ? ` · ${data.location}` : ''}${data.notes ? `\n${data.notes}` : ''}` : 'Нет данных'}
+              style={{
+                background: cfg ? (isDark ? cfg.darkBg : cfg.bg) : emptyBg,
+                border: isToday ? `2px solid ${cfg?.color ?? '#f97316'}` : '2px solid transparent',
+                cursor: data ? 'pointer' : 'default',
+              }}
+            >
+              <span className="text-xs font-semibold" style={{ color: isWeekend ? (isDark ? '#6b7280' : '#d1d5db') : textSecondary }}>
+                {dayName}
+              </span>
+              <span className="text-base font-black" style={{ color: cfg ? cfg.color : (isWeekend ? (isDark ? '#4b5563' : '#d1d5db') : textPrimary) }}>
+                {dayNum}
+              </span>
+              {cfg && (
+                <span className="text-xs font-semibold text-center leading-tight" style={{ color: cfg.color, fontSize: '9px' }}>
+                  {cfg.label.toUpperCase()}
+                </span>
+              )}
+              {data?.location && (
+                <span className="text-center leading-tight" style={{ color: cfg!.color, fontSize: '8px', opacity: 0.8 }}>
+                  {data.location.length > 8 ? data.location.slice(0, 7) + '…' : data.location}
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Легенда */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4 pt-4" style={{ borderTop: `1px solid ${border}` }}>
+        {(Object.entries(DAY_TYPE_CONFIG) as [ShootingDayType, typeof DAY_TYPE_CONFIG[ShootingDayType]][]).map(([key, cfg]) => (
+          <div key={key} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+            <span className="text-xs" style={{ color: textSecondary }}>{cfg.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Task Board мини ──────────────────────────────────────────────────────────
+
+const TASK_STATUS_CONFIG = {
+  todo:       { icon: <Circle size={13} />,       color: '#6b7280', label: 'Новая' },
+  inProgress: { icon: <Clock size={13} />,        color: '#38bdf8', label: 'В работе' },
+  done:       { icon: <CheckCircle2 size={13} />, color: '#4ade80', label: 'Готово' },
+  overdue:    { icon: <AlertCircle size={13} />,  color: '#f87171', label: 'Просрочена' },
+}
+
+function TaskBoardMini({ projectId, isDark }: { projectId: string; isDark: boolean }) {
+  const { getProjectTasks } = useTaskStore()
+  const all = getProjectTasks(projectId)
+  const tasks = [...all]
+    .sort((a, b) => {
+      if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
+      if (a.deadline) return -1
+      if (b.deadline) return 1
+      return 0
+    })
+    .slice(0, 5)
+
+  const textPrimary   = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const cardBg        = isDark ? '#1a1a35' : '#ffffff'
+  const border        = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+  const rowBg         = isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb'
+
+  const demoTasks = tasks.length === 0 ? [
+    { id: 'd1', title: 'Подготовить сценарный план',    deadline: '', status: 'todo'       as const, module: 'script',   assignee: 'Авт.' },
+    { id: 'd2', title: 'Утвердить локации съёмок',      deadline: '', status: 'inProgress' as const, module: 'locations',assignee: 'Реж.' },
+    { id: 'd3', title: 'Кастинг на главную роль',       deadline: '', status: 'inProgress' as const, module: 'casting',  assignee: 'Каст.' },
+    { id: 'd4', title: 'Сформировать план съёмочных дней', deadline: '', status: 'todo'  as const, module: 'schedule', assignee: '' },
+    { id: 'd5', title: 'Согласовать бюджет съёмочного периода', deadline: '', status: 'todo' as const, module: 'budget', assignee: '' },
+  ] : tasks
+
+  return (
+    <div className="rounded-2xl p-6"
+      style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-sm" style={{ color: textPrimary }}>Задачи</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6', color: textSecondary }}>
+          {all.filter(t => t.status !== 'done').length || demoTasks.length} активных
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {demoTasks.map((task) => {
+          const cfg = TASK_STATUS_CONFIG[task.status]
+          const isOverdue = task.status === 'overdue'
+          return (
+            <div key={task.id} className="flex items-start gap-3 rounded-xl px-3 py-2.5"
+              style={{ background: isOverdue ? 'rgba(248,113,113,0.08)' : rowBg }}
+            >
+              <span className="mt-0.5 shrink-0" style={{ color: cfg.color }}>{cfg.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm leading-tight truncate" style={{ color: textPrimary }}>{task.title}</p>
+                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>
+                  {task.module}{task.assignee ? ` · ${task.assignee}` : ''}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {tasks.length === 0 && (
+        <p className="text-xs mt-3 text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Демо-данные · задачи появятся из модулей</p>
+      )}
+    </div>
+  )
+}
+
+// ─── Activity Feed ────────────────────────────────────────────────────────────
+
+const ACTIVITY_TYPE_CONFIG = {
+  schedule:   { color: '#a78bfa', icon: '📅' },
+  callsheet:  { color: '#4ade80', icon: '📋' },
+  casting:    { color: '#f97316', icon: '🎭' },
+  conflict:   { color: '#f87171', icon: '⚠️' },
+  script:     { color: '#38bdf8', icon: '📝' },
+  general:    { color: '#6b7280', icon: '💬' },
+}
+
+function ActivityFeed({ projectId, isDark }: { projectId: string; isDark: boolean }) {
+  const { getProjectActivity } = useTaskStore()
+  const events = getProjectActivity(projectId).slice(0, 6)
+
+  const textPrimary   = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const cardBg        = isDark ? '#1a1a35' : '#ffffff'
+  const border        = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+
+  const demoEvents = events.length === 0 ? [
+    { id: 'a1', type: 'general'   as const, text: 'Проект создан', timestamp: new Date(Date.now() - 60000 * 5).toISOString() },
+    { id: 'a2', type: 'script'    as const, text: 'Ожидается импорт сценария', timestamp: new Date(Date.now() - 60000 * 30).toISOString() },
+    { id: 'a3', type: 'schedule'  as const, text: 'Расписание пока не заполнено', timestamp: new Date(Date.now() - 60000 * 60).toISOString() },
+    { id: 'a4', type: 'casting'   as const, text: 'Кастинг ещё не начат', timestamp: new Date(Date.now() - 60000 * 120).toISOString() },
+  ] : events
+
+  const timeAgo = (iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    if (diff < 60) return 'только что'
+    if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`
+    return `${Math.floor(diff / 86400)} д назад`
+  }
+
+  return (
+    <div className="rounded-2xl p-6"
+      style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Zap size={14} className="text-orange-400" />
+        <h3 className="font-bold text-sm" style={{ color: textPrimary }}>Последние события</h3>
+      </div>
+
+      <div className="space-y-3">
+        {demoEvents.map((ev) => {
+          const cfg = ACTIVITY_TYPE_CONFIG[ev.type]
+          return (
+            <div key={ev.id} className="flex items-start gap-3">
+              <span className="text-base shrink-0 leading-none mt-0.5">{cfg.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm leading-snug" style={{ color: textPrimary }}>{ev.text}</p>
+                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>{timeAgo(ev.timestamp)}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {events.length === 0 && (
+        <p className="text-xs mt-3 text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Демо-данные · события появятся при работе</p>
+      )}
+    </div>
+  )
+}
+
+const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+const MONTHS_RU = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь']
+
+function MiniCalendar({ startDate, endDate, isDark }: {
+  startDate?: string; endDate?: string; isDark: boolean
+}) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Первый день текущего месяца
+  const [viewYear, setViewYear] = React.useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = React.useState(today.getMonth())
+
+  const firstDay = new Date(viewYear, viewMonth, 1)
+  // Понедельник = 0
+  const startOffset = (firstDay.getDay() + 6) % 7
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+
+  const start = startDate ? new Date(startDate) : null
+  const end   = endDate   ? new Date(endDate)   : null
+  if (start) start.setHours(0,0,0,0)
+  if (end)   end.setHours(0,0,0,0)
+
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+  // Дополняем до полных недель
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  const isToday    = (d: number) => new Date(viewYear, viewMonth, d).getTime() === today.getTime()
+  const isStart    = (d: number) => start && new Date(viewYear, viewMonth, d).getTime() === start.getTime()
+  const isEnd      = (d: number) => end   && new Date(viewYear, viewMonth, d).getTime() === end.getTime()
+  const isInRange  = (d: number) => {
+    if (!start || !end) return false
+    const t = new Date(viewYear, viewMonth, d).getTime()
+    return t > start.getTime() && t < end.getTime()
+  }
+
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+  const textPrimary = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const cellHover = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
+
+  return (
+    <div className="rounded-2xl p-7" style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}>
+      {/* Шапка */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="font-bold text-base" style={{ color: textPrimary }}>Календарь проекта</h2>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth}
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: textSecondary }}
+            onMouseEnter={e => (e.currentTarget.style.background = cellHover)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >‹</button>
+          <span className="text-sm font-semibold px-2 capitalize" style={{ color: textPrimary }}>
+            {MONTHS_RU[viewMonth]} {viewYear}
+          </span>
+          <button onClick={nextMonth}
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: textSecondary }}
+            onMouseEnter={e => (e.currentTarget.style.background = cellHover)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >›</button>
+        </div>
+      </div>
+
+      {/* Дни недели */}
+      <div className="grid grid-cols-7 mb-1">
+        {WEEKDAYS.map(d => (
+          <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: textSecondary }}>{d}</div>
+        ))}
+      </div>
+
+      {/* Ячейки */}
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />
+          const inRange = isInRange(day)
+          const startDay = isStart(day)
+          const endDay = isEnd(day)
+          const todayDay = isToday(day)
+          const isWeekend = ((i % 7) === 5 || (i % 7) === 6)
+
+          return (
+            <div key={i} className="flex items-center justify-center" style={{ height: 36 }}>
+              <div
+                className="w-8 h-8 flex items-center justify-center rounded-full text-sm transition-all"
+                style={{
+                  background: startDay || endDay
+                    ? 'linear-gradient(135deg, #f97316, #dc2626)'
+                    : todayDay
+                    ? isDark ? 'rgba(249,115,22,0.2)' : 'rgba(249,115,22,0.12)'
+                    : inRange
+                    ? isDark ? 'rgba(167,139,250,0.15)' : 'rgba(167,139,250,0.1)'
+                    : 'transparent',
+                  color: startDay || endDay
+                    ? '#fff'
+                    : todayDay
+                    ? '#f97316'
+                    : inRange
+                    ? '#a78bfa'
+                    : isWeekend
+                    ? isDark ? '#6b7280' : '#d1d5db'
+                    : textPrimary,
+                  fontWeight: startDay || endDay || todayDay ? '700' : '400',
+                  outline: todayDay && !startDay && !endDay ? `2px solid rgba(249,115,22,0.4)` : 'none',
+                }}
+              >{day}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Легенда */}
+      {(start || end) && (
+        <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'}` }}>
+          {start && (
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+              <span className="text-xs" style={{ color: textSecondary }}>Начало: {start.toLocaleDateString('ru-RU')}</span>
+            </div>
+          )}
+          {end && (
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="text-xs" style={{ color: textSecondary }}>Конец: {end.toLocaleDateString('ru-RU')}</span>
+            </div>
+          )}
+          {start && end && (
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-violet-400" />
+              <span className="text-xs" style={{ color: textSecondary }}>
+                {Math.round((end.getTime() - start.getTime()) / 86400000)} дней производства
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ProgressRow({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span className="text-gray-400">{label}</span>
+        <span className="text-gray-300 font-medium">{value}%</span>
+      </div>
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${color} transition-all duration-700`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+export default function DashboardPage() {
+  const navigate = useNavigate()
+  const { getCurrentProject } = useProjectStore()
+  const { theme } = useUiStore()
+  const project = getCurrentProject()
+
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500">
+        Проект не выбран
+      </div>
+    )
+  }
+
+  const overallProgress = Math.round(
+    (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
+  )
+
+  const isShooting = project.status === 'shooting'
+
+  // Дни до старта / финиша
+  const daysLabel = (() => {
+    const now = new Date(); now.setHours(0,0,0,0)
+    if (project.startDate) {
+      const start = new Date(project.startDate); start.setHours(0,0,0,0)
+      const diff = Math.round((start.getTime() - now.getTime()) / 86400000)
+      if (diff > 0) return { text: `До старта ${diff} дн.`, color: '#38bdf8' }
+    }
+    if (project.endDate) {
+      const end = new Date(project.endDate); end.setHours(0,0,0,0)
+      const diff = Math.round((end.getTime() - now.getTime()) / 86400000)
+      if (diff > 0) return { text: `До финиша ${diff} дн.`, color: '#a78bfa' }
+      if (diff <= 0) return { text: 'Завершён', color: '#4ade80' }
+    }
+    return null
+  })()
+
+  // Вызывные — заглушка пока нет модуля
+  const callSheetsLabel = project.callSheetsSent > 0
+    ? `${project.callSheetsConfirmed}/${project.callSheetsSent} вызывных`
+    : null
+
+  const moduleCards = [
+    {
+      icon: <FileText size={22} />,
+      label: 'Сценарий',
+      value: project.scriptProgress,
+      color: 'from-blue-500 to-blue-600',
+      textColor: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      borderColor: 'border-blue-500/20',
+      detail: `${project.scriptProgress}% написано`,
+      path: `/project/${project.id}/script`,
+      ready: false,
+    },
+    {
+      icon: <Calendar size={22} />,
+      label: 'Планирование',
+      value: project.scheduleProgress,
+      color: 'from-purple-500 to-purple-600',
+      textColor: 'text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      borderColor: 'border-purple-500/20',
+      detail: `${project.plannedShootingDays} дней запланировано`,
+      path: `/project/${project.id}/schedule`,
+      ready: false,
+    },
+    {
+      icon: <ClipboardList size={22} />,
+      label: 'Вызывные',
+      value: 0,
+      color: 'from-green-500 to-green-600',
+      textColor: 'text-green-400',
+      bgColor: 'bg-green-500/10',
+      borderColor: 'border-green-500/20',
+      detail: 'Вызывных пока нет',
+      path: `/project/${project.id}/callsheets`,
+      ready: false,
+    },
+    {
+      icon: <Users size={22} />,
+      label: 'Пре-продакшн',
+      value: project.castingProgress,
+      color: 'from-orange-500 to-orange-600',
+      textColor: 'text-orange-400',
+      bgColor: 'bg-orange-500/10',
+      borderColor: 'border-orange-500/20',
+      detail: `Кастинг ${project.castingProgress}%`,
+      path: `/project/${project.id}/preproduction`,
+      ready: false,
+    },
+  ]
+
+  const isDark = theme === 'dark'
+
+  return (
+    <div className="flex-1 overflow-y-auto" style={{ background: isDark ? '#13132a' : '#f4f4f8' }}>
+
+      {/* Верхняя панель */}
+      <header
+        className="sticky top-0 z-20 flex items-center justify-between px-8 h-16 border-b"
+        style={{
+          background: isDark ? 'rgba(20,20,40,0.9)' : 'rgba(255,255,255,0.9)',
+          borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <div>
+          <h1 className="font-bold text-lg leading-tight" style={{ color: isDark ? '#fff' : '#111' }}>{project.name}</h1>
+          <p className="text-xs mt-0.5" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</p>
+        </div>
+        <div className="flex items-center gap-2.5">
+
+          {/* Дни до старта / финиша */}
+          {daysLabel && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+              style={{ background: `${daysLabel.color}18`, border: `1px solid ${daysLabel.color}33` }}
+            >
+              <Calendar size={13} style={{ color: daysLabel.color }} />
+              <span className="text-sm font-semibold" style={{ color: daysLabel.color }}>{daysLabel.text}</span>
+            </div>
+          )}
+
+          {/* Вызывные X/Y */}
+          {callSheetsLabel && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+              style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}
+            >
+              <ClipboardList size={13} className="text-green-400" />
+              <span className="text-sm font-semibold text-green-400">{callSheetsLabel}</span>
+            </div>
+          )}
+
+          {/* % готовности */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+            style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.2)' }}
+          >
+            <TrendingUp size={14} className="text-orange-400" />
+            <span className="text-orange-400 font-bold text-sm">{overallProgress}%</span>
+            <span className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>готовности</span>
+          </div>
+
+        </div>
+      </header>
+
+      <div className="max-w-5xl mx-auto" style={{ padding: '32px 32px 48px' }}>
+
+        {/* Баннер «ЗАВТРА СЪЁМКА» */}
+        {isShooting && (
+          <div className="rounded-2xl p-5 flex items-start gap-4 mb-8"
+            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(239,68,68,0.15)' }}
+            >
+              <AlertCircle size={20} className="text-red-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-red-400 font-bold text-sm uppercase tracking-wide mb-1">Завтра съёмочный день</p>
+              <p className="text-sm" style={{ color: isDark ? '#d1d5db' : '#6b7280' }}>
+                Вызывной ещё не создан. Перейдите в раздел «Вызывные» для создания.
+              </p>
+            </div>
+            <button onClick={() => navigate(`/project/${project.id}/callsheets`)}
+              className="shrink-0 px-4 py-2 rounded-xl text-red-300 text-sm transition-colors hover:bg-red-500/20"
+              style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
+            >
+              Создать вызывной →
+            </button>
+          </div>
+        )}
+
+        {/* Карточки модулей */}
+        <section style={{ marginBottom: '32px' }}>
+          <h2 className="text-xs font-bold uppercase tracking-widest mb-5"
+            style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
+          >Модули проекта</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {moduleCards.map((card) => (
+              <button key={card.label} onClick={() => navigate(card.path)}
+                className="rounded-2xl p-6 text-left transition-all duration-200 group"
+                style={{
+                  background: isDark ? '#1a1a35' : '#ffffff',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                  boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(249,115,22,0.4)'
+                  ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = isDark
+                    ? '0 8px 24px rgba(0,0,0,0.3)'
+                    : '0 8px 24px rgba(0,0,0,0.1)'
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+                  ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)'
+                }}
+              >
+                <div className={`w-12 h-12 rounded-xl ${card.bgColor} border ${card.borderColor} flex items-center justify-center mb-5 ${card.textColor}`}>
+                  {card.icon}
+                </div>
+                <p className="font-bold text-sm mb-1" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>
+                  {card.label}
+                </p>
+                <p className="text-xs mb-4" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{card.detail}</p>
+                <div className="h-1.5 rounded-full overflow-hidden"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6' }}
+                >
+                  <div className={`h-full rounded-full bg-gradient-to-r ${card.color}`}
+                    style={{ width: `${card.value}%`, transition: 'width 0.7s ease' }}
+                  />
+                </div>
+                {!card.ready && (
+                  <p className="mt-3 text-xs" style={{ color: isDark ? '#374151' : '#d1d5db' }}>В разработке</p>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ЗОНА 3 — двухколоночный основной контент */}
+        <section style={{ marginBottom: '32px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+            {/* Левая колонка (2/3): таймлайн + ход съёмок */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+
+              {/* «Ближайшие 7 дней» */}
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-3"
+                  style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
+                >Ближайшие 7 дней</h2>
+                <WeekAtAGlance shootingDays={project.shootingDays} isDark={isDark} />
+              </div>
+
+              {/* Ход съёмок */}
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-3"
+                  style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
+                >Ход съёмок</h2>
+                <div className="rounded-2xl p-7"
+                  style={{
+                    background: isDark ? '#1a1a35' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                    boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+                  }}
+                >
+                  <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                    <div className="shrink-0">
+                      <ShootingChart
+                        total={project.plannedShootingDays}
+                        shot={project.shotDays}
+                        scheduled={project.scheduledDays}
+                        isDark={isDark}
+                      />
+                    </div>
+                    <div className="flex-1 w-full">
+                      <h3 className="font-bold text-base mb-1" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>
+                        {project.plannedShootingDays} съёмочных дней
+                      </h3>
+                      <p className="text-sm mb-6" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                        {project.shootingGroups > 1 ? `${project.shootingGroups} съёмочные группы · ` : ''}
+                        Выработка {project.dailyOutput} мин/день
+                      </p>
+                      <div className="space-y-4">
+                        {[
+                          { label: 'Снято', value: project.shotDays, color: '#f97316',
+                            pct: project.plannedShootingDays ? Math.round(project.shotDays / project.plannedShootingDays * 100) : 0 },
+                          { label: 'Запланировано в расписании', value: project.scheduledDays, color: '#a78bfa',
+                            pct: project.plannedShootingDays ? Math.round(project.scheduledDays / project.plannedShootingDays * 100) : 0 },
+                          { label: 'Требуется ещё', value: Math.max(project.plannedShootingDays - project.scheduledDays, 0),
+                            color: isDark ? 'rgba(255,255,255,0.25)' : '#9ca3af',
+                            pct: project.plannedShootingDays ? Math.round(Math.max(project.plannedShootingDays - project.scheduledDays, 0) / project.plannedShootingDays * 100) : 0 },
+                        ].map((row) => (
+                          <div key={row.label}>
+                            <div className="flex justify-between items-baseline mb-1.5">
+                              <span className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>{row.label}</span>
+                              <span className="text-sm font-bold" style={{ color: isDark ? '#e5e7eb' : '#111' }}>
+                                {row.value} дн. <span className="font-normal text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>({row.pct}%)</span>
+                              </span>
+                            </div>
+                            <div className="h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6' }}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${row.pct}%`, background: row.color }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>{/* /левая колонка */}
+
+            {/* Правая колонка (1/3): задачи + события */}
+            <div className="flex flex-col gap-6">
+              <TaskBoardMini projectId={project.id} isDark={isDark} />
+              <ActivityFeed  projectId={project.id} isDark={isDark} />
+            </div>
+
+          </div>
+        </section>
+
+        {/* ЗОНА 4 — Готовность + Параметры + Календарь */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Готовность проекта */}
+          <div className="rounded-2xl p-7"
+            style={{
+              background: isDark ? '#1a1a35' : '#ffffff',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+              boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-bold text-base" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Готовность проекта</h2>
+              <div className="flex items-center gap-1 px-3 py-1 rounded-lg" style={{ background: 'rgba(249,115,22,0.12)' }}>
+                <span className="text-2xl font-black text-orange-400">{overallProgress}</span>
+                <span className="text-sm text-orange-400 font-bold">%</span>
+              </div>
+            </div>
+            <div className="space-y-5">
+              <ProgressRow label="Сценарий" value={project.scriptProgress} color="bg-blue-400" />
+              <ProgressRow label="Кастинг" value={project.castingProgress} color="bg-orange-400" />
+              <ProgressRow label="Локации" value={project.locationsProgress} color="bg-green-400" />
+              <ProgressRow label="Расписание" value={project.scheduleProgress} color="bg-purple-400" />
+            </div>
+          </div>
+
+          {/* Параметры проекта */}
+          <div className="rounded-2xl p-7"
+            style={{
+              background: isDark ? '#1a1a35' : '#ffffff',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+              boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+            }}
+          >
+            <h2 className="font-bold text-base mb-6" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Параметры проекта</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'Дней съёмок', value: project.plannedShootingDays ?? '—', icon: '🎬' },
+                { label: 'Съёмочных групп', value: project.shootingGroups, icon: '👥' },
+                { label: 'Выработка / день', value: `${project.dailyOutput ?? '—'} мин`, icon: '⏱' },
+                {
+                  label: project.type === 'serial' ? 'Серий' : 'Хронометраж',
+                  value: project.type === 'serial'
+                    ? `${project.episodesCount ?? '—'} × ${project.episodeDuration ?? '—'} мин`
+                    : `${project.totalDuration ?? '—'} мин`,
+                  icon: '🎞',
+                },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl p-4"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'}` }}
+                >
+                  <div className="text-lg mb-2">{item.icon}</div>
+                  <div className="text-xs mb-1" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{item.label}</div>
+                  <div className="font-bold" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Календарь */}
+          <MiniCalendar startDate={project.startDate} endDate={project.endDate} isDark={isDark} />
+
+        </div>
+
+      </div>
+    </div>
+  )
+}
