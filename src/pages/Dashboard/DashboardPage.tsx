@@ -931,7 +931,7 @@ export default function DashboardPage() {
 
       {/* Верхняя панель */}
       <header
-        className="sticky top-0 z-20 flex items-center justify-between px-8 h-16 border-b"
+        className="sticky top-0 z-20 flex items-center justify-between px-8 py-3 border-b"
         style={{
           background: isDark ? 'rgba(20,20,40,0.9)' : 'rgba(255,255,255,0.9)',
           borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
@@ -940,7 +940,49 @@ export default function DashboardPage() {
       >
         <div>
           <h1 className="font-bold text-lg leading-tight" style={{ color: isDark ? '#fff' : '#111' }}>{project.name}</h1>
-          <p className="text-xs mt-0.5" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</p>
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+            <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</span>
+            {project.plannedShootingDays > 0 && (
+              <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
+            )}
+            {project.plannedShootingDays > 0 && (
+              <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                🎬 {project.plannedShootingDays} дней
+              </span>
+            )}
+            {project.shootingGroups > 1 && (
+              <>
+                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
+                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                  👥 {project.shootingGroups} группы
+                </span>
+              </>
+            )}
+            {project.type === 'serial' && project.episodesCount && (
+              <>
+                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
+                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                  🎥 {project.episodesCount} × {project.episodeDuration} мин
+                </span>
+              </>
+            )}
+            {project.type !== 'serial' && project.totalDuration && (
+              <>
+                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
+                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                  ⏱ {project.totalDuration} мин
+                </span>
+              </>
+            )}
+            {project.dailyOutput > 0 && (
+              <>
+                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
+                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                  {project.dailyOutput} мин/день
+                </span>
+              </>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2.5">
 
@@ -1175,8 +1217,8 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* ЗОНА 4 — Готовность + Параметры + Календарь */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ЗОНА 4 — Радар + Календарь */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Радар пре-продакшна */}
           <div className="rounded-2xl p-6"
@@ -1207,39 +1249,6 @@ export default function DashboardPage() {
                   { label: 'VFX',         value: 5,   color: '#38bdf8' },
                 ]}
               />
-            </div>
-          </div>
-
-          {/* Параметры проекта */}
-          <div className="rounded-2xl p-7"
-            style={{
-              background: isDark ? '#1a1a35' : '#ffffff',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-              boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
-            }}
-          >
-            <h2 className="font-bold text-base mb-6" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Параметры проекта</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Дней съёмок', value: project.plannedShootingDays ?? '—', icon: '🎬' },
-                { label: 'Съёмочных групп', value: project.shootingGroups, icon: '👥' },
-                { label: 'Выработка / день', value: `${project.dailyOutput ?? '—'} мин`, icon: '⏱' },
-                {
-                  label: project.type === 'serial' ? 'Серий' : 'Хронометраж',
-                  value: project.type === 'serial'
-                    ? `${project.episodesCount ?? '—'} × ${project.episodeDuration ?? '—'} мин`
-                    : `${project.totalDuration ?? '—'} мин`,
-                  icon: '🎞',
-                },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl p-4"
-                  style={{ background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'}` }}
-                >
-                  <div className="text-lg mb-2">{item.icon}</div>
-                  <div className="text-xs mb-1" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{item.label}</div>
-                  <div className="font-bold" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>{item.value}</div>
-                </div>
-              ))}
             </div>
           </div>
 
