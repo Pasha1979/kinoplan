@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Film, FileText, Calendar, ClipboardList,
   Video, ChevronLeft, ChevronRight, Settings,
   ArrowLeft, MapPin, Shirt, Car, Package,
-  Zap, PersonStanding, Sparkles, MessageSquare, Users
+  Zap, PersonStanding, Sparkles, MessageSquare, Users, ChevronDown
 } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -16,12 +17,46 @@ interface NavItem {
   group?: string
 }
 
+function NavButton({ item, isActive, sidebarExpanded, onClick }: {
+  item: NavItem; isActive: boolean; sidebarExpanded: boolean; onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={!sidebarExpanded ? item.label : undefined}
+      className="w-full flex items-center gap-3 rounded-xl transition-all duration-200 relative"
+      style={{
+        padding: sidebarExpanded ? '10px 14px' : '10px 0',
+        justifyContent: sidebarExpanded ? 'flex-start' : 'center',
+        background: isActive ? 'rgba(249,115,22,0.15)' : 'transparent',
+        color: isActive ? '#fb923c' : item.ready ? '#9ca3af' : '#4b5563',
+      }}
+      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+    >
+      {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-orange-500 rounded-r-full" />}
+      <span className="shrink-0">{item.icon}</span>
+      {sidebarExpanded && (
+        <>
+          <span className="text-sm font-medium truncate flex-1 text-left">{item.label}</span>
+          {!item.ready && (
+            <span className="text-xs px-1.5 py-0.5 rounded-md shrink-0"
+              style={{ background: 'rgba(255,255,255,0.05)', color: '#374151' }}>скоро</span>
+          )}
+        </>
+      )}
+    </button>
+  )
+}
+
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { sidebarExpanded, toggleSidebar } = useUiStore()
   const { getCurrentProject } = useProjectStore()
   const project = getCurrentProject()
+
+  const [preproOpen, setPreproOpen] = useState(true)
 
   if (!project) return null
 
@@ -72,64 +107,63 @@ export default function Sidebar() {
 
       {/* Навигация */}
       <nav className="flex-1 overflow-y-auto" style={{ padding: '12px 10px' }}>
-        {navItems.map((item, idx) => {
+
+        {/* Основные пункты (без группы) */}
+        {navItems.filter(i => !i.group).map((item) => {
           const isActive = location.pathname === item.path
-          const prevItem = navItems[idx - 1]
-          const showGroupLabel = item.group && item.group !== prevItem?.group
           return (
-            <div key={item.path}>
-              {/* Разделитель группы */}
-              {showGroupLabel && (
-                <div className="mt-3 mb-1" style={{ padding: sidebarExpanded ? '0 4px' : '0' }}>
-                  {sidebarExpanded
-                    ? <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#374151' }}>{item.group}</p>
-                    : <div className="h-px mx-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
-                  }
-                </div>
-              )}
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              title={!sidebarExpanded ? item.label : undefined}
-              className="w-full flex items-center gap-3 rounded-xl transition-all duration-200 relative group"
-              style={{
-                padding: sidebarExpanded ? '12px 14px' : '12px 0',
-                justifyContent: sidebarExpanded ? 'flex-start' : 'center',
-                background: isActive ? 'rgba(249,115,22,0.15)' : 'transparent',
-                color: isActive ? '#fb923c' : item.ready ? '#9ca3af' : '#4b5563',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
-              }}
-            >
-              {/* Активная полоса слева */}
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-orange-500 rounded-r-full" />
-              )}
-
-              <span className="shrink-0" style={{ marginLeft: isActive && sidebarExpanded ? '4px' : undefined }}>
-                {item.icon}
-              </span>
-
-              {sidebarExpanded && (
-                <>
-                  <span className="text-sm font-medium truncate flex-1 text-left">{item.label}</span>
-                  {!item.ready && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-md shrink-0"
-                      style={{ background: 'rgba(255,255,255,0.05)', color: '#4b5563' }}
-                    >
-                      скоро
-                    </span>
-                  )}
-                </>
-              )}
-            </button>
-            </div>
+            <NavButton key={item.path} item={item} isActive={isActive}
+              sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
           )
         })}
+
+        {/* Группа: Пре-продакшн (аккордеон) */}
+        <div className="mt-3">
+          {/* Заголовок группы — кнопка сворачивания */}
+          {sidebarExpanded ? (
+            <button
+              onClick={() => setPreproOpen(o => !o)}
+              className="w-full flex items-center justify-between px-1 py-1.5 rounded-lg transition-colors mb-1"
+              style={{ color: '#374151' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6b7280'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#374151'}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest">Пре-продакшн</span>
+              <ChevronDown size={13} style={{ transform: preproOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+            </button>
+          ) : (
+            <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          )}
+
+          {/* Пункты группы */}
+          {(preproOpen || !sidebarExpanded) && (
+            <div>
+              {navItems.filter(i => i.group === 'Пре-продакшн').map((item) => {
+                const isActive = location.pathname === item.path
+                return (
+                  <NavButton key={item.path} item={item} isActive={isActive}
+                    sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Группа: Продакшн */}
+        <div className="mt-3">
+          {sidebarExpanded
+            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Продакшн</p>
+            : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          }
+          {navItems.filter(i => i.group === 'Продакшн').map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <NavButton key={item.path} item={item} isActive={isActive}
+                sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+            )
+          })}
+        </div>
+
       </nav>
 
       {/* Нижняя часть */}

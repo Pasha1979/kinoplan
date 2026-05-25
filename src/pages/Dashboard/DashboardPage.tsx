@@ -1,10 +1,122 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, FileText, ClipboardList, Users, TrendingUp, AlertCircle, CheckCircle2, Circle, Clock, Zap } from 'lucide-react'
+import { Calendar, FileText, ClipboardList, Users, TrendingUp, AlertCircle, CheckCircle2, Circle, Clock, Zap, ChevronDown, Info } from 'lucide-react'
 import { useProjectStore } from '../../store/projectStore'
 import type { ShootingDayType } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { useTaskStore } from '../../store/taskStore'
+import { computeAlerts } from '../../store/alertStore'
+import type { AlertLevel } from '../../store/alertStore'
+
+const ALERT_CONFIG: Record<AlertLevel, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
+  critical: {
+    color: '#f87171',
+    bg: 'rgba(239,68,68,0.08)',
+    border: 'rgba(239,68,68,0.2)',
+    icon: <AlertCircle size={15} />,
+  },
+  warning: {
+    color: '#fbbf24',
+    bg: 'rgba(251,191,36,0.08)',
+    border: 'rgba(251,191,36,0.2)',
+    icon: <AlertCircle size={15} />,
+  },
+  info: {
+    color: '#38bdf8',
+    bg: 'rgba(56,189,248,0.08)',
+    border: 'rgba(56,189,248,0.2)',
+    icon: <Info size={15} />,
+  },
+}
+
+function SmartAlerts({ project, isDark, navigate }: {
+  project: Parameters<typeof computeAlerts>[0]
+  isDark: boolean
+  navigate: (path: string) => void
+}) {
+  const [open, setOpen] = useState(true)
+  const alerts = computeAlerts(project)
+  const criticalCount = alerts.filter(a => a.level === 'critical').length
+  const warningCount  = alerts.filter(a => a.level === 'warning').length
+
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const textPrimary = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+
+  return (
+    <div className="rounded-2xl overflow-hidden mb-8"
+      style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}
+    >
+      {/* Заголовок — кнопка разворачивания */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-6 py-4"
+      >
+        <div className="flex items-center gap-3">
+          <AlertCircle size={16} className="text-orange-400" />
+          <span className="font-bold text-sm" style={{ color: textPrimary }}>Smart Alerts</span>
+          {/* Счётчики */}
+          <div className="flex items-center gap-1.5">
+            {criticalCount > 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}
+              >🔴 {criticalCount}</span>
+            )}
+            {warningCount > 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}
+              >🟡 {warningCount}</span>
+            )}
+            {criticalCount === 0 && warningCount === 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(74,222,128,0.15)', color: '#4ade80' }}
+              >✓ Всё в порядке</span>
+            )}
+          </div>
+        </div>
+        <ChevronDown size={15} style={{
+          color: textSecondary,
+          transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+          transition: 'transform 0.2s',
+        }} />
+      </button>
+
+      {/* Список алертов */}
+      {open && (
+        <div className="px-6 pb-5 space-y-2.5">
+          {alerts.map(alert => {
+            const cfg = ALERT_CONFIG[alert.level]
+            return (
+              <div key={alert.id}
+                className="flex items-start gap-3 rounded-xl px-4 py-3"
+                style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+              >
+                <span className="shrink-0 mt-0.5" style={{ color: cfg.color }}>{cfg.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: cfg.color }}>{alert.title}</p>
+                  <p className="text-xs mt-0.5" style={{ color: textSecondary }}>{alert.description}</p>
+                  {alert.module && (
+                    <p className="text-xs mt-1" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Модуль: {alert.module}</p>
+                  )}
+                </div>
+                {alert.action && (
+                  <button
+                    onClick={() => navigate(alert.action!.path)}
+                    className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                    style={{ background: cfg.border, color: cfg.color, border: `1px solid ${cfg.border}` }}
+                  >
+                    {alert.action.label}
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const STATUS_LABELS: Record<string, string> = {
   preproduction: 'Пре-продакшн',
@@ -656,6 +768,19 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Бейдж критичных алертов */}
+          {(() => {
+            const criticals = computeAlerts(project).filter(a => a.level === 'critical').length
+            return criticals > 0 ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
+              >
+                <AlertCircle size={13} className="text-red-400" />
+                <span className="text-sm font-bold text-red-400">{criticals} критичных</span>
+              </div>
+            ) : null
+          })()}
+
           {/* % готовности */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
             style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.2)' }}
@@ -669,6 +794,9 @@ export default function DashboardPage() {
       </header>
 
       <div className="max-w-5xl mx-auto" style={{ padding: '32px 32px 48px' }}>
+
+        {/* Smart Alerts */}
+        <SmartAlerts project={project} isDark={isDark} navigate={navigate} />
 
         {/* Баннер «ЗАВТРА СЪЁМКА» */}
         {isShooting && (
