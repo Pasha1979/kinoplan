@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Upload, Plus, BookOpen, Clock, Search, MoreVertical, Hash, Sun, Moon, AlignLeft } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Search, MoreVertical, Hash, Sun, Moon, AlignLeft, ChevronLeft } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 
@@ -291,6 +291,18 @@ export default function ScriptPage() {
           style={{ background: sidebarBg, borderColor: border }}>
 
           <div className="flex items-center gap-3">
+            {/* Кнопка возврата */}
+            <button
+              onClick={() => setView('empty')}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-all"
+              style={{ color: textSecondary }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'; (e.currentTarget as HTMLElement).style.color = textPrimary }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = textSecondary }}
+            >
+              <ChevronLeft size={14} />
+              Назад
+            </button>
+            <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
             <div>
               <p className="text-sm font-bold" style={{ color: textPrimary }}>
                 Сц. {selectedScene.number} · {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
