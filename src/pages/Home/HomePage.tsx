@@ -83,7 +83,7 @@ export default function HomePage() {
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-2xl font-semibold text-base transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-2xl font-semibold text-base transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
             >
               <Plus size={20} />
               Создать первый проект
@@ -103,7 +103,7 @@ export default function HomePage() {
               </div>
               <button
                 onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-xl font-medium text-sm transition-all shadow-lg shadow-orange-500/20"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-xl font-medium text-sm transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <Plus size={16} />
                 Новый проект
@@ -140,7 +140,7 @@ export default function HomePage() {
               {/* Карточка создания нового */}
               <button
                 onClick={() => setShowModal(true)}
-                className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center gap-3 min-h-48 transition-all ${
+                className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center gap-3 min-h-48 transition-all hover:-translate-y-0.5 active:translate-y-0 ${
                   theme === 'dark'
                     ? 'border-white/10 text-gray-600 hover:border-orange-500/30 hover:text-orange-400 hover:bg-orange-500/3'
                     : 'border-gray-200 text-gray-400 hover:border-orange-400 hover:text-orange-500'

@@ -60,7 +60,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group w-full text-left bg-[#13132a] border border-white/8 rounded-2xl p-5 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/5"
+      className="group w-full text-left bg-[#13132a] border border-white/8 rounded-2xl p-5 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
     >
       {/* Шапка карточки */}
       <div className="flex items-start justify-between gap-3 mb-4">
