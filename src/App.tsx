@@ -6,6 +6,9 @@ import ProjectLayout from './layouts/ProjectLayout'
 import DashboardPage from './pages/Dashboard/DashboardPage'
 import ScriptPage from './pages/Script/ScriptPage'
 import { LocationsPage, CostumesPage, TransportPage, PropsPage, SFXPage, StuntsPage, VFXPage, MeetingsPage } from './pages/Preproduction'
+import CallsheetsPage from './pages/Callsheets/CallsheetsPage'
+import CastingPage from './pages/Casting/CastingPage'
+import ProductionPage from './pages/Production/ProductionPage'
 import ReportsPage from './pages/Reports/ReportsPage'
 import AttendancePage from './pages/Attendance/AttendancePage'
 import DoodPage from './pages/Dood/DoodPage'
@@ -53,6 +56,9 @@ function App() {
             <Route path="stunts" element={<StuntsPage />} />
             <Route path="vfx" element={<VFXPage />} />
             <Route path="meetings" element={<MeetingsPage />} />
+            <Route path="callsheets" element={<CallsheetsPage />} />
+            <Route path="casting" element={<CastingPage />} />
+            <Route path="production" element={<ProductionPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="dood" element={<DoodPage />} />

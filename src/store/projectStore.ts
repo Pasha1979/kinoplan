@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export type ProjectType = 'serial' | 'film' | 'ad' | 'clip' | 'other'
 export type ProjectStatus = 'preproduction' | 'shooting' | 'postproduction' | 'completed'
@@ -108,8 +109,9 @@ interface ProjectStore {
   getCurrentProject: () => Project | null
 }
 
-// Локальное хранилище — данные живут в памяти, потом подключим SQLite
-export const useProjectStore = create<ProjectStore>((set, get) => ({
+export const useProjectStore = create<ProjectStore>()(
+  persist(
+    (set, get) => ({
   projects: [],
   currentProjectId: null,
 
@@ -123,4 +125,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const { projects, currentProjectId } = get()
     return projects.find((p) => p.id === currentProjectId) ?? null
   },
-}))
+  }),
+  { name: 'kinoplan-projects' }
+)
+)

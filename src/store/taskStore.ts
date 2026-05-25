@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Task, ActivityEvent } from './projectStore'
 
 interface TaskStore {
@@ -11,7 +12,9 @@ interface TaskStore {
   getProjectActivity: (projectId: string) => ActivityEvent[]
 }
 
-export const useTaskStore = create<TaskStore>((set, get) => ({
+export const useTaskStore = create<TaskStore>()(
+  persist(
+    (set, get) => ({
   tasks: [],
   activity: [],
 
@@ -28,4 +31,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   getProjectActivity: (projectId) =>
     get().activity.filter((a) => a.projectId === projectId),
-}))
+  }),
+  { name: 'kinoplan-tasks' }
+)
+)
