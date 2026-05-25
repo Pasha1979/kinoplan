@@ -4,7 +4,9 @@ import {
   Film, FileText, Calendar, ClipboardList,
   Video, ChevronLeft, ChevronRight, Settings,
   ArrowLeft, MapPin, Shirt, Car, Package,
-  Zap, PersonStanding, Sparkles, MessageSquare, Users, ChevronDown
+  Zap, PersonStanding, Sparkles, MessageSquare, Users, ChevronDown,
+  ClipboardCheck, UserCheck, BarChart2, FolderOpen, GitBranch,
+  ScrollText, Tag, History
 } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -57,6 +59,7 @@ export default function Sidebar() {
   const project = getCurrentProject()
 
   const [preproOpen, setPreproOpen] = useState(true)
+  const [productionOpen, setProductionOpen] = useState(true)
 
   if (!project) return null
 
@@ -77,7 +80,19 @@ export default function Sidebar() {
     { icon: <Sparkles size={20} />,    label: 'VFX / CG',     path: `/project/${project.id}/vfx`,       ready: false, group: 'Пре-продакшн' },
     { icon: <MessageSquare size={20}/>,label: 'Собрания',     path: `/project/${project.id}/meetings`,  ready: false, group: 'Пре-продакшн' },
     // Продакшн
-    { icon: <Video size={20} />,       label: 'Продакшн',     path: `/project/${project.id}/production`,ready: false, group: 'Продакшн' },
+    { icon: <Video size={20} />,          label: 'Съёмочный день',    path: `/project/${project.id}/production`,   ready: false, group: 'Продакшн' },
+    { icon: <ClipboardCheck size={20} />, label: 'Произв. отчёты',    path: `/project/${project.id}/reports`,      ready: false, group: 'Продакшн' },
+    { icon: <ScrollText size={20} />,     label: 'Явочный лист',      path: `/project/${project.id}/attendance`,   ready: false, group: 'Продакшн' },
+    { icon: <UserCheck size={20} />,      label: 'DOOD / Занятость',  path: `/project/${project.id}/dood`,         ready: false, group: 'Продакшн' },
+    // Команда
+    { icon: <Users size={20} />,          label: 'Съёмочная группа',  path: `/project/${project.id}/crew`,         ready: false, group: 'Команда' },
+    { icon: <History size={20} />,        label: 'Лог изменений',     path: `/project/${project.id}/changelog`,    ready: false, group: 'Команда' },
+    // Отчёты
+    { icon: <BarChart2 size={20} />,      label: 'Аналитика',         path: `/project/${project.id}/analytics`,    ready: false, group: 'Отчёты' },
+    { icon: <GitBranch size={20} />,      label: 'Версии КПП',        path: `/project/${project.id}/scheduleversions`, ready: false, group: 'Отчёты' },
+    { icon: <Tag size={20} />,            label: 'Теги',              path: `/project/${project.id}/tags`,         ready: false, group: 'Отчёты' },
+    // Файлы
+    { icon: <FolderOpen size={20} />,     label: 'Медиатека',         path: `/project/${project.id}/files`,        ready: false, group: 'Файлы' },
   ]
 
   return (
@@ -149,13 +164,72 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Группа: Продакшн */}
+        {/* Группа: Продакшн (аккордеон) */}
+        <div className="mt-3">
+          {sidebarExpanded ? (
+            <button
+              onClick={() => setProductionOpen(o => !o)}
+              className="w-full flex items-center justify-between px-1 py-1.5 rounded-lg transition-colors mb-1"
+              style={{ color: '#374151' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6b7280'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#374151'}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest">Продакшн</span>
+              <ChevronDown size={13} style={{ transform: productionOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+            </button>
+          ) : (
+            <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          )}
+          {(productionOpen || !sidebarExpanded) && (
+            <div>
+              {navItems.filter(i => i.group === 'Продакшн').map((item) => {
+                const isActive = location.pathname === item.path
+                return (
+                  <NavButton key={item.path} item={item} isActive={isActive}
+                    sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Группа: Команда */}
         <div className="mt-3">
           {sidebarExpanded
-            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Продакшн</p>
+            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Команда</p>
             : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
           }
-          {navItems.filter(i => i.group === 'Продакшн').map((item) => {
+          {navItems.filter(i => i.group === 'Команда').map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <NavButton key={item.path} item={item} isActive={isActive}
+                sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+            )
+          })}
+        </div>
+
+        {/* Группа: Отчёты */}
+        <div className="mt-3">
+          {sidebarExpanded
+            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Отчёты</p>
+            : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          }
+          {navItems.filter(i => i.group === 'Отчёты').map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <NavButton key={item.path} item={item} isActive={isActive}
+                sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+            )
+          })}
+        </div>
+
+        {/* Группа: Файлы */}
+        <div className="mt-3">
+          {sidebarExpanded
+            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Файлы</p>
+            : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          }
+          {navItems.filter(i => i.group === 'Файлы').map((item) => {
             const isActive = location.pathname === item.path
             return (
               <NavButton key={item.path} item={item} isActive={isActive}

@@ -6,6 +6,15 @@ import ProjectLayout from './layouts/ProjectLayout'
 import DashboardPage from './pages/Dashboard/DashboardPage'
 import ScriptPage from './pages/Script/ScriptPage'
 import { LocationsPage, CostumesPage, TransportPage, PropsPage, SFXPage, StuntsPage, VFXPage, MeetingsPage } from './pages/Preproduction'
+import ReportsPage from './pages/Reports/ReportsPage'
+import AttendancePage from './pages/Attendance/AttendancePage'
+import DoodPage from './pages/Dood/DoodPage'
+import CrewPage from './pages/Crew/CrewPage'
+import ChangelogPage from './pages/Changelog/ChangelogPage'
+import AnalyticsPage from './pages/Analytics/AnalyticsPage'
+import ScheduleVersionsPage from './pages/ScheduleVersions/ScheduleVersionsPage'
+import TagsPage from './pages/Tags/TagsPage'
+import FilesPage from './pages/Files/FilesPage'
 
 function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -44,6 +53,15 @@ function App() {
             <Route path="stunts" element={<StuntsPage />} />
             <Route path="vfx" element={<VFXPage />} />
             <Route path="meetings" element={<MeetingsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="attendance" element={<AttendancePage />} />
+            <Route path="dood" element={<DoodPage />} />
+            <Route path="crew" element={<CrewPage />} />
+            <Route path="changelog" element={<ChangelogPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="scheduleversions" element={<ScheduleVersionsPage />} />
+            <Route path="tags" element={<TagsPage />} />
+            <Route path="files" element={<FilesPage />} />
           </Route>
         </Routes>
       </div>
