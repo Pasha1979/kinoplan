@@ -938,51 +938,30 @@ export default function DashboardPage() {
           backdropFilter: 'blur(12px)',
         }}
       >
-        <div>
-          <h1 className="font-bold text-lg leading-tight" style={{ color: isDark ? '#fff' : '#111' }}>{project.name}</h1>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-            <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</span>
-            {project.plannedShootingDays > 0 && (
-              <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
-            )}
-            {project.plannedShootingDays > 0 && (
-              <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
-                🎬 {project.plannedShootingDays} дней
-              </span>
-            )}
-            {project.shootingGroups > 1 && (
-              <>
-                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
-                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
-                  👥 {project.shootingGroups} группы
-                </span>
-              </>
-            )}
-            {project.type === 'serial' && project.episodesCount && (
-              <>
-                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
-                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
-                  🎥 {project.episodesCount} × {project.episodeDuration} мин
-                </span>
-              </>
-            )}
-            {project.type !== 'serial' && project.totalDuration && (
-              <>
-                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
-                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
-                  ⏱ {project.totalDuration} мин
-                </span>
-              </>
-            )}
-            {project.dailyOutput > 0 && (
-              <>
-                <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>·</span>
-                <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
-                  {project.dailyOutput} мин/день
-                </span>
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <h1 className="font-bold text-base shrink-0" style={{ color: isDark ? '#fff' : '#111' }}>{project.name}</h1>
+          <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+          <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</span>
+          {project.plannedShootingDays > 0 && (<>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>🎬 {project.plannedShootingDays} дн.</span>
+          </>)}
+          {project.shootingGroups > 1 && (<>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>👥 {project.shootingGroups} гр.</span>
+          </>)}
+          {project.type === 'serial' && project.episodesCount && (<>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>🎥 {project.episodesCount}×{project.episodeDuration} мин</span>
+          </>)}
+          {project.type !== 'serial' && project.totalDuration && (<>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>⏱ {project.totalDuration} мин</span>
+          </>)}
+          {project.dailyOutput > 0 && (<>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{project.dailyOutput} мин/день</span>
+          </>)}
         </div>
         <div className="flex items-center gap-2.5">
 
