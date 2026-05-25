@@ -56,8 +56,13 @@ function SmartAlerts({ project, isDark, navigate }: {
         <div className="flex items-center gap-3">
           <AlertCircle size={16} className="text-orange-400" />
           <span className="font-bold text-sm" style={{ color: textPrimary }}>Smart Alerts</span>
-          {/* Счётчики */}
-          <div className="flex items-center gap-1.5">
+          {/* Превью первого алерта в свёрнутом виде + счётчики */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {!open && alerts.length > 0 && (
+              <span className="text-xs max-w-xs truncate" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                {alerts[0].title}
+              </span>
+            )}
             {criticalCount > 0 && (
               <span className="text-xs font-bold px-2 py-0.5 rounded-full"
                 style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}
@@ -275,7 +280,8 @@ function RadarChart({ data, isDark }: {
   data: { label: string; value: number; color: string }[]
   isDark: boolean
 }) {
-  const cx = 120; const cy = 120; const r = 90
+  const SIZE = 280
+  const cx = SIZE / 2; const cy = SIZE / 2; const r = 100
   const n = data.length
   const levels = [25, 50, 75, 100]
 
@@ -286,41 +292,55 @@ function RadarChart({ data, isDark }: {
     y: cy + radius * Math.sin(angleOf(i)),
   })
 
-  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'
-  const axisColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-  const textColor = isDark ? '#6b7280' : '#9ca3af'
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const axisColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'
+  const textColor = isDark ? '#9ca3af' : '#6b7280'
 
-  // Полигон данных
   const dataPoints = data.map((d, i) => pointAt(i, (d.value / 100) * r))
   const polyPath = dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
 
   return (
-    <svg width={240} height={240} style={{ overflow: 'visible' }}>
-      {/* Сетка */}
+    <svg width={SIZE} height={SIZE} style={{ overflow: 'visible' }}>
+      {/* Уровни сетки с подписями % */}
       {levels.map(lvl => {
         const pts = data.map((_, i) => pointAt(i, (lvl / 100) * r))
         const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
-        return <path key={lvl} d={path} fill="none" stroke={gridColor} strokeWidth={1} />
+        const labelPt = pointAt(0, (lvl / 100) * r)
+        return (
+          <g key={lvl}>
+            <path d={path} fill="none" stroke={gridColor} strokeWidth={1} />
+            <text x={(labelPt.x + cx) / 2} y={(labelPt.y + cy) / 2 - 4}
+              textAnchor="middle" fontSize={8} fill={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}
+            >{lvl}%</text>
+          </g>
+        )
       })}
       {/* Оси */}
       {data.map((_, i) => {
         const outer = pointAt(i, r)
-        return <line key={i} x1={cx} y1={cy} x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)} stroke={axisColor} strokeWidth={1} />
+        return <line key={i} x1={cx} y1={cy} x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)} stroke={axisColor} strokeWidth={1.5} />
       })}
       {/* Заполненный полигон */}
-      <path d={polyPath} fill="rgba(249,115,22,0.15)" stroke="rgba(249,115,22,0.6)" strokeWidth={2} strokeLinejoin="round" />
-      {/* Точки */}
+      <path d={polyPath} fill="rgba(249,115,22,0.18)" stroke="rgba(249,115,22,0.7)" strokeWidth={2.5} strokeLinejoin="round" />
+      {/* Точки с % подписью */}
       {dataPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={4} fill={data[i].color} stroke={isDark ? '#1a1a35' : '#fff'} strokeWidth={2} />
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r={5} fill={data[i].color} stroke={isDark ? '#1a1a35' : '#fff'} strokeWidth={2} />
+          {data[i].value > 0 && (
+            <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize={9}
+              fill={data[i].color} fontWeight={700}
+            >{data[i].value}%</text>
+          )}
+        </g>
       ))}
-      {/* Подписи */}
+      {/* Подписи осей */}
       {data.map((d, i) => {
-        const pt = pointAt(i, r + 18)
-        const anchor = pt.x < cx - 5 ? 'end' : pt.x > cx + 5 ? 'start' : 'middle'
+        const pt = pointAt(i, r + 22)
+        const anchor = pt.x < cx - 8 ? 'end' : pt.x > cx + 8 ? 'start' : 'middle'
         return (
           <text key={i} x={pt.x.toFixed(1)} y={pt.y.toFixed(1)}
             textAnchor={anchor} dominantBaseline="central"
-            fontSize={10} fill={textColor} fontWeight={600}
+            fontSize={12} fill={textColor} fontWeight={600}
           >
             {d.label}
           </text>
@@ -358,6 +378,21 @@ function ShootingChart({ total, shot, scheduled, isDark }: {
 
   const gap = 0
   const rotate = -90 // начало с 12 часов
+
+  if (shot === 0 && scheduled === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-6 w-full">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#4b5563' : '#d1d5db'} strokeWidth={1.5}>
+            <circle cx={12} cy={12} r={10}/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+        </div>
+        <p className="text-sm font-semibold text-center" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Съёмки ещё не начались</p>
+        <p className="text-xs text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Заполните расписание в модуле «Планирование»</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center">
@@ -940,26 +975,26 @@ export default function DashboardPage() {
       >
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <h1 className="font-bold text-base shrink-0" style={{ color: isDark ? '#fff' : '#111' }}>{project.name}</h1>
-          <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+          <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
           <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</span>
           {project.plannedShootingDays > 0 && (<>
-            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
             <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>🎬 {project.plannedShootingDays} дн.</span>
           </>)}
           {project.shootingGroups > 1 && (<>
-            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
             <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>👥 {project.shootingGroups} гр.</span>
           </>)}
           {project.type === 'serial' && project.episodesCount && (<>
-            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
             <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>🎥 {project.episodesCount}×{project.episodeDuration} мин</span>
           </>)}
           {project.type !== 'serial' && project.totalDuration && (<>
-            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
             <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>⏱ {project.totalDuration} мин</span>
           </>)}
           {project.dailyOutput > 0 && (<>
-            <span className="text-xs shrink-0" style={{ color: isDark ? '#374151' : '#d1d5db' }}>·</span>
+            <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
             <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{project.dailyOutput} мин/день</span>
           </>)}
         </div>
@@ -1091,12 +1126,21 @@ export default function DashboardPage() {
                 <p className="font-bold text-sm mb-1" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>
                   {card.label}
                 </p>
-                <p className="text-xs mb-4" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{card.detail}</p>
+                <p className="text-xs mb-3" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{card.detail}</p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>Готовность</span>
+                  <span className="text-sm font-bold" style={{
+                    color: card.value >= 70 ? '#4ade80' : card.value >= 30 ? '#fbbf24' : '#f87171'
+                  }}>{card.value}%</span>
+                </div>
                 <div className="h-1.5 rounded-full overflow-hidden"
                   style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6' }}
                 >
-                  <div className={`h-full rounded-full bg-gradient-to-r ${card.color}`}
-                    style={{ width: `${card.value}%`, transition: 'width 0.7s ease' }}
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${card.value}%`,
+                      background: card.value >= 70 ? '#4ade80' : card.value >= 30 ? '#fbbf24' : '#f87171'
+                    }}
                   />
                 </div>
                 {!card.ready && (
