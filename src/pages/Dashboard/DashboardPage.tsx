@@ -1159,10 +1159,10 @@ export default function DashboardPage() {
 
         {/* ЗОНА 3 — двухколоночный основной контент */}
         <section style={{ marginBottom: '32px' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
             {/* Левая колонка (2/3): таймлайн + ход съёмок */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="lg:col-span-2 flex flex-col gap-6 self-stretch">
 
               {/* «Ближайшие 7 дней» */}
               <div>
@@ -1173,14 +1173,14 @@ export default function DashboardPage() {
               </div>
 
               {/* Ход съёмок */}
-              <div>
+              <div className="flex flex-col flex-1">
                 <h2 className="text-xs font-bold uppercase tracking-widest mb-3"
                   style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
                 >Ход съёмок</h2>
 
                 {project.shotDays === 0 && project.scheduledDays === 0 ? (
                   /* Компактная карточка «Что сделать дальше» когда съёмки не начались */
-                  <div className="rounded-2xl p-5"
+                  <div className="rounded-2xl p-5 flex flex-col flex-1"
                     style={{
                       background: isDark ? '#1a1a35' : '#ffffff',
                       border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
