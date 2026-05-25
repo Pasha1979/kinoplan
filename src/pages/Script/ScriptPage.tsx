@@ -55,7 +55,6 @@ export default function ScriptPage() {
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const sidebarBg = isDark ? '#13132a' : '#ffffff'
-  const cardBg = isDark ? '#1a1a35' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
@@ -103,34 +102,48 @@ export default function ScriptPage() {
           </p>
 
           {/* Две карточки выбора */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-2xl">
 
             {/* Загрузить файл */}
             <button
               onClick={() => setView('editor')}
               onMouseEnter={() => setImportHover(true)}
               onMouseLeave={() => setImportHover(false)}
-              className="flex flex-col items-start gap-4 rounded-2xl p-6 text-left transition-all"
+              className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
               style={{
-                background: importHover ? (isDark ? '#1e1e40' : '#f0f0ff') : cardBg,
-                border: `1px solid ${importHover ? 'rgba(99,102,241,0.4)' : border}`,
-                boxShadow: importHover ? '0 0 0 3px rgba(99,102,241,0.1)' : 'none',
+                background: isDark
+                  ? 'linear-gradient(135deg, #1e1b4b 0%, #1a1a35 60%, #1e1b4b 100%)'
+                  : 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                border: `1px solid ${importHover ? 'rgba(129,140,248,0.6)' : 'rgba(129,140,248,0.25)'}`,
+                boxShadow: importHover
+                  ? '0 8px 32px rgba(99,102,241,0.25), 0 0 0 1px rgba(129,140,248,0.3)'
+                  : '0 2px 12px rgba(99,102,241,0.1)',
+                transform: importHover ? 'translateY(-2px)' : 'translateY(0)',
               }}
             >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(99,102,241,0.12)' }}>
-                <Upload size={18} style={{ color: '#818cf8' }} />
+              {/* Декоративный круг */}
+              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-20"
+                style={{ background: 'radial-gradient(circle, #818cf8, transparent)' }} />
+
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 relative"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}>
+                <Upload size={20} className="text-white" />
               </div>
-              <div>
-                <p className="font-bold text-sm mb-1" style={{ color: textPrimary }}>Загрузить файл</p>
-                <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-                  Импорт из Word (.docx), PDF или Final Draft (.fdx). Сцены распознаются автоматически.
-                </p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
+
+              <p className="font-bold text-base mb-1.5 relative" style={{ color: isDark ? '#f1f5f9' : '#1e1b4b' }}>
+                Загрузить файл
+              </p>
+              <p className="text-xs leading-relaxed mb-4 relative" style={{ color: isDark ? '#94a3b8' : '#6366f1' }}>
+                Импорт из Word, PDF или Final Draft. Сцены распознаются автоматически.
+              </p>
+              <div className="flex gap-2 flex-wrap relative">
                 {['DOCX', 'PDF', 'FDX'].map(f => (
-                  <span key={f} className="text-xs px-2 py-0.5 rounded-md font-mono"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{f}</span>
+                  <span key={f} className="text-xs px-2.5 py-1 rounded-lg font-mono font-bold"
+                    style={{
+                      background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)',
+                      color: isDark ? '#a5b4fc' : '#4338ca',
+                      border: '1px solid rgba(99,102,241,0.25)',
+                    }}>{f}</span>
                 ))}
               </div>
             </button>
@@ -140,27 +153,41 @@ export default function ScriptPage() {
               onClick={() => setView('editor')}
               onMouseEnter={() => setCreateHover(true)}
               onMouseLeave={() => setCreateHover(false)}
-              className="flex flex-col items-start gap-4 rounded-2xl p-6 text-left transition-all"
+              className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
               style={{
-                background: createHover ? (isDark ? '#1e1e40' : '#f0f0ff') : cardBg,
-                border: `1px solid ${createHover ? 'rgba(99,102,241,0.4)' : border}`,
-                boxShadow: createHover ? '0 0 0 3px rgba(99,102,241,0.1)' : 'none',
+                background: isDark
+                  ? 'linear-gradient(135deg, #0f2a1e 0%, #1a1a35 60%, #0f2a1e 100%)'
+                  : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                border: `1px solid ${createHover ? 'rgba(52,211,153,0.6)' : 'rgba(52,211,153,0.25)'}`,
+                boxShadow: createHover
+                  ? '0 8px 32px rgba(16,185,129,0.2), 0 0 0 1px rgba(52,211,153,0.3)'
+                  : '0 2px 12px rgba(16,185,129,0.08)',
+                transform: createHover ? 'translateY(-2px)' : 'translateY(0)',
               }}
             >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(99,102,241,0.12)' }}>
-                <Plus size={18} style={{ color: '#818cf8' }} />
+              {/* Декоративный круг */}
+              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-20"
+                style={{ background: 'radial-gradient(circle, #34d399, transparent)' }} />
+
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 relative"
+                style={{ background: 'linear-gradient(135deg, #059669, #34d399)', boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}>
+                <Plus size={20} className="text-white" />
               </div>
-              <div>
-                <p className="font-bold text-sm mb-1" style={{ color: textPrimary }}>Написать с нуля</p>
-                <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-                  Профессиональный редактор с авто-форматированием. Поддержка российского и голливудского стандартов.
-                </p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
+
+              <p className="font-bold text-base mb-1.5 relative" style={{ color: isDark ? '#f1f5f9' : '#064e3b' }}>
+                Написать с нуля
+              </p>
+              <p className="text-xs leading-relaxed mb-4 relative" style={{ color: isDark ? '#94a3b8' : '#059669' }}>
+                Профессиональный редактор с авто-форматированием. Российский и голливудский стандарты.
+              </p>
+              <div className="flex gap-2 flex-wrap relative">
                 {['ИНТ./ЭКСТ.', 'Персонаж', 'Диалог'].map(f => (
-                  <span key={f} className="text-xs px-2 py-0.5 rounded-md"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{f}</span>
+                  <span key={f} className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                    style={{
+                      background: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.12)',
+                      color: isDark ? '#6ee7b7' : '#047857',
+                      border: '1px solid rgba(16,185,129,0.25)',
+                    }}>{f}</span>
                 ))}
               </div>
             </button>
