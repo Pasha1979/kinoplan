@@ -1,36 +1,391 @@
-import { FileText, Clock } from 'lucide-react'
+import { useState } from 'react'
+import { FileText, Upload, Plus, BookOpen, Clock, Search, MoreVertical, Hash, Sun, Moon, AlignLeft } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
+import { useProjectStore } from '../../store/projectStore'
+
+type ScriptView = 'empty' | 'editor'
+
+const DEMO_SCENES = [
+  { id: '1', number: '1', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.5 },
+  { id: '2', number: '2', type: 'ЭКСТ', location: 'УЛИЦА У ДОМА', time: 'ДЕНЬ', cast: ['ИВАН'], pages: 0.5 },
+  { id: '3', number: '3', type: 'ИНТ', location: 'ОФИС КОМПАНИИ', time: 'ДЕНЬ', cast: ['ИВАН', 'ДИРЕКТОР', 'СЕКРЕТАРЬ'], pages: 2 },
+  { id: '4', number: '4', type: 'ЭКСТ', location: 'ПАРК', time: 'ВЕЧЕР', cast: ['МАША', 'НЕЗНАКОМЕЦ'], pages: 1 },
+  { id: '5', number: '5', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'НОЧЬ', cast: ['ИВАН'], pages: 0.75 },
+  { id: '6', number: '6', type: 'ИНТ', location: 'ОФИС КОМПАНИИ', time: 'УТРО', cast: ['ДИРЕКТОР', 'ИВАН', 'КОЛЛЕГИ'], pages: 3 },
+  { id: '7', number: '7', type: 'ЭКСТ', location: 'АЭРОПОРТ', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.25 },
+]
+
+const DEMO_SCRIPT_TEXT = `ИНТ. КВАРТИРА ИВАНА — ДЕНЬ
+
+Небольшая уютная квартира в центре города. Солнечный свет пробивается сквозь жалюзи. ИВАН (32 года, журналист) стоит у окна с чашкой кофе в руке. Он смотрит на улицу, явно погружённый в мысли.
+
+Звонит телефон. Иван не сразу реагирует.
+
+МАША (О.С.)
+(в трубке)
+Иван! Ты там вообще живой?
+
+ИВАН
+(отрываясь от окна)
+Да, да. Привет, Маш.
+
+МАША (О.С.)
+Ты помнишь, что сегодня встреча с редактором?
+
+Иван резко ставит кофе на стол. Смотрит на часы — опаздывает.
+
+ИВАН
+Чёрт. Буду через двадцать минут.
+
+Он бросает трубку и начинает быстро собираться.
+
+НАПЛЫВ:`
 
 export default function ScriptPage() {
   const { theme } = useUiStore()
+  const { getCurrentProject } = useProjectStore()
+  const project = getCurrentProject()
+  const isDark = theme === 'dark'
 
+  const [view, setView] = useState<ScriptView>('empty')
+  const [selectedScene, setSelectedScene] = useState(DEMO_SCENES[0])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [importHover, setImportHover] = useState(false)
+  const [createHover, setCreateHover] = useState(false)
+
+  const bg = isDark ? '#0f0f20' : '#f5f5f5'
+  const sidebarBg = isDark ? '#13132a' : '#ffffff'
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const textPrimary = isDark ? '#f1f5f9' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const textMuted = isDark ? '#374151' : '#d1d5db'
+  const editorBg = isDark ? '#111126' : '#fefefe'
+
+  const filteredScenes = DEMO_SCENES.filter(s =>
+    s.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.cast.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    s.number.includes(searchQuery)
+  )
+
+  const totalPages = DEMO_SCENES.reduce((s, sc) => s + sc.pages, 0)
+
+  if (view === 'empty') {
+    return (
+      <div className="flex-1 flex flex-col" style={{ background: bg }}>
+
+        {/* Шапка */}
+        <div className="shrink-0 flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: border }}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)' }}>
+              <FileText size={16} style={{ color: '#818cf8' }} />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold" style={{ color: textPrimary }}>Сценарий</h1>
+              {project && <p className="text-xs" style={{ color: textSecondary }}>{project.name}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Центральный экран выбора */}
+        <div className="flex-1 flex flex-col items-center justify-center px-8 pb-16">
+
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: 'rgba(99,102,241,0.12)', border: '2px solid rgba(99,102,241,0.25)' }}>
+            <BookOpen size={30} style={{ color: '#818cf8' }} />
+          </div>
+
+          <h2 className="text-2xl font-bold mb-2 text-center" style={{ color: textPrimary }}>
+            Добавьте сценарий
+          </h2>
+          <p className="text-sm text-center mb-10 max-w-sm" style={{ color: textSecondary }}>
+            Загрузите готовый файл или начните писать с нуля прямо в редакторе
+          </p>
+
+          {/* Две карточки выбора */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
+
+            {/* Загрузить файл */}
+            <button
+              onClick={() => setView('editor')}
+              onMouseEnter={() => setImportHover(true)}
+              onMouseLeave={() => setImportHover(false)}
+              className="flex flex-col items-start gap-4 rounded-2xl p-6 text-left transition-all"
+              style={{
+                background: importHover ? (isDark ? '#1e1e40' : '#f0f0ff') : cardBg,
+                border: `1px solid ${importHover ? 'rgba(99,102,241,0.4)' : border}`,
+                boxShadow: importHover ? '0 0 0 3px rgba(99,102,241,0.1)' : 'none',
+              }}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(99,102,241,0.12)' }}>
+                <Upload size={18} style={{ color: '#818cf8' }} />
+              </div>
+              <div>
+                <p className="font-bold text-sm mb-1" style={{ color: textPrimary }}>Загрузить файл</p>
+                <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+                  Импорт из Word (.docx), PDF или Final Draft (.fdx). Сцены распознаются автоматически.
+                </p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {['DOCX', 'PDF', 'FDX'].map(f => (
+                  <span key={f} className="text-xs px-2 py-0.5 rounded-md font-mono"
+                    style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{f}</span>
+                ))}
+              </div>
+            </button>
+
+            {/* Написать с нуля */}
+            <button
+              onClick={() => setView('editor')}
+              onMouseEnter={() => setCreateHover(true)}
+              onMouseLeave={() => setCreateHover(false)}
+              className="flex flex-col items-start gap-4 rounded-2xl p-6 text-left transition-all"
+              style={{
+                background: createHover ? (isDark ? '#1e1e40' : '#f0f0ff') : cardBg,
+                border: `1px solid ${createHover ? 'rgba(99,102,241,0.4)' : border}`,
+                boxShadow: createHover ? '0 0 0 3px rgba(99,102,241,0.1)' : 'none',
+              }}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(99,102,241,0.12)' }}>
+                <Plus size={18} style={{ color: '#818cf8' }} />
+              </div>
+              <div>
+                <p className="font-bold text-sm mb-1" style={{ color: textPrimary }}>Написать с нуля</p>
+                <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+                  Профессиональный редактор с авто-форматированием. Поддержка российского и голливудского стандартов.
+                </p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {['ИНТ./ЭКСТ.', 'Персонаж', 'Диалог'].map(f => (
+                  <span key={f} className="text-xs px-2 py-0.5 rounded-md"
+                    style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{f}</span>
+                ))}
+              </div>
+            </button>
+
+          </div>
+
+          {/* Подсказка внизу */}
+          <p className="text-xs mt-8" style={{ color: textMuted }}>
+            Вставить текст сценария вручную можно прямо в редакторе
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── VIEW: EDITOR ────────────────────────────────────────────────────────────
   return (
-    <div className={`flex-1 flex flex-col items-center justify-center gap-6 p-8 ${
-      theme === 'dark' ? 'bg-[#0f0f20]' : 'bg-gray-50'
-    }`}>
-      <div className={`w-20 h-20 rounded-2xl flex items-center justify-center ${
-        theme === 'dark' ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'
-      }`}>
-        <FileText size={36} className="text-blue-400" />
+    <div className="flex-1 flex overflow-hidden" style={{ background: bg }}>
+
+      {/* ── Левая панель: навигатор сцен ────────────────────────────────────── */}
+      <div className="shrink-0 flex flex-col border-r overflow-hidden"
+        style={{ width: 260, background: sidebarBg, borderColor: border }}>
+
+        {/* Шапка навигатора */}
+        <div className="shrink-0 px-4 pt-5 pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: textSecondary }}>
+              Сцены
+            </h2>
+            <div className="flex items-center gap-1">
+              <span className="text-xs px-2 py-0.5 rounded-md"
+                style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
+                {DEMO_SCENES.length}
+              </span>
+              <button className="w-6 h-6 rounded-lg flex items-center justify-center"
+                style={{ color: textSecondary }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                <Plus size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* Поиск */}
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: textSecondary }} />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Сцена, персонаж..."
+              className="w-full pl-7 pr-3 py-1.5 rounded-lg text-xs outline-none transition-colors"
+              style={{
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}`,
+                color: textPrimary,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Список сцен */}
+        <div className="flex-1 overflow-y-auto px-2 pb-4">
+          {filteredScenes.map(scene => {
+            const isActive = selectedScene.id === scene.id
+            return (
+              <button
+                key={scene.id}
+                onClick={() => setSelectedScene(scene)}
+                className="w-full text-left rounded-xl px-3 py-2.5 mb-0.5 transition-all"
+                style={{
+                  background: isActive ? 'rgba(99,102,241,0.12)' : 'transparent',
+                  border: `1px solid ${isActive ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
+                }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb' }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold shrink-0 w-5 text-center"
+                    style={{ color: isActive ? '#818cf8' : textSecondary }}>
+                    {scene.number}
+                  </span>
+                  <span className="text-xs px-1.5 rounded shrink-0 font-mono"
+                    style={{
+                      background: scene.type === 'ИНТ' ? 'rgba(99,102,241,0.15)' : 'rgba(34,197,94,0.12)',
+                      color: scene.type === 'ИНТ' ? '#818cf8' : '#4ade80',
+                    }}>
+                    {scene.type}
+                  </span>
+                  <span className="text-xs font-medium truncate flex-1"
+                    style={{ color: isActive ? textPrimary : (isDark ? '#d1d5db' : '#374151') }}>
+                    {scene.location}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 pl-7">
+                  <span className="flex items-center gap-1 text-xs" style={{ color: textSecondary }}>
+                    {scene.time === 'НОЧЬ' ? <Moon size={9} /> : <Sun size={9} />}
+                    {scene.time}
+                  </span>
+                  <span className="text-xs" style={{ color: textMuted }}>·</span>
+                  <span className="text-xs" style={{ color: textSecondary }}>
+                    {scene.pages} стр.
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Итого страниц */}
+        <div className="shrink-0 px-4 py-3 border-t" style={{ borderColor: border }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: textSecondary }}>Итого страниц</span>
+            <span className="text-xs font-bold" style={{ color: textPrimary }}>{totalPages.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs" style={{ color: textSecondary }}>≈ хронометраж</span>
+            <span className="text-xs font-bold" style={{ color: '#818cf8' }}>{Math.round(totalPages)} мин</span>
+          </div>
+        </div>
       </div>
 
-      <div className="text-center max-w-sm">
-        <h2 className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          Редактор сценариев
-        </h2>
-        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-          Профессиональный редактор с автоформатированием, авто-парсингом сцен, персонажей и локаций.
-          Этот модуль сейчас в разработке.
-        </p>
-      </div>
+      {/* ── Центральная область: редактор ───────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-      <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm ${
-        theme === 'dark'
-          ? 'bg-white/5 border border-white/10 text-gray-500'
-          : 'bg-gray-100 border border-gray-200 text-gray-400'
-      }`}>
-        <Clock size={14} />
-        <span>Модуль будет доступен в следующей итерации</span>
+        {/* Шапка редактора */}
+        <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b"
+          style={{ background: sidebarBg, borderColor: border }}>
+
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-sm font-bold" style={{ color: textPrimary }}>
+                Сц. {selectedScene.number} · {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
+              </p>
+              <div className="flex items-center gap-3 mt-0.5">
+                {selectedScene.cast.map(c => (
+                  <span key={c} className="text-xs px-2 py-0.5 rounded-md"
+                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
+                    {c}
+                  </span>
+                ))}
+                <span className="flex items-center gap-1 text-xs" style={{ color: textSecondary }}>
+                  <AlignLeft size={10} />
+                  {selectedScene.pages} стр.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Версия */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
+              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textSecondary }}>
+              <Hash size={11} />
+              Съёмочный сценарий
+            </div>
+            {/* Формат */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
+              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textSecondary }}>
+              <FileText size={11} />
+              Российский
+            </div>
+            <button className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ color: textSecondary }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            >
+              <MoreVertical size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Область текста сценария */}
+        <div className="flex-1 overflow-y-auto py-10 px-8" style={{ background: editorBg }}>
+          <div className="max-w-2xl mx-auto">
+
+            {/* Заголовок сцены */}
+            <div className="mb-4">
+              <p className="text-sm font-bold tracking-wider uppercase"
+                style={{ color: textPrimary, fontFamily: 'Courier New, monospace' }}>
+                {selectedScene.number}. {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
+              </p>
+            </div>
+
+            {/* Текст сцены */}
+            <div className="whitespace-pre-wrap text-sm leading-relaxed"
+              style={{
+                fontFamily: 'Courier New, monospace',
+                color: isDark ? '#d1d5db' : '#374151',
+                lineHeight: '1.8',
+              }}>
+              {DEMO_SCRIPT_TEXT}
+            </div>
+
+            {/* Подсказка — редактор в разработке */}
+            <div className="mt-10 flex items-center gap-2 px-4 py-3 rounded-xl"
+              style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <Clock size={13} style={{ color: '#818cf8' }} />
+              <span className="text-xs" style={{ color: '#818cf8' }}>
+                Интерактивное редактирование — следующий шаг разработки
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Статусбар внизу */}
+        <div className="shrink-0 flex items-center gap-6 px-6 py-2 border-t"
+          style={{ background: sidebarBg, borderColor: border }}>
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
+            <Hash size={11} />
+            Сцена {selectedScene.number} из {DEMO_SCENES.length}
+          </span>
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
+            <AlignLeft size={11} />
+            {selectedScene.pages} стр.
+          </span>
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
+            <Clock size={11} />
+            ≈ {Math.round(selectedScene.pages * 60)} сек
+          </span>
+          <div className="flex-1" />
+          <span className="text-xs" style={{ color: textMuted }}>
+            Всего: {totalPages.toFixed(2)} стр. · ≈ {Math.round(totalPages)} мин
+          </span>
+        </div>
       </div>
     </div>
   )
