@@ -34,9 +34,9 @@ function SmartAlerts({ project, isDark, navigate }: {
   isDark: boolean
   navigate: (path: string) => void
 }) {
-  const [open, setOpen] = useState(true)
   const alerts = computeAlerts(project)
   const criticalCount = alerts.filter(a => a.level === 'critical').length
+  const [open, setOpen] = useState(criticalCount > 0)
   const warningCount  = alerts.filter(a => a.level === 'warning').length
 
   const cardBg = isDark ? '#1a1a35' : '#ffffff'
@@ -82,6 +82,18 @@ function SmartAlerts({ project, isDark, navigate }: {
         }} />
       </button>
 
+      {/* Состояние «всё в порядке» */}
+      {!open && criticalCount === 0 && warningCount === 0 && (
+        <div className="px-6 pb-4">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+            style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
+          >
+            <CheckCircle2 size={14} className="text-green-400" />
+            <span className="text-sm text-green-400">Проект в порядке — критичных проблем нет</span>
+          </div>
+        </div>
+      )}
+
       {/* Список алертов */}
       {open && (
         <div className="px-6 pb-5 space-y-2.5">
@@ -115,6 +127,206 @@ function SmartAlerts({ project, isDark, navigate }: {
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Виджет «Сегодня» ──────────────────────────────────────────────────────
+interface TodayEvent {
+  id: string
+  time: string
+  title: string
+  type: 'shoot' | 'meeting' | 'casting' | 'fitting' | 'scouting' | 'rehearsal'
+  location?: string
+}
+
+const TODAY_TYPE_CONFIG: Record<TodayEvent['type'], { color: string; bg: string; icon: string }> = {
+  shoot:     { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  icon: '🎬' },
+  meeting:   { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  icon: '📋' },
+  casting:   { color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🎭' },
+  fitting:   { color: '#f472b6', bg: 'rgba(244,114,182,0.12)', icon: '👗' },
+  scouting:  { color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '📍' },
+  rehearsal: { color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '🎙' },
+}
+
+const DEMO_TODAY: TodayEvent[] = [
+  { id: '1', time: '10:00', title: 'Кастинг — роль Максима', type: 'casting', location: 'Студия на Тверской' },
+  { id: '2', time: '14:00', title: 'Общее собрание группы', type: 'meeting', location: 'Zoom' },
+  { id: '3', time: '16:30', title: 'Примерка — Анна Смирнова', type: 'fitting', location: 'Костюмерный цех' },
+]
+
+function TodayWidget({ shootingDays, isDark }: {
+  shootingDays: import('../../store/projectStore').ShootingDay[]
+  isDark: boolean
+}) {
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayShoot = shootingDays.find(d => d.date === todayStr)
+  const events: TodayEvent[] = DEMO_TODAY
+
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const textPrimary = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+
+  const todayLabel = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  return (
+    <div className="rounded-2xl overflow-hidden mb-5"
+      style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}
+    >
+      <div className="px-6 pt-5 pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📅</span>
+          <div>
+            <span className="font-bold text-sm" style={{ color: textPrimary }}>Сегодня</span>
+            <span className="text-xs ml-2" style={{ color: textSecondary }}>{todayLabel}</span>
+          </div>
+        </div>
+        {todayShoot && (
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316' }}
+          >🎬 Съёмочный день</span>
+        )}
+      </div>
+      <div className="px-6 pb-5 space-y-2">
+        {events.map(ev => {
+          const cfg = TODAY_TYPE_CONFIG[ev.type]
+          return (
+            <div key={ev.id} className="flex items-center gap-3 rounded-xl px-4 py-2.5"
+              style={{ background: cfg.bg, border: `1px solid ${cfg.color}22` }}
+            >
+              <span className="text-base shrink-0">{cfg.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: textPrimary }}>{ev.title}</p>
+                {ev.location && <p className="text-xs" style={{ color: textSecondary }}>{ev.location}</p>}
+              </div>
+              <span className="text-xs font-bold shrink-0" style={{ color: cfg.color }}>{ev.time}</span>
+            </div>
+          )
+        })}
+        {events.length === 0 && (
+          <p className="text-sm text-center py-3" style={{ color: textSecondary }}>На сегодня событий нет</p>
+        )}
+        <p className="text-xs text-center pt-1" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Демо-данные · события появятся из календаря</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Onboarding ──────────────────────────────────────────────────────────────
+function OnboardingBanner({ isDark, navigate, projectId }: {
+  isDark: boolean
+  navigate: (p: string) => void
+  projectId: string
+}) {
+  const [dismissed, setDismissed] = useState(false)
+  if (dismissed) return null
+
+  const steps = [
+    { icon: '📝', title: 'Загрузите сценарий', desc: 'Импортируйте .fdx или .pdf — система разобьёт сцены автоматически', action: () => navigate(`/project/${projectId}/script`), btn: 'К сценарию' },
+    { icon: '🎭', title: 'Заполните кастинг', desc: 'Добавьте актёров на роли и отслеживайте статусы', action: () => navigate(`/project/${projectId}/casting`), btn: 'К кастингу' },
+    { icon: '📍', title: 'Добавьте локации', desc: 'Прикрепите фото, адреса и документы по каждому объекту', action: () => navigate(`/project/${projectId}/locations`), btn: 'К локациям' },
+    { icon: '📅', title: 'Составьте расписание', desc: 'Создайте стрипборд и распределите сцены по дням', action: () => navigate(`/project/${projectId}/schedule`), btn: 'К расписанию' },
+  ]
+
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const textPrimary = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+
+  return (
+    <div className="rounded-2xl overflow-hidden mb-8"
+      style={{ background: cardBg, border: '1px solid rgba(56,189,248,0.3)', boxShadow: '0 0 0 2px rgba(56,189,248,0.08)' }}
+    >
+      <div className="px-6 pt-5 pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-base">👋</span>
+          <div>
+            <p className="font-bold text-sm" style={{ color: '#38bdf8' }}>С чего начать?</p>
+            <p className="text-xs" style={{ color: textSecondary }}>Пройдите 4 шага чтобы запустить проект</p>
+          </div>
+        </div>
+        <button onClick={() => setDismissed(true)}
+          className="text-xs px-3 py-1.5 rounded-lg"
+          style={{ color: textSecondary, background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}
+        >Скрыть</button>
+      </div>
+      <div className="px-6 pb-5 grid grid-cols-2 gap-3">
+        {steps.map((step, i) => (
+          <button key={i} onClick={step.action}
+            className="text-left rounded-xl p-4 transition-all hover:scale-[1.02]"
+            style={{ background: isDark ? 'rgba(56,189,248,0.06)' : 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)' }}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">{step.icon}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold mb-0.5" style={{ color: textPrimary }}>{step.title}</p>
+                <p className="text-xs leading-snug" style={{ color: textSecondary }}>{step.desc}</p>
+                <p className="text-xs font-semibold mt-2" style={{ color: '#38bdf8' }}>{step.btn} →</p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Радар-диаграмма пре-продакшна ───────────────────────────────────────────
+function RadarChart({ data, isDark }: {
+  data: { label: string; value: number; color: string }[]
+  isDark: boolean
+}) {
+  const cx = 120; const cy = 120; const r = 90
+  const n = data.length
+  const levels = [25, 50, 75, 100]
+
+  const angleOf = (i: number) => (Math.PI * 2 * i) / n - Math.PI / 2
+
+  const pointAt = (i: number, radius: number) => ({
+    x: cx + radius * Math.cos(angleOf(i)),
+    y: cy + radius * Math.sin(angleOf(i)),
+  })
+
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'
+  const axisColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+  const textColor = isDark ? '#6b7280' : '#9ca3af'
+
+  // Полигон данных
+  const dataPoints = data.map((d, i) => pointAt(i, (d.value / 100) * r))
+  const polyPath = dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
+
+  return (
+    <svg width={240} height={240} style={{ overflow: 'visible' }}>
+      {/* Сетка */}
+      {levels.map(lvl => {
+        const pts = data.map((_, i) => pointAt(i, (lvl / 100) * r))
+        const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
+        return <path key={lvl} d={path} fill="none" stroke={gridColor} strokeWidth={1} />
+      })}
+      {/* Оси */}
+      {data.map((_, i) => {
+        const outer = pointAt(i, r)
+        return <line key={i} x1={cx} y1={cy} x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)} stroke={axisColor} strokeWidth={1} />
+      })}
+      {/* Заполненный полигон */}
+      <path d={polyPath} fill="rgba(249,115,22,0.15)" stroke="rgba(249,115,22,0.6)" strokeWidth={2} strokeLinejoin="round" />
+      {/* Точки */}
+      {dataPoints.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={4} fill={data[i].color} stroke={isDark ? '#1a1a35' : '#fff'} strokeWidth={2} />
+      ))}
+      {/* Подписи */}
+      {data.map((d, i) => {
+        const pt = pointAt(i, r + 18)
+        const anchor = pt.x < cx - 5 ? 'end' : pt.x > cx + 5 ? 'start' : 'middle'
+        return (
+          <text key={i} x={pt.x.toFixed(1)} y={pt.y.toFixed(1)}
+            textAnchor={anchor} dominantBaseline="central"
+            fontSize={10} fill={textColor} fontWeight={600}
+          >
+            {d.label}
+          </text>
+        )
+      })}
+    </svg>
   )
 }
 
@@ -618,22 +830,6 @@ function MiniCalendar({ startDate, endDate, isDark }: {
   )
 }
 
-function ProgressRow({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-400">{label}</span>
-        <span className="text-gray-300 font-medium">{value}%</span>
-      </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${color} transition-all duration-700`}
-          style={{ width: `${value}%` }}
-        />
-      </div>
-    </div>
-  )
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -795,6 +991,14 @@ export default function DashboardPage() {
 
       <div className="max-w-5xl mx-auto" style={{ padding: '32px 32px 48px' }}>
 
+        {/* Onboarding — только если проект совсем новый */}
+        {overallProgress === 0 && (
+          <OnboardingBanner isDark={isDark} navigate={navigate} projectId={project.id} />
+        )}
+
+        {/* Виджет «Сегодня» */}
+        <TodayWidget shootingDays={project.shootingDays} isDark={isDark} />
+
         {/* Smart Alerts */}
         <SmartAlerts project={project} isDark={isDark} navigate={navigate} />
 
@@ -828,14 +1032,24 @@ export default function DashboardPage() {
           <h2 className="text-xs font-bold uppercase tracking-widest mb-5"
             style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
           >Модули проекта</h2>
+          {(() => {
+            const minVal = Math.min(...moduleCards.map(c => c.value))
+            const weakCard = moduleCards.find(c => c.value === minVal && minVal < 50)
+            return (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {moduleCards.map((card) => (
+            {moduleCards.map((card) => {
+              const isWeak = weakCard?.label === card.label
+              return (
               <button key={card.label} onClick={() => navigate(card.path)}
                 className="rounded-2xl p-6 text-left transition-all duration-200 group"
                 style={{
                   background: isDark ? '#1a1a35' : '#ffffff',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-                  boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+                  border: isWeak
+                    ? '1px solid rgba(239,68,68,0.4)'
+                    : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                  boxShadow: isWeak
+                    ? '0 0 0 3px rgba(239,68,68,0.08)'
+                    : isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.borderColor = 'rgba(249,115,22,0.4)'
@@ -867,9 +1081,15 @@ export default function DashboardPage() {
                 {!card.ready && (
                   <p className="mt-3 text-xs" style={{ color: isDark ? '#374151' : '#d1d5db' }}>В разработке</p>
                 )}
+                {isWeak && (
+                  <p className="mt-2 text-xs font-semibold" style={{ color: '#f87171' }}>⚠ Требует внимания</p>
+                )}
               </button>
-            ))}
+            )})
+          }
           </div>
+            )
+          })()}
         </section>
 
         {/* ЗОНА 3 — двухколоночный основной контент */}
@@ -958,26 +1178,35 @@ export default function DashboardPage() {
         {/* ЗОНА 4 — Готовность + Параметры + Календарь */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Готовность проекта */}
-          <div className="rounded-2xl p-7"
+          {/* Радар пре-продакшна */}
+          <div className="rounded-2xl p-6"
             style={{
               background: isDark ? '#1a1a35' : '#ffffff',
               border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
               boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
             }}
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-bold text-base" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Готовность проекта</h2>
-              <div className="flex items-center gap-1 px-3 py-1 rounded-lg" style={{ background: 'rgba(249,115,22,0.12)' }}>
-                <span className="text-2xl font-black text-orange-400">{overallProgress}</span>
-                <span className="text-sm text-orange-400 font-bold">%</span>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-sm" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Готовность пре-продакшна</h2>
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(249,115,22,0.12)' }}>
+                <span className="text-lg font-black text-orange-400">{overallProgress}</span>
+                <span className="text-xs text-orange-400 font-bold">%</span>
               </div>
             </div>
-            <div className="space-y-5">
-              <ProgressRow label="Сценарий" value={project.scriptProgress} color="bg-blue-400" />
-              <ProgressRow label="Кастинг" value={project.castingProgress} color="bg-orange-400" />
-              <ProgressRow label="Локации" value={project.locationsProgress} color="bg-green-400" />
-              <ProgressRow label="Расписание" value={project.scheduleProgress} color="bg-purple-400" />
+            <div className="flex justify-center">
+              <RadarChart
+                isDark={isDark}
+                data={[
+                  { label: 'Сценарий',    value: project.scriptProgress,    color: '#60a5fa' },
+                  { label: 'Кастинг',     value: project.castingProgress,   color: '#fb923c' },
+                  { label: 'Локации',     value: project.locationsProgress, color: '#4ade80' },
+                  { label: 'Расписание',  value: project.scheduleProgress,  color: '#a78bfa' },
+                  { label: 'Костюмы',     value: 20,  color: '#f472b6' },
+                  { label: 'Грим',        value: 10,  color: '#f59e0b' },
+                  { label: 'Реквизит',    value: 35,  color: '#34d399' },
+                  { label: 'VFX',         value: 5,   color: '#38bdf8' },
+                ]}
+              />
             </div>
           </div>
 
