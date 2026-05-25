@@ -60,6 +60,9 @@ export default function Sidebar() {
 
   const [preproOpen, setPreproOpen] = useState(true)
   const [productionOpen, setProductionOpen] = useState(true)
+  const [teamOpen, setTeamOpen] = useState(true)
+  const [reportsOpen, setReportsOpen] = useState(true)
+  const [filesOpen, setFilesOpen] = useState(true)
 
   if (!project) return null
 
@@ -193,49 +196,91 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Группа: Команда */}
+        {/* Группа: Команда (аккордеон) */}
         <div className="mt-3">
-          {sidebarExpanded
-            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Команда</p>
-            : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
-          }
-          {navItems.filter(i => i.group === 'Команда').map((item) => {
-            const isActive = location.pathname === item.path
-            return (
-              <NavButton key={item.path} item={item} isActive={isActive}
-                sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
-            )
-          })}
+          {sidebarExpanded ? (
+            <button
+              onClick={() => setTeamOpen(o => !o)}
+              className="w-full flex items-center justify-between px-1 py-1.5 rounded-lg transition-colors mb-1"
+              style={{ color: '#374151' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6b7280'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#374151'}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest">Команда</span>
+              <ChevronDown size={13} style={{ transform: teamOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+            </button>
+          ) : (
+            <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          )}
+          {(teamOpen || !sidebarExpanded) && (
+            <div>
+              {navItems.filter(i => i.group === 'Команда').map((item) => {
+                const isActive = location.pathname === item.path
+                return (
+                  <NavButton key={item.path} item={item} isActive={isActive}
+                    sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Группа: Отчёты */}
+        {/* Группа: Отчёты (аккордеон) */}
         <div className="mt-3">
-          {sidebarExpanded
-            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Отчёты</p>
-            : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
-          }
-          {navItems.filter(i => i.group === 'Отчёты').map((item) => {
-            const isActive = location.pathname === item.path
-            return (
-              <NavButton key={item.path} item={item} isActive={isActive}
-                sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
-            )
-          })}
+          {sidebarExpanded ? (
+            <button
+              onClick={() => setReportsOpen(o => !o)}
+              className="w-full flex items-center justify-between px-1 py-1.5 rounded-lg transition-colors mb-1"
+              style={{ color: '#374151' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6b7280'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#374151'}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest">Отчёты</span>
+              <ChevronDown size={13} style={{ transform: reportsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+            </button>
+          ) : (
+            <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          )}
+          {(reportsOpen || !sidebarExpanded) && (
+            <div>
+              {navItems.filter(i => i.group === 'Отчёты').map((item) => {
+                const isActive = location.pathname === item.path
+                return (
+                  <NavButton key={item.path} item={item} isActive={isActive}
+                    sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Группа: Файлы */}
+        {/* Группа: Файлы (аккордеон) */}
         <div className="mt-3">
-          {sidebarExpanded
-            ? <p className="text-xs font-bold uppercase tracking-widest px-1 py-1.5 mb-1" style={{ color: '#374151' }}>Файлы</p>
-            : <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
-          }
-          {navItems.filter(i => i.group === 'Файлы').map((item) => {
-            const isActive = location.pathname === item.path
-            return (
-              <NavButton key={item.path} item={item} isActive={isActive}
-                sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
-            )
-          })}
+          {sidebarExpanded ? (
+            <button
+              onClick={() => setFilesOpen(o => !o)}
+              className="w-full flex items-center justify-between px-1 py-1.5 rounded-lg transition-colors mb-1"
+              style={{ color: '#374151' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6b7280'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#374151'}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest">Файлы</span>
+              <ChevronDown size={13} style={{ transform: filesOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+            </button>
+          ) : (
+            <div className="h-px mx-2 mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          )}
+          {(filesOpen || !sidebarExpanded) && (
+            <div>
+              {navItems.filter(i => i.group === 'Файлы').map((item) => {
+                const isActive = location.pathname === item.path
+                return (
+                  <NavButton key={item.path} item={item} isActive={isActive}
+                    sidebarExpanded={sidebarExpanded} onClick={() => navigate(item.path)} />
+                )
+              })}
+            </div>
+          )}
         </div>
 
       </nav>
