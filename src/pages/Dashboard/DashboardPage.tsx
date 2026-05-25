@@ -1177,6 +1177,50 @@ export default function DashboardPage() {
                 <h2 className="text-xs font-bold uppercase tracking-widest mb-3"
                   style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
                 >Ход съёмок</h2>
+
+                {project.shotDays === 0 && project.scheduledDays === 0 ? (
+                  /* Компактная карточка «Что сделать дальше» когда съёмки не начались */
+                  <div className="rounded-2xl p-5"
+                    style={{
+                      background: isDark ? '#1a1a35' : '#ffffff',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                      boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: 'rgba(249,115,22,0.12)' }}
+                      >
+                        <span style={{ fontSize: 16 }}>🎬</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Съёмки ещё не начались</p>
+                        <p className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Заполните расписание чтобы отслеживать прогресс</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { step: '1', label: 'Загрузите сценарий', icon: '📄', path: `/project/${project.id}/script` },
+                        { step: '2', label: 'Составьте КПП', icon: '📅', path: `/project/${project.id}/schedule` },
+                        { step: '3', label: 'Создайте вызывной', icon: '📋', path: `/project/${project.id}/callsheets` },
+                      ].map(item => (
+                        <button key={item.step} onClick={() => navigate(item.path)}
+                          className="flex flex-col items-center gap-2 rounded-xl py-3 px-2 transition-all"
+                          style={{
+                            background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}`,
+                          }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(249,115,22,0.4)'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}
+                        >
+                          <span style={{ fontSize: 20 }}>{item.icon}</span>
+                          <span className="text-xs text-center font-medium leading-tight" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+
                 <div className="rounded-2xl p-7"
                   style={{
                     background: isDark ? '#1a1a35' : '#ffffff',
@@ -1227,6 +1271,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+                )}{/* конец тернара shotDays===0 */}
               </div>
 
             </div>{/* /левая колонка */}
