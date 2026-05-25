@@ -294,10 +294,14 @@ export default function ScriptPage() {
             {/* Кнопка возврата */}
             <button
               onClick={() => setView('empty')}
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-all"
-              style={{ color: textSecondary }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'; (e.currentTarget as HTMLElement).style.color = textPrimary }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = textSecondary }}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+              style={{
+                background: isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
+                color: isDark ? '#e5e7eb' : '#374151',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db'}`,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.14)' : '#e5e5e5' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0' }}
             >
               <ChevronLeft size={14} />
               Назад
