@@ -321,7 +321,7 @@ export default function FormatAssistant({
                 {filteredErrors.map((error) => (
                   <div
                     key={error.id}
-                    className="rounded-lg p-2.5 cursor-pointer transition-all"
+                    className="rounded-lg p-2.5 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md"
                     style={{
                       background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb',
                       border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}`,
@@ -357,7 +357,7 @@ export default function FormatAssistant({
                                 e.stopPropagation()
                                 onApplyFix?.(error.blockId, error.suggestion!)
                               }}
-                              className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all"
+                              className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all hover:bg-opacity-20"
                               style={{
                                 background: 'rgba(99,102,241,0.15)',
                                 color: '#818cf8',

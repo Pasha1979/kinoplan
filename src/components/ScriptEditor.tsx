@@ -97,6 +97,14 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
   }
 
   const handleKeyDown = (e: React.KeyboardEvent, blockId: string) => {
+    // Ctrl+S — сохранение (заглушка)
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault()
+      // TODO: интегрировать с сохранением в store
+      console.log('Сохранение сценария...')
+      return
+    }
+
     if (e.key === 'Tab') {
       e.preventDefault()
       // Tab переключает тип блока
@@ -150,6 +158,45 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     if (e.key === 'Enter' && e.shiftKey) {
       // Shift+Enter — новая строка в том же блоке
       // Разрешаем стандартное поведение
+    }
+
+    // Навигация стрелками между блоками
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      const blockIndex = blocks.findIndex(b => b.id === blockId)
+      if (blockIndex === -1) return
+
+      const textarea = e.target as HTMLTextAreaElement
+      const { selectionStart, selectionEnd, value } = textarea
+      
+      // Проверяем, есть ли текст выше/ниже курсора
+      const hasTextAbove = selectionStart > 0 && value.substring(0, selectionStart).includes('\n')
+      const hasTextBelow = selectionEnd < value.length && value.substring(selectionEnd).includes('\n')
+      
+      // Переход к предыдущему блоку только если курсор в начале и нет текста выше
+      if (e.key === 'ArrowUp' && selectionStart === 0 && !hasTextAbove && blockIndex > 0) {
+        e.preventDefault()
+        const prevBlockId = blocks[blockIndex - 1].id
+        setTimeout(() => {
+          const prevBlockEl = document.querySelector(`[data-block-id="${prevBlockId}"]`) as HTMLTextAreaElement
+          if (prevBlockEl) {
+            prevBlockEl.focus()
+            prevBlockEl.setSelectionRange(prevBlockEl.value.length, prevBlockEl.value.length)
+          }
+        }, 0)
+      }
+      
+      // Переход к следующему блоку только если курсор в конце и нет текста ниже
+      if (e.key === 'ArrowDown' && selectionEnd === value.length && !hasTextBelow && blockIndex < blocks.length - 1) {
+        e.preventDefault()
+        const nextBlockId = blocks[blockIndex + 1].id
+        setTimeout(() => {
+          const nextBlockEl = document.querySelector(`[data-block-id="${nextBlockId}"]`) as HTMLTextAreaElement
+          if (nextBlockEl) {
+            nextBlockEl.focus()
+            nextBlockEl.setSelectionRange(0, 0)
+          }
+        }, 0)
+      }
     }
   }
 
@@ -210,27 +257,49 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
 
         {/* Блоки сценария - занимают всё оставшееся пространство */}
         <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-          {blocks.map((block) => (
-            <div
-              key={block.id}
-              data-block-id={block.id}
-              className="flex-1 min-h-0"
-            >
-              <textarea
-                value={block.content}
-                onChange={(e) => handleContentChange(block.id, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e, block.id)}
-                className="w-full h-full bg-transparent resize-none outline-none text-sm leading-relaxed"
-                style={{
-                  color: textPrimary,
-                  lineHeight: '1.8',
-                  textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
-                  fontWeight: block.type === 'character' ? 'bold' : 'normal',
-                }}
-                placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
-              />
-            </div>
-          ))}
+          {blocks.map((block) => {
+            // Action блоки занимают больше вертикального пространства
+            const isAction = block.type === 'action'
+            const minHeight = isAction ? 'min-h-[200px]' : 'min-h-[40px]'
+            
+            // Отступы по типам блоков
+            const getPaddingClass = () => {
+              switch (block.type) {
+                case 'character':
+                  return 'pl-[20%]'
+                case 'dialog':
+                  return 'pl-[15%]'
+                case 'parenthetical':
+                  return 'pl-[25%]'
+                case 'transition':
+                  return 'pl-[60%]'
+                default:
+                  return ''
+              }
+            }
+            
+            return (
+              <div
+                key={block.id}
+                data-block-id={block.id}
+                className={`${minHeight} ${isAction ? 'flex-1' : ''} ${getPaddingClass()}`}
+              >
+                <textarea
+                  value={block.content}
+                  onChange={(e) => handleContentChange(block.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, block.id)}
+                  className="w-full h-full bg-transparent resize-none outline-none text-sm leading-relaxed"
+                  style={{
+                    color: textPrimary,
+                    lineHeight: '1.8',
+                    textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
+                    fontWeight: block.type === 'character' ? 'bold' : 'normal',
+                  }}
+                  placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
+                />
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

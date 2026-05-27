@@ -68,7 +68,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.title}
               onChange={(e) => handleChange('title', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
               style={{
                 background: inputBg,
                 color: textPrimary,
@@ -88,7 +88,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.writtenBy}
               onChange={(e) => handleChange('writtenBy', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
               style={{
                 background: inputBg,
                 color: textPrimary,
@@ -108,7 +108,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.basedOn}
               onChange={(e) => handleChange('basedOn', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
               style={{
                 background: inputBg,
                 color: textPrimary,
@@ -128,7 +128,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.director}
               onChange={(e) => handleChange('director', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
               style={{
                 background: inputBg,
                 color: textPrimary,
@@ -151,7 +151,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                   type="email"
                   value={data.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
                   style={{
                     background: inputBg,
                     color: textPrimary,
@@ -167,7 +167,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                   type="tel"
                   value={data.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
                   style={{
                     background: inputBg,
                     color: textPrimary,
@@ -190,7 +190,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                 type="text"
                 value={data.draftNumber}
                 onChange={(e) => handleChange('draftNumber', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
                 style={{
                   background: inputBg,
                   color: textPrimary,
@@ -208,7 +208,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                 type="text"
                 value={data.date}
                 onChange={(e) => handleChange('date', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
                 style={{
                   background: inputBg,
                   color: textPrimary,
@@ -243,13 +243,16 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
 
         {/* Область предпросмотра */}
         {showPreview && (
-          <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center">
+          <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center" style={{ background: isDark ? '#0a0a15' : '#e5e5e5' }}>
             <div 
-              className="w-full max-w-2xl min-h-[800px] p-12 rounded-lg shadow-lg"
+              className="w-full max-w-2xl min-h-[800px] p-12 rounded-xl shadow-2xl"
               style={{ 
                 background: '#ffffff',
                 color: '#000000',
                 fontFamily: 'Courier New, monospace',
+                boxShadow: isDark 
+                  ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)' 
+                  : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
               }}
             >
               {/* Титульная страница - российский формат */}
