@@ -85,8 +85,8 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
       case 'scene_header': return '100%'
       case 'action': return '100%'
       case 'character': return 'auto'
-      case 'dialog': return '60%'
-      case 'parenthetical': return '40%'
+      case 'dialog': return '70%'
+      case 'parenthetical': return '50%'
       case 'transition': return 'auto'
       default: return '100%'
     }
@@ -223,10 +223,10 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                 color: textPrimary,
                 lineHeight: '1.8',
                 textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
-                minHeight: block.type === 'action' ? '60px' : '30px',
+                minHeight: block.type === 'action' ? '60px' : block.type === 'scene_header' ? '40px' : '30px',
                 fontWeight: block.type === 'character' ? 'bold' : 'normal',
               }}
-              rows={block.type === 'action' ? 2 : 1}
+              rows={block.type === 'action' ? 2 : block.type === 'scene_header' ? 2 : 1}
               placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
             />
           </div>
