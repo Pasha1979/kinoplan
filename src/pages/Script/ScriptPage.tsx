@@ -35,6 +35,7 @@ export default function ScriptPage() {
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [sceneCount, setSceneCount] = useState(0)
+  const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -426,7 +427,9 @@ export default function ScriptPage() {
           fontFamily="Courier New"
           fontSize={12}
           isDark={isDark}
+          genreCoefficient={1.0}
           onSceneCountChange={setSceneCount}
+          onStatsChange={setScriptStats}
         />
 
         {/* Статусбар внизу */}
@@ -434,19 +437,15 @@ export default function ScriptPage() {
           style={{ background: sidebarBg, borderColor: border }}>
           <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
             <Hash size={11} />
-            Сцена {selectedScene.number} из {DEMO_SCENES.length}
+            {scriptStats.scenes} сцен
           </span>
           <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
             <AlignLeft size={11} />
-            {selectedScene.pages} стр.
+            {scriptStats.pages.toFixed(1)} стр.
           </span>
           <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
             <Clock size={11} />
-            ≈ {Math.round(selectedScene.pages * 60)} сек
-          </span>
-          <div className="flex-1" />
-          <span className="text-xs" style={{ color: textMuted }}>
-            Всего: {totalPages.toFixed(2)} стр. · ≈ {Math.round(totalPages)} мин
+            ≈ {Math.round(scriptStats.duration / 60)} мин
           </span>
         </div>
       </div>

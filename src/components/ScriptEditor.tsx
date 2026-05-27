@@ -14,28 +14,42 @@ interface ScriptEditorProps {
   fontFamily: string
   fontSize: number
   isDark: boolean
+  genreCoefficient: number
   onSceneCountChange?: (count: number) => void
+  onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
 }
 
-export default function ScriptEditor({ format, fontFamily, fontSize, isDark, onSceneCountChange }: ScriptEditorProps) {
+export default function ScriptEditor({ format, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: '1', type: 'scene_header', content: '' },
   ])
   const [showTutorial, setShowTutorial] = useState(true)
   const editorRef = useRef<HTMLDivElement>(null)
 
-  // Подсчёт количества сцен (scene_header)
-  const sceneCount = blocks.filter(b => b.type === 'scene_header').length
-
   // Проверяем, начал ли пользователь писать
   const hasContent = blocks.some(b => b.content.trim().length > 0)
 
-  // Сообщаем родителю о количестве сцен
+  // Подсчёт статистики
   useEffect(() => {
+    // Количество сцен
+    const scenes = blocks.filter(b => b.type === 'scene_header').length
+
+    // Подсчёт страниц (примерно: 1 страница = 2500 символов для action блоков)
+    const actionBlocks = blocks.filter(b => b.type === 'action')
+    const totalCharacters = actionBlocks.reduce((sum, b) => sum + b.content.length, 0)
+    const pages = totalCharacters > 0 ? totalCharacters / 2500 : 0
+
+    // Хронометраж: 1 страница = 55 секунд × жанровый коэффициент
+    const duration = pages * 55 * genreCoefficient
+
+    // Сообщаем родителю
     if (onSceneCountChange) {
-      onSceneCountChange(sceneCount)
+      onSceneCountChange(scenes)
     }
-  }, [sceneCount, onSceneCountChange])
+    if (onStatsChange) {
+      onStatsChange({ scenes, pages, duration })
+    }
+  }, [blocks, genreCoefficient, onSceneCountChange, onStatsChange])
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
