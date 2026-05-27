@@ -13,6 +13,42 @@ export default function CreateScriptPage() {
   const project = getCurrentProject()
   const isDark = theme === 'dark'
 
+  // Добавляем CSS для тултипов
+  if (typeof document !== 'undefined' && !document.getElementById('tooltip-styles')) {
+    const style = document.createElement('style')
+    style.id = 'tooltip-styles'
+    style.textContent = `
+      [data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e1e42;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.1);
+        pointer-events: none;
+      }
+      [data-tooltip]:hover::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #1e1e42;
+        z-index: 1000;
+      }
+    `
+    document.head.appendChild(style)
+  }
+
   const [title, setTitle] = useState(project?.name || '')
   const [format, setFormat] = useState<ScriptFormat>('russian')
   const [fontFamily, setFontFamily] = useState('Courier New')
@@ -125,20 +161,21 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { value: 'hollywood' as ScriptFormat, label: 'Голливудский (WGA)' },
-                  { value: 'russian' as ScriptFormat, label: 'Российский (КИТ)' },
-                  { value: 'russian' as ScriptFormat, label: 'Пользовательский' },
+                  { value: 'hollywood' as ScriptFormat, label: 'Голливудский (WGA)', tooltip: 'Стандарт WGA — 1 дюйм отступов, Courier 12pt' },
+                  { value: 'russian' as ScriptFormat, label: 'Российский (КИТ)', tooltip: 'Российский стандарт — отступы по ГОСТ' },
+                  { value: 'custom' as ScriptFormat, label: 'Пользовательский', tooltip: 'Настройте отступы и шрифт вручную' },
                 ].map((option) => (
                   <button
                     key={option.value}
                     onClick={() => setFormat(option.value)}
-                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all relative group"
                     style={{
                       background: format === option.value ? activeBg : inputBg,
                       border: `1px solid ${format === option.value ? activeBorder : inputBorder}`,
                       color: format === option.value ? activeText : textPrimary,
                       boxShadow: format === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
+                    data-tooltip={option.tooltip}
                   >
                     {option.label}
                   </button>
@@ -153,20 +190,21 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { value: 'Courier New', label: 'Courier New' },
-                  { value: 'Courier Prime', label: 'Courier Prime' },
-                  { value: 'Другой', label: 'Другой' },
+                  { value: 'Courier New', label: 'Courier New', tooltip: 'Классический моноширинный шрифт' },
+                  { value: 'Courier Prime', label: 'Courier Prime', tooltip: 'Оптимизированный для чтения шрифт' },
+                  { value: 'Другой', label: 'Другой', tooltip: 'Выберите свой шрифт' },
                 ].map((option) => (
                   <button
                     key={option.value}
                     onClick={() => setFontFamily(option.value)}
-                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all relative group"
                     style={{
                       background: fontFamily === option.value ? activeBg : inputBg,
                       border: `1px solid ${fontFamily === option.value ? activeBorder : inputBorder}`,
                       color: fontFamily === option.value ? activeText : textPrimary,
                       boxShadow: fontFamily === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
+                    data-tooltip={option.tooltip}
                   >
                     {option.label}
                   </button>
@@ -206,21 +244,22 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: 'page' as TimingSystem, label: 'Постраничный (1 стр = 55 сек)' },
-                  { value: 'character' as TimingSystem, label: 'Посимвольный' },
-                  { value: 'flexible' as TimingSystem, label: 'Гибкий' },
-                  { value: 'manual' as TimingSystem, label: 'Ручной' },
+                  { value: 'page' as TimingSystem, label: 'Постраничный (1 стр = 55 сек)', tooltip: '1 страница = 55 секунд × жанровый коэффициент' },
+                  { value: 'character' as TimingSystem, label: 'Посимвольный', tooltip: 'Расчёт по количеству символов в тексте' },
+                  { value: 'flexible' as TimingSystem, label: 'Гибкий', tooltip: 'Комбинированный метод расчёта' },
+                  { value: 'manual' as TimingSystem, label: 'Ручной', tooltip: 'Установите время для каждой сцены вручную' },
                 ].map((option) => (
                   <button
                     key={option.value}
                     onClick={() => setTimingSystem(option.value)}
-                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all relative group"
                     style={{
                       background: timingSystem === option.value ? activeBg : inputBg,
                       border: `1px solid ${timingSystem === option.value ? activeBorder : inputBorder}`,
                       color: timingSystem === option.value ? activeText : textPrimary,
                       boxShadow: timingSystem === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
+                    data-tooltip={option.tooltip}
                   >
                     {option.label}
                   </button>
@@ -235,21 +274,22 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: 'auto', label: 'Авто' },
-                  { value: '0.9', label: 'Мюзикл (0.9)' },
-                  { value: '1.15', label: 'Комедия (1.15)' },
-                  { value: '1.0', label: 'Драма (1.0)' },
+                  { value: 'auto', label: 'Авто', tooltip: 'Автоматический расчёт по типу проекта' },
+                  { value: '0.9', label: 'Мюзикл (0.9)', tooltip: 'Мюзиклы быстрее — 0.9x от стандартного времени' },
+                  { value: '1.15', label: 'Комедия (1.15)', tooltip: 'Комедии требуют больше времени — 1.15x' },
+                  { value: '1.0', label: 'Драма (1.0)', tooltip: 'Стандартный коэффициент для драмы' },
                 ].map((option) => (
                   <button
                     key={option.value}
                     onClick={() => setGenreCoefficient(option.value)}
-                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all relative group"
                     style={{
                       background: genreCoefficient === option.value ? activeBg : inputBg,
                       border: `1px solid ${genreCoefficient === option.value ? activeBorder : inputBorder}`,
                       color: genreCoefficient === option.value ? activeText : textPrimary,
                       boxShadow: genreCoefficient === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
+                    data-tooltip={option.tooltip}
                   >
                     {option.label}
                   </button>

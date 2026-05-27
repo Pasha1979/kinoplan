@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 
 // Типы данных для модуля сценария
 
-export type ScriptFormat = 'russian' | 'hollywood'
+export type ScriptFormat = 'russian' | 'hollywood' | 'custom'
 export type TimingSystem = 'page' | 'character' | 'flexible' | 'manual'
 export type SceneType = 'INT' | 'EXT' | 'INT/EXT'
 export type TimeOfDay = 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS'
