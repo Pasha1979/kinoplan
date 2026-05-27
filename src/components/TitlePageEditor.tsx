@@ -36,7 +36,6 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
-  const inputBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'
 
   const handleChange = (field: keyof TitlePageData, value: string) => {
     setData(prev => ({ ...prev, [field]: value }))
@@ -68,12 +67,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.title}
               onChange={(e) => handleChange('title', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-              style={{
-                background: inputBg,
-                color: textPrimary,
-                border: `1px solid ${border}`,
-              }}
+              className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
               placeholder="Введите название"
             />
           </div>
@@ -88,12 +82,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.writtenBy}
               onChange={(e) => handleChange('writtenBy', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-              style={{
-                background: inputBg,
-                color: textPrimary,
-                border: `1px solid ${border}`,
-              }}
+              className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
               placeholder="Иван Иванов"
             />
           </div>
@@ -108,12 +97,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.basedOn}
               onChange={(e) => handleChange('basedOn', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-              style={{
-                background: inputBg,
-                color: textPrimary,
-                border: `1px solid ${border}`,
-              }}
+              className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
               placeholder="Название книги или истории"
             />
           </div>
@@ -128,12 +112,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
               type="text"
               value={data.director}
               onChange={(e) => handleChange('director', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-              style={{
-                background: inputBg,
-                color: textPrimary,
-                border: `1px solid ${border}`,
-              }}
+              className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
               placeholder="Пётр Петров"
             />
           </div>
@@ -151,12 +130,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                   type="email"
                   value={data.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-                  style={{
-                    background: inputBg,
-                    color: textPrimary,
-                    border: `1px solid ${border}`,
-                  }}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
                   placeholder="email@example.com"
                 />
               </div>
@@ -167,12 +141,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                   type="tel"
                   value={data.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-                  style={{
-                    background: inputBg,
-                    color: textPrimary,
-                    border: `1px solid ${border}`,
-                  }}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
                   placeholder="+7 (999) 123-45-67"
                 />
               </div>
@@ -190,12 +159,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                 type="text"
                 value={data.draftNumber}
                 onChange={(e) => handleChange('draftNumber', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-                style={{
-                  background: inputBg,
-                  color: textPrimary,
-                  border: `1px solid ${border}`,
-                }}
+                className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
                 placeholder="1"
               />
             </div>
@@ -208,12 +172,7 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
                 type="text"
                 value={data.date}
                 onChange={(e) => handleChange('date', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all hover:border-opacity-50 focus:border-opacity-100"
-                style={{
-                  background: inputBg,
-                  color: textPrimary,
-                  border: `1px solid ${border}`,
-                }}
+                className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
               />
             </div>
           </div>
