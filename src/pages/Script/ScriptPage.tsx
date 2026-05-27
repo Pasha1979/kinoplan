@@ -8,9 +8,10 @@ import ScriptEditor from '../../components/ScriptEditor'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
 import SceneNavigator from '../../components/SceneNavigator'
+import ScriptBreakdown from '../../components/ScriptBreakdown'
 
 type ScriptView = 'empty' | 'editor'
-type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics'
+type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
 
 const DEMO_SCENES = [
   { id: '1', number: '1', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.5 },
@@ -306,6 +307,7 @@ export default function ScriptPage() {
           {[
             { id: 'text' as ScriptTab, label: 'ТЕКСТ', icon: FileText },
             { id: 'title' as ScriptTab, label: 'ТИТУЛ', icon: BookOpen },
+            { id: 'breakdown' as ScriptTab, label: 'РАЗБИВКА', icon: Hash },
             { id: 'cards' as ScriptTab, label: 'КАРТОЧКИ', icon: Hash },
             { id: 'development' as ScriptTab, label: 'РАЗРАБОТКА', icon: Settings },
             { id: 'plan' as ScriptTab, label: 'ПЛАН', icon: Clock },
@@ -336,6 +338,16 @@ export default function ScriptPage() {
           <TitlePageEditor 
             isDark={isDark}
             scriptTitle={project?.name}
+          />
+        ) : activeTab === 'breakdown' ? (
+          <ScriptBreakdown
+            scenes={DEMO_SCENES.map(s => ({
+              id: s.id,
+              number: s.number,
+              location: s.location,
+              type: s.type,
+            }))}
+            isDark={isDark}
           />
         ) : (
           <div className="flex-1 flex overflow-hidden">
