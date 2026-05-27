@@ -5,9 +5,10 @@ import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
 import ScriptEditor from '../../components/ScriptEditor'
+import TitlePageEditor from '../../components/TitlePageEditor'
 
 type ScriptView = 'empty' | 'editor'
-type ScriptTab = 'text' | 'cards' | 'development' | 'plan' | 'statistics'
+type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics'
 
 const DEMO_SCENES = [
   { id: '1', number: '1', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.5 },
@@ -402,6 +403,7 @@ export default function ScriptPage() {
           style={{ background: sidebarBg, borderColor: border }}>
           {[
             { id: 'text' as ScriptTab, label: 'ТЕКСТ' },
+            { id: 'title' as ScriptTab, label: 'ТИТУЛ' },
             { id: 'cards' as ScriptTab, label: 'КАРТОЧКИ' },
             { id: 'development' as ScriptTab, label: 'РАЗРАБОТКА' },
             { id: 'plan' as ScriptTab, label: 'ПЛАН' },
@@ -421,33 +423,42 @@ export default function ScriptPage() {
           ))}
         </div>
 
-        {/* Область текста сценария */}
-        <ScriptEditor 
-          format="russian"
-          fontFamily="Courier New"
-          fontSize={12}
-          isDark={isDark}
-          genreCoefficient={1.0}
-          onSceneCountChange={setSceneCount}
-          onStatsChange={setScriptStats}
-        />
+        {/* Область контента по вкладкам */}
+        {activeTab === 'title' ? (
+          <TitlePageEditor 
+            isDark={isDark}
+            scriptTitle={project?.name}
+          />
+        ) : (
+          <ScriptEditor 
+            format="russian"
+            fontFamily="Courier New"
+            fontSize={12}
+            isDark={isDark}
+            genreCoefficient={1.0}
+            onSceneCountChange={setSceneCount}
+            onStatsChange={setScriptStats}
+          />
+        )}
 
-        {/* Статусбар внизу */}
-        <div className="shrink-0 flex items-center gap-6 px-6 py-2 border-t"
-          style={{ background: sidebarBg, borderColor: border }}>
-          <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
-            <Hash size={11} />
-            {scriptStats.scenes} сцен
-          </span>
-          <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
-            <AlignLeft size={11} />
-            {scriptStats.pages.toFixed(1)} стр.
-          </span>
-          <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
-            <Clock size={11} />
-            ≈ {Math.round(scriptStats.duration / 60)} мин
-          </span>
-        </div>
+        {/* Статусбар внизу — только для текстового редактора */}
+        {activeTab === 'text' && (
+          <div className="shrink-0 flex items-center gap-6 px-6 py-2 border-t"
+            style={{ background: sidebarBg, borderColor: border }}>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
+              <Hash size={11} />
+              {scriptStats.scenes} сцен
+            </span>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
+              <AlignLeft size={11} />
+              {scriptStats.pages.toFixed(1)} стр.
+            </span>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
+              <Clock size={11} />
+              ≈ {Math.round(scriptStats.duration / 60)} мин
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Правая панель: заметки / версии ───────────────────────────────────── */}
