@@ -27,6 +27,9 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, onS
   // Подсчёт количества сцен (scene_header)
   const sceneCount = blocks.filter(b => b.type === 'scene_header').length
 
+  // Проверяем, начал ли пользователь писать
+  const hasContent = blocks.some(b => b.content.trim().length > 0)
+
   // Сообщаем родителю о количестве сцен
   useEffect(() => {
     if (onSceneCountChange) {
@@ -173,33 +176,57 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, onS
       )}
 
       <div className="max-w-2xl mx-auto" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
-        {blocks.map((block) => (
-          <div
-            key={block.id}
-            data-block-id={block.id}
-            className="mb-2"
-            style={{
-              marginLeft: getIndent(block.type),
-              width: getWidth(block.type),
-            }}
-          >
-            <textarea
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id)}
-              className="w-full bg-transparent resize-none outline-none text-sm leading-relaxed"
-              style={{
-                color: textPrimary,
-                lineHeight: '1.8',
-                textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
-                minHeight: block.type === 'action' ? '60px' : '30px',
-                fontWeight: block.type === 'character' ? 'bold' : 'normal',
-              }}
-              rows={block.type === 'action' ? 2 : 1}
-              placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
-            />
+        {!hasContent ? (
+          // Объяснение если сценарий пустой
+          <div className="py-20 text-center">
+            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+              style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)' }}>
+              <span className="text-3xl" style={{ color: '#818cf8' }}>✍️</span>
+            </div>
+            <h3 className="text-lg font-bold mb-2" style={{ color: textPrimary }}>
+              Начните писать сценарий
+            </h3>
+            <p className="text-sm mb-4 leading-relaxed" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+              Введите заголовок первой сцены, например: <br />
+              <span className="font-mono text-xs px-2 py-1 rounded" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}>
+                1. ИНТ. КВАРТИРА — ДЕНЬ
+              </span>
+            </p>
+            <p className="text-xs leading-relaxed" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+              Нажмите <strong>Tab</strong> для переключения типа блока,<br />
+              <strong>Enter</strong> для создания нового блока
+            </p>
           </div>
-        ))}
+        ) : (
+          // Блоки сценария
+          blocks.map((block) => (
+            <div
+              key={block.id}
+              data-block-id={block.id}
+              className="mb-2"
+              style={{
+                marginLeft: getIndent(block.type),
+                width: getWidth(block.type),
+              }}
+            >
+              <textarea
+                value={block.content}
+                onChange={(e) => handleContentChange(block.id, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, block.id)}
+                className="w-full bg-transparent resize-none outline-none text-sm leading-relaxed"
+                style={{
+                  color: textPrimary,
+                  lineHeight: '1.8',
+                  textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
+                  minHeight: block.type === 'action' ? '60px' : '30px',
+                  fontWeight: block.type === 'character' ? 'bold' : 'normal',
+                }}
+                rows={block.type === 'action' ? 2 : 1}
+                placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
+              />
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
