@@ -249,10 +249,21 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                 color: textPrimary,
                 lineHeight: '1.8',
                 textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
-                minHeight: block.type === 'action' ? '60px' : block.type === 'scene_header' ? '40px' : '30px',
+                minHeight: 
+                  block.type === 'action' ? '90px' : 
+                  block.type === 'scene_header' ? '60px' : 
+                  block.type === 'dialog' ? '60px' : 
+                  block.type === 'parenthetical' ? '40px' : 
+                  block.type === 'transition' ? '40px' : '30px',
                 fontWeight: block.type === 'character' ? 'bold' : 'normal',
               }}
-              rows={block.type === 'action' ? 2 : block.type === 'scene_header' ? 2 : 1}
+              rows={
+                block.type === 'action' ? 4 : 
+                block.type === 'scene_header' ? 3 : 
+                block.type === 'dialog' ? 3 : 
+                block.type === 'parenthetical' ? 2 : 
+                block.type === 'transition' ? 2 : 1
+              }
               placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
             />
           </div>
