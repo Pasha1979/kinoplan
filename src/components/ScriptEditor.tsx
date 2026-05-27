@@ -58,37 +58,6 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
-  // Отступы по форматам
-  const getIndent = (type: BlockType) => {
-    if (format === 'russian') {
-      switch (type) {
-        case 'scene_header': return '0px'
-        case 'action': return '0px'
-        case 'character': return '150px'
-        case 'dialog': return '100px'
-        case 'parenthetical': return '200px'
-        case 'transition': return '300px'
-        default: return '0px'
-      }
-    } else {
-      // Голливудский (WGA)
-      switch (type) {
-        case 'scene_header': return '0px'
-        case 'action': return '0px'
-        case 'character': return '250px'
-        case 'dialog': return '150px'
-        case 'parenthetical': return '200px'
-        case 'transition': return '350px'
-        default: return '0px'
-      }
-    }
-  }
-
-  const getWidth = () => {
-    // Все блоки на полную ширину
-    return '100%'
-  }
-
   // Автоопределение типа блока по содержимому
   const detectBlockType = (content: string): BlockType => {
     const trimmed = content.trim().toUpperCase()
