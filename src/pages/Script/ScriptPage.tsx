@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Upload, Plus, BookOpen, Clock, Search, Hash, Sun, Moon, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
@@ -202,126 +202,9 @@ export default function ScriptPage() {
     )
   }
 
-  // ─── VIEW: EDITOR ────────────────────────────────────────────────────────────
+    // ─── VIEW: EDITOR ────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex overflow-hidden" style={{ background: bg }}>
-
-      {/* ── Левая панель: навигатор сцен ────────────────────────────────────── */}
-      <div className="shrink-0 flex flex-col border-r overflow-hidden"
-        style={{ width: 260, background: sidebarBg, borderColor: border }}>
-
-        {/* Шапка навигатора */}
-        <div className="shrink-0 px-4 pt-5 pb-3">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: textSecondary }}>
-              Сцены
-            </h2>
-            <div className="flex items-center gap-1">
-              <span className="text-xs px-2 py-0.5 rounded-md"
-                style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
-                {sceneCount}
-              </span>
-              <button className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ color: textSecondary }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-              >
-                <Plus size={13} />
-              </button>
-            </div>
-          </div>
-
-          {/* Поиск */}
-          <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: textSecondary }} />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Сцена, персонаж..."
-              className="w-full pl-7 pr-3 py-1.5 rounded-lg text-xs outline-none transition-colors"
-              style={{
-                background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}`,
-                color: textPrimary,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Список сцен */}
-        <div className="flex-1 overflow-y-auto px-2 pb-4">
-          {sceneCount === 0 ? (
-            // Объяснение если сценарий пустой
-            <div className="px-3 py-4 text-center">
-              <BookOpen size={24} className="mx-auto mb-2" style={{ color: textSecondary }} />
-              <p className="text-xs mb-2" style={{ color: textPrimary }}>
-                Сцены появятся здесь
-              </p>
-              <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-                Начните писать сценарий в редакторе. Каждая новая сцена автоматически добавится в этот список.
-              </p>
-            </div>
-          ) : (
-            // Заглушка: демо-сцены (пока не реализована полная интеграция)
-            filteredScenes.map(scene => {
-              const isActive = selectedScene.id === scene.id
-              return (
-                <button
-                  key={scene.id}
-                onClick={() => setSelectedScene(scene)}
-                className="w-full text-left rounded-xl px-3 py-2.5 mb-0.5 transition-all"
-                style={{
-                  background: isActive ? 'rgba(99,102,241,0.12)' : 'transparent',
-                  border: `1px solid ${isActive ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
-                }}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb' }}
-                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold shrink-0 w-5 text-center"
-                    style={{ color: isActive ? '#818cf8' : textSecondary }}>
-                    {scene.number}
-                  </span>
-                  <span className="text-xs px-1.5 rounded shrink-0 font-mono"
-                    style={{
-                      background: scene.type === 'ИНТ' ? 'rgba(99,102,241,0.15)' : 'rgba(34,197,94,0.12)',
-                      color: scene.type === 'ИНТ' ? '#818cf8' : '#4ade80',
-                    }}>
-                    {scene.type}
-                  </span>
-                  <span className="text-xs font-medium truncate flex-1"
-                    style={{ color: isActive ? textPrimary : (isDark ? '#d1d5db' : '#374151') }}>
-                    {scene.location}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 pl-7">
-                  <span className="flex items-center gap-1 text-xs" style={{ color: textSecondary }}>
-                    {scene.time === 'НОЧЬ' ? <Moon size={9} /> : <Sun size={9} />}
-                    {scene.time}
-                  </span>
-                  <span className="text-xs" style={{ color: textMuted }}>·</span>
-                  <span className="text-xs" style={{ color: textSecondary }}>
-                    {scene.pages} стр.
-                  </span>
-                </div>
-              </button>
-            )
-            })
-          )}
-        </div>
-
-        {/* Итого страниц */}
-        <div className="shrink-0 px-4 py-3 border-t" style={{ borderColor: border }}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs" style={{ color: textSecondary }}>Итого страниц</span>
-            <span className="text-xs font-bold" style={{ color: textPrimary }}>{totalPages.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs" style={{ color: textSecondary }}>≈ хронометраж</span>
-            <span className="text-xs font-bold" style={{ color: '#818cf8' }}>{Math.round(totalPages)} мин</span>
-          </div>
-        </div>
-      </div>
 
       {/* ── Центральная область: редактор ───────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -418,28 +301,34 @@ export default function ScriptPage() {
         </div>
 
         {/* Вкладки */}
-        <div className="shrink-0 flex items-center gap-1 px-6 py-2 border-b"
+        <div className="shrink-0 flex items-center gap-2 px-6 py-2 border-b"
           style={{ background: sidebarBg, borderColor: border }}>
           {[
-            { id: 'text' as ScriptTab, label: 'ТЕКСТ' },
-            { id: 'title' as ScriptTab, label: 'ТИТУЛ' },
-            { id: 'cards' as ScriptTab, label: 'КАРТОЧКИ' },
-            { id: 'development' as ScriptTab, label: 'РАЗРАБОТКА' },
-            { id: 'plan' as ScriptTab, label: 'ПЛАН' },
-            { id: 'statistics' as ScriptTab, label: 'СТАТИСТИКА' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-              style={{
-                background: activeTab === tab.id ? 'rgba(99,102,241,0.15)' : 'transparent',
-                color: activeTab === tab.id ? '#818cf8' : textSecondary,
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'text' as ScriptTab, label: 'ТЕКСТ', icon: FileText },
+            { id: 'title' as ScriptTab, label: 'ТИТУЛ', icon: BookOpen },
+            { id: 'cards' as ScriptTab, label: 'КАРТОЧКИ', icon: Hash },
+            { id: 'development' as ScriptTab, label: 'РАЗРАБОТКА', icon: Settings },
+            { id: 'plan' as ScriptTab, label: 'ПЛАН', icon: Clock },
+            { id: 'statistics' as ScriptTab, label: 'СТАТИСТИКА', icon: AlignLeft },
+          ].map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${isDark ? 'border-white/10 hover:border-indigo-400' : 'border-gray-300 hover:border-indigo-400'} ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+                style={{
+                  background: isActive ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)') : (isDark ? 'rgba(255,255,255,0.03)' : '#ffffff'),
+                  color: isActive ? '#818cf8' : textSecondary,
+                  boxShadow: isActive ? '0 0 0 1px rgba(99,102,241,0.5)' : 'none',
+                }}
+              >
+                <Icon size={12} />
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
 
         {/* Область контента по вкладкам */}

@@ -125,7 +125,7 @@ export default function SceneNavigator({
             return (
               <div
                 key={scene.id}
-                className={`rounded-lg border overflow-hidden transition-all cursor-pointer ${isActive ? 'ring-1 ring-indigo-500' : ''}`}
+                className={`rounded-lg border overflow-hidden transition-all cursor-pointer hover:scale-[1.02] hover:shadow-md ${isActive ? 'ring-1 ring-indigo-500' : ''} ${isDark ? 'hover:bg-white/8' : 'hover:bg-gray-50'}`}
                 style={{
                   background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
                   borderColor: isActive ? '#6366f1' : border,
