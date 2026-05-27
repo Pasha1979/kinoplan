@@ -246,11 +246,11 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                 lineHeight: '1.8',
                 textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
                 minHeight: 
-                  block.type === 'action' ? '200px' : 
-                  block.type === 'scene_header' ? '80px' : 
-                  block.type === 'dialog' ? '120px' : 
-                  block.type === 'parenthetical' ? '60px' : 
-                  block.type === 'transition' ? '60px' : '50px',
+                  block.type === 'action' ? '500px' : 
+                  block.type === 'scene_header' ? '100px' : 
+                  block.type === 'dialog' ? '300px' : 
+                  block.type === 'parenthetical' ? '80px' : 
+                  block.type === 'transition' ? '80px' : '80px',
                 fontWeight: block.type === 'character' ? 'bold' : 'normal',
               }}
               rows={
