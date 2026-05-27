@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Upload, Plus, BookOpen, Clock, Search, MoreVertical, Hash, Sun, Moon, AlignLeft, ChevronLeft } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Search, Hash, Sun, Moon, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 
 type ScriptView = 'empty' | 'editor'
+type ScriptTab = 'text' | 'cards' | 'development' | 'plan' | 'statistics'
 
 const DEMO_SCENES = [
   { id: '1', number: '1', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.5 },
@@ -54,6 +55,8 @@ export default function ScriptPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [importHover, setImportHover] = useState(false)
   const [createHover, setCreateHover] = useState(false)
+  const [activeTab, setActiveTab] = useState<ScriptTab>('text')
+  const [rightPanelOpen, setRightPanelOpen] = useState(true)
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const sidebarBg = isDark ? '#13132a' : '#ffffff'
@@ -356,26 +359,64 @@ export default function ScriptPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Версия */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
-              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textSecondary }}>
-              <Hash size={11} />
-              Съёмочный сценарий
-            </div>
-            {/* Формат */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
-              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textSecondary }}>
-              <FileText size={11} />
-              Российский
-            </div>
-            <button className="w-8 h-8 rounded-lg flex items-center justify-center"
+            {/* Кнопка Сохранить */}
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: 'rgba(99,102,241,0.15)',
+                color: '#818cf8',
+                border: '1px solid rgba(99,102,241,0.3)',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.25)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.15)' }}
+            >
+              <Save size={13} />
+              Сохранить
+            </button>
+            {/* Кнопка Настройки */}
+            <button
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ color: textSecondary }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
-              <MoreVertical size={15} />
+              <Settings size={15} />
+            </button>
+            {/* Кнопка правой панели */}
+            <button
+              onClick={() => setRightPanelOpen(!rightPanelOpen)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ color: textSecondary }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            >
+              {rightPanelOpen ? <X size={15} /> : <ChevronRight size={15} />}
             </button>
           </div>
+        </div>
+
+        {/* Вкладки */}
+        <div className="shrink-0 flex items-center gap-1 px-6 py-2 border-b"
+          style={{ background: sidebarBg, borderColor: border }}>
+          {[
+            { id: 'text' as ScriptTab, label: 'ТЕКСТ' },
+            { id: 'cards' as ScriptTab, label: 'КАРТОЧКИ' },
+            { id: 'development' as ScriptTab, label: 'РАЗРАБОТКА' },
+            { id: 'plan' as ScriptTab, label: 'ПЛАН' },
+            { id: 'statistics' as ScriptTab, label: 'СТАТИСТИКА' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: activeTab === tab.id ? 'rgba(99,102,241,0.15)' : 'transparent',
+                color: activeTab === tab.id ? '#818cf8' : textSecondary,
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Область текста сценария */}
@@ -432,6 +473,55 @@ export default function ScriptPage() {
           </span>
         </div>
       </div>
+
+      {/* ── Правая панель: заметки / версии ───────────────────────────────────── */}
+      {rightPanelOpen && (
+        <div className="shrink-0 flex flex-col border-l overflow-hidden"
+          style={{ width: 300, background: sidebarBg, borderColor: border }}>
+          
+          {/* Шапка правой панели */}
+          <div className="shrink-0 px-4 pt-5 pb-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: textSecondary }}>
+                Заметки к сцене
+              </h2>
+            </div>
+          </div>
+
+          {/* Заметки (заглушка) */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="rounded-xl p-4 mb-3"
+              style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb', border: `1px solid ${border}` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <Hash size={12} style={{ color: '#818cf8' }} />
+                <span className="text-xs font-bold" style={{ color: textPrimary }}>The Drafts</span>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs px-2 py-1.5 rounded-md"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textSecondary }}>
+                  v1.0 (Черновик 1) — 15.03.2026
+                </div>
+                <div className="text-xs px-2 py-1.5 rounded-md"
+                  style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
+                  v2.0 (Черновик 2) — 20.03.2026 [АКТИВЕН]
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl p-4"
+              style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb', border: `1px solid ${border}` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <FileText size={12} style={{ color: '#818cf8' }} />
+                <span className="text-xs font-bold" style={{ color: textPrimary }}>The Notes</span>
+              </div>
+              <button className="w-full text-xs px-2 py-1.5 rounded-md transition-all"
+                style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.08)', color: '#818cf8', border: '1px dashed rgba(99,102,241,0.3)' }}>
+                + Новая заметка
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
