@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Search, MoreVertical, Hash, Sun, Moon, AlignLeft, ChevronLeft } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -42,6 +43,7 @@ const DEMO_SCRIPT_TEXT = `ИНТ. КВАРТИРА ИВАНА — ДЕНЬ
 НАПЛЫВ:`
 
 export default function ScriptPage() {
+  const navigate = useNavigate()
   const { theme } = useUiStore()
   const { getCurrentProject } = useProjectStore()
   const project = getCurrentProject()
@@ -150,7 +152,7 @@ export default function ScriptPage() {
 
             {/* Написать с нуля */}
             <button
-              onClick={() => setView('editor')}
+              onClick={() => navigate(`/project/${project?.id}/script/create`)}
               onMouseEnter={() => setCreateHover(true)}
               onMouseLeave={() => setCreateHover(false)}
               className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
