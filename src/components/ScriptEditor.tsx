@@ -64,7 +64,13 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     
     // Заголовок сцены: начинается с цифры и точки
     if (/^\d+\./.test(trimmed)) {
-      return 'scene_header'
+      // Проверка формата заголовка в зависимости от выбранного формата
+      const scenePattern = format === 'russian' 
+        ? /ИНТ|ЭКСТ/ 
+        : /INT|EXT/
+      if (scenePattern.test(trimmed)) {
+        return 'scene_header'
+      }
     }
     
     // Переход: содержит слова НАПЛЫВ, РАСТЯЖКА, ПЕРЕХОД и т.д.
