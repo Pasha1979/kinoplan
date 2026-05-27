@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Search, Hash, Sun, Moon, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
+import { useScriptStore } from '../../store/scriptStore'
 import ScriptEditor from '../../components/ScriptEditor'
 
 type ScriptView = 'empty' | 'editor'
@@ -22,6 +23,7 @@ export default function ScriptPage() {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { getCurrentProject } = useProjectStore()
+  const { scripts } = useScriptStore()
   const project = getCurrentProject()
   const isDark = theme === 'dark'
 
@@ -32,6 +34,16 @@ export default function ScriptPage() {
   const [createHover, setCreateHover] = useState(false)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
+
+  // Проверяем, есть ли сценарий для текущего проекта
+  useEffect(() => {
+    if (project) {
+      const projectScripts = scripts.filter(s => s.projectId === project.id)
+      if (projectScripts.length > 0) {
+        setView('editor')
+      }
+    }
+  }, [project, scripts])
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const sidebarBg = isDark ? '#13132a' : '#ffffff'
