@@ -234,11 +234,7 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
           <div
             key={block.id}
             data-block-id={block.id}
-            className="mb-2"
-            style={{
-              marginLeft: getIndent(block.type),
-              width: getWidth(),
-            }}
+            className="mb-3 w-full"
           >
             <textarea
               value={block.content}
