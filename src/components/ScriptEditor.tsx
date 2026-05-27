@@ -18,14 +18,27 @@ interface ScriptEditorProps {
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
   onBlocksChange?: (blocks: Block[]) => void
+  focusSceneId?: string
 }
 
-export default function ScriptEditor({ format, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange }: ScriptEditorProps) {
+export default function ScriptEditor({ format, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange, focusSceneId }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: '1', type: 'scene_header', content: '' },
   ])
   const [showTutorial, setShowTutorial] = useState(true)
   const editorRef = useRef<HTMLDivElement>(null)
+
+  // Обработка фокуса на сцену из навигатора
+  useEffect(() => {
+    if (focusSceneId) {
+      // Находим блок с нужной сценой и фокусируемся на него
+      const sceneBlock = document.querySelector(`[data-block-id="${focusSceneId}"]`) as HTMLTextAreaElement
+      if (sceneBlock) {
+        sceneBlock.focus()
+        sceneBlock.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+  }, [focusSceneId])
 
   // Проверяем, начал ли пользователь писать
   const hasContent = blocks.some(b => b.content.trim().length > 0)

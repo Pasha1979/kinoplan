@@ -7,6 +7,7 @@ import { useScriptStore } from '../../store/scriptStore'
 import ScriptEditor from '../../components/ScriptEditor'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
+import SceneNavigator from '../../components/SceneNavigator'
 
 type ScriptView = 'empty' | 'editor'
 type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics'
@@ -40,6 +41,7 @@ export default function ScriptPage() {
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
   const [enableAutoFix, setEnableAutoFix] = useState(false)
   const [editorBlocks, setEditorBlocks] = useState<Array<{ id: string; type: string; content: string }>>([])
+  const [focusSceneId, setFocusSceneId] = useState<string>()
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -447,16 +449,39 @@ export default function ScriptPage() {
             scriptTitle={project?.name}
           />
         ) : (
-          <ScriptEditor 
-            format="russian"
-            fontFamily="Courier New"
-            fontSize={12}
-            isDark={isDark}
-            genreCoefficient={1.0}
-            onSceneCountChange={setSceneCount}
-            onStatsChange={setScriptStats}
-            onBlocksChange={setEditorBlocks}
-          />
+          <div className="flex-1 flex overflow-hidden">
+            {/* Навигатор сцен — слева */}
+            <SceneNavigator
+              scenes={DEMO_SCENES.map(s => ({
+                id: s.id,
+                number: s.number,
+                type: s.type === 'ИНТ' ? 'INT' : 'EXT',
+                location: s.location,
+                timeOfDay: s.time === 'ДЕНЬ' ? 'DAY' : s.time === 'НОЧЬ' ? 'NIGHT' : 'CONTINUOUS',
+                synopsis: '',
+                pageCount: s.pages,
+              }))}
+              isDark={isDark}
+              onSceneClick={(sceneId) => {
+                setSelectedScene(DEMO_SCENES.find(s => s.id === sceneId) || DEMO_SCENES[0])
+                setFocusSceneId(sceneId)
+              }}
+              activeSceneId={selectedScene.id}
+            />
+            
+            {/* Редактор — справа */}
+            <ScriptEditor 
+              format="russian"
+              fontFamily="Courier New"
+              fontSize={12}
+              isDark={isDark}
+              genreCoefficient={1.0}
+              onSceneCountChange={setSceneCount}
+              onStatsChange={setScriptStats}
+              onBlocksChange={setEditorBlocks}
+              focusSceneId={focusSceneId}
+            />
+          </div>
         )}
 
         {/* Статусбар внизу — только для текстового редактора */}
