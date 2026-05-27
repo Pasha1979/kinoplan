@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 
 type BlockType = 'scene_header' | 'action' | 'character' | 'dialog' | 'parenthetical' | 'transition'
@@ -14,14 +14,25 @@ interface ScriptEditorProps {
   fontFamily: string
   fontSize: number
   isDark: boolean
+  onSceneCountChange?: (count: number) => void
 }
 
-export default function ScriptEditor({ format, fontFamily, fontSize, isDark }: ScriptEditorProps) {
+export default function ScriptEditor({ format, fontFamily, fontSize, isDark, onSceneCountChange }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: '1', type: 'scene_header', content: '' },
   ])
   const [showTutorial, setShowTutorial] = useState(true)
   const editorRef = useRef<HTMLDivElement>(null)
+
+  // Подсчёт количества сцен (scene_header)
+  const sceneCount = blocks.filter(b => b.type === 'scene_header').length
+
+  // Сообщаем родителю о количестве сцен
+  useEffect(() => {
+    if (onSceneCountChange) {
+      onSceneCountChange(sceneCount)
+    }
+  }, [sceneCount, onSceneCountChange])
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'

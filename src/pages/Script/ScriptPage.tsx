@@ -34,6 +34,7 @@ export default function ScriptPage() {
   const [createHover, setCreateHover] = useState(false)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
+  const [sceneCount, setSceneCount] = useState(0)
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -211,7 +212,7 @@ export default function ScriptPage() {
             <div className="flex items-center gap-1">
               <span className="text-xs px-2 py-0.5 rounded-md"
                 style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
-                {DEMO_SCENES.length}
+                {sceneCount}
               </span>
               <button className="w-6 h-6 rounded-lg flex items-center justify-center"
                 style={{ color: textSecondary }}
@@ -242,11 +243,24 @@ export default function ScriptPage() {
 
         {/* Список сцен */}
         <div className="flex-1 overflow-y-auto px-2 pb-4">
-          {filteredScenes.map(scene => {
-            const isActive = selectedScene.id === scene.id
-            return (
-              <button
-                key={scene.id}
+          {sceneCount === 0 ? (
+            // Объяснение если сценарий пустой
+            <div className="px-3 py-4 text-center">
+              <BookOpen size={24} className="mx-auto mb-2" style={{ color: textSecondary }} />
+              <p className="text-xs mb-2" style={{ color: textPrimary }}>
+                Сцены появятся здесь
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+                Начните писать сценарий в редакторе. Каждая новая сцена автоматически добавится в этот список.
+              </p>
+            </div>
+          ) : (
+            // Заглушка: демо-сцены (пока не реализована полная интеграция)
+            filteredScenes.map(scene => {
+              const isActive = selectedScene.id === scene.id
+              return (
+                <button
+                  key={scene.id}
                 onClick={() => setSelectedScene(scene)}
                 className="w-full text-left rounded-xl px-3 py-2.5 mb-0.5 transition-all"
                 style={{
@@ -285,7 +299,8 @@ export default function ScriptPage() {
                 </div>
               </button>
             )
-          })}
+            })
+          )}
         </div>
 
         {/* Итого страниц */}
@@ -411,6 +426,7 @@ export default function ScriptPage() {
           fontFamily="Courier New"
           fontSize={12}
           isDark={isDark}
+          onSceneCountChange={setSceneCount}
         />
 
         {/* Статусбар внизу */}
