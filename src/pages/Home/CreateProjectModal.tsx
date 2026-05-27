@@ -117,11 +117,11 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
     const project: Project = {
       id: `project_${Date.now()}`,
       name: name.trim(), type, status: 'preproduction',
-      episodesCount: type === 'serial' ? parseInt(episodesCount) || undefined : undefined,
-      episodeDuration: type === 'serial' ? parseInt(episodeDuration) || undefined : undefined,
-      totalDuration: type !== 'serial' ? parseInt(totalDuration) || undefined : undefined,
-      dailyOutput: parseFloat(dailyOutput) || 0,
-      shootingGroups, plannedShootingDays: plannedDays,
+      episodesCount: type === 'serial' && episodesCount ? parseInt(episodesCount) : undefined,
+      episodeDuration: type === 'serial' && episodeDuration ? parseInt(episodeDuration) : undefined,
+      totalDuration: type !== 'serial' && totalDuration ? parseInt(totalDuration) : undefined,
+      dailyOutput: dailyOutput ? parseFloat(dailyOutput) : 5, // дефолт 5 минут
+      shootingGroups, plannedShootingDays: plannedDays || 0,
       startDate: startDate || undefined, endDate: endDate || undefined,
       cloudStorage, createdAt: now, updatedAt: now,
       scriptProgress: 0, castingProgress: 0, locationsProgress: 0, scheduleProgress: 0,
