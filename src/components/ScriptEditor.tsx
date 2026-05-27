@@ -215,7 +215,7 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
+      <div className="max-w-4xl mx-auto" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
         {/* Объяснение если сценарий пустой */}
         {!hasContent && (
           <div className="py-10 text-center mb-4">
