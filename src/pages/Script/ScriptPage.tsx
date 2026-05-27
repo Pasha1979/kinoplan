@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Search, Hash, Sun, Moon, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
+import ScriptEditor from '../../components/ScriptEditor'
 
 type ScriptView = 'empty' | 'editor'
 type ScriptTab = 'text' | 'cards' | 'development' | 'plan' | 'statistics'
@@ -16,32 +17,6 @@ const DEMO_SCENES = [
   { id: '6', number: '6', type: 'ИНТ', location: 'ОФИС КОМПАНИИ', time: 'УТРО', cast: ['ДИРЕКТОР', 'ИВАН', 'КОЛЛЕГИ'], pages: 3 },
   { id: '7', number: '7', type: 'ЭКСТ', location: 'АЭРОПОРТ', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.25 },
 ]
-
-const DEMO_SCRIPT_TEXT = `ИНТ. КВАРТИРА ИВАНА — ДЕНЬ
-
-Небольшая уютная квартира в центре города. Солнечный свет пробивается сквозь жалюзи. ИВАН (32 года, журналист) стоит у окна с чашкой кофе в руке. Он смотрит на улицу, явно погружённый в мысли.
-
-Звонит телефон. Иван не сразу реагирует.
-
-МАША (О.С.)
-(в трубке)
-Иван! Ты там вообще живой?
-
-ИВАН
-(отрываясь от окна)
-Да, да. Привет, Маш.
-
-МАША (О.С.)
-Ты помнишь, что сегодня встреча с редактором?
-
-Иван резко ставит кофе на стол. Смотрит на часы — опаздывает.
-
-ИВАН
-Чёрт. Буду через двадцать минут.
-
-Он бросает трубку и начинает быстро собираться.
-
-НАПЛЫВ:`
 
 export default function ScriptPage() {
   const navigate = useNavigate()
@@ -64,7 +39,6 @@ export default function ScriptPage() {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
   const textMuted = isDark ? '#374151' : '#d1d5db'
-  const editorBg = isDark ? '#111126' : '#fefefe'
 
   const filteredScenes = DEMO_SCENES.filter(s =>
     s.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -420,37 +394,12 @@ export default function ScriptPage() {
         </div>
 
         {/* Область текста сценария */}
-        <div className="flex-1 overflow-y-auto py-10 px-8" style={{ background: editorBg }}>
-          <div className="max-w-2xl mx-auto">
-
-            {/* Заголовок сцены */}
-            <div className="mb-4">
-              <p className="text-sm font-bold tracking-wider uppercase"
-                style={{ color: textPrimary, fontFamily: 'Courier New, monospace' }}>
-                {selectedScene.number}. {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
-              </p>
-            </div>
-
-            {/* Текст сцены */}
-            <div className="whitespace-pre-wrap text-sm leading-relaxed"
-              style={{
-                fontFamily: 'Courier New, monospace',
-                color: isDark ? '#d1d5db' : '#374151',
-                lineHeight: '1.8',
-              }}>
-              {DEMO_SCRIPT_TEXT}
-            </div>
-
-            {/* Подсказка — редактор в разработке */}
-            <div className="mt-10 flex items-center gap-2 px-4 py-3 rounded-xl"
-              style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <Clock size={13} style={{ color: '#818cf8' }} />
-              <span className="text-xs" style={{ color: '#818cf8' }}>
-                Интерактивное редактирование — следующий шаг разработки
-              </span>
-            </div>
-          </div>
-        </div>
+        <ScriptEditor 
+          format="russian"
+          fontFamily="Courier New"
+          fontSize={12}
+          isDark={isDark}
+        />
 
         {/* Статусбар внизу */}
         <div className="shrink-0 flex items-center gap-6 px-6 py-2 border-t"
