@@ -215,10 +215,10 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
         </div>
       )}
 
-      <div className="w-full px-4" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
+      <div className="w-full h-full flex flex-col px-4" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
         {/* Объяснение если сценарий пустой */}
         {!hasContent && (
-          <div className="py-10 text-center mb-4">
+          <div className="py-4 text-center shrink-0">
             <h3 className="text-sm font-bold mb-2" style={{ color: textPrimary }}>
               Начните писать сценарий
             </h3>
@@ -229,41 +229,30 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
           </div>
         )}
 
-        {/* Блоки сценария */}
-        {blocks.map((block) => (
-          <div
-            key={block.id}
-            data-block-id={block.id}
-            className="mb-3 w-full"
-          >
-            <textarea
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id)}
-              className="w-full bg-transparent resize-none outline-none text-sm leading-relaxed"
-              style={{
-                color: textPrimary,
-                lineHeight: '1.8',
-                textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
-                minHeight: 
-                  block.type === 'action' ? '500px' : 
-                  block.type === 'scene_header' ? '100px' : 
-                  block.type === 'dialog' ? '300px' : 
-                  block.type === 'parenthetical' ? '80px' : 
-                  block.type === 'transition' ? '80px' : '80px',
-                fontWeight: block.type === 'character' ? 'bold' : 'normal',
-              }}
-              rows={
-                block.type === 'action' ? 8 : 
-                block.type === 'scene_header' ? 4 : 
-                block.type === 'dialog' ? 6 : 
-                block.type === 'parenthetical' ? 3 : 
-                block.type === 'transition' ? 3 : 2
-              }
-              placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
-            />
-          </div>
-        ))}
+        {/* Блоки сценария - занимают всё оставшееся пространство */}
+        <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
+          {blocks.map((block) => (
+            <div
+              key={block.id}
+              data-block-id={block.id}
+              className="flex-1 min-h-0"
+            >
+              <textarea
+                value={block.content}
+                onChange={(e) => handleContentChange(block.id, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, block.id)}
+                className="w-full h-full bg-transparent resize-none outline-none text-sm leading-relaxed"
+                style={{
+                  color: textPrimary,
+                  lineHeight: '1.8',
+                  textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
+                  fontWeight: block.type === 'character' ? 'bold' : 'normal',
+                }}
+                placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
