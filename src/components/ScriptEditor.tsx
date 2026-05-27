@@ -18,11 +18,9 @@ interface ScriptEditorProps {
 
 export default function ScriptEditor({ format, fontFamily, fontSize, isDark }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
-    { id: '1', type: 'scene_header', content: '1. ИНТ. КВАРТИРА ИВАНА — ДЕНЬ' },
-    { id: '2', type: 'action', content: 'Иван сидит за столом, пьёт кофе.' },
-    { id: '3', type: 'character', content: 'ИВАН' },
-    { id: '4', type: 'dialog', content: 'Нужно успеть на встречу.' },
+    { id: '1', type: 'scene_header', content: '' },
   ])
+  const [showTutorial, setShowTutorial] = useState(true)
   const editorRef = useRef<HTMLDivElement>(null)
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
@@ -120,6 +118,11 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark }: S
         if (newBlockEl) newBlockEl.focus()
       }, 0)
     }
+
+    if (e.key === 'Enter' && e.shiftKey) {
+      // Shift+Enter — новая строка в том же блоке
+      // Разрешаем стандартное поведение
+    }
   }
 
   const handleContentChange = (blockId: string, content: string) => {
@@ -131,9 +134,33 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark }: S
   return (
     <div 
       ref={editorRef}
-      className="flex-1 overflow-y-auto py-10 px-8"
+      className="flex-1 overflow-y-auto py-10 px-8 relative"
       style={{ background: editorBg }}
     >
+      {/* Окно обучения */}
+      {showTutorial && (
+        <div className="absolute inset-0 flex items-center justify-center z-10"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div className="max-w-lg p-8 rounded-2xl"
+            style={{ background: isDark ? '#1a1a35' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+            <h3 className="text-xl font-bold mb-4" style={{ color: textPrimary }}>Как пользоваться редактором</h3>
+            <ul className="space-y-3 text-sm mb-6" style={{ color: isDark ? '#d1d5db' : '#374151' }}>
+              <li><strong>Tab</strong> — переключить тип блока</li>
+              <li><strong>Shift+Tab</strong> — переключить назад</li>
+              <li><strong>Enter</strong> — создать новый блок</li>
+              <li><strong>Shift+Enter</strong> — новая строка в том же блоке</li>
+            </ul>
+            <button
+              onClick={() => setShowTutorial(false)}
+              className="w-full py-3 rounded-xl text-sm font-bold transition-all"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#ffffff' }}
+            >
+              Понятно, начинаю писать
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
         {blocks.map((block) => (
           <div
