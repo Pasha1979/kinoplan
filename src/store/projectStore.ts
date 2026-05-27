@@ -105,6 +105,7 @@ interface ProjectStore {
   projects: Project[]
   currentProjectId: string | null
   addProject: (project: Project) => void
+  deleteProject: (id: string) => void
   setCurrentProject: (id: string) => void
   getCurrentProject: () => Project | null
 }
@@ -117,6 +118,9 @@ export const useProjectStore = create<ProjectStore>()(
 
   addProject: (project) =>
     set((state) => ({ projects: [...state.projects, project] })),
+
+  deleteProject: (id) =>
+    set((state) => ({ projects: state.projects.filter((p) => p.id !== id) })),
 
   setCurrentProject: (id) =>
     set({ currentProjectId: id }),

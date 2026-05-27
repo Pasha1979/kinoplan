@@ -9,7 +9,7 @@ import type { Project } from '../../store/projectStore'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { projects, addProject, setCurrentProject } = useProjectStore()
+  const { projects, addProject, deleteProject, setCurrentProject } = useProjectStore()
   const { theme, toggleTheme } = useUiStore()
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
@@ -135,6 +135,7 @@ export default function HomePage() {
                   key={project.id}
                   project={project}
                   onClick={() => handleOpen(project)}
+                  onDelete={() => deleteProject(project.id)}
                 />
               ))}
               {/* Карточка создания нового */}

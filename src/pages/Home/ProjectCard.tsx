@@ -1,4 +1,4 @@
-import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock } from 'lucide-react'
+import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2 } from 'lucide-react'
 import type { Project } from '../../store/projectStore'
 
 const TYPE_LABELS: Record<Project['type'], string> = {
@@ -50,35 +50,37 @@ function formatDate(iso?: string) {
 interface ProjectCardProps {
   project: Project
   onClick: () => void
+  onDelete: () => void
 }
 
-export default function ProjectCard({ project, onClick }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
   const overallProgress = Math.round(
     (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
   )
 
   return (
-    <button
-      onClick={onClick}
-      className="group w-full text-left bg-[#13132a] border border-white/8 rounded-2xl p-5 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
-    >
-      {/* Шапка карточки */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center text-orange-400">
-            {TYPE_ICONS[project.type]}
+    <div className="group relative">
+      <button
+        onClick={onClick}
+        className="w-full text-left bg-[#13132a] border border-white/8 rounded-2xl p-5 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
+      >
+        {/* Шапка карточки */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center text-orange-400">
+              {TYPE_ICONS[project.type]}
+            </div>
+            <div>
+              <h3 className="text-white font-semibold text-base leading-tight group-hover:text-orange-300 transition-colors">
+                {project.name}
+              </h3>
+              <span className="text-gray-500 text-xs">{TYPE_LABELS[project.type]}</span>
+            </div>
           </div>
-          <div>
-            <h3 className="text-white font-semibold text-base leading-tight group-hover:text-orange-300 transition-colors">
-              {project.name}
-            </h3>
-            <span className="text-gray-500 text-xs">{TYPE_LABELS[project.type]}</span>
-          </div>
+          <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLORS[project.status]}`}>
+            {STATUS_LABELS[project.status]}
+          </span>
         </div>
-        <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLORS[project.status]}`}>
-          {STATUS_LABELS[project.status]}
-        </span>
-      </div>
 
       {/* Статистика */}
       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -130,6 +132,21 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
           <span>Изменён {formatDate(project.updatedAt)}</span>
         </div>
       </div>
-    </button>
+      </button>
+
+      {/* Кнопка удаления */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          if (confirm(`Удалить проект "${project.name}"? Это действие нельзя отменить.`)) {
+            onDelete()
+          }
+        }}
+        className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-500/20"
+        title="Удалить проект"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
   )
 }
