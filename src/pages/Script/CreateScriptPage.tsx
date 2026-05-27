@@ -20,13 +20,16 @@ export default function CreateScriptPage() {
   const [timingSystem, setTimingSystem] = useState<TimingSystem>('page')
   const [genreCoefficient, setGenreCoefficient] = useState('auto')
 
-  const bg = isDark ? '#0f0f20' : '#f5f5f5'
-  const cardBg = isDark ? '#13132a' : '#ffffff'
-  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
-  const textPrimary = isDark ? '#f1f5f9' : '#111827'
-  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
-  const inputBg = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6'
-  const inputBorder = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'
+  const bg = isDark ? '#0f0f20' : '#f8fafc'
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'
+  const textPrimary = isDark ? '#f1f5f9' : '#0f172a'
+  const textSecondary = isDark ? '#94a3b8' : '#64748b'
+  const inputBg = isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'
+  const inputBorder = isDark ? 'rgba(255,255,255,0.15)' : '#e2e8f0'
+  const activeBg = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)'
+  const activeBorder = isDark ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.4)'
+  const activeText = isDark ? '#a5b4fc' : '#4f46e5'
 
   const handleCreate = () => {
     if (!title.trim()) {
@@ -90,35 +93,37 @@ export default function CreateScriptPage() {
       </div>
 
       {/* Форма */}
-      <div className="flex-1 flex items-center justify-center px-8 py-10">
-        <div className="w-full max-w-2xl">
-          <div className="rounded-2xl p-8" style={{ background: cardBg, border: `1px solid ${border}` }}>
+      <div className="flex-1 flex items-center justify-center px-8 py-12">
+        <div className="w-full max-w-3xl">
+          <div className="rounded-3xl p-10" style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.4)' : '0 20px 60px rgba(0,0,0,0.08)' }}>
             
             {/* Название */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold mb-2" style={{ color: textPrimary }}>
-                Название проекта
+            <div className="mb-8">
+              <label className="block text-sm font-semibold mb-3" style={{ color: textPrimary }}>
+                Название сценария
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="Мой новый фильм"
-                className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-colors"
+                className="w-full px-5 py-4 rounded-xl text-base outline-none transition-all"
                 style={{
                   background: inputBg,
                   border: `1px solid ${inputBorder}`,
                   color: textPrimary,
                 }}
+                onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = activeBorder}
+                onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = inputBorder}
               />
             </div>
 
             {/* Формат сценария */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold mb-2" style={{ color: textPrimary }}>
+            <div className="mb-8">
+              <label className="block text-sm font-semibold mb-3" style={{ color: textPrimary }}>
                 Формат сценария
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 {[
                   { value: 'hollywood' as ScriptFormat, label: 'Голливудский (WGA)' },
                   { value: 'russian' as ScriptFormat, label: 'Российский (КИТ)' },
@@ -127,11 +132,12 @@ export default function CreateScriptPage() {
                   <button
                     key={option.value}
                     onClick={() => setFormat(option.value)}
-                    className="px-4 py-3 rounded-lg text-xs font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: format === option.value ? 'rgba(99,102,241,0.15)' : inputBg,
-                      border: `1px solid ${format === option.value ? 'rgba(99,102,241,0.4)' : inputBorder}`,
-                      color: format === option.value ? '#818cf8' : textPrimary,
+                      background: format === option.value ? activeBg : inputBg,
+                      border: `1px solid ${format === option.value ? activeBorder : inputBorder}`,
+                      color: format === option.value ? activeText : textPrimary,
+                      boxShadow: format === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
                   >
                     {option.label}
@@ -141,11 +147,11 @@ export default function CreateScriptPage() {
             </div>
 
             {/* Шрифт */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold mb-2" style={{ color: textPrimary }}>
+            <div className="mb-8">
+              <label className="block text-sm font-semibold mb-3" style={{ color: textPrimary }}>
                 Шрифт
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 {[
                   { value: 'Courier New', label: 'Courier New' },
                   { value: 'Courier Prime', label: 'Courier Prime' },
@@ -154,11 +160,12 @@ export default function CreateScriptPage() {
                   <button
                     key={option.value}
                     onClick={() => setFontFamily(option.value)}
-                    className="px-4 py-3 rounded-lg text-xs font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: fontFamily === option.value ? 'rgba(99,102,241,0.15)' : inputBg,
-                      border: `1px solid ${fontFamily === option.value ? 'rgba(99,102,241,0.4)' : inputBorder}`,
-                      color: fontFamily === option.value ? '#818cf8' : textPrimary,
+                      background: fontFamily === option.value ? activeBg : inputBg,
+                      border: `1px solid ${fontFamily === option.value ? activeBorder : inputBorder}`,
+                      color: fontFamily === option.value ? activeText : textPrimary,
+                      boxShadow: fontFamily === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
                   >
                     {option.label}
@@ -168,34 +175,36 @@ export default function CreateScriptPage() {
             </div>
 
             {/* Размер шрифта */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold mb-2" style={{ color: textPrimary }}>
+            <div className="mb-8">
+              <label className="block text-sm font-semibold mb-3" style={{ color: textPrimary }}>
                 Размер шрифта
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <input
                   type="number"
                   value={fontSize}
                   onChange={e => setFontSize(Number(e.target.value))}
                   min={10}
                   max={16}
-                  className="w-24 px-4 py-3 rounded-lg text-sm outline-none transition-colors"
+                  className="w-32 px-5 py-4 rounded-xl text-base outline-none transition-all"
                   style={{
                     background: inputBg,
                     border: `1px solid ${inputBorder}`,
                     color: textPrimary,
                   }}
+                  onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = activeBorder}
+                  onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = inputBorder}
                 />
-                <span className="text-xs" style={{ color: textSecondary }}>pt</span>
+                <span className="text-sm font-medium" style={{ color: textSecondary }}>pt</span>
               </div>
             </div>
 
             {/* Система хронометража */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold mb-2" style={{ color: textPrimary }}>
+            <div className="mb-8">
+              <label className="block text-sm font-semibold mb-3" style={{ color: textPrimary }}>
                 Система хронометража
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { value: 'page' as TimingSystem, label: 'Постраничный (1 стр = 55 сек)' },
                   { value: 'character' as TimingSystem, label: 'Посимвольный' },
@@ -205,11 +214,12 @@ export default function CreateScriptPage() {
                   <button
                     key={option.value}
                     onClick={() => setTimingSystem(option.value)}
-                    className="px-4 py-3 rounded-lg text-xs font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: timingSystem === option.value ? 'rgba(99,102,241,0.15)' : inputBg,
-                      border: `1px solid ${timingSystem === option.value ? 'rgba(99,102,241,0.4)' : inputBorder}`,
-                      color: timingSystem === option.value ? '#818cf8' : textPrimary,
+                      background: timingSystem === option.value ? activeBg : inputBg,
+                      border: `1px solid ${timingSystem === option.value ? activeBorder : inputBorder}`,
+                      color: timingSystem === option.value ? activeText : textPrimary,
+                      boxShadow: timingSystem === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
                   >
                     {option.label}
@@ -219,11 +229,11 @@ export default function CreateScriptPage() {
             </div>
 
             {/* Жанровый коэффициент */}
-            <div className="mb-8">
-              <label className="block text-xs font-bold mb-2" style={{ color: textPrimary }}>
+            <div className="mb-10">
+              <label className="block text-sm font-semibold mb-3" style={{ color: textPrimary }}>
                 Жанровый коэффициент
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { value: 'auto', label: 'Авто' },
                   { value: '0.9', label: 'Мюзикл (0.9)' },
@@ -233,11 +243,12 @@ export default function CreateScriptPage() {
                   <button
                     key={option.value}
                     onClick={() => setGenreCoefficient(option.value)}
-                    className="px-4 py-3 rounded-lg text-xs font-medium transition-all"
+                    className="px-5 py-4 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: genreCoefficient === option.value ? 'rgba(99,102,241,0.15)' : inputBg,
-                      border: `1px solid ${genreCoefficient === option.value ? 'rgba(99,102,241,0.4)' : inputBorder}`,
-                      color: genreCoefficient === option.value ? '#818cf8' : textPrimary,
+                      background: genreCoefficient === option.value ? activeBg : inputBg,
+                      border: `1px solid ${genreCoefficient === option.value ? activeBorder : inputBorder}`,
+                      color: genreCoefficient === option.value ? activeText : textPrimary,
+                      boxShadow: genreCoefficient === option.value ? '0 4px 20px rgba(99,102,241,0.25)' : 'none',
                     }}
                   >
                     {option.label}
@@ -247,31 +258,35 @@ export default function CreateScriptPage() {
             </div>
 
             {/* Кнопки */}
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-4 pt-4" style={{ borderTop: `1px solid ${border}` }}>
               <button
                 onClick={handleCancel}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-medium transition-all"
+                className="flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-medium transition-all"
                 style={{
-                  background: isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
-                  color: isDark ? '#e5e7eb' : '#374151',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db'}`,
+                  background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                  color: isDark ? '#e5e7eb' : '#475569',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#e2e8f0'}`,
                 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.12)' : '#e2e8f0' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' }}
               >
-                <X size={14} />
+                <X size={16} />
                 Отмена
               </button>
               <button
                 onClick={handleCreate}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-medium transition-all"
+                className="flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-medium transition-all"
                 style={{
                   background: 'linear-gradient(135deg, #6366f1, #818cf8)',
                   color: '#ffffff',
                   border: '1px solid rgba(99,102,241,0.3)',
-                  boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
+                  boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
                 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 25px rgba(99,102,241,0.5)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(99,102,241,0.4)' }}
               >
-                <Save size={14} />
-                Создать
+                <Save size={16} />
+                Создать сценарий
               </button>
             </div>
           </div>
