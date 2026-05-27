@@ -80,16 +80,37 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     }
   }
 
-  const getWidth = (type: BlockType) => {
-    switch (type) {
-      case 'scene_header': return '100%'
-      case 'action': return '100%'
-      case 'character': return 'auto'
-      case 'dialog': return '70%'
-      case 'parenthetical': return '50%'
-      case 'transition': return 'auto'
-      default: return '100%'
+  const getWidth = () => {
+    // Все блоки на полную ширину
+    return '100%'
+  }
+
+  // Автоопределение типа блока по содержимому
+  const detectBlockType = (content: string): BlockType => {
+    const trimmed = content.trim().toUpperCase()
+    
+    // Заголовок сцены: начинается с цифры и точки
+    if (/^\d+\./.test(trimmed)) {
+      return 'scene_header'
     }
+    
+    // Переход: содержит слова НАПЛЫВ, РАСТЯЖКА, ПЕРЕХОД и т.д.
+    if (/НАПЛЫВ|РАСТЯЖКА|ПЕРЕХОД|ПРИБЛИЖЕНИЕ|ОТЪЕЗД/.test(trimmed)) {
+      return 'transition'
+    }
+    
+    // Ремарка: в скобках
+    if (/^\(.*\)$/.test(content.trim())) {
+      return 'parenthetical'
+    }
+    
+    // Персонаж: короткая строка в верхнем регистре без цифр
+    if (trimmed.length < 30 && /^[А-ЯA-Z\s]+$/.test(trimmed) && !/\d/.test(trimmed)) {
+      return 'character'
+    }
+    
+    // По умолчанию - действие
+    return 'action'
   }
 
   const getUppercase = (type: BlockType) => {
@@ -154,9 +175,14 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
   }
 
   const handleContentChange = (blockId: string, content: string) => {
-    setBlocks(blocks.map(b => 
-      b.id === blockId ? { ...b, content } : b
-    ))
+    setBlocks(blocks.map(b => {
+      if (b.id === blockId) {
+        // Автоопределение типа блока если контент изменился
+        const autoType = detectBlockType(content)
+        return { ...b, content, type: autoType }
+      }
+      return b
+    }))
   }
 
   return (
@@ -211,7 +237,7 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
             className="mb-2"
             style={{
               marginLeft: getIndent(block.type),
-              width: getWidth(block.type),
+              width: getWidth(),
             }}
           >
             <textarea
