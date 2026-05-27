@@ -161,9 +161,9 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { value: 'hollywood' as ScriptFormat, label: 'Голливудский (WGA)', tooltip: 'Стандарт WGA — 1 дюйм отступов, Courier 12pt' },
-                  { value: 'russian' as ScriptFormat, label: 'Российский (КИТ)', tooltip: 'Российский стандарт — отступы по ГОСТ' },
-                  { value: 'custom' as ScriptFormat, label: 'Пользовательский', tooltip: 'Настройте отступы и шрифт вручную' },
+                  { value: 'hollywood' as ScriptFormat, label: 'Голливудский (WGA)', tooltip: 'Стандарт WGA: отступы 1 дюйм, Courier 12pt, 1 стр = 55 сек' },
+                  { value: 'russian' as ScriptFormat, label: 'Российский (КИТ)', tooltip: 'Российский стандарт по ГОСТ с отступами для кириллицы' },
+                  { value: 'custom' as ScriptFormat, label: 'Пользовательский', tooltip: 'Настройте отступы и шрифт вручную (пока не реализовано)' },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -190,9 +190,9 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { value: 'Courier New', label: 'Courier New', tooltip: 'Классический моноширинный шрифт' },
-                  { value: 'Courier Prime', label: 'Courier Prime', tooltip: 'Оптимизированный для чтения шрифт' },
-                  { value: 'Другой', label: 'Другой', tooltip: 'Выберите свой шрифт' },
+                  { value: 'Courier New', label: 'Courier New', tooltip: 'Классический моноширинный шрифт, стандарт для сценариев' },
+                  { value: 'Courier Prime', label: 'Courier Prime', tooltip: 'Оптимизированный для чтения шрифт с лучшей читаемостью' },
+                  { value: 'Другой', label: 'Другой', tooltip: 'Выберите свой шрифт из списка (пока не реализовано)' },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -244,10 +244,10 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: 'page' as TimingSystem, label: 'Постраничный (1 стр = 55 сек)', tooltip: '1 страница = 55 секунд × жанровый коэффициент' },
-                  { value: 'character' as TimingSystem, label: 'Посимвольный', tooltip: 'Расчёт по количеству символов в тексте' },
-                  { value: 'flexible' as TimingSystem, label: 'Гибкий', tooltip: 'Комбинированный метод расчёта' },
-                  { value: 'manual' as TimingSystem, label: 'Ручной', tooltip: 'Установите время для каждой сцены вручную' },
+                  { value: 'page' as TimingSystem, label: 'Постраничный (1 стр = 55 сек)', tooltip: '1 страница = 55 секунд × жанровый коэффициент. Стандартный метод.' },
+                  { value: 'character' as TimingSystem, label: 'Посимвольный', tooltip: '1 символ = 0.05 секунды. Точный расчёт по количеству символов.' },
+                  { value: 'flexible' as TimingSystem, label: 'Гибкий', tooltip: 'Комбинированный метод: страницы + диалоги (пока не реализовано)' },
+                  { value: 'manual' as TimingSystem, label: 'Ручной', tooltip: 'Установите время для каждой сцены вручную (пока не реализовано)' },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -274,10 +274,10 @@ export default function CreateScriptPage() {
               </label>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: 'auto', label: 'Авто', tooltip: 'Автоматический расчёт по типу проекта' },
-                  { value: '0.9', label: 'Мюзикл (0.9)', tooltip: 'Мюзиклы быстрее — 0.9x от стандартного времени' },
-                  { value: '1.15', label: 'Комедия (1.15)', tooltip: 'Комедии требуют больше времени — 1.15x' },
-                  { value: '1.0', label: 'Драма (1.0)', tooltip: 'Стандартный коэффициент для драмы' },
+                  { value: 'auto', label: 'Авто', tooltip: 'Автоматический расчёт по типу проекта (мюзикл 0.9, комедия 1.15, драма 1.0)' },
+                  { value: '0.9', label: 'Мюзикл (0.9)', tooltip: 'Мюзиклы быстрее: 1 страница = 49.5 сек (0.9 × 55)' },
+                  { value: '1.15', label: 'Комедия (1.15)', tooltip: 'Комедии медленнее: 1 страница = 63.25 сек (1.15 × 55)' },
+                  { value: '1.0', label: 'Драма (1.0)', tooltip: 'Стандарт: 1 страница = 55 секунд' },
                 ].map((option) => (
                   <button
                     key={option.value}
