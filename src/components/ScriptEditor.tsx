@@ -179,10 +179,6 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, onS
         {!hasContent ? (
           // Объяснение если сценарий пустой
           <div className="py-20 text-center">
-            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)' }}>
-              <span className="text-3xl" style={{ color: '#818cf8' }}>✍️</span>
-            </div>
             <h3 className="text-lg font-bold mb-2" style={{ color: textPrimary }}>
               Начните писать сценарий
             </h3>
