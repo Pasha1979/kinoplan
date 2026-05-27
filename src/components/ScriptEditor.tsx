@@ -215,7 +215,7 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
+      <div className="w-full px-4" style={{ fontFamily: `${fontFamily}, monospace`, fontSize: `${fontSize}pt` }}>
         {/* Объяснение если сценарий пустой */}
         {!hasContent && (
           <div className="py-10 text-center mb-4">
@@ -246,19 +246,19 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                 lineHeight: '1.8',
                 textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
                 minHeight: 
-                  block.type === 'action' ? '90px' : 
-                  block.type === 'scene_header' ? '60px' : 
-                  block.type === 'dialog' ? '60px' : 
-                  block.type === 'parenthetical' ? '40px' : 
-                  block.type === 'transition' ? '40px' : '30px',
+                  block.type === 'action' ? '200px' : 
+                  block.type === 'scene_header' ? '80px' : 
+                  block.type === 'dialog' ? '120px' : 
+                  block.type === 'parenthetical' ? '60px' : 
+                  block.type === 'transition' ? '60px' : '50px',
                 fontWeight: block.type === 'character' ? 'bold' : 'normal',
               }}
               rows={
-                block.type === 'action' ? 4 : 
-                block.type === 'scene_header' ? 3 : 
-                block.type === 'dialog' ? 3 : 
-                block.type === 'parenthetical' ? 2 : 
-                block.type === 'transition' ? 2 : 1
+                block.type === 'action' ? 8 : 
+                block.type === 'scene_header' ? 4 : 
+                block.type === 'dialog' ? 6 : 
+                block.type === 'parenthetical' ? 3 : 
+                block.type === 'transition' ? 3 : 2
               }
               placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
             />
