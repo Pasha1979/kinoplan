@@ -17,9 +17,10 @@ interface ScriptEditorProps {
   genreCoefficient: number
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
+  onBlocksChange?: (blocks: Block[]) => void
 }
 
-export default function ScriptEditor({ format, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange }: ScriptEditorProps) {
+export default function ScriptEditor({ format, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: '1', type: 'scene_header', content: '' },
   ])
@@ -48,6 +49,9 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     }
     if (onStatsChange) {
       onStatsChange({ scenes, pages, duration })
+    }
+    if (onBlocksChange) {
+      onBlocksChange(blocks)
     }
   }, [blocks, genreCoefficient, onSceneCountChange, onStatsChange])
 

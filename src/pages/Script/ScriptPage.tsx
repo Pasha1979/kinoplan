@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Upload, Plus, BookOpen, Clock, Search, Hash, Sun, Moon, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Search, Hash, Sun, Moon, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
 import ScriptEditor from '../../components/ScriptEditor'
 import TitlePageEditor from '../../components/TitlePageEditor'
+import FormatAssistant from '../../components/FormatAssistant'
 
 type ScriptView = 'empty' | 'editor'
 type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics'
@@ -37,6 +38,8 @@ export default function ScriptPage() {
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [sceneCount, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
+  const [enableAutoFix, setEnableAutoFix] = useState(false)
+  const [editorBlocks, setEditorBlocks] = useState<Array<{ id: string; type: string; content: string }>>([])
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -385,6 +388,20 @@ export default function ScriptPage() {
             >
               <Settings size={15} />
             </button>
+            {/* Кнопка Format Assistant */}
+            <button
+              onClick={() => setEnableAutoFix(!enableAutoFix)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center relative"
+              style={{ 
+                color: enableAutoFix ? '#818cf8' : textSecondary,
+                background: enableAutoFix ? 'rgba(99,102,241,0.15)' : 'transparent',
+              }}
+              onMouseEnter={e => !enableAutoFix && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+              onMouseLeave={e => !enableAutoFix && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+              title="Проверка форматирования"
+            >
+              <AlertTriangle size={15} />
+            </button>
             {/* Кнопка правой панели */}
             <button
               onClick={() => setRightPanelOpen(!rightPanelOpen)}
@@ -438,6 +455,7 @@ export default function ScriptPage() {
             genreCoefficient={1.0}
             onSceneCountChange={setSceneCount}
             onStatsChange={setScriptStats}
+            onBlocksChange={setEditorBlocks}
           />
         )}
 
@@ -458,6 +476,16 @@ export default function ScriptPage() {
               ≈ {Math.round(scriptStats.duration / 60)} мин
             </span>
           </div>
+        )}
+
+        {/* Format Assistant — панель проверки форматирования */}
+        {activeTab === 'text' && (
+          <FormatAssistant
+            blocks={editorBlocks}
+            format="russian"
+            isDark={isDark}
+            enableAutoFix={enableAutoFix}
+          />
         )}
       </div>
 
