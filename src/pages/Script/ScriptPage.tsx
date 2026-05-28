@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
+import type { ScriptFormat } from '../../store/scriptStore'
 import ScriptEditor from '../../components/ScriptEditor'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
@@ -43,6 +44,9 @@ export default function ScriptPage() {
   const [enableAutoFix, setEnableAutoFix] = useState(false)
   const [editorBlocks, setEditorBlocks] = useState<Array<{ id: string; type: string; content: string }>>([])
   const [focusSceneId, setFocusSceneId] = useState<string>()
+  const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
+  const [showFormatModal, setShowFormatModal] = useState(false)
+  const [currentSeries, setCurrentSeries] = useState(1)
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -53,6 +57,53 @@ export default function ScriptPage() {
       }
     }
   }, [project, scripts])
+
+  // Конвертация блоков при переключении формата
+  useEffect(() => {
+    if (editorBlocks.length === 0) return
+
+    const convertBlocks = (blocks: Array<{ id: string; type: string; content: string }>, from: ScriptFormat, to: ScriptFormat) => {
+      if (from === to) return blocks
+      
+      return blocks.map(block => {
+        if (block.type === 'scene_header') {
+          let content = block.content.trim()
+          
+          if (from === 'russian' && to === 'hollywood') {
+            // RU → EN
+            content = content.replace(/^\d+\.\s*/, '')
+            content = content.replace(/ИНТ\./gi, 'INT.')
+            content = content.replace(/ЭКСТ\./gi, 'EXT.')
+            content = content.replace(/—/g, '-')
+            content = content.replace(/ДЕНЬ/gi, 'DAY')
+            content = content.replace(/НОЧЬ/gi, 'NIGHT')
+            content = content.replace(/УТРО/gi, 'MORNING')
+            content = content.replace(/ВЕЧЕР/gi, 'EVENING')
+          } else if (from === 'hollywood' && to === 'russian') {
+            // EN → RU
+            content = content.replace(/INT\./gi, 'ИНТ.')
+            content = content.replace(/EXT\./gi, 'ЭКСТ.')
+            content = content.replace(/-/g, '—')
+            content = content.replace(/DAY/gi, 'ДЕНЬ')
+            content = content.replace(/NIGHT/gi, 'НОЧЬ')
+            content = content.replace(/MORNING/gi, 'УТРО')
+            content = content.replace(/EVENING/gi, 'ВЕЧЕР')
+          }
+          
+          return { ...block, content }
+        }
+        return block
+      })
+    }
+
+    // Сохраняем предыдущий формат для конвертации
+    const prevFormat = useRef(scriptFormat)
+    if (prevFormat.current !== scriptFormat) {
+      const converted = convertBlocks(editorBlocks, prevFormat.current, scriptFormat)
+      setEditorBlocks(converted)
+      prevFormat.current = scriptFormat
+    }
+  }, [scriptFormat, editorBlocks])
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const sidebarBg = isDark ? '#13132a' : '#ffffff'
@@ -150,7 +201,7 @@ export default function ScriptPage() {
 
             {/* Написать с нуля */}
             <button
-              onClick={() => navigate(`/project/${project?.id}/script/create`)}
+              onClick={() => setShowFormatModal(true)}
               onMouseEnter={() => setCreateHover(true)}
               onMouseLeave={() => setCreateHover(false)}
               className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
@@ -230,6 +281,54 @@ export default function ScriptPage() {
               <ChevronLeft size={14} />
               Назад
             </button>
+            <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
+            
+            {/* Навигация между сериями (только для сериалов) */}
+            {project?.type === 'serial' && (
+              <>
+                <div className="flex items-center gap-1 rounded-lg p-0.5"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
+                  <button
+                    onClick={() => setCurrentSeries(Math.max(1, currentSeries - 1))}
+                    disabled={currentSeries <= 1}
+                    className="px-2 py-1 text-xs font-medium transition-all disabled:opacity-30"
+                    style={{ color: isDark ? '#e5e7eb' : '#374151' }}
+                  >
+                    ‹
+                  </button>
+                  <span className="px-3 py-1 text-xs font-medium" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Серия {currentSeries}
+                  </span>
+                  <button
+                    onClick={() => setCurrentSeries(currentSeries + 1)}
+                    className="px-2 py-1 text-xs font-medium transition-all"
+                    style={{ color: isDark ? '#e5e7eb' : '#374151' }}
+                  >
+                    ›
+                  </button>
+                </div>
+                <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
+              </>
+            )}
+            
+            {/* Переключатель форматов */}
+            <div className="flex items-center gap-1 rounded-lg p-0.5"
+              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
+              <button
+                onClick={() => setScriptFormat('russian')}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${scriptFormat === 'russian' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
+              >
+                <Globe size={12} />
+                RU
+              </button>
+              <button
+                onClick={() => setScriptFormat('hollywood')}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${scriptFormat === 'hollywood' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
+              >
+                <Globe size={12} />
+                EN
+              </button>
+            </div>
             <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
             <div>
               <p className="text-sm font-bold" style={{ color: textPrimary }}>
@@ -373,7 +472,9 @@ export default function ScriptPage() {
             
             {/* Редактор — справа */}
             <ScriptEditor 
-              format="russian"
+              format={scriptFormat}
+              projectType={project?.type || 'film'}
+              currentSeries={currentSeries}
               fontFamily="Courier New"
               fontSize={12}
               isDark={isDark}
@@ -461,6 +562,78 @@ export default function ScriptPage() {
                 + Новая заметка
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно выбора формата сценария */}
+      {showFormatModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div className="max-w-md w-full mx-4 p-8 rounded-2xl"
+            style={{ background: isDark ? '#1a1a35' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: textPrimary }}>Выберите формат сценария</h3>
+            <p className="text-sm mb-6" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+              Формат будет применён ко всему сценарию. Его можно изменить позже.
+            </p>
+            
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => {
+                  setScriptFormat('russian')
+                  setShowFormatModal(false)
+                  setView('editor')
+                }}
+                className="w-full p-4 rounded-xl text-left transition-all"
+                style={{
+                  background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)' }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Globe size={20} style={{ color: '#818cf8' }} />
+                  <span className="font-bold" style={{ color: textPrimary }}>Российский формат</span>
+                </div>
+                <p className="text-xs" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  1. ИНТ. КУХНЯ — ДЕНЬ<br />
+                  Автонумерация сцен, кириллица
+                </p>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setScriptFormat('hollywood')
+                  setShowFormatModal(false)
+                  setView('editor')
+                }}
+                className="w-full p-4 rounded-xl text-left transition-all"
+                style={{
+                  background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.05)',
+                  border: '1px solid rgba(34,197,94,0.25)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.05)' }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Globe size={20} style={{ color: '#22c55e' }} />
+                  <span className="font-bold" style={{ color: textPrimary }}>Голливудский формат</span>
+                </div>
+                <p className="text-xs" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  INT. KITCHEN - DAY<br />
+                  Международный стандарт, латиница
+                </p>
+              </button>
+            </div>
+            
+            <button
+              onClick={() => setShowFormatModal(false)}
+              className="w-full py-3 rounded-xl text-sm font-medium transition-all"
+              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textSecondary }}
+            >
+              Отмена
+            </button>
           </div>
         </div>
       )}

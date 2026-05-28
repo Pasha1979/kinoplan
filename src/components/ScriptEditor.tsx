@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
+import type { ProjectType } from '../store/projectStore'
 import { useSmartType } from '../hooks/useSmartType'
 import { parseScript, getUniqueElements } from '../utils/scriptParser'
 
@@ -13,6 +14,8 @@ interface Block {
 
 interface ScriptEditorProps {
   format: ScriptFormat
+  projectType: ProjectType
+  currentSeries: number
   fontFamily: string
   fontSize: number
   isDark: boolean
@@ -23,7 +26,7 @@ interface ScriptEditorProps {
   focusSceneId?: string
 }
 
-export default function ScriptEditor({ format, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange, focusSceneId }: ScriptEditorProps) {
+export default function ScriptEditor({ format, projectType, currentSeries, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange, focusSceneId }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: '1', type: 'scene_header', content: '' },
   ])
@@ -98,19 +101,149 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
+  // Автонумерация сцен для российского формата
+  const renumberScenes = (updatedBlocks: Block[]) => {
+    if (format !== 'russian') return updatedBlocks
+    
+    let sceneNumber = 1
+    return updatedBlocks.map(block => {
+      if (block.type === 'scene_header') {
+        const content = block.content.trim()
+        
+        // Проверяем, есть ли буква в номере (например, 1-1-А)
+        const letterMatch = content.match(/^(\d+-\d+-[А-ЯA-Z])\.\s*(.*)$/i)
+        if (letterMatch) {
+          // Сохраняем букву, если она есть
+          const letter = letterMatch[1].split('-')[2]
+          const baseNumber = projectType === 'serial' 
+            ? `${currentSeries}-${sceneNumber}-${letter}`
+            : `${sceneNumber}-${letter}`
+          const newContent = `${baseNumber}. ${letterMatch[2]}`
+          sceneNumber++
+          return { ...block, content: newContent }
+        }
+        
+        // Сериал: формат 1-5 (серия-сцена)
+        if (projectType === 'serial') {
+          const match = content.match(/^(\d+-\d+\.\s*)?(.*)$/)
+          if (match) {
+            const newContent = `${currentSeries}-${sceneNumber}. ${match[2]}`
+            sceneNumber++
+            return { ...block, content: newContent }
+          }
+        }
+        
+        // Полнометражный фильм: формат 1, 2, 3...
+        const match = content.match(/^(\d+\.\s*)?(.*)$/)
+        if (match) {
+          const newContent = `${sceneNumber}. ${match[2]}`
+          sceneNumber++
+          return { ...block, content: newContent }
+        }
+      }
+      return block
+    })
+  }
+
+  // Конвертация между форматами
+  const convertFormat = (blocks: Block[], fromFormat: ScriptFormat, toFormat: ScriptFormat): Block[] => {
+    if (fromFormat === toFormat) return blocks
+    
+    return blocks.map(block => {
+      if (block.type === 'scene_header') {
+        let content = block.content.trim()
+        
+        if (fromFormat === 'russian' && toFormat === 'hollywood') {
+          // RU → EN: "1. ИНТ. КУХНЯ — ДЕНЬ" → "INT. KITCHEN - DAY"
+          content = content.replace(/^\d+\.\s*/, '') // Убираем номер
+          content = content.replace(/ИНТ\./gi, 'INT.')
+          content = content.replace(/ЭКСТ\./gi, 'EXT.')
+          content = content.replace(/—/g, '-')
+          content = content.replace(/ДЕНЬ/gi, 'DAY')
+          content = content.replace(/НОЧЬ/gi, 'NIGHT')
+          content = content.replace(/УТРО/gi, 'MORNING')
+          content = content.replace(/ВЕЧЕР/gi, 'EVENING')
+        } else if (fromFormat === 'hollywood' && toFormat === 'russian') {
+          // EN → RU: "INT. KITCHEN - DAY" → "1. ИНТ. КУХНЯ — ДЕНЬ"
+          content = content.replace(/INT\./gi, 'ИНТ.')
+          content = content.replace(/EXT\./gi, 'ЭКСТ.')
+          content = content.replace(/-/g, '—')
+          content = content.replace(/DAY/gi, 'ДЕНЬ')
+          content = content.replace(/NIGHT/gi, 'НОЧЬ')
+          content = content.replace(/MORNING/gi, 'УТРО')
+          content = content.replace(/EVENING/gi, 'ВЕЧЕР')
+          // Номер добавится через renumberScenes
+        }
+        
+        return { ...block, content }
+      }
+      return block
+    })
+  }
+
+  // Автодополнение для заголовков сцен
+  const autoCompleteSceneHeader = (content: string, cursorPosition: number): string => {
+    const trimmed = content.substring(0, cursorPosition)
+    
+    if (format === 'russian') {
+      // Российский формат
+      if (trimmed.endsWith('И')) {
+        return content.substring(0, cursorPosition - 1) + 'ИНТ.' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('Э')) {
+        return content.substring(0, cursorPosition - 1) + 'ЭКСТ.' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('Д')) {
+        return content.substring(0, cursorPosition - 1) + 'ДЕНЬ' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('Н')) {
+        return content.substring(0, cursorPosition - 1) + 'НОЧЬ' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('У')) {
+        return content.substring(0, cursorPosition - 1) + 'УТРО' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('В')) {
+        return content.substring(0, cursorPosition - 1) + 'ВЕЧЕР' + content.substring(cursorPosition)
+      }
+    } else {
+      // Голливудский формат
+      if (trimmed.endsWith('I')) {
+        return content.substring(0, cursorPosition - 1) + 'INT.' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('E')) {
+        return content.substring(0, cursorPosition - 1) + 'EXT.' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('D')) {
+        return content.substring(0, cursorPosition - 1) + 'DAY' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('N')) {
+        return content.substring(0, cursorPosition - 1) + 'NIGHT' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('M')) {
+        return content.substring(0, cursorPosition - 1) + 'MORNING' + content.substring(cursorPosition)
+      }
+      if (trimmed.endsWith('E')) {
+        return content.substring(0, cursorPosition - 1) + 'EVENING' + content.substring(cursorPosition)
+      }
+    }
+    
+    return content
+  }
+
   // Автоопределение типа блока по содержимому
   const detectBlockType = (content: string): BlockType => {
     const trimmed = content.trim().toUpperCase()
     
-    // Заголовок сцены: начинается с цифры и точки
-    if (/^\d+\./.test(trimmed)) {
-      // Проверка формата заголовка в зависимости от выбранного формата
-      const scenePattern = format === 'russian' 
-        ? /ИНТ|ЭКСТ/ 
-        : /INT|EXT/
-      if (scenePattern.test(trimmed)) {
-        return 'scene_header'
-      }
+    // Российский формат заголовка сцены: "1. ИНТ. КУХНЯ — ДЕНЬ"
+    if (format === 'russian') {
+      const russianSceneRegex = /^\d+\.\s*(ИНТ\.|ЭКСТ\.)/i
+      if (russianSceneRegex.test(trimmed)) return 'scene_header'
+    }
+    
+    // Голливудский формат заголовка сцены: "INT. KITCHEN - DAY"
+    if (format === 'hollywood') {
+      const hollywoodSceneRegex = /^(INT\.|EXT\.)/i
+      if (hollywoodSceneRegex.test(trimmed)) return 'scene_header'
     }
     
     // Переход: содержит слова НАПЛЫВ, РАСТЯЖКА, ПЕРЕХОД и т.д.
@@ -303,19 +436,29 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     const block = blocks.find(b => b.id === blockId)
     if (!block) return
 
+    // Автодополнение для заголовков сцен
+    let updatedContent = content
+    if (cursorPosition !== undefined && block.type === 'scene_header') {
+      updatedContent = autoCompleteSceneHeader(content, cursorPosition)
+    }
+
     // Обновляем блоки
-    setBlocks(blocks.map(b => {
+    const updatedBlocks = blocks.map(b => {
       if (b.id === blockId) {
         // Автоопределение типа блока если контент изменился
-        const autoType = detectBlockType(content)
-        return { ...b, content, type: autoType }
+        const autoType = detectBlockType(updatedContent)
+        return { ...b, content: updatedContent, type: autoType }
       }
       return b
-    }))
+    })
+
+    // Применяем автонумерацию для российского формата
+    const renumberedBlocks = renumberScenes(updatedBlocks)
+    setBlocks(renumberedBlocks)
 
     // Обновляем подсказки SmartType
     if (cursorPosition !== undefined) {
-      smartType.updateSuggestions(content, cursorPosition, block?.type || 'action')
+      smartType.updateSuggestions(updatedContent, cursorPosition, block?.type || 'action')
     }
   }
 
@@ -424,7 +567,7 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                     textTransform: getUppercase(block.type) ? 'uppercase' : 'none',
                     fontWeight: block.type === 'character' ? 'bold' : 'normal',
                   }}
-                  placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
+                  placeholder={block.type === 'scene_header' ? (format === 'russian' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : 'INT. LOCATION - DAY') : ''}
                 />
                 
                 {/* SmartType подсказки */}
