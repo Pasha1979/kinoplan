@@ -622,7 +622,7 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
                 )}
               </div>
             )
-          })}
+          })
         </div>
       </div>
     </div>
