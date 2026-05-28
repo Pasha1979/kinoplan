@@ -167,17 +167,21 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
       return scenePrefix + 'ЭКСТ. ' + afterCursor
     }
     
-    // 2. После пробела или тире: Д/Н/У/В → ДЕНЬ/НОЧЬ/УТРО/ВЕЧЕР
+    // 2. После локации: Д/Н/У/В → ДЕНЬ/НОЧЬ/УТРО/ВЕЧЕР
     const lastChar = beforeCursor.slice(-1).toUpperCase()
     const prevChar = beforeCursor.length > 1 ? beforeCursor.slice(-2, -1) : ''
     
     const hasSceneHeader = words.some(w => /ИНТ\.|ЭКСТ\./i.test(w))
     
-    if (hasSceneHeader && (prevChar === ' ' || prevChar === '—' || prevChar === '-')) {
-      if (lastChar === 'Д') return beforeCursor.slice(0, -1) + 'ДЕНЬ' + afterCursor
-      if (lastChar === 'Н') return beforeCursor.slice(0, -1) + 'НОЧЬ' + afterCursor
-      if (lastChar === 'У') return beforeCursor.slice(0, -1) + 'УТРО' + afterCursor
-      if (lastChar === 'В') return beforeCursor.slice(0, -1) + 'ВЕЧЕР' + afterCursor
+    // Проверяем что есть ИНТ/ЭКСТ и перед буквой уже есть локация (минимум 3 слова: ИНТ. + локация + буква)
+    if (hasSceneHeader && words.length >= 3 && (prevChar === ' ' || prevChar === '—' || prevChar === '-')) {
+      // Проверяем что последнее слово - это одна буква Д/Н/У/В
+      if (lastWord.length === 1) {
+        if (lastChar === 'Д') return beforeCursor.slice(0, -1) + 'ДЕНЬ' + afterCursor
+        if (lastChar === 'Н') return beforeCursor.slice(0, -1) + 'НОЧЬ' + afterCursor
+        if (lastChar === 'У') return beforeCursor.slice(0, -1) + 'УТРО' + afterCursor
+        if (lastChar === 'В') return beforeCursor.slice(0, -1) + 'ВЕЧЕР' + afterCursor
+      }
     }
     
     return content
