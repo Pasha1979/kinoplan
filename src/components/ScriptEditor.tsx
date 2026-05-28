@@ -168,13 +168,17 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
     }
     
     // 2. Время суток: Д/Н/У/В → ДЕНЬ/НОЧЬ/УТРО/ВЕЧЕР
+    // Срабатывает только если есть подобъект (точка в локации) или минимум 2 слова после ИНТ/ЭКСТ
     const lastChar = beforeCursor.slice(-1).toUpperCase()
     const prevChar = beforeCursor.length > 1 ? beforeCursor.slice(-2, -1) : ''
     
     const hasSceneHeader = words.some(w => /ИНТ\.|ЭКСТ\./i.test(w))
+    const hasSubObject = beforeCursor.includes('.') // есть точка (подобъект)
+    const hasLocationAfterHeader = words.length >= 3 // ИНТ/ЭКСТ + локация + буква
     
-    // Срабатывает если есть ИНТ/ЭКСТ, перед буквой пробел/тире, и последнее слово - одна буква Д/Н/У/В
-    if (hasSceneHeader && (prevChar === ' ' || prevChar === '—' || prevChar === '-') && lastWord.length === 1) {
+    // Срабатывает если: есть ИНТ/ЭКСТ, есть подобъект ИЛИ локация, перед буквой пробел/тире
+    if (hasSceneHeader && (hasSubObject || hasLocationAfterHeader) && 
+        (prevChar === ' ' || prevChar === '—' || prevChar === '-') && lastWord.length === 1) {
       if (lastChar === 'Д') return beforeCursor.slice(0, -1) + 'ДЕНЬ' + afterCursor
       if (lastChar === 'Н') return beforeCursor.slice(0, -1) + 'НОЧЬ' + afterCursor
       if (lastChar === 'У') return beforeCursor.slice(0, -1) + 'УТРО' + afterCursor
