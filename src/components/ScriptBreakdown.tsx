@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react'
 import { 
   Users, Box, MapPin, Shirt, Car, Sparkles, Flame, 
   Monitor, StickyNote, Plus, X,
-  Search, Filter, Download
+  Search, Filter, Download, BarChart3
 } from 'lucide-react'
 import { parseScript, getUniqueElements, type ParsedElement, type ParsedScene } from '../utils/scriptParser'
+import CharacterStats, { type CharacterData } from './CharacterStats'
 
 export type BreakdownCategory = 
   | 'cast'        // Актёры / роли
@@ -59,6 +60,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
   const [newElementName, setNewElementName] = useState('')
   const [newElementCategory, setNewElementCategory] = useState<BreakdownCategory>('cast')
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeView, setActiveView] = useState<'elements' | 'stats'>('elements')
 
   const cardBg = isDark ? '#13132a' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
@@ -84,6 +86,20 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
 
   // Объединяем распарсенные и ручные элементы
   const allElements = [...parsedElements, ...manualElements]
+
+  // Подготовка данных для CharacterStats
+  const characterData = useMemo(() => {
+    const characterElements = allElements.filter(e => e.category === 'cast')
+    return characterElements.map(char => ({
+      id: char.id,
+      name: char.name,
+      sceneIds: char.sceneIds,
+      dialogPages: char.sceneIds.length * 0.5, // Примерная оценка
+      firstAppearance: char.sceneIds[0] || '1',
+      lastAppearance: char.sceneIds[char.sceneIds.length - 1] || '1',
+      appearanceGaps: [], // Упрощенно для демо
+    }))
+  }, [allElements])
 
   const filteredElements = useMemo(() => {
     let result = allElements
@@ -133,6 +149,17 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
     return cat?.color || '#6b7280'
   }
 
+  // Если выбран режим статистики — показываем CharacterStats
+  if (activeView === 'stats') {
+    return (
+      <CharacterStats
+        characters={characterData}
+        totalScenes={scenes.length}
+        isDark={isDark}
+      />
+    )
+  }
+
   return (
     <div className="flex-1 flex overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       
@@ -144,12 +171,29 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
         <div className="p-4 border-b" style={{ borderColor: border }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold" style={{ color: textPrimary }}>
-              Разбивка сцен
+              {activeView === 'elements' ? 'Разбивка сцен' : 'Статистика'}
             </h2>
             <span className="text-xs px-2 py-1 rounded-full"
               style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#f0f0f0', color: textSecondary }}>
-              {filteredElements.length} элементов
+              {activeView === 'elements' ? `${filteredElements.length} элементов` : `${characterData.length} персонажей`}
             </span>
+          </div>
+          
+          {/* Переключатель режимов */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveView('elements')}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'elements' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
+            >
+              Элементы
+            </button>
+            <button
+              onClick={() => setActiveView('stats')}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'stats' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
+            >
+              <BarChart3 size={12} className="inline mr-1" />
+              Статистика
+            </button>
           </div>
 
           {/* Поиск */}
