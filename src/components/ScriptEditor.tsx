@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
+import { useSmartType } from '../hooks/useSmartType'
+import { parseScript, getUniqueElements } from '../utils/scriptParser'
 
 type BlockType = 'scene_header' | 'action' | 'character' | 'dialog' | 'parenthetical' | 'transition'
 
@@ -26,7 +28,32 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     { id: '1', type: 'scene_header', content: '' },
   ])
   const [showTutorial, setShowTutorial] = useState(true)
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
+
+  // Извлекаем персонажей и локации для SmartType
+  const { characters, locations } = useMemo(() => {
+    const parsed = parseScript(blocks)
+    const elements = getUniqueElements(parsed)
+    
+    const chars = elements
+      .filter(e => e.category === 'cast')
+      .map(e => e.name)
+    
+    const locs = elements
+      .filter(e => e.category === 'locations')
+      .map(e => e.name)
+    
+    return { characters: chars, locations: locs }
+  }, [blocks])
+
+  // SmartType для автодополнения
+  const smartType = useSmartType({
+    characters,
+    locations,
+    minMatchLength: 1,
+    maxSuggestions: 5,
+  })
 
   // Обработка фокуса на сцену из навигатора
   useEffect(() => {
@@ -134,17 +161,52 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
   }
 
   const handleKeyDown = (e: React.KeyboardEvent, blockId: string) => {
+    // SmartType: навигация по подсказкам
+    if (smartType.isOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        smartType.navigateSuggestions('down')
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        smartType.navigateSuggestions('up')
+        return
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault()
+        const suggestion = smartType.suggestions[smartType.activeIndex]
+        if (suggestion) {
+          const block = blocks.find(b => b.id === blockId)
+          if (block) {
+            const target = e.currentTarget as HTMLTextAreaElement
+            const { newText } = smartType.selectSuggestion(
+              block.content,
+              target.selectionStart,
+              suggestion
+            )
+            handleContentChange(blockId, newText)
+            return
+          }
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        smartType.closeSuggestions()
+        return
+      }
+    }
+
     // Ctrl+S — сохранение (заглушка)
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault()
-      // TODO: интегрировать с сохранением в store
       console.log('Сохранение сценария...')
       return
     }
 
-    if (e.key === 'Tab') {
+    // Tab без подсказок — переключает тип блока
+    if (e.key === 'Tab' && !smartType.isOpen) {
       e.preventDefault()
-      // Tab переключает тип блока
       const blockIndex = blocks.findIndex(b => b.id === blockId)
       if (blockIndex === -1) return
 
@@ -237,7 +299,11 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
     }
   }
 
-  const handleContentChange = (blockId: string, content: string) => {
+  const handleContentChange = (blockId: string, content: string, cursorPosition?: number) => {
+    const block = blocks.find(b => b.id === blockId)
+    if (!block) return
+
+    // Обновляем блоки
     setBlocks(blocks.map(b => {
       if (b.id === blockId) {
         // Автоопределение типа блока если контент изменился
@@ -246,6 +312,11 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
       }
       return b
     }))
+
+    // Обновляем подсказки SmartType
+    if (cursorPosition !== undefined) {
+      smartType.updateSuggestions(content, cursorPosition, block?.type || 'action')
+    }
   }
 
   return (
@@ -336,10 +407,16 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                     Tab → переключить
                   </span>
                 </div>
-                <textarea
-                  value={block.content}
-                  onChange={(e) => handleContentChange(block.id, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, block.id)}
+                <div className="relative">
+                  <textarea
+                    value={block.content}
+                    onChange={(e) => {
+                      const cursorPos = e.target.selectionStart
+                      handleContentChange(block.id, e.target.value, cursorPos)
+                      setActiveBlockId(block.id)
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, block.id)}
+                    onFocus={() => setActiveBlockId(block.id)}
                   className="w-full flex-1 bg-transparent resize-none outline-none text-sm leading-relaxed"
                   style={{
                     color: textPrimary,
@@ -349,6 +426,57 @@ export default function ScriptEditor({ format, fontFamily, fontSize, isDark, gen
                   }}
                   placeholder={block.type === 'scene_header' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : ''}
                 />
+                
+                {/* SmartType подсказки */}
+                {smartType.isOpen && activeBlockId === block.id && (
+                  <div className="absolute left-0 right-0 bottom-full mb-1 z-50">
+                    <div className="rounded-lg shadow-lg border overflow-hidden max-h-48 overflow-y-auto"
+                      style={{
+                        background: isDark ? '#1a1a2e' : '#ffffff',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
+                      }}>
+                      {smartType.suggestions.map((suggestion, index) => {
+                        const isActive = index === smartType.activeIndex
+                        const colors = {
+                          character: '#818cf8',
+                          location: '#22c55e',
+                          prop: '#f59e0b',
+                          time: '#6b7280',
+                        }
+                        return (
+                          <div
+                            key={suggestion.id}
+                            className={`px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors ${isActive ? (isDark ? 'bg-white/10' : 'bg-gray-100') : ''}`}
+                            style={{
+                              borderLeft: isActive ? `3px solid ${colors[suggestion.type]}` : '3px solid transparent',
+                            }}
+                          >
+                            <span className="text-xs px-1.5 py-0.5 rounded"
+                              style={{
+                                background: `${colors[suggestion.type]}20`,
+                                color: colors[suggestion.type],
+                                fontSize: '10px',
+                              }}>
+                              {suggestion.type === 'character' ? 'ПЕРС' :
+                               suggestion.type === 'location' ? 'ЛОК' :
+                               suggestion.type === 'prop' ? 'РЕКВ' : 'ВРЕМ'}
+                            </span>
+                            <span className="text-sm" style={{ color: isDark ? '#f1f5f9' : '#111827' }}>
+                              {suggestion.text}
+                            </span>
+                          </div>
+                        )
+                      })}
+                      <div className="px-3 py-1 text-[10px] border-t"
+                        style={{
+                          color: isDark ? '#6b7280' : '#9ca3af',
+                          borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
+                        }}>
+                        ↑↓ для навигации, Tab/Enter для выбора, Esc для закрытия
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
