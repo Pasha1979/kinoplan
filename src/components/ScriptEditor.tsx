@@ -147,47 +147,33 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
 
   // Автодополнение для заголовков сцен
   const autoCompleteSceneHeader = (content: string, cursorPosition: number): string => {
-    const trimmed = content.substring(0, cursorPosition)
+    const beforeCursor = content.substring(0, cursorPosition)
+    const afterCursor = content.substring(cursorPosition)
+    
+    // Срабатывает только если это отдельная буква (начало строки или после пробела)
+    const lastChar = beforeCursor.slice(-1)
+    const prevChar = beforeCursor.length > 1 ? beforeCursor.slice(-2, -1) : ''
+    
+    // Проверяем что это начало строки или пробел перед буквой
+    const isWordStart = prevChar === '' || prevChar === ' '
+    
+    if (!isWordStart) return content
     
     if (format === 'russian') {
-      // Российский формат
-      if (trimmed.endsWith('И')) {
-        return content.substring(0, cursorPosition - 1) + 'ИНТ.' + content.substring(cursorPosition)
+      // Только ИНТ. и ЭКСТ. (время пишем сами)
+      if (lastChar === 'И') {
+        return beforeCursor.slice(0, -1) + 'ИНТ.' + afterCursor
       }
-      if (trimmed.endsWith('Э')) {
-        return content.substring(0, cursorPosition - 1) + 'ЭКСТ.' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('Д')) {
-        return content.substring(0, cursorPosition - 1) + 'ДЕНЬ' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('Н')) {
-        return content.substring(0, cursorPosition - 1) + 'НОЧЬ' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('У')) {
-        return content.substring(0, cursorPosition - 1) + 'УТРО' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('В')) {
-        return content.substring(0, cursorPosition - 1) + 'ВЕЧЕР' + content.substring(cursorPosition)
+      if (lastChar === 'Э') {
+        return beforeCursor.slice(0, -1) + 'ЭКСТ.' + afterCursor
       }
     } else {
       // Голливудский формат
-      if (trimmed.endsWith('I')) {
-        return content.substring(0, cursorPosition - 1) + 'INT.' + content.substring(cursorPosition)
+      if (lastChar === 'I') {
+        return beforeCursor.slice(0, -1) + 'INT.' + afterCursor
       }
-      if (trimmed.endsWith('E')) {
-        return content.substring(0, cursorPosition - 1) + 'EXT.' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('D')) {
-        return content.substring(0, cursorPosition - 1) + 'DAY' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('N')) {
-        return content.substring(0, cursorPosition - 1) + 'NIGHT' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('M')) {
-        return content.substring(0, cursorPosition - 1) + 'MORNING' + content.substring(cursorPosition)
-      }
-      if (trimmed.endsWith('E')) {
-        return content.substring(0, cursorPosition - 1) + 'EVENING' + content.substring(cursorPosition)
+      if (lastChar === 'E') {
+        return beforeCursor.slice(0, -1) + 'EXT.' + afterCursor
       }
     }
     
