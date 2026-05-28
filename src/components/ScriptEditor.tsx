@@ -149,31 +149,33 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
   const autoCompleteSceneHeader = (content: string, cursorPosition: number): string => {
     const beforeCursor = content.substring(0, cursorPosition)
     const afterCursor = content.substring(cursorPosition)
-    
-    // Срабатывает только если это отдельная буква (начало строки или после пробела)
     const lastChar = beforeCursor.slice(-1)
     const prevChar = beforeCursor.length > 1 ? beforeCursor.slice(-2, -1) : ''
     
-    // Проверяем что это начало строки или пробел перед буквой
-    const isWordStart = prevChar === '' || prevChar === ' '
+    // Формат номера сцены: 1-1. для сериала или 1. для фильма
+    const scenePrefix = format === 'russian' 
+      ? (projectType === 'serial' ? `${currentSeries}-1. ` : '1. ')
+      : ''
     
-    if (!isWordStart) return content
+    // 1. Начало строки: И → 1. ИНТ.  или  Э → 1. ЭКСТ.
+    if (beforeCursor === 'И') {
+      return scenePrefix + 'ИНТ. ' + afterCursor
+    }
+    if (beforeCursor === 'Э') {
+      return scenePrefix + 'ЭКСТ. ' + afterCursor
+    }
     
-    if (format === 'russian') {
-      // Только ИНТ. и ЭКСТ. (время пишем сами)
-      if (lastChar === 'И') {
-        return beforeCursor.slice(0, -1) + 'ИНТ.' + afterCursor
-      }
-      if (lastChar === 'Э') {
-        return beforeCursor.slice(0, -1) + 'ЭКСТ.' + afterCursor
-      }
-    } else {
-      // Голливудский формат
-      if (lastChar === 'I') {
-        return beforeCursor.slice(0, -1) + 'INT.' + afterCursor
-      }
-      if (lastChar === 'E') {
-        return beforeCursor.slice(0, -1) + 'EXT.' + afterCursor
+    // 2. После пробела: Д/Н/У/В → ДЕНЬ/НОЧЬ/УТРО/ВЕЧЕР
+    if (prevChar === ' ') {
+      const words = beforeCursor.trim().split(/\s+/)
+      // Проверяем что уже есть ИНТ. или ЭКСТ.
+      const hasSceneHeader = words.some(w => /ИНТ\.|ЭКСТ\.|INT\.|EXT\./i.test(w))
+      
+      if (hasSceneHeader) {
+        if (lastChar === 'Д') return beforeCursor.slice(0, -1) + 'ДЕНЬ' + afterCursor
+        if (lastChar === 'Н') return beforeCursor.slice(0, -1) + 'НОЧЬ' + afterCursor
+        if (lastChar === 'У') return beforeCursor.slice(0, -1) + 'УТРО' + afterCursor
+        if (lastChar === 'В') return beforeCursor.slice(0, -1) + 'ВЕЧЕР' + afterCursor
       }
     }
     
@@ -312,11 +314,11 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
       const currentBlock = blocks[blockIndex]
       let nextType: BlockType = 'action'
 
-      // Определяем тип следующего блока
-      if (currentBlock.type === 'scene_header') nextType = 'action'
-      else if (currentBlock.type === 'action') nextType = 'character'
+      // Автопереход: scene_header → character → dialog → action
+      if (currentBlock.type === 'scene_header') nextType = 'character'
       else if (currentBlock.type === 'character') nextType = 'dialog'
-      else if (currentBlock.type === 'dialog') nextType = 'character'
+      else if (currentBlock.type === 'dialog') nextType = 'action'
+      else if (currentBlock.type === 'action') nextType = 'character'
       else if (currentBlock.type === 'parenthetical') nextType = 'dialog'
       else if (currentBlock.type === 'transition') nextType = 'scene_header'
 
