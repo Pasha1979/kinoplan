@@ -149,34 +149,35 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
   const autoCompleteSceneHeader = (content: string, cursorPosition: number): string => {
     const beforeCursor = content.substring(0, cursorPosition)
     const afterCursor = content.substring(cursorPosition)
-    const lastChar = beforeCursor.slice(-1)
-    const prevChar = beforeCursor.length > 1 ? beforeCursor.slice(-2, -1) : ''
-    
     // Формат номера сцены: 1-1. для сериала или 1. для фильма
     const scenePrefix = format === 'russian' 
       ? (projectType === 'serial' ? `${currentSeries}-1. ` : '1. ')
       : ''
     
+    // Получаем слова перед курсором
+    const words = beforeCursor.trim().split(/\s+/)
+    const lastWord = words[words.length - 1] || ''
+    
     // 1. Начало строки: И → 1. ИНТ.  или  Э → 1. ЭКСТ.
-    if (beforeCursor === 'И') {
+    // Только если это первая буква в начале строки (одно слово)
+    if (words.length === 1 && lastWord.toUpperCase() === 'И') {
       return scenePrefix + 'ИНТ. ' + afterCursor
     }
-    if (beforeCursor === 'Э') {
+    if (words.length === 1 && lastWord.toUpperCase() === 'Э') {
       return scenePrefix + 'ЭКСТ. ' + afterCursor
     }
     
-    // 2. После пробела: Д/Н/У/В → ДЕНЬ/НОЧЬ/УТРО/ВЕЧЕР
-    if (prevChar === ' ') {
-      const words = beforeCursor.trim().split(/\s+/)
-      // Проверяем что уже есть ИНТ. или ЭКСТ.
-      const hasSceneHeader = words.some(w => /ИНТ\.|ЭКСТ\.|INT\.|EXT\./i.test(w))
-      
-      if (hasSceneHeader) {
-        if (lastChar === 'Д') return beforeCursor.slice(0, -1) + 'ДЕНЬ' + afterCursor
-        if (lastChar === 'Н') return beforeCursor.slice(0, -1) + 'НОЧЬ' + afterCursor
-        if (lastChar === 'У') return beforeCursor.slice(0, -1) + 'УТРО' + afterCursor
-        if (lastChar === 'В') return beforeCursor.slice(0, -1) + 'ВЕЧЕР' + afterCursor
-      }
+    // 2. После пробела или тире: Д/Н/У/В → ДЕНЬ/НОЧЬ/УТРО/ВЕЧЕР
+    const lastChar = beforeCursor.slice(-1).toUpperCase()
+    const prevChar = beforeCursor.length > 1 ? beforeCursor.slice(-2, -1) : ''
+    
+    const hasSceneHeader = words.some(w => /ИНТ\.|ЭКСТ\./i.test(w))
+    
+    if (hasSceneHeader && (prevChar === ' ' || prevChar === '—' || prevChar === '-')) {
+      if (lastChar === 'Д') return beforeCursor.slice(0, -1) + 'ДЕНЬ' + afterCursor
+      if (lastChar === 'Н') return beforeCursor.slice(0, -1) + 'НОЧЬ' + afterCursor
+      if (lastChar === 'У') return beforeCursor.slice(0, -1) + 'УТРО' + afterCursor
+      if (lastChar === 'В') return beforeCursor.slice(0, -1) + 'ВЕЧЕР' + afterCursor
     }
     
     return content
