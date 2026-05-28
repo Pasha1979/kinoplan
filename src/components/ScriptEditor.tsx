@@ -198,9 +198,9 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
   const detectBlockType = (content: string): BlockType => {
     const trimmed = content.trim().toUpperCase()
     
-    // Российский формат заголовка сцены: "1. ИНТ. КУХНЯ — ДЕНЬ"
+    // Российский формат заголовка сцены: "1. ИНТ. КУХНЯ — ДЕНЬ" или "ИНТ. КУХНЯ — ДЕНЬ"
     if (format === 'russian') {
-      const russianSceneRegex = /^\d+\.\s*(ИНТ\.|ЭКСТ\.)/i
+      const russianSceneRegex = /^(\d+\.\s*)?(ИНТ\.|ЭКСТ\.)/i
       if (russianSceneRegex.test(trimmed)) return 'scene_header'
     }
     
@@ -400,9 +400,9 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
     const block = blocks.find(b => b.id === blockId)
     if (!block) return
 
-    // Автодополнение для заголовков сцен
+    // Автодополнение для заголовков сцен (для всех типов блоков)
     let updatedContent = content
-    if (cursorPosition !== undefined && block.type === 'scene_header') {
+    if (cursorPosition !== undefined) {
       updatedContent = autoCompleteSceneHeader(content, cursorPosition)
     }
 
