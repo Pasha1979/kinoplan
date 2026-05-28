@@ -4,6 +4,7 @@ import {
   Monitor, StickyNote, Plus, X,
   Search, Filter, Download
 } from 'lucide-react'
+import { parseScript, getUniqueElements, type ParsedElement, type ParsedScene } from '../utils/scriptParser'
 
 export type BreakdownCategory = 
   | 'cast'        // Актёры / роли
@@ -34,6 +35,7 @@ export interface SceneBreakdown {
 interface ScriptBreakdownProps {
   scenes: Array<{ id: string; number: string; location: string; type: string }>
   isDark: boolean
+  blocks?: Array<{ id: string; type: string; content: string }>
 }
 
 const CATEGORIES: { id: BreakdownCategory; label: string; icon: typeof Users; color: string }[] = [
@@ -49,10 +51,10 @@ const CATEGORIES: { id: BreakdownCategory; label: string; icon: typeof Users; co
   { id: 'notes', label: 'Заметки', icon: StickyNote, color: '#6b7280' },
 ]
 
-export default function ScriptBreakdown({ scenes, isDark }: ScriptBreakdownProps) {
+export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakdownProps) {
   const [selectedCategory, setSelectedCategory] = useState<BreakdownCategory | 'all'>('all')
   const [selectedScene, setSelectedScene] = useState<string | 'all'>('all')
-  const [elements, setElements] = useState<BreakdownElement[]>([])
+  const [manualElements, setManualElements] = useState<BreakdownElement[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [newElementName, setNewElementName] = useState('')
   const [newElementCategory, setNewElementCategory] = useState<BreakdownCategory>('cast')
@@ -63,19 +65,25 @@ export default function ScriptBreakdown({ scenes, isDark }: ScriptBreakdownProps
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
 
-  // Демо-данные для начала
-  const demoElements: BreakdownElement[] = useMemo(() => [
-    { id: '1', category: 'cast', name: 'ИВАН', notes: 'Главный герой, 30 лет', sceneIds: ['1', '2', '5', '6', '7'] },
-    { id: '2', category: 'cast', name: 'МАША', notes: 'Подруга Ивана', sceneIds: ['1', '5', '7'] },
-    { id: '3', category: 'cast', name: 'ДИРЕКТОР', notes: 'Начальник Ивана', sceneIds: ['3', '6'] },
-    { id: '4', category: 'locations', name: 'КВАРТИРА ИВАНА', notes: 'Интерьер, 2 комнаты', sceneIds: ['1', '5'] },
-    { id: '5', category: 'locations', name: 'ОФИС КОМПАНИИ', notes: 'Оpen space, 5 этаж', sceneIds: ['3', '6'] },
-    { id: '6', category: 'props', name: 'ТЕЛЕФОН', notes: 'iPhone 15 Pro', sceneIds: ['1', '2', '3'] },
-    { id: '7', category: 'vehicles', name: 'МАШИНА ИВАНА', notes: 'Toyota Camry', sceneIds: ['2', '7'] },
-    { id: '8', category: 'sfx', name: 'ДЫМ', notes: 'Лёгкий дым для атмосферы', sceneIds: ['4'] },
-  ], [])
+  // Парсинг блоков из редактора
+  const parsedElements = useMemo(() => {
+    if (!blocks || blocks.length === 0) return []
+    
+    const parsedScenes = parseScript(blocks as any)
+    const uniqueElements = getUniqueElements(parsedScenes)
+    
+    // Конвертируем ParsedElement в BreakdownElement
+    return uniqueElements.map(el => ({
+      id: el.id,
+      category: el.category,
+      name: el.name,
+      notes: el.notes,
+      sceneIds: el.sceneIds,
+    }))
+  }, [blocks])
 
-  const allElements = elements.length > 0 ? elements : demoElements
+  // Объединяем распарсенные и ручные элементы
+  const allElements = [...parsedElements, ...manualElements]
 
   const filteredElements = useMemo(() => {
     let result = allElements
@@ -105,13 +113,13 @@ export default function ScriptBreakdown({ scenes, isDark }: ScriptBreakdownProps
       sceneIds: selectedScene !== 'all' ? [selectedScene] : [],
     }
     
-    setElements(prev => [...prev, newElement])
+    setManualElements(prev => [...prev, newElement])
     setNewElementName('')
     setShowAddModal(false)
   }
 
   const removeElement = (elementId: string) => {
-    setElements(prev => prev.filter(e => e.id !== elementId))
+    setManualElements(prev => prev.filter(e => e.id !== elementId))
   }
 
   const getCategoryIcon = (category: BreakdownCategory) => {

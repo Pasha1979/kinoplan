@@ -348,6 +348,7 @@ export default function ScriptPage() {
               type: s.type,
             }))}
             isDark={isDark}
+            blocks={editorBlocks}
           />
         ) : (
           <div className="flex-1 flex overflow-hidden">
