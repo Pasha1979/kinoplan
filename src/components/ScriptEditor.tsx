@@ -145,42 +145,6 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
     })
   }
 
-  // Конвертация между форматами
-  const convertFormat = (blocks: Block[], fromFormat: ScriptFormat, toFormat: ScriptFormat): Block[] => {
-    if (fromFormat === toFormat) return blocks
-    
-    return blocks.map(block => {
-      if (block.type === 'scene_header') {
-        let content = block.content.trim()
-        
-        if (fromFormat === 'russian' && toFormat === 'hollywood') {
-          // RU → EN: "1. ИНТ. КУХНЯ — ДЕНЬ" → "INT. KITCHEN - DAY"
-          content = content.replace(/^\d+\.\s*/, '') // Убираем номер
-          content = content.replace(/ИНТ\./gi, 'INT.')
-          content = content.replace(/ЭКСТ\./gi, 'EXT.')
-          content = content.replace(/—/g, '-')
-          content = content.replace(/ДЕНЬ/gi, 'DAY')
-          content = content.replace(/НОЧЬ/gi, 'NIGHT')
-          content = content.replace(/УТРО/gi, 'MORNING')
-          content = content.replace(/ВЕЧЕР/gi, 'EVENING')
-        } else if (fromFormat === 'hollywood' && toFormat === 'russian') {
-          // EN → RU: "INT. KITCHEN - DAY" → "1. ИНТ. КУХНЯ — ДЕНЬ"
-          content = content.replace(/INT\./gi, 'ИНТ.')
-          content = content.replace(/EXT\./gi, 'ЭКСТ.')
-          content = content.replace(/-/g, '—')
-          content = content.replace(/DAY/gi, 'ДЕНЬ')
-          content = content.replace(/NIGHT/gi, 'НОЧЬ')
-          content = content.replace(/MORNING/gi, 'УТРО')
-          content = content.replace(/EVENING/gi, 'ВЕЧЕР')
-          // Номер добавится через renumberScenes
-        }
-        
-        return { ...block, content }
-      }
-      return block
-    })
-  }
-
   // Автодополнение для заголовков сцен
   const autoCompleteSceneHeader = (content: string, cursorPosition: number): string => {
     const trimmed = content.substring(0, cursorPosition)
