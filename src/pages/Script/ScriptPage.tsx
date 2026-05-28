@@ -47,6 +47,7 @@ export default function ScriptPage() {
   const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
+  const prevFormatRef = useRef<ScriptFormat>('russian')
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -96,12 +97,11 @@ export default function ScriptPage() {
       })
     }
 
-    // Сохраняем предыдущий формат для конвертации
-    const prevFormat = useRef(scriptFormat)
-    if (prevFormat.current !== scriptFormat) {
-      const converted = convertBlocks(editorBlocks, prevFormat.current, scriptFormat)
+    // Конвертация при изменении формата
+    if (prevFormatRef.current !== scriptFormat) {
+      const converted = convertBlocks(editorBlocks, prevFormatRef.current, scriptFormat)
       setEditorBlocks(converted)
-      prevFormat.current = scriptFormat
+      prevFormatRef.current = scriptFormat
     }
   }, [scriptFormat, editorBlocks])
 
