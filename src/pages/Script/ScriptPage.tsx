@@ -201,7 +201,10 @@ export default function ScriptPage() {
 
             {/* Написать с нуля */}
             <button
-              onClick={() => setShowFormatModal(true)}
+              onClick={() => {
+                console.log('Кнопка Написать с нуля нажата — переход в редактор')
+                setView('editor')
+              }}
               onMouseEnter={() => setCreateHover(true)}
               onMouseLeave={() => setCreateHover(false)}
               className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
