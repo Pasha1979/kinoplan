@@ -320,7 +320,12 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
 
       const newBlocks = [...blocks]
       newBlocks.splice(blockIndex + 1, 0, newBlock)
-      setBlocks(newBlocks)
+      
+      // Применяем автонумерацию если добавили сцену
+      const renumberedBlocks = newBlock.type === 'scene_header' 
+        ? renumberScenes(newBlocks)
+        : newBlocks
+      setBlocks(renumberedBlocks)
 
       // Фокус на новый блок
       setTimeout(() => {
