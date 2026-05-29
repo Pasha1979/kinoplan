@@ -973,7 +973,22 @@ export default function DashboardPage() {
           backdropFilter: 'blur(12px)',
         }}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0 flex-wrap">
+          {/* Кнопка возврата к списку проектов */}
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0"
+            style={{
+              color: isDark ? '#9ca3af' : '#6b7280',
+              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
+          >
+            ← К проектам
+          </button>
+          <span style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>|</span>
           <h1 className="font-bold text-base shrink-0" style={{ color: isDark ? '#fff' : '#111' }}>{project.name}</h1>
           <span className="text-xs shrink-0 mx-1" style={{ color: isDark ? '#4b5563' : '#c4c4c4' }}>|</span>
           <span className="text-xs shrink-0" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{STATUS_LABELS[project.status]}</span>
