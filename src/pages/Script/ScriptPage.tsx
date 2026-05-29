@@ -157,10 +157,10 @@ export default function ScriptPage() {
 
             {/* Загрузить файл */}
             <button
-              onClick={() => setView('editor')}
+              onClick={() => alert('Функция импорта файлов будет реализована в ближайшем обновлении')}
               onMouseEnter={() => setImportHover(true)}
               onMouseLeave={() => setImportHover(false)}
-              className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
+              className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden opacity-60"
               style={{
                 background: isDark
                   ? 'linear-gradient(135deg, #1e1b4b 0%, #1a1a35 60%, #1e1b4b 100%)'
