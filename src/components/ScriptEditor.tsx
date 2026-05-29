@@ -383,9 +383,11 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
     const block = blocks.find(b => b.id === blockId)
     if (!block) return
 
-    // Автодополнение для заголовков сцен (для всех типов блоков)
+    // Автодополнение для заголовков сцен только для пустых/новых блоков
+    // НЕ применяем к уже заполненным scene_header — иначе мешает вводу пробелов
     let updatedContent = content
-    if (cursorPosition !== undefined) {
+    const isNewOrEmpty = !block.content.trim() || block.content.length < 3
+    if (cursorPosition !== undefined && isNewOrEmpty) {
       updatedContent = autoCompleteSceneHeader(content, cursorPosition)
     }
 
