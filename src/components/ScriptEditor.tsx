@@ -389,26 +389,11 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
       updatedContent = autoCompleteSceneHeader(content, cursorPosition)
     }
 
-    // Обновляем блоки
+    // Обновляем блоки — тип НЕ меняется при редактировании текста!
+    // Тип определяется только при создании блока или явном Tab
     const updatedBlocks = blocks.map(b => {
       if (b.id === blockId) {
-        // Автоопределение типа блока если контент изменился
-        // НО: не меняем тип если блок уже scene_header, character или transition (фиксированные типы)
-        const currentType = b.type
-        const autoType = detectBlockType(updatedContent)
-        
-        // Фиксированные типы не меняем автоматически (только если контент совсем не соответствует)
-        const isFixedType = ['scene_header', 'character', 'transition'].includes(currentType)
-        const stillMatchesCurrentType = 
-          (currentType === 'scene_header' && /^(\d+\.\s*)?(ИНТ\.?|ЭКСТ\.?|INT\.?|EXT\.?)/i.test(updatedContent)) ||
-          (currentType === 'character' && updatedContent.trim().toUpperCase() === updatedContent.trim() && updatedContent.trim().length < 30) ||
-          (currentType === 'transition' && /НАПЛЫВ|РАСТЯЖКА|ПЕРЕХОД|ПРИБЛИЖЕНИЕ|ОТЪЕЗД/i.test(updatedContent))
-        
-        // Если фиксированный тип и контент всё ещё соответствует — оставляем тип
-        // Или если новый тип тот же — оставляем
-        const finalType = (isFixedType && stillMatchesCurrentType) ? currentType : autoType
-        
-        return { ...b, content: updatedContent, type: finalType }
+        return { ...b, content: updatedContent }
       }
       return b
     })
