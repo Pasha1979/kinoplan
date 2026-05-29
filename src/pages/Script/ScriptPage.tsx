@@ -582,7 +582,7 @@ export default function ScriptPage() {
                 onClick={() => {
                   setScriptFormat('russian')
                   setShowFormatModal(false)
-                  setView('editor')
+                  navigate(`/project/${project?.id}/script/create`)
                 }}
                 className="w-full p-4 rounded-xl text-left transition-all"
                 style={{
@@ -606,7 +606,7 @@ export default function ScriptPage() {
                 onClick={() => {
                   setScriptFormat('hollywood')
                   setShowFormatModal(false)
-                  setView('editor')
+                  navigate(`/project/${project?.id}/script/create`)
                 }}
                 className="w-full p-4 rounded-xl text-left transition-all"
                 style={{
