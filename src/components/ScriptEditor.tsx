@@ -374,31 +374,6 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
     return type === 'scene_header' || type === 'character' || type === 'transition'
   }
 
-  const getBlockTypeLabel = (type: BlockType) => {
-    const labels: Record<BlockType, string> = {
-      scene_header: 'Заголовок сцены',
-      scene_cast: 'Участники сцены',
-      action: 'Действие',
-      character: 'Персонаж',
-      dialog: 'Диалог',
-      parenthetical: 'Ремарка',
-      transition: 'Переход',
-    }
-    return labels[type]
-  }
-
-  const getBlockTypeColor = (type: BlockType) => {
-    const colors: Record<BlockType, string> = {
-      scene_header: '#818cf8',
-      scene_cast: '#ec4899',
-      action: '#22c55e',
-      character: '#f59e0b',
-      dialog: '#3b82f6',
-      parenthetical: '#8b5cf6',
-      transition: '#ef4444',
-    }
-    return colors[type]
-  }
 
   const handleKeyDown = (e: React.KeyboardEvent, blockId: string) => {
     // Подсказки шапки (sceneHeaderSuggestions) приоритетнее smartType
@@ -822,27 +797,23 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
               }
             }
             
+            // Цветная линия слева для визуальной индикации типа блока
+            const blockBorderColor = 
+              block.type === 'scene_header' ? 'rgba(99,102,241,0.4)' :
+              block.type === 'scene_cast' ? 'rgba(236,72,153,0.4)' :
+              block.type === 'action' ? 'rgba(34,197,94,0.3)' :
+              block.type === 'character' ? 'rgba(245,158,11,0.4)' :
+              block.type === 'dialog' ? 'rgba(59,130,246,0.3)' :
+              block.type === 'parenthetical' ? 'rgba(139,92,246,0.3)' :
+              'rgba(239,68,68,0.3)'
+
             return (
               <div
                 key={block.id}
                 data-block-id={block.id}
-                className={`${minHeight} ${isAction ? 'flex-1' : ''} ${getPaddingClass()} flex flex-col`}
+                className={`${minHeight} ${isAction ? 'flex-1' : ''} ${getPaddingClass()} flex flex-col border-l-2 hover:border-l-[3px] transition-all`}
+                style={{ borderLeftColor: blockBorderColor }}
               >
-                {/* Badge с типом блока */}
-                <div className="flex items-center gap-2 mb-1 px-1">
-                  <span 
-                    className="text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider"
-                    style={{ 
-                      background: `${getBlockTypeColor(block.type)}20`,
-                      color: getBlockTypeColor(block.type),
-                    }}
-                  >
-                    {getBlockTypeLabel(block.type)}
-                  </span>
-                  <span className="text-[10px] opacity-50" style={{ color: textPrimary }}>
-                    Tab → переключить
-                  </span>
-                </div>
                 <div className="relative">
                   <textarea
                     value={block.content}
