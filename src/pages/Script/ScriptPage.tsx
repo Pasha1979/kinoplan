@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe, HelpCircle } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
@@ -387,6 +387,17 @@ export default function ScriptPage() {
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
               <Settings size={15} />
+            </button>
+            {/* Кнопка Помощь — заглушка, потом мини-обучение */}
+            <button
+              onClick={() => alert('Мини-обучение: горячие клавиши и справка по модулю сценария будет реализовано позже')}
+              className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+              style={{ color: textSecondary }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              title="Помощь"
+            >
+              <HelpCircle size={15} />
             </button>
             {/* Кнопка Format Assistant */}
             <button
