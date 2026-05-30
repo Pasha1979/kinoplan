@@ -311,7 +311,8 @@ export default function Sidebar() {
 
         <button
           title={!sidebarExpanded ? 'Настройки' : undefined}
-          className="w-full flex items-center gap-3 rounded-xl text-sm transition-all duration-200"
+          onClick={() => alert('Настройки приложения будут реализованы позже')}
+          className="w-full flex items-center gap-3 rounded-xl text-sm transition-all duration-200 cursor-pointer"
           style={{
             padding: sidebarExpanded ? '11px 14px' : '11px 0',
             justifyContent: sidebarExpanded ? 'flex-start' : 'center',
