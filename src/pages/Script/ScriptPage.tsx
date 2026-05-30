@@ -5,7 +5,7 @@ import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
 import type { ScriptFormat } from '../../store/scriptStore'
-import ScriptEditorV2 from '../../components/ScriptEditorV2'
+import ScriptEditor from '../../components/ScriptEditor'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
 import SceneNavigator from '../../components/SceneNavigator'
@@ -501,17 +501,19 @@ export default function ScriptPage() {
             />
             
             {/* Редактор — справа */}
-            <ScriptEditorV2
+            <ScriptEditor
               format={scriptFormat}
               projectType={project?.type || 'film'}
               currentSeries={currentSeries}
               fontFamily="Courier New"
               fontSize={12}
               isDark={isDark}
+              genreCoefficient={1.0}
               onSceneCountChange={setSceneCount}
               onStatsChange={setScriptStats}
               onBlocksChange={setEditorBlocks}
               onScenesChange={handleScenesChange}
+              focusSceneId={focusSceneId}
             />
           </div>
         )}

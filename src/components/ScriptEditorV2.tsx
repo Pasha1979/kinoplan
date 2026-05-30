@@ -240,6 +240,7 @@ export default function ScriptEditorV2({
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        dir="ltr"
         className="flex-1 overflow-y-auto p-8 text-sm leading-relaxed font-mono"
         style={{
           background: editorBg,
@@ -250,7 +251,6 @@ export default function ScriptEditorV2({
           whiteSpace: 'pre-wrap',
           direction: 'ltr',
           textAlign: 'left',
-          unicodeBidi: 'normal',
         }}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
