@@ -598,28 +598,35 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
       ))
     }
 
-    // Ctrl+Enter — переход от участников к тексту сцены (создаёт action блок)
-    if (e.ctrlKey && e.key === 'Enter') {
-      e.preventDefault()
+    // Shift+Enter — переход от участников к тексту сцены (только для scene_cast)
+    if (e.shiftKey && e.key === 'Enter') {
       const blockIndex = blocks.findIndex(b => b.id === blockId)
       if (blockIndex === -1) return
+      const currentBlock = blocks[blockIndex]
+      
+      // Только для блока участников — создаём action блок
+      if (currentBlock.type === 'scene_cast') {
+        e.preventDefault()
+        const newBlock: Block = {
+          id: crypto.randomUUID(),
+          type: 'action',
+          content: '',
+        }
+        const newBlocks = [...blocks]
+        newBlocks.splice(blockIndex + 1, 0, newBlock)
+        setBlocks(newBlocks)
 
-      // Создаём action блок после текущего
-      const newBlock: Block = {
-        id: crypto.randomUUID(),
-        type: 'action',
-        content: '',
+        // Фокус на новый блок + курсор в начало
+        setTimeout(() => {
+          const newBlockEl = document.querySelector(`[data-block-id="${newBlock.id}"]`) as HTMLTextAreaElement
+          if (newBlockEl) {
+            newBlockEl.focus()
+            newBlockEl.setSelectionRange(0, 0)
+          }
+        }, 0)
+        return
       }
-      const newBlocks = [...blocks]
-      newBlocks.splice(blockIndex + 1, 0, newBlock)
-      setBlocks(newBlocks)
-
-      // Фокус на новый блок
-      setTimeout(() => {
-        const newBlockEl = document.querySelector(`[data-block-id="${newBlock.id}"]`) as HTMLTextAreaElement
-        if (newBlockEl) newBlockEl.focus()
-      }, 0)
-      return
+      // Для других блоков — стандартное поведение (новая строка)
     }
 
     if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
@@ -660,11 +667,6 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
         const newBlockEl = document.querySelector(`[data-block-id="${newBlock.id}"]`) as HTMLTextAreaElement
         if (newBlockEl) newBlockEl.focus()
       }, 0)
-    }
-
-    if (e.key === 'Enter' && e.shiftKey) {
-      // Shift+Enter — новая строка в том же блоке
-      // Разрешаем стандартное поведение
     }
 
     // Навигация стрелками между блоками
@@ -769,7 +771,8 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
               <li><strong>Tab</strong> — переключить тип блока</li>
               <li><strong>Shift+Tab</strong> — переключить назад</li>
               <li><strong>Enter</strong> — создать новый блок</li>
-              <li><strong>Shift+Enter</strong> — новая строка в том же блоке</li>
+              <li><strong>Shift+Enter</strong> — после участников → текст сцены</li>
+              <li><strong>Ctrl+S</strong> — сохранить сценарий</li>
             </ul>
             <button
               onClick={() => setShowTutorial(false)}
@@ -861,7 +864,7 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
                     block.type === 'scene_header' 
                       ? (format === 'russian' ? '1. ИНТ. ЛОКАЦИЯ — ДЕНЬ' : 'INT. LOCATION - DAY')
                       : block.type === 'scene_cast'
-                        ? 'ПЕТРОВ, ИВАНОВ, СИДОРОВ...'
+                        ? 'ПЕТРОВ, ИВАНОВ, СИДОРОВ... (Shift+Enter → текст сцены)'
                         : ''
                   }
                 />
