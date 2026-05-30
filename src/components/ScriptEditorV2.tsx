@@ -248,6 +248,9 @@ export default function ScriptEditorV2({
           fontSize: `${fontSize}pt`,
           lineHeight: '1.5',
           whiteSpace: 'pre-wrap',
+          direction: 'ltr',
+          textAlign: 'left',
+          unicodeBidi: 'normal',
         }}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
