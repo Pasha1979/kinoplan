@@ -14,15 +14,16 @@ import ScriptBreakdown from '../../components/ScriptBreakdown'
 type ScriptView = 'empty' | 'editor'
 type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
 
-const DEMO_SCENES = [
-  { id: '1', number: '1', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.5 },
-  { id: '2', number: '2', type: 'ЭКСТ', location: 'УЛИЦА У ДОМА', time: 'ДЕНЬ', cast: ['ИВАН'], pages: 0.5 },
-  { id: '3', number: '3', type: 'ИНТ', location: 'ОФИС КОМПАНИИ', time: 'ДЕНЬ', cast: ['ИВАН', 'ДИРЕКТОР', 'СЕКРЕТАРЬ'], pages: 2 },
-  { id: '4', number: '4', type: 'ЭКСТ', location: 'ПАРК', time: 'ВЕЧЕР', cast: ['МАША', 'НЕЗНАКОМЕЦ'], pages: 1 },
-  { id: '5', number: '5', type: 'ИНТ', location: 'КВАРТИРА ИВАНА', time: 'НОЧЬ', cast: ['ИВАН'], pages: 0.75 },
-  { id: '6', number: '6', type: 'ИНТ', location: 'ОФИС КОМПАНИИ', time: 'УТРО', cast: ['ДИРЕКТОР', 'ИВАН', 'КОЛЛЕГИ'], pages: 3 },
-  { id: '7', number: '7', type: 'ЭКСТ', location: 'АЭРОПОРТ', time: 'ДЕНЬ', cast: ['ИВАН', 'МАША'], pages: 1.25 },
-]
+// При "Написать с нуля" список сцен пустой — сценарист начинает с чистого листа
+const scenes: Array<{
+  id: string
+  number: string
+  type: string
+  location: string
+  time: string
+  cast: string[]
+  pages: number
+}> = []
 
 export default function ScriptPage() {
   const navigate = useNavigate()
@@ -33,13 +34,12 @@ export default function ScriptPage() {
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<ScriptView>('empty')
-  const [selectedScene, setSelectedScene] = useState(DEMO_SCENES[0])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedScene, setSelectedScene] = useState(scenes[0] || null)
   const [importHover, setImportHover] = useState(false)
   const [createHover, setCreateHover] = useState(false)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
-  const [sceneCount, setSceneCount] = useState(0)
+  const [, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
   const [enableAutoFix, setEnableAutoFix] = useState(false)
   const [editorBlocks, setEditorBlocks] = useState<Array<{ id: string; type: string; content: string }>>([])
@@ -111,14 +111,6 @@ export default function ScriptPage() {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
   const textMuted = isDark ? '#374151' : '#d1d5db'
-
-  const filteredScenes = DEMO_SCENES.filter(s =>
-    s.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.cast.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    s.number.includes(searchQuery)
-  )
-
-  const totalPages = DEMO_SCENES.reduce((s, sc) => s + sc.pages, 0)
 
   if (view === 'empty') {
     return (
@@ -331,21 +323,29 @@ export default function ScriptPage() {
             </div>
             <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
             <div>
-              <p className="text-sm font-bold" style={{ color: textPrimary }}>
-                Сц. {selectedScene.number} · {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
-              </p>
-              <div className="flex items-center gap-3 mt-0.5">
-                {selectedScene.cast.map(c => (
-                  <span key={c} className="text-xs px-2 py-0.5 rounded-md"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
-                    {c}
-                  </span>
-                ))}
-                <span className="flex items-center gap-1 text-xs" style={{ color: textSecondary }}>
-                  <AlignLeft size={10} />
-                  {selectedScene.pages} стр.
-                </span>
-              </div>
+              {selectedScene ? (
+                <>
+                  <p className="text-sm font-bold" style={{ color: textPrimary }}>
+                    Сц. {selectedScene.number} · {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
+                  </p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {selectedScene.cast.map(c => (
+                      <span key={c} className="text-xs px-2 py-0.5 rounded-md"
+                        style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
+                        {c}
+                      </span>
+                    ))}
+                    <span className="flex items-center gap-1 text-xs" style={{ color: textSecondary }}>
+                      <AlignLeft size={10} />
+                      {selectedScene.pages} стр.
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm" style={{ color: textSecondary }}>
+                  Нет сцен — начните писать
+                </p>
+              )}
             </div>
           </div>
 
@@ -438,22 +438,26 @@ export default function ScriptPage() {
             isDark={isDark}
             scriptTitle={project?.name}
           />
-        ) : activeTab === 'breakdown' ? (
-          <ScriptBreakdown
-            scenes={DEMO_SCENES.map(s => ({
-              id: s.id,
-              number: s.number,
-              location: s.location,
-              type: s.type,
-            }))}
-            isDark={isDark}
-            blocks={editorBlocks}
-          />
+        ) : ['breakdown', 'cards', 'development', 'plan', 'statistics'].includes(activeTab) ? (
+          <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)' }}>
+                <Settings size={32} style={{ color: isDark ? '#818cf8' : '#6366f1' }} />
+              </div>
+              <p className="text-lg font-medium mb-2" style={{ color: textPrimary }}>
+                В разработке
+              </p>
+              <p className="text-sm" style={{ color: textSecondary }}>
+                Этот раздел появится в будущих обновлениях
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex overflow-hidden">
             {/* Навигатор сцен — слева */}
             <SceneNavigator
-              scenes={DEMO_SCENES.map(s => ({
+              scenes={scenes.map(s => ({
                 id: s.id,
                 number: s.number,
                 type: s.type === 'ИНТ' ? 'INT' : 'EXT',
@@ -464,10 +468,10 @@ export default function ScriptPage() {
               }))}
               isDark={isDark}
               onSceneClick={(sceneId) => {
-                setSelectedScene(DEMO_SCENES.find(s => s.id === sceneId) || DEMO_SCENES[0])
+                setSelectedScene(scenes.find(s => s.id === sceneId) || scenes[0])
                 setFocusSceneId(sceneId)
               }}
-              activeSceneId={selectedScene.id}
+              activeSceneId={selectedScene?.id || ''}
             />
             
             {/* Редактор — справа */}

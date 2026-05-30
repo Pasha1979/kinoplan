@@ -42,15 +42,7 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
   const [castSuggestions, setCastSuggestions] = useState<string[]>([])
   const [activeCastSuggestion, setActiveCastSuggestion] = useState(0)
   
-  // Инициализация: добавляем номер первой сцены при монтировании
-  useEffect(() => {
-    const initialNumber = projectType === 'serial' ? `${currentSeries}-1. ` : '1. '
-    setBlocks(prev => prev.map((b, i) => 
-      i === 0 && b.type === 'scene_header' && !b.content 
-        ? { ...b, content: initialNumber } 
-        : b
-    ))
-  }, [projectType, currentSeries])
+  // Блок полностью пустой при "Написать с нуля" — сценарист начинает с чистого листа
 
   // Извлекаем персонажей и локации для SmartType
   const { characters, locations } = useMemo(() => {
