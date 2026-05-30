@@ -521,7 +521,6 @@ export default function ScriptPage() {
           />
         )}
       </div>
-      </div>
 
       {/* ── Правая панель: заметки / версии — В РАЗРАБОТКЕ ───────────────────── */}
       {rightPanelOpen && (
@@ -542,6 +541,7 @@ export default function ScriptPage() {
                 В разработке
               </p>
             </div>
+          </div>
         </div>
       )}
 
