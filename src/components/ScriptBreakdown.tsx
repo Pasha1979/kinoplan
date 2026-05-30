@@ -276,7 +276,8 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
         {/* Кнопка экспорт */}
         <div className="p-3 border-t" style={{ borderColor: border }}>
           <button
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all border hover:border-indigo-400"
+            onClick={() => alert('Экспорт в PDF будет реализован в следующих версиях')}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all border hover:border-indigo-400 cursor-pointer"
             style={{ borderColor: border, color: textSecondary }}
           >
             <Download size={14} />
