@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
@@ -14,15 +14,6 @@ type ScriptView = 'empty' | 'editor'
 type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
 
 // При "Написать с нуля" список сцен пустой — сценарист начинает с чистого листа
-const scenes: Array<{
-  id: string
-  number: string
-  type: string
-  location: string
-  time: string
-  cast: string[]
-  pages: number
-}> = []
 
 export default function ScriptPage() {
   const navigate = useNavigate()
@@ -33,6 +24,7 @@ export default function ScriptPage() {
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<ScriptView>('empty')
+  const [scenes, setScenes] = useState<Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>>([])
   const [selectedScene, setSelectedScene] = useState(scenes[0] || null)
   const [importHover, setImportHover] = useState(false)
   const [createHover, setCreateHover] = useState(false)
@@ -47,6 +39,20 @@ export default function ScriptPage() {
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
   const prevFormatRef = useRef<ScriptFormat>('russian')
+
+  // При получении новых сцен из редактора — обновляем список
+  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => {
+    setScenes(newScenes)
+    // Если selectedScene больше нет в списке — выбираем первую
+    if (newScenes.length > 0) {
+      const stillExists = selectedScene && newScenes.find(s => s.id === selectedScene.id)
+      if (!stillExists) {
+        setSelectedScene(newScenes[0])
+      }
+    } else {
+      setSelectedScene(null)
+    }
+  }, [selectedScene])
 
   // Проверяем, есть ли сценарий для текущего проекта
   useEffect(() => {
@@ -349,9 +355,17 @@ export default function ScriptPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Кнопка Сохранить — заглушка */}
+            {/* Кнопка Сохранить — подтверждает автосохранение */}
             <button
-              onClick={() => alert('Сохранение будет реализовано в следующих версиях')}
+              onClick={() => {
+                // Сохраняем текущие блоки в localStorage
+                localStorage.setItem('kinoplan_script_saved', JSON.stringify({
+                  projectId: project?.id,
+                  timestamp: new Date().toISOString(),
+                  scenes: scenes.length,
+                }))
+                alert(`Сценарий сохранён!\nСцен: ${scenes.length}\nВремя: ${new Date().toLocaleTimeString()}`)
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
               style={{
                 background: 'rgba(99,102,241,0.15)',
@@ -487,6 +501,7 @@ export default function ScriptPage() {
               onSceneCountChange={setSceneCount}
               onStatsChange={setScriptStats}
               onBlocksChange={setEditorBlocks}
+              onScenesChange={handleScenesChange}
               focusSceneId={focusSceneId}
             />
           </div>

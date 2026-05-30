@@ -23,10 +23,11 @@ interface ScriptEditorProps {
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
   onBlocksChange?: (blocks: Block[]) => void
+  onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
   focusSceneId?: string
 }
 
-export default function ScriptEditor({ format, projectType, currentSeries, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange, focusSceneId }: ScriptEditorProps) {
+export default function ScriptEditor({ format, projectType, currentSeries, fontFamily, fontSize, isDark, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange, onScenesChange, focusSceneId }: ScriptEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: '1', type: 'scene_header', content: '' },
   ])
@@ -128,7 +129,79 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
     if (onBlocksChange) {
       onBlocksChange(blocks)
     }
-  }, [blocks, genreCoefficient, onSceneCountChange, onStatsChange])
+  }, [blocks, genreCoefficient, onSceneCountChange, onStatsChange, onBlocksChange])
+
+  // Автосохранение: при изменении блоков сохраняем в localStorage
+  useEffect(() => {
+    const hasContent = blocks.some(b => b.content.trim().length > 0)
+    if (hasContent) {
+      localStorage.setItem('kinoplan_draft_blocks', JSON.stringify(blocks))
+      console.log('Автосохранение:', new Date().toLocaleTimeString())
+    }
+  }, [blocks])
+
+  // Парсинг сцен для списка сцен (объекты, подобъекты, участники)
+  useEffect(() => {
+    if (!onScenesChange) return
+
+    const parsedScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }> = []
+    let sceneIndex = 0
+
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i]
+      if (block.type !== 'scene_header') continue
+
+      // Парсим шапку сцены: "1. ИНТ. У ДОМА ШИЛОВЫХ.ДВОР. — ДЕНЬ"
+      const content = block.content.trim()
+      const headerMatch = content.match(/^(?:\d+(?:-\d+)?\.\s*)?([ИЭ]К?С?Т?\.?)\s+(.+)$/i)
+      
+      let sceneType = 'ИНТ'
+      let sceneLocation = ''
+      let sceneTime = 'ДЕНЬ'
+
+      if (headerMatch) {
+        sceneType = headerMatch[1].toUpperCase().startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
+        const locationPart = headerMatch[2]
+        // Разделяем локацию и время по "—" или "-"
+        const parts = locationPart.split(/[—–\-]/)
+        if (parts.length >= 2) {
+          sceneLocation = parts[0].trim().replace(/\.$/, '') // убираем точку в конце
+          sceneTime = parts[parts.length - 1].trim().replace(/\.$/, '')
+        } else {
+          sceneLocation = locationPart.replace(/\.$/, '')
+        }
+      }
+
+      // Парсим участников из следующего блока scene_cast
+      const castBlock = blocks[i + 1]
+      const cast = (castBlock?.type === 'scene_cast') 
+        ? castBlock.content.split(/[,;]/).map(s => s.trim()).filter(Boolean)
+        : []
+
+      // Подсчёт страниц: action блоки до следующей шапки
+      let scenePages = 0
+      let j = i + 1
+      while (j < blocks.length && blocks[j].type !== 'scene_header') {
+        if (blocks[j].type === 'action') {
+          scenePages += blocks[j].content.length / 2500
+        }
+        j++
+      }
+
+      sceneIndex++
+      parsedScenes.push({
+        id: block.id,
+        number: projectType === 'serial' ? `${currentSeries}-${sceneIndex}` : String(sceneIndex),
+        type: sceneType,
+        location: sceneLocation,
+        time: sceneTime,
+        cast,
+        pages: Math.max(0.1, scenePages),
+      })
+    }
+
+    onScenesChange(parsedScenes)
+  }, [blocks, projectType, currentSeries, onScenesChange])
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
@@ -525,7 +598,31 @@ export default function ScriptEditor({ format, projectType, currentSeries, fontF
       ))
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Ctrl+Enter — переход от участников к тексту сцены (создаёт action блок)
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault()
+      const blockIndex = blocks.findIndex(b => b.id === blockId)
+      if (blockIndex === -1) return
+
+      // Создаём action блок после текущего
+      const newBlock: Block = {
+        id: crypto.randomUUID(),
+        type: 'action',
+        content: '',
+      }
+      const newBlocks = [...blocks]
+      newBlocks.splice(blockIndex + 1, 0, newBlock)
+      setBlocks(newBlocks)
+
+      // Фокус на новый блок
+      setTimeout(() => {
+        const newBlockEl = document.querySelector(`[data-block-id="${newBlock.id}"]`) as HTMLTextAreaElement
+        if (newBlockEl) newBlockEl.focus()
+      }, 0)
+      return
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
       e.preventDefault()
       // Enter создаёт новый блок
       const blockIndex = blocks.findIndex(b => b.id === blockId)
