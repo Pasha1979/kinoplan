@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo } from 'react'
 export interface SmartTypeSuggestion {
   id: string
   text: string
-  type: 'character' | 'location' | 'prop' | 'time'
+  type: 'character' | 'location' | 'prop' | 'time' | 'scene_prefix'
   frequency: number // сколько раз уже использовалось
 }
 
@@ -34,6 +34,17 @@ export function useSmartType(options: UseSmartTypeOptions) {
   // Все доступные варианты
   const allSuggestions = useMemo(() => {
     const result: SmartTypeSuggestion[] = []
+    
+    // Подсказки для шапки сцены
+    const scenePrefixes = ['ИНТ.', 'ЭКСТ.', 'И.', 'Э.', 'ИНТ-ЭКСТ.', 'ИНТ/ЭКСТ.']
+    scenePrefixes.forEach((prefix, index) => {
+      result.push({
+        id: `prefix_${index}`,
+        text: prefix,
+        type: 'scene_prefix',
+        frequency: 10, // Высокая частота чтобы были первыми
+      })
+    })
     
     characters.forEach((char, index) => {
       result.push({
@@ -99,13 +110,13 @@ export function useSmartType(options: UseSmartTypeOptions) {
     // Фильтруем подсказки по типу блока
     let relevantSuggestions = allSuggestions
     
-    if (blockType === 'character') {
+    if (blockType === 'character' || blockType === 'sceneCharacter') {
       // Для блока персонажа — только персонажи
       relevantSuggestions = allSuggestions.filter(s => s.type === 'character')
-    } else if (blockType === 'scene_header') {
-      // Для заголовка сцены — локации и время
+    } else if (blockType === 'scene_header' || blockType === 'sceneHeader') {
+      // Для заголовка сцены — префиксы (ИНТ/ЭКСТ), локации и время
       relevantSuggestions = allSuggestions.filter(s => 
-        s.type === 'location' || s.type === 'time'
+        s.type === 'scene_prefix' || s.type === 'location' || s.type === 'time'
       )
     }
 

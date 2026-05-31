@@ -87,6 +87,7 @@ export function SmartTypePopup({
       case 'location': return '📍'
       case 'time': return '🕐'
       case 'prop': return '🎭'
+      case 'scene_prefix': return '🎬'
       default: return '•'
     }
   }
@@ -97,6 +98,7 @@ export function SmartTypePopup({
       case 'location': return 'Локация'
       case 'time': return 'Время'
       case 'prop': return 'Реквизит'
+      case 'scene_prefix': return 'Тип сцены'
       default: return ''
     }
   }
