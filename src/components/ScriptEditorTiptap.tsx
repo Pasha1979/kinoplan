@@ -113,8 +113,21 @@ export default function ScriptEditorTiptap({
     const { selection } = state
     const { $from } = selection
     
-    // Получаем текущий блок (нода)
-    const currentNode = $from.node()
+    // Получаем текущий блок — ищем paragraph или наш кастомный блок
+    let currentNode = $from.node()
+    
+    // Если это не блоковый уровень, ищем родителя
+    if (currentNode && !['paragraph', 'sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneTransition'].includes(currentNode.type.name)) {
+      // Ищем родительский блок
+      for (let i = $from.depth; i > 0; i--) {
+        const node = $from.node(i)
+        if (node && ['paragraph', 'sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneTransition'].includes(node.type.name)) {
+          currentNode = node
+          break
+        }
+      }
+    }
+    
     if (!currentNode) return
     
     const textContent = currentNode.textContent.trim()
@@ -126,7 +139,8 @@ export default function ScriptEditorTiptap({
     let newType: string | null = null
     
     // 1. Шапка сцены: ИНТ. / ЭКСТ. / И. / Э. / ИНТ.-ЭКСТ.
-    const headerPattern = /^(ИНТ\.?|И\.?|ЭКСТ\.?|Э\.?|ИНТ-ЭКСТ\.?)\s+/i
+    // Поддерживает: "1. ИНТ.", "1-1. ИНТ.", "5. ЭКСТ.", просто "ИНТ."
+    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.?|И\.?|ЭКСТ\.?|Э\.?|ИНТ-ЭКСТ\.?)(\s+|$)/i
     if (headerPattern.test(textContent)) {
       newType = 'sceneHeader'
     }
@@ -134,29 +148,31 @@ export default function ScriptEditorTiptap({
     else if (/^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT)$/i.test(textContent)) {
       newType = 'sceneTransition'
     }
-    // 3. Персонаж: капслок, 2-25 символов, только буквы и пробелы
+    // 3. Персонаж: капслок, 2-25 символов
+    // Поддерживаем русский и английский капслок
     else if (
-      /^[А-ЯA-ZЁ\s]{2,25}$/.test(textContent) && // Только капслок
-      /[А-ЯA-ZЁ]/.test(textContent) && // Хотя бы одна буква
+      textContent.length >= 2 && 
+      textContent.length <= 25 &&
       !textContent.includes('.') && // Без точек
-      textContent === textContent.toUpperCase() // Точно капслок
+      textContent === textContent.toUpperCase() && // Точно капслок
+      /^[А-ЯЁA-Z\s\-']+$/.test(textContent) && // Только буквы, пробелы, дефисы
+      /[А-ЯЁA-Z]/.test(textContent) // Хотя бы одна буква
     ) {
       newType = 'sceneCharacter'
     }
     // 4. Диалог: если после персонажа (проверяем предыдущий блок)
     else if (currentType === 'paragraph' || currentType === 'sceneAction') {
       // Проверяем предыдущий блок
-      const pos = $from.before()
-      if (pos > 0) {
-        const prevNode = state.doc.nodeAt(pos - 1)
-        if (prevNode?.type.name === 'sceneCharacter') {
-          newType = 'sceneDialog'
-        }
+      const resolvedPos = state.doc.resolve($from.before())
+      const prevNode = resolvedPos.nodeBefore
+      if (prevNode?.type.name === 'sceneCharacter') {
+        newType = 'sceneDialog'
       }
     }
     
     // Если определили новый тип и он отличается от текущего — меняем
     if (newType && newType !== currentType) {
+      console.log(`Auto-detect: ${currentType} → ${newType} for "${textContent}"`)
       editor.chain().setNode(newType).run()
     }
   }
