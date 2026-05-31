@@ -340,8 +340,8 @@ export default function ScriptEditorTiptap({
         // Только если эту шапку ещё не обрабатывали
         if (!processedHeadersRef.current.has(headerKey)) {
           processedHeadersRef.current.add(headerKey)
-          // Создаём новый блок действия
-          editor.chain().splitBlock().setNode('sceneAction').run()
+          // Создаём новый блок для списка персонажей (cast)
+          editor.chain().splitBlock().setNode('sceneCast').run()
         }
       }
     }
