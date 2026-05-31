@@ -4,8 +4,8 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect, useCallback } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
-import { SceneHeader, SceneAction, SceneCharacter, SceneDialog } from './tiptap'
-import { Film, AlignLeft, User, MessageSquare } from 'lucide-react'
+import { SceneHeader, SceneAction, SceneCharacter, SceneDialog, SceneTransition } from './tiptap'
+import { Film, AlignLeft, User, MessageSquare, ArrowRight } from 'lucide-react'
 
 interface ScriptEditorTiptapProps {
   format: ScriptFormat
@@ -41,6 +41,7 @@ export default function ScriptEditorTiptap({
       SceneAction,
       SceneCharacter,
       SceneDialog,
+      SceneTransition,
       Placeholder.configure({
         placeholder: 'Начните писать сценарий...',
       }),
@@ -61,6 +62,9 @@ export default function ScriptEditorTiptap({
       
       // Парсим сцены для списка
       parseScenes(text)
+      
+      // Автоопределение типа блока
+      autoDetectBlockType(editor)
     },
   })
 
@@ -100,6 +104,60 @@ export default function ScriptEditorTiptap({
 
     if (onScenesChange) {
       onScenesChange(scenes)
+    }
+  }
+
+  // Автоопределение типа блока по тексту (Фаза 2.5)
+  const autoDetectBlockType = (editor: any) => {
+    const { state } = editor
+    const { selection } = state
+    const { $from } = selection
+    
+    // Получаем текущий блок (нода)
+    const currentNode = $from.node()
+    if (!currentNode) return
+    
+    const textContent = currentNode.textContent.trim()
+    const currentType = currentNode.type.name
+    
+    // Если блок пустой — не меняем
+    if (!textContent) return
+    
+    let newType: string | null = null
+    
+    // 1. Шапка сцены: ИНТ. / ЭКСТ. / И. / Э. / ИНТ.-ЭКСТ.
+    const headerPattern = /^(ИНТ\.?|И\.?|ЭКСТ\.?|Э\.?|ИНТ-ЭКСТ\.?)\s+/i
+    if (headerPattern.test(textContent)) {
+      newType = 'sceneHeader'
+    }
+    // 2. Переходы: РАССВЕТ, ЗАТЕМНЕНИЕ, ПЕРЕХОД, СМЕНА
+    else if (/^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT)$/i.test(textContent)) {
+      newType = 'sceneTransition'
+    }
+    // 3. Персонаж: капслок, 2-25 символов, только буквы и пробелы
+    else if (
+      /^[А-ЯA-ZЁ\s]{2,25}$/.test(textContent) && // Только капслок
+      /[А-ЯA-ZЁ]/.test(textContent) && // Хотя бы одна буква
+      !textContent.includes('.') && // Без точек
+      textContent === textContent.toUpperCase() // Точно капслок
+    ) {
+      newType = 'sceneCharacter'
+    }
+    // 4. Диалог: если после персонажа (проверяем предыдущий блок)
+    else if (currentType === 'paragraph' || currentType === 'sceneAction') {
+      // Проверяем предыдущий блок
+      const pos = $from.before()
+      if (pos > 0) {
+        const prevNode = state.doc.nodeAt(pos - 1)
+        if (prevNode?.type.name === 'sceneCharacter') {
+          newType = 'sceneDialog'
+        }
+      }
+    }
+    
+    // Если определили новый тип и он отличается от текущего — меняем
+    if (newType && newType !== currentType) {
+      editor.chain().setNode(newType).run()
     }
   }
 
@@ -143,6 +201,7 @@ export default function ScriptEditorTiptap({
     { name: 'sceneAction', label: 'Действие', icon: AlignLeft, color: '#9ca3af' },
     { name: 'sceneCharacter', label: 'Персонаж', icon: User, color: '#f97316' },
     { name: 'sceneDialog', label: 'Диалог', icon: MessageSquare, color: '#22c55e' },
+    { name: 'sceneTransition', label: 'Переход', icon: ArrowRight, color: '#ec4899' },
   ]
 
   return (
