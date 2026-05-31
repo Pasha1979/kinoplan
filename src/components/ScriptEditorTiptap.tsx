@@ -444,7 +444,7 @@ export default function ScriptEditorTiptap({
       >
         <EditorContent
           editor={editor}
-          className="h-full tiptap-editor"
+          className={`h-full tiptap-editor format-${format || 'russian'}`}
           style={{
             fontFamily,
             fontSize: `${fontSize}pt`,

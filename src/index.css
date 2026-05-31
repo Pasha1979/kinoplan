@@ -155,7 +155,8 @@ body {
 }
 
 /* Scene Character (Speaking): "ВЛАДА" */
-.tiptap-editor div[data-type="scene-character"] {
+.tiptap-editor div[data-type="scene-character"],
+.tiptap-editor.ProseMirror div[data-type="scene-character"] {
   position: relative;
   padding-left: var(--character-indent) !important;
   margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
@@ -164,16 +165,19 @@ body {
   text-align: center;
   border-left: 3px solid #f97316;
   width: fit-content;
+  max-width: calc(100% - var(--character-indent) - 2cm) !important;
 }
 
 /* Scene Dialog (Speech): "Как же мне плохо..." */
-.tiptap-editor div[data-type="scene-dialog"] {
+.tiptap-editor div[data-type="scene-dialog"],
+.tiptap-editor.ProseMirror div[data-type="scene-dialog"] {
   position: relative;
   padding-left: var(--dialog-left-indent) !important;
   padding-right: var(--dialog-right-indent) !important;
   margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0 !important;
   border-left: 3px solid #22c55e;
   max-width: calc(100% - var(--dialog-left-indent) - var(--dialog-right-indent)) !important;
+  box-sizing: border-box;
 }
 
 /* Scene Transition: "НАЧАЛО ДНЯ" or "FADE IN:" */
