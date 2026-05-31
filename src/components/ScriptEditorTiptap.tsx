@@ -278,7 +278,12 @@ export default function ScriptEditorTiptap({
       newType = 'sceneHeader'
     }
     // 2. Список персонажей в сцене (через запятую): "ВЛАДА, СВЕТА, РЯБИНИНА, ХАН"
-    else if (currentType === 'sceneHeader' && /^[А-ЯЁA-Z\s,]+$/.test(textContent) && textContent.includes(',')) {
+    // Работает после header или когда уже в cast (для продолжения ввода)
+    else if (
+      (currentType === 'sceneHeader' || currentType === 'sceneCast') && 
+      /^[А-ЯЁA-Z\s,]+$/.test(textContent) && 
+      textContent.includes(',')
+    ) {
       newType = 'sceneCast'
     }
     // 3. Переходы: РАССВЕТ, ЗАТЕМНЕНИЕ, ПЕРЕХОД, СМЕНА

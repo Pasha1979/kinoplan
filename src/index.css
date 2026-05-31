@@ -43,11 +43,11 @@ body {
   --russian-action-margin-bottom: 12px;
   --russian-character-margin-top: 16px;
   --russian-character-margin-bottom: 0;
-  --russian-character-indent: 6.75cm; /* от левого края страницы */
+  --russian-character-indent: 4.2cm; /* центрирование на A4 (ширина ~21cm, поля 3cm) */
   --russian-dialog-margin-top: 0;
   --russian-dialog-margin-bottom: 16px;
-  --russian-dialog-left-indent: 3.75cm;
-  --russian-dialog-right-indent: 3.75cm;
+  --russian-dialog-left-indent: 3cm;
+  --russian-dialog-right-indent: 3cm;
   --russian-transition-margin-top: 16px;
   --russian-transition-margin-bottom: 16px;
   

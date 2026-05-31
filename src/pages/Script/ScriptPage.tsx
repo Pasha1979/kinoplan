@@ -54,12 +54,18 @@ export default function ScriptPage() {
     }
   }, [selectedScene])
 
-  // Проверяем, есть ли сценарий для текущего проекта
+  // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
   useEffect(() => {
     if (project) {
       const projectScripts = scripts.filter(s => s.projectId === project.id)
       if (projectScripts.length > 0) {
         setView('editor')
+        // Загружаем формат из первого сценария проекта
+        const currentScript = projectScripts[0]
+        if (currentScript.format) {
+          setScriptFormat(currentScript.format)
+          prevFormatRef.current = currentScript.format
+        }
       }
     }
   }, [project, scripts])
@@ -542,7 +548,7 @@ export default function ScriptPage() {
         {activeTab === 'text' && (
           <FormatAssistant
             blocks={editorBlocks}
-            format="russian"
+            format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
             isDark={isDark}
             enableAutoFix={enableAutoFix}
           />
