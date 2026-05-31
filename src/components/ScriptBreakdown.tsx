@@ -4,8 +4,8 @@ import {
   Monitor, StickyNote, Plus, X,
   Search, Filter, Download, BarChart3
 } from 'lucide-react'
-import { parseScript, getUniqueElements, type ParsedElement, type ParsedScene } from '../utils/scriptParser'
-import CharacterStats, { type CharacterData } from './CharacterStats'
+import { parseScript, getUniqueElements } from '../utils/scriptParser'
+import CharacterStats from './CharacterStats'
 
 export type BreakdownCategory = 
   | 'cast'        // Актёры / роли

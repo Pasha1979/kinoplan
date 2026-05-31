@@ -25,7 +25,7 @@ export default function ScriptPage() {
 
   const [view, setView] = useState<ScriptView>('empty')
   const [scenes, setScenes] = useState<Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>>([])
-  const [selectedScene, setSelectedScene] = useState(scenes[0] || null)
+  const [selectedScene, setSelectedScene] = useState<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number } | null>(null)
   const [importHover, setImportHover] = useState(false)
   const [createHover, setCreateHover] = useState(false)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
