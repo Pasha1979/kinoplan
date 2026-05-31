@@ -181,19 +181,25 @@ export default function ScriptEditorTiptap({
       // Автоопределение типа блока
       autoDetectBlockType(editor)
       
-      // SmartType — обновляем подсказки
+      // SmartType — обновляем подсказки (только для шапки сцены)
       const { state } = editor
       const { selection } = state
       const { $from } = selection
       const currentType = getCurrentBlockType(editor)
       
-      // Получаем текст текущей ноды и позицию внутри неё
-      const currentNode = $from.node()
-      const nodeText = currentNode?.textContent || ''
-      const nodeStartPos = $from.start()
-      const posInNode = selection.from - nodeStartPos
-      
-      smartType.updateSuggestions(nodeText, posInNode, currentType)
+      // Подсказки ИНТ/ЭКСТ и времени только в шапке сцены
+      if (currentType === 'sceneHeader') {
+        // Получаем текст текущей ноды и позицию внутри неё
+        const currentNode = $from.node()
+        const nodeText = currentNode?.textContent || ''
+        const nodeStartPos = $from.start()
+        const posInNode = selection.from - nodeStartPos
+        
+        smartType.updateSuggestions(nodeText, posInNode, currentType)
+      } else {
+        // Закрываем подсказки если не в шапке
+        smartType.closeSuggestions()
+      }
     },
   })
 
@@ -206,9 +212,8 @@ export default function ScriptEditorTiptap({
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
       
-      // Проверяем шапку сцены: 1. ИНТ. ЛОКАЦИЯ — ДЕНЬ
-      // Поддержка: ИНТ., ЭКСТ., И., Э., ИНТ-ЭКСТ., И/Э, ИНТ/ЭКСТ.
-      const headerMatch = line.match(/^(?:\d+(?:-\d+)?\.\s*)?(ИНТ[/-]?ЭКСТ\.?|И[/-]?Э\.?|ИНТ\.?|И\.?|ЭКСТ\.?|Э\.?)\s+(.+)$/i)
+      // Проверяем шапку сцены: только полные формы ИНТ/ЭКСТ/ИНТ-ЭКСТ
+      const headerMatch = line.match(/^(?:\d+(?:-\d+)?\.\s*)?(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)\s+(.+)$/i)
       
       if (headerMatch) {
         sceneIndex++
@@ -271,9 +276,9 @@ export default function ScriptEditorTiptap({
     
     let newType: string | null = null
     
-    // 1. Шапка сцены: ИНТ. / ЭКСТ. / И. / Э. / ИНТ.-ЭКСТ.
-    // Поддерживает: "1. ИНТ.", "1-1. ИНТ.", "5. ЭКСТ.", просто "ИНТ."
-    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.?|И\.?|ЭКСТ\.?|Э\.?|ИНТ-ЭКСТ\.?)(\s+|$)/i
+    // 1. Шапка сцены: только ИНТ. / ЭКСТ. / ИНТ-ЭКСТ. (полные формы)
+    // Требуем: ИНТ/ЭКСТ/ИНТ-ЭКСТ + пробел + заглавная буква (начало локации)
+    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)(\s+[А-ЯЁA-Z]|\.?$)/i
     if (headerPattern.test(textContent)) {
       newType = 'sceneHeader'
     }
