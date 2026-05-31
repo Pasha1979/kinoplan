@@ -436,21 +436,35 @@ export default function ScriptEditorTiptap({
 
       {/* Область редактора */}
       <div
-        className="flex-1 overflow-y-auto p-8"
+        className="flex-1 overflow-y-auto py-8 px-4"
         style={{
           background: editorBg,
           color: textPrimary,
         }}
       >
-        <EditorContent
-          editor={editor}
-          className={`h-full tiptap-editor format-${format || 'russian'}`}
+        {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
+        <div
+          className="mx-auto"
           style={{
-            fontFamily,
-            fontSize: `${fontSize}pt`,
-            lineHeight: '1.5',
+            width: '210mm', // Стандарт A4
+            minHeight: '297mm',
+            background: isDark ? '#1a1a2e' : '#ffffff',
+            boxShadow: isDark 
+              ? '0 4px 20px rgba(0,0,0,0.5)' 
+              : '0 4px 20px rgba(0,0,0,0.1)',
+            padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm (стандарт для сценариев)
           }}
-        />
+        >
+          <EditorContent
+            editor={editor}
+            className={`h-full tiptap-editor format-${format || 'russian'}`}
+            style={{
+              fontFamily,
+              fontSize: `${fontSize}pt`,
+              lineHeight: '1.5',
+            }}
+          />
+        </div>
       </div>
 
       {/* Статусбар */}

@@ -43,11 +43,11 @@ body {
   --russian-action-margin-bottom: 12px;
   --russian-character-margin-top: 16px;
   --russian-character-margin-bottom: 0;
-  --russian-character-indent: 4.2cm; /* центрирование на A4 (ширина ~21cm, поля 3cm) */
+  --russian-character-indent: 6.75cm; /* по стандарту КИТ Сценарист */
   --russian-dialog-margin-top: 0;
   --russian-dialog-margin-bottom: 16px;
-  --russian-dialog-left-indent: 3cm;
-  --russian-dialog-right-indent: 3cm;
+  --russian-dialog-left-indent: 3.75cm; /* по стандарту КИТ Сценарист */
+  --russian-dialog-right-indent: 3.75cm;  /* симметрично */
   --russian-transition-margin-top: 16px;
   --russian-transition-margin-bottom: 16px;
   
@@ -154,18 +154,28 @@ body {
   border-left: 3px solid #9ca3af;
 }
 
-/* Scene Character (Speaking): "ВЛАДА" */
-.tiptap-editor div[data-type="scene-character"],
-.tiptap-editor.ProseMirror div[data-type="scene-character"] {
+/* Scene Character (Speaking): "ВЛАДА" — Russian: центрирование */
+.tiptap-editor.format-russian div[data-type="scene-character"],
+.tiptap-editor.format-russian.ProseMirror div[data-type="scene-character"] {
+  position: relative;
+  width: 100% !important;
+  text-align: center !important;
+  margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-left: 3px solid #f97316;
+}
+
+/* Scene Character — Hollywood: отступ от левого края, без центрирования */
+.tiptap-editor.format-hollywood div[data-type="scene-character"],
+.tiptap-editor.format-hollywood.ProseMirror div[data-type="scene-character"] {
   position: relative;
   padding-left: var(--character-indent) !important;
   margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
-  text-align: center;
   border-left: 3px solid #f97316;
-  width: fit-content;
-  max-width: calc(100% - var(--character-indent) - 2cm) !important;
+  width: auto;
 }
 
 /* Scene Dialog (Speech): "Как же мне плохо..." */
@@ -176,8 +186,6 @@ body {
   padding-right: var(--dialog-right-indent) !important;
   margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0 !important;
   border-left: 3px solid #22c55e;
-  max-width: calc(100% - var(--dialog-left-indent) - var(--dialog-right-indent)) !important;
-  box-sizing: border-box;
 }
 
 /* Scene Transition: "НАЧАЛО ДНЯ" or "FADE IN:" */
