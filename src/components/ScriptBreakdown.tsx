@@ -171,11 +171,11 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
         <div className="p-4 border-b" style={{ borderColor: border }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold" style={{ color: textPrimary }}>
-              {activeView === 'elements' ? 'Разбивка сцен' : 'Статистика'}
+              Разбивка сцен
             </h2>
             <span className="text-xs px-2 py-1 rounded-full"
               style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#f0f0f0', color: textSecondary }}>
-              {activeView === 'elements' ? `${filteredElements.length} элементов` : `${characterData.length} персонажей`}
+              {filteredElements.length} элементов
             </span>
           </div>
           
