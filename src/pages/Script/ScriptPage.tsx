@@ -6,6 +6,7 @@ import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
 import type { ScriptFormat } from '../../store/scriptStore'
 import ScriptEditor from '../../components/ScriptEditor'
+import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
 import SceneNavigator from '../../components/SceneNavigator'
@@ -501,20 +502,45 @@ export default function ScriptPage() {
             />
             
             {/* Редактор — справа */}
-            <ScriptEditor
-              format={scriptFormat}
-              projectType={project?.type || 'film'}
-              currentSeries={currentSeries}
-              fontFamily="Courier New"
-              fontSize={12}
-              isDark={isDark}
-              genreCoefficient={1.0}
-              onSceneCountChange={setSceneCount}
-              onStatsChange={setScriptStats}
-              onBlocksChange={setEditorBlocks}
-              onScenesChange={handleScenesChange}
-              focusSceneId={focusSceneId}
-            />
+            <div className="flex flex-col gap-4 flex-1">
+              {/* Старый редактор */}
+              <div className="flex-1 border rounded-lg" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
+                <ScriptEditor
+                  format={scriptFormat}
+                  projectType={project?.type || 'film'}
+                  currentSeries={currentSeries}
+                  fontFamily="Courier New"
+                  fontSize={12}
+                  isDark={isDark}
+                  genreCoefficient={1.0}
+                  onSceneCountChange={setSceneCount}
+                  onStatsChange={setScriptStats}
+                  onBlocksChange={setEditorBlocks}
+                  onScenesChange={handleScenesChange}
+                  focusSceneId={focusSceneId}
+                />
+              </div>
+              
+              {/* Новый Tiptap редактор (тестирование) */}
+              <div className="h-64 border-2 border-dashed rounded-lg" style={{ borderColor: '#6366f1' }}>
+                <div className="px-3 py-1 text-xs font-medium" style={{ background: '#6366f1', color: '#fff' }}>
+                  🧪 Tiptap Editor (тестирование)
+                </div>
+                <ScriptEditorTiptap
+                  format={scriptFormat}
+                  projectType={project?.type || 'film'}
+                  currentSeries={currentSeries}
+                  fontFamily="Courier New"
+                  fontSize={12}
+                  isDark={isDark}
+                  genreCoefficient={1.0}
+                  onSceneCountChange={setSceneCount}
+                  onStatsChange={setScriptStats}
+                  onBlocksChange={setEditorBlocks}
+                  onScenesChange={handleScenesChange}
+                />
+              </div>
+            </div>
           </div>
         )}
 
