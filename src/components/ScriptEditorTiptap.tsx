@@ -71,7 +71,7 @@ export default function ScriptEditorTiptap({
     content: '<p>1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</p><p></p>',
     editorProps: {
       attributes: {
-        class: `prose prose-sm max-w-none focus:outline-none format-${format || 'russian'}`,
+        class: `tiptap-editor prose prose-sm max-w-none focus:outline-none format-${format || 'russian'}`,
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
       },
       handleKeyDown: (view, event) => {
@@ -287,7 +287,9 @@ export default function ScriptEditorTiptap({
     }
     // 4. Персонаж: капслок, 2-25 символов
     // Поддерживаем русский и английский капслок
+    // НЕ срабатывает если уже в sceneCast (чтобы список персонажей не превращался в имя)
     else if (
+      currentType !== 'sceneCast' && // Защита: не меняем cast на character
       textContent.length >= 2 && 
       textContent.length <= 25 &&
       !textContent.includes('.') && // Без точек

@@ -129,8 +129,8 @@ body {
 /* Scene Header: 2-1. ИНТ. КВАРТИРА ВЛАДЫ.КОМНАТА. НОЧЬ */
 .tiptap-editor div[data-type="scene-header"] {
   position: relative;
-  padding-left: 0;
-  margin: var(--header-margin-top) 0 var(--header-margin-bottom) 0;
+  padding-left: 0 !important;
+  margin: var(--header-margin-top) 0 var(--header-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
   border-left: 3px solid #6366f1;
@@ -139,8 +139,8 @@ body {
 /* Scene Cast (Characters in scene): ВЛАДА, СВЕТА, РЯБИНИНА, ХАН */
 .tiptap-editor div[data-type="scene-cast"] {
   position: relative;
-  padding-left: 0;
-  margin: var(--cast-margin-top) 0 var(--cast-margin-bottom) 0;
+  padding-left: 0 !important;
+  margin: var(--cast-margin-top) 0 var(--cast-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
   border-left: 3px solid #8b5cf6; /* Purple */
@@ -149,16 +149,16 @@ body {
 /* Scene Action (Description): "Влада лежит на кровати..." */
 .tiptap-editor div[data-type="scene-action"] {
   position: relative;
-  padding-left: 0;
-  margin: var(--action-margin-top) 0 var(--action-margin-bottom) 0;
+  padding-left: 0 !important;
+  margin: var(--action-margin-top) 0 var(--action-margin-bottom) 0 !important;
   border-left: 3px solid #9ca3af;
 }
 
 /* Scene Character (Speaking): "ВЛАДА" */
 .tiptap-editor div[data-type="scene-character"] {
   position: relative;
-  padding-left: var(--character-indent);
-  margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0;
+  padding-left: var(--character-indent) !important;
+  margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
   text-align: center;
@@ -169,11 +169,11 @@ body {
 /* Scene Dialog (Speech): "Как же мне плохо..." */
 .tiptap-editor div[data-type="scene-dialog"] {
   position: relative;
-  padding-left: var(--dialog-left-indent);
-  padding-right: var(--dialog-right-indent);
-  margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0;
+  padding-left: var(--dialog-left-indent) !important;
+  padding-right: var(--dialog-right-indent) !important;
+  margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0 !important;
   border-left: 3px solid #22c55e;
-  max-width: calc(100% - var(--dialog-left-indent) - var(--dialog-right-indent));
+  max-width: calc(100% - var(--dialog-left-indent) - var(--dialog-right-indent)) !important;
 }
 
 /* Scene Transition: "НАЧАЛО ДНЯ" or "FADE IN:" */
