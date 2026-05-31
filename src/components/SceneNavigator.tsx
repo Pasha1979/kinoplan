@@ -1,17 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
-
-export interface Scene {
-  id: string
-  number: string
-  type: 'INT' | 'EXT' | 'INT/EXT'
-  location: string
-  timeOfDay: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS'
-  synopsis: string
-  pageCount: number
-  colorTag?: string
-  isOmitted?: boolean
-}
+import type { Scene } from '../store/scriptStore'
 
 interface SceneNavigatorProps {
   scenes: Scene[]
@@ -170,7 +159,7 @@ export default function SceneNavigator({
                         {scene.timeOfDay}
                       </span>
                       <span className="text-[10px]" style={{ color: textSecondary }}>
-                        {scene.pageCount} стр
+                        {scene.pages} стр
                       </span>
                     </div>
                   </div>
