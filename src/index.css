@@ -31,44 +31,160 @@ body {
   border-radius: 3px;
 }
 
-/* Tiptap Editor Styles - Scene Blocks */
+/* ========== TIPTAP EDITOR - SCRIPT FORMATTING ========== */
+/* CSS Variables for format switching */
+:root {
+  /* Russian format (default) - based on KIT Scenarist standard */
+  --russian-header-margin-top: 16px;
+  --russian-header-margin-bottom: 0;
+  --russian-cast-margin-top: 0;
+  --russian-cast-margin-bottom: 8px;
+  --russian-action-margin-top: 12px;
+  --russian-action-margin-bottom: 12px;
+  --russian-character-margin-top: 16px;
+  --russian-character-margin-bottom: 0;
+  --russian-character-indent: 6.75cm; /* от левого края страницы */
+  --russian-dialog-margin-top: 0;
+  --russian-dialog-margin-bottom: 16px;
+  --russian-dialog-left-indent: 3.75cm;
+  --russian-dialog-right-indent: 3.75cm;
+  --russian-transition-margin-top: 16px;
+  --russian-transition-margin-bottom: 16px;
+  
+  /* Hollywood format - based on US industry standard */
+  --hollywood-header-margin-top: 16px;
+  --hollywood-header-margin-bottom: 0;
+  --hollywood-cast-margin-top: 0;
+  --hollywood-cast-margin-bottom: 8px;
+  --hollywood-action-margin-top: 12px;
+  --hollywood-action-margin-bottom: 12px;
+  --hollywood-character-margin-top: 16px;
+  --hollywood-character-margin-bottom: 0;
+  --hollywood-character-indent: 9.3cm; /* 3.7" from left page edge */
+  --hollywood-dialog-margin-top: 0;
+  --hollywood-dialog-margin-bottom: 16px;
+  --hollywood-dialog-left-indent: 6.35cm; /* 2.5" from left page edge */
+  --hollywood-dialog-right-indent: 2.5cm;
+  --hollywood-transition-margin-top: 16px;
+  --hollywood-transition-margin-bottom: 16px;
+}
+
+/* Russian format mode */
+.tiptap-editor.format-russian {
+  --header-margin-top: var(--russian-header-margin-top);
+  --header-margin-bottom: var(--russian-header-margin-bottom);
+  --cast-margin-top: var(--russian-cast-margin-top);
+  --cast-margin-bottom: var(--russian-cast-margin-bottom);
+  --action-margin-top: var(--russian-action-margin-top);
+  --action-margin-bottom: var(--russian-action-margin-bottom);
+  --character-margin-top: var(--russian-character-margin-top);
+  --character-margin-bottom: var(--russian-character-margin-bottom);
+  --character-indent: var(--russian-character-indent);
+  --dialog-margin-top: var(--russian-dialog-margin-top);
+  --dialog-margin-bottom: var(--russian-dialog-margin-bottom);
+  --dialog-left-indent: var(--russian-dialog-left-indent);
+  --dialog-right-indent: var(--russian-dialog-right-indent);
+  --transition-margin-top: var(--russian-transition-margin-top);
+  --transition-margin-bottom: var(--russian-transition-margin-bottom);
+}
+
+/* Hollywood format mode */
+.tiptap-editor.format-hollywood {
+  --header-margin-top: var(--hollywood-header-margin-top);
+  --header-margin-bottom: var(--hollywood-header-margin-bottom);
+  --cast-margin-top: var(--hollywood-cast-margin-top);
+  --cast-margin-bottom: var(--hollywood-cast-margin-bottom);
+  --action-margin-top: var(--hollywood-action-margin-top);
+  --action-margin-bottom: var(--hollywood-action-margin-bottom);
+  --character-margin-top: var(--hollywood-character-margin-top);
+  --character-margin-bottom: var(--hollywood-character-margin-bottom);
+  --character-indent: var(--hollywood-character-indent);
+  --dialog-margin-top: var(--hollywood-dialog-margin-top);
+  --dialog-margin-bottom: var(--hollywood-dialog-margin-bottom);
+  --dialog-left-indent: var(--hollywood-dialog-left-indent);
+  --dialog-right-indent: var(--hollywood-dialog-right-indent);
+  --transition-margin-top: var(--hollywood-transition-margin-top);
+  --transition-margin-bottom: var(--hollywood-transition-margin-bottom);
+}
+
+/* Default to Russian */
+.tiptap-editor {
+  --header-margin-top: var(--russian-header-margin-top);
+  --header-margin-bottom: var(--russian-header-margin-bottom);
+  --cast-margin-top: var(--russian-cast-margin-top);
+  --cast-margin-bottom: var(--russian-cast-margin-bottom);
+  --action-margin-top: var(--russian-action-margin-top);
+  --action-margin-bottom: var(--russian-action-margin-bottom);
+  --character-margin-top: var(--russian-character-margin-top);
+  --character-margin-bottom: var(--russian-character-margin-bottom);
+  --character-indent: var(--russian-character-indent);
+  --dialog-margin-top: var(--russian-dialog-margin-top);
+  --dialog-margin-bottom: var(--russian-dialog-margin-bottom);
+  --dialog-left-indent: var(--russian-dialog-left-indent);
+  --dialog-right-indent: var(--russian-dialog-right-indent);
+  --transition-margin-top: var(--russian-transition-margin-top);
+  --transition-margin-bottom: var(--russian-transition-margin-bottom);
+}
+
+/* Scene Header: 2-1. ИНТ. КВАРТИРА ВЛАДЫ.КОМНАТА. НОЧЬ */
 .tiptap-editor div[data-type="scene-header"] {
   position: relative;
-  padding-left: 12px;
-  margin: 8px 0;
+  padding-left: 0;
+  margin: var(--header-margin-top) 0 var(--header-margin-bottom) 0;
   font-weight: 600;
+  text-transform: uppercase;
   border-left: 3px solid #6366f1;
 }
 
+/* Scene Cast (Characters in scene): ВЛАДА, СВЕТА, РЯБИНИНА, ХАН */
+.tiptap-editor div[data-type="scene-cast"] {
+  position: relative;
+  padding-left: 0;
+  margin: var(--cast-margin-top) 0 var(--cast-margin-bottom) 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-left: 3px solid #8b5cf6; /* Purple */
+}
+
+/* Scene Action (Description): "Влада лежит на кровати..." */
 .tiptap-editor div[data-type="scene-action"] {
   position: relative;
-  padding-left: 12px;
-  margin: 4px 0;
+  padding-left: 0;
+  margin: var(--action-margin-top) 0 var(--action-margin-bottom) 0;
   border-left: 3px solid #9ca3af;
 }
 
+/* Scene Character (Speaking): "ВЛАДА" */
 .tiptap-editor div[data-type="scene-character"] {
   position: relative;
-  padding-left: 12px;
-  margin: 8px 0 4px 0;
+  padding-left: var(--character-indent);
+  margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0;
   font-weight: 600;
   text-transform: uppercase;
+  text-align: center;
   border-left: 3px solid #f97316;
+  width: fit-content;
 }
 
+/* Scene Dialog (Speech): "Как же мне плохо..." */
 .tiptap-editor div[data-type="scene-dialog"] {
   position: relative;
-  padding-left: 80px;
-  margin: 4px 0 8px 0;
+  padding-left: var(--dialog-left-indent);
+  padding-right: var(--dialog-right-indent);
+  margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0;
   border-left: 3px solid #22c55e;
+  max-width: calc(100% - var(--dialog-left-indent) - var(--dialog-right-indent));
 }
 
+/* Scene Transition: "НАЧАЛО ДНЯ" or "FADE IN:" */
 .tiptap-editor div[data-type="scene-transition"] {
   position: relative;
-  padding-left: 12px;
-  margin: 8px 0;
+  padding-left: 0;
+  padding-right: 0;
+  margin: var(--transition-margin-top) 0 var(--transition-margin-bottom) 0;
   text-align: right;
   font-weight: 600;
+  text-transform: uppercase;
   border-left: 3px solid #ec4899;
 }
 

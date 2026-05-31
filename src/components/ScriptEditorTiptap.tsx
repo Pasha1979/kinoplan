@@ -4,8 +4,8 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect, useCallback, useRef } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
-import { SceneHeader, SceneAction, SceneCharacter, SceneDialog, SceneTransition } from './tiptap'
-import { Film, AlignLeft, User, MessageSquare, ArrowRight } from 'lucide-react'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition } from './tiptap'
+import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-react'
 import { useSmartType } from '../hooks/useSmartType'
 import { SmartTypePopup } from './SmartTypePopup'
 import { useDebouncedCallback } from '../hooks/useDebounce'
@@ -59,6 +59,7 @@ export default function ScriptEditorTiptap({
     extensions: [
       StarterKit,
       SceneHeader,
+      SceneCast,
       SceneAction,
       SceneCharacter,
       SceneDialog,
@@ -70,7 +71,7 @@ export default function ScriptEditorTiptap({
     content: '<p>1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</p><p></p>',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none',
+        class: `prose prose-sm max-w-none focus:outline-none format-${format || 'russian'}`,
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
       },
       handleKeyDown: (view, event) => {
@@ -125,6 +126,43 @@ export default function ScriptEditorTiptap({
           event.preventDefault()
           smartType.closeSuggestions()
           return true
+        }
+        
+        // Автоматические переходы между типами блоков при Enter
+        if (event.key === 'Enter' && !event.shiftKey) {
+          const { state } = view
+          const { selection } = state
+          const { $from } = selection
+          const currentNode = $from.node()
+          const currentType = currentNode?.type.name
+          
+          // 1. После SceneHeader → создаём SceneCast для персонажей
+          if (currentType === 'sceneHeader') {
+            event.preventDefault()
+            editor?.chain().splitBlock().setNode('sceneCast').run()
+            return true
+          }
+          
+          // 2. После SceneCast → создаём SceneAction (описание)
+          if (currentType === 'sceneCast') {
+            event.preventDefault()
+            editor?.chain().splitBlock().setNode('sceneAction').run()
+            return true
+          }
+          
+          // 3. После SceneCharacter → создаём SceneDialog
+          if (currentType === 'sceneCharacter') {
+            event.preventDefault()
+            editor?.chain().splitBlock().setNode('sceneDialog').run()
+            return true
+          }
+          
+          // 4. После SceneDialog → создаём SceneAction (или проверяем капслок)
+          if (currentType === 'sceneDialog') {
+            event.preventDefault()
+            editor?.chain().splitBlock().setNode('sceneAction').run()
+            return true
+          }
         }
         
         return false // Пропускаем остальные клавиши
@@ -239,23 +277,28 @@ export default function ScriptEditorTiptap({
     if (headerPattern.test(textContent)) {
       newType = 'sceneHeader'
     }
-    // 2. Переходы: РАССВЕТ, ЗАТЕМНЕНИЕ, ПЕРЕХОД, СМЕНА
+    // 2. Список персонажей в сцене (через запятую): "ВЛАДА, СВЕТА, РЯБИНИНА, ХАН"
+    else if (currentType === 'sceneHeader' && /^[А-ЯЁA-Z\s,]+$/.test(textContent) && textContent.includes(',')) {
+      newType = 'sceneCast'
+    }
+    // 3. Переходы: РАССВЕТ, ЗАТЕМНЕНИЕ, ПЕРЕХОД, СМЕНА
     else if (/^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT)$/i.test(textContent)) {
       newType = 'sceneTransition'
     }
-    // 3. Персонаж: капслок, 2-25 символов
+    // 4. Персонаж: капслок, 2-25 символов
     // Поддерживаем русский и английский капслок
     else if (
       textContent.length >= 2 && 
       textContent.length <= 25 &&
       !textContent.includes('.') && // Без точек
+      !textContent.includes(',') && // Без запятых (это cast list)
       textContent === textContent.toUpperCase() && // Точно капслок
       /^[А-ЯЁA-Z\s\-']+$/.test(textContent) && // Только буквы, пробелы, дефисы
       /[А-ЯЁA-Z]/.test(textContent) // Хотя бы одна буква
     ) {
       newType = 'sceneCharacter'
     }
-    // 4. Диалог: если после персонажа (проверяем предыдущий блок)
+    // 5. Диалог: если после персонажа (проверяем предыдущий блок)
     else if (currentType === 'paragraph' || currentType === 'sceneAction') {
       // Проверяем предыдущий блок
       const resolvedPos = state.doc.resolve($from.before())
@@ -343,6 +386,7 @@ export default function ScriptEditorTiptap({
 
   const blockTypes = [
     { name: 'sceneHeader', label: 'Шапка', icon: Film, color: '#6366f1' },
+    { name: 'sceneCast', label: 'Действующие', icon: Users, color: '#8b5cf6' },
     { name: 'sceneAction', label: 'Действие', icon: AlignLeft, color: '#9ca3af' },
     { name: 'sceneCharacter', label: 'Персонаж', icon: User, color: '#f97316' },
     { name: 'sceneDialog', label: 'Диалог', icon: MessageSquare, color: '#22c55e' },

@@ -1,4 +1,5 @@
 export { SceneHeader } from './SceneHeader'
+export { SceneCast } from './SceneCast'
 export { SceneAction } from './SceneAction'
 export { SceneCharacter } from './SceneCharacter'
 export { SceneDialog } from './SceneDialog'
