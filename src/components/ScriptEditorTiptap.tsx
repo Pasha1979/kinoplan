@@ -6,6 +6,8 @@ import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneAction, SceneCharacter, SceneDialog, SceneTransition } from './tiptap'
 import { Film, AlignLeft, User, MessageSquare, ArrowRight } from 'lucide-react'
+import { useSmartType } from '../hooks/useSmartType'
+import { SmartTypePopup } from './SmartTypePopup'
 
 interface ScriptEditorTiptapProps {
   format: ScriptFormat
@@ -33,6 +35,13 @@ export default function ScriptEditorTiptap({
 }: ScriptEditorTiptapProps) {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
+
+  // SmartType — подсказки при наборе
+  const smartType = useSmartType({
+    characters: ['ПЕТЯ', 'МАША', 'ВАСЯ', 'ОЛЯ', 'ДИМА'],
+    locations: ['КВАРТИРА', 'ПАРК', 'ОФИС', 'УЛИЦА', 'КАФЕ'],
+    times: ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
+  })
 
   const editor = useEditor({
     extensions: [
@@ -65,6 +74,13 @@ export default function ScriptEditorTiptap({
       
       // Автоопределение типа блока
       autoDetectBlockType(editor)
+      
+      // SmartType — обновляем подсказки
+      const { state } = editor
+      const { selection } = state
+      const cursorPos = selection.from
+      const currentType = getCurrentBlockType(editor)
+      smartType.updateSuggestions(text, cursorPos, currentType)
     },
   })
 
@@ -203,14 +219,14 @@ export default function ScriptEditorTiptap({
   }, [editor])
 
   // Получаем текущий тип блока
-  const getCurrentBlockType = () => {
-    if (!editor) return 'paragraph'
-    const { $from } = editor.state.selection
+  const getCurrentBlockType = (ed: any) => {
+    if (!ed) return 'paragraph'
+    const { $from } = ed.state.selection
     const node = $from.node()
     return node?.attrs?.['data-type'] || node?.type?.name || 'paragraph'
   }
 
-  const currentType = getCurrentBlockType()
+  const currentType = getCurrentBlockType(editor)
 
   const blockTypes = [
     { name: 'sceneHeader', label: 'Шапка', icon: Film, color: '#6366f1' },
@@ -288,6 +304,26 @@ export default function ScriptEditorTiptap({
           {(editor.getText().length / 2500).toFixed(1)} стр.
         </span>
       </div>
+
+      {/* SmartType Popup */}
+      <SmartTypePopup
+        editor={editor}
+        suggestions={smartType.suggestions}
+        activeIndex={smartType.activeIndex}
+        isOpen={smartType.isOpen}
+        onSelect={(suggestion) => {
+          if (!editor) return
+          const text = editor.getText()
+          const cursorPos = editor.state.selection.from
+          const result = smartType.selectSuggestion(text, cursorPos, suggestion)
+          
+          // Заменяем текст в редакторе
+          editor.commands.setContent(result.newText)
+          editor.commands.setTextSelection(result.newCursorPos)
+        }}
+        onClose={smartType.closeSuggestions}
+        onNavigate={smartType.navigateSuggestions}
+      />
     </div>
   )
 }
