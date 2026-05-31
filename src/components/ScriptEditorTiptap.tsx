@@ -1,13 +1,14 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneAction, SceneCharacter, SceneDialog, SceneTransition } from './tiptap'
 import { Film, AlignLeft, User, MessageSquare, ArrowRight } from 'lucide-react'
 import { useSmartType } from '../hooks/useSmartType'
 import { SmartTypePopup } from './SmartTypePopup'
+import { useDebouncedCallback } from '../hooks/useDebounce'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -23,6 +24,10 @@ interface ScriptEditorTiptapProps {
   onBlocksChange?: (blocks: any[]) => void
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
   focusSceneId?: string
+  // SmartType данные (вместо hardcoded)
+  smartTypeCharacters?: string[]
+  smartTypeLocations?: string[]
+  smartTypeTimes?: string[]
 }
 
 export default function ScriptEditorTiptap({
@@ -33,16 +38,22 @@ export default function ScriptEditorTiptap({
   fontSize,
   isDark,
   onScenesChange,
+  smartTypeCharacters,
+  smartTypeLocations,
+  smartTypeTimes,
 }: ScriptEditorTiptapProps) {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
-  // SmartType — подсказки при наборе
+  // SmartType — подсказки при наборе (с дефолтами если пропсы не переданы)
   const smartType = useSmartType({
-    characters: ['ПЕТЯ', 'МАША', 'ВАСЯ', 'ОЛЯ', 'ДИМА'],
-    locations: ['КВАРТИРА', 'ПАРК', 'ОФИС', 'УЛИЦА', 'КАФЕ'],
-    times: ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
+    characters: smartTypeCharacters || ['ПЕТЯ', 'МАША', 'ВАСЯ', 'ОЛЯ', 'ДИМА'],
+    locations: smartTypeLocations || ['КВАРТИРА', 'ПАРК', 'ОФИС', 'УЛИЦА', 'КАФЕ'],
+    times: smartTypeTimes || ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
   })
+
+  // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
+  const processedHeadersRef = useRef<Set<string>>(new Set())
 
   const editor = useEditor({
     extensions: [
@@ -123,11 +134,11 @@ export default function ScriptEditorTiptap({
       const html = editor.getHTML()
       const text = editor.getText()
       
-      // Сохраняем в localStorage
+      // Сохраняем в localStorage (сразу — легкая операция)
       localStorage.setItem('kinoplan_tiptap_draft', html)
       
-      // Парсим сцены для списка
-      parseScenes(text)
+      // Парсим сцены для списка (debounced — тяжёлая операция)
+      debouncedParseScenes(text)
       
       // Автоопределение типа блока
       autoDetectBlockType(editor)
@@ -158,7 +169,8 @@ export default function ScriptEditorTiptap({
       const line = lines[i].trim()
       
       // Проверяем шапку сцены: 1. ИНТ. ЛОКАЦИЯ — ДЕНЬ
-      const headerMatch = line.match(/^(?:\d+(?:-\d+)?\.\s*)?([ИЭ]К?С?Т?\.?)\s+(.+)$/i)
+      // Поддержка: ИНТ., ЭКСТ., И., Э., ИНТ-ЭКСТ., И/Э, ИНТ/ЭКСТ.
+      const headerMatch = line.match(/^(?:\d+(?:-\d+)?\.\s*)?(ИНТ[/-]?ЭКСТ\.?|И[/-]?Э\.?|ИНТ\.?|И\.?|ЭКСТ\.?|Э\.?)\s+(.+)$/i)
       
       if (headerMatch) {
         sceneIndex++
@@ -186,6 +198,9 @@ export default function ScriptEditorTiptap({
       onScenesChange(scenes)
     }
   }
+
+  // Debounced версия для тяжёлого парсинга (300ms)
+  const debouncedParseScenes = useDebouncedCallback(parseScenes, 300)
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
   const autoDetectBlockType = (editor: any) => {
@@ -259,6 +274,9 @@ export default function ScriptEditorTiptap({
     if (currentType === 'sceneHeader' || newType === 'sceneHeader') {
       const upperText = textContent.toUpperCase()
       if (upperText !== textContent) {
+        // Сохраняем позицию курсора относительно начала ноды
+        const cursorOffset = selection.from - $from.start()
+        
         // Заменяем текст на капслок
         const nodeStart = $from.start()
         const nodeEnd = $from.end()
@@ -266,14 +284,22 @@ export default function ScriptEditorTiptap({
           .chain()
           .deleteRange({ from: nodeStart, to: nodeEnd })
           .insertContent(upperText)
+          .setTextSelection(nodeStart + cursorOffset)
           .run()
       }
       
-      // Если время закончилось точкой — переходим на новую строку
+      // Если время закончилось точкой — переходим на новую строку (только один раз)
       const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.$/
       if (timePattern.test(upperText)) {
-        // Создаём новый блок действия
-        editor.chain().splitBlock().setNode('sceneAction').run()
+        // Создаём уникальный ключ для шапки (позиция + текст)
+        const headerKey = `${$from.pos}-${upperText}`
+        
+        // Только если эту шапку ещё не обрабатывали
+        if (!processedHeadersRef.current.has(headerKey)) {
+          processedHeadersRef.current.add(headerKey)
+          // Создаём новый блок действия
+          editor.chain().splitBlock().setNode('sceneAction').run()
+        }
       }
     }
   }
@@ -284,6 +310,8 @@ export default function ScriptEditorTiptap({
       const saved = localStorage.getItem('kinoplan_tiptap_draft')
       if (saved) {
         editor.commands.setContent(saved)
+        // Сбрасываем отслеживание при загрузке нового контента
+        processedHeadersRef.current.clear()
       }
     }
   }, [editor])
