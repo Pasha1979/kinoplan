@@ -121,14 +121,10 @@ export default function ScriptEditorTiptap({
   const setBlockType = useCallback((type: string) => {
     if (!editor) return
     
-    const { from, to } = editor.state.selection
-    const text = editor.state.doc.textBetween(from, to, ' ')
-    
-    // Удаляем текущий блок и создаём новый нужного типа
+    // Преобразуем текущий блок в нужный тип
     editor.chain()
       .focus()
-      .deleteRange({ from, to })
-      .insertContent(`<div data-type="${type}">${text}</div>`)
+      .setNode(type)
       .run()
   }, [editor])
 
