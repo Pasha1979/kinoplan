@@ -10,6 +10,7 @@ import { useSmartType } from '../hooks/useSmartType'
 import { SmartTypePopup } from './SmartTypePopup'
 
 interface ScriptEditorTiptapProps {
+  // format is optional - currently not used but kept for future compatibility
   format?: ScriptFormat
   projectType: ProjectType
   currentSeries: number
