@@ -88,8 +88,9 @@ export function useSmartType(options: UseSmartTypeOptions) {
   // Получить текущее слово перед курсором
   const getCurrentWord = useCallback((text: string, cursorPos: number): string => {
     const beforeCursor = text.substring(0, cursorPos)
-    const words = beforeCursor.split(/\s+/)
-    return words[words.length - 1] || ''
+    // Находим последнее слово — берем текст после последнего пробела/переноса строки
+    const match = beforeCursor.match(/[^\s]*$/)
+    return match ? match[0] : ''
   }, [])
 
   // Обновить подсказки
@@ -117,6 +118,11 @@ export function useSmartType(options: UseSmartTypeOptions) {
       // Для заголовка сцены — префиксы (ИНТ/ЭКСТ), локации и время
       relevantSuggestions = allSuggestions.filter(s => 
         s.type === 'scene_prefix' || s.type === 'location' || s.type === 'time'
+      )
+    } else {
+      // Для paragraph и других — показываем префиксы сцен (ИНТ/ЭКСТ) и персонажей
+      relevantSuggestions = allSuggestions.filter(s => 
+        s.type === 'scene_prefix' || s.type === 'character'
       )
     }
 

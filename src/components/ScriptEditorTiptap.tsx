@@ -61,6 +61,62 @@ export default function ScriptEditorTiptap({
         class: 'prose prose-sm max-w-none focus:outline-none',
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
       },
+      handleKeyDown: (view, event) => {
+        // Если SmartType открыт и нажат Enter — выбираем подсказку
+        if (smartType.isOpen && (event.key === 'Enter' || event.key === 'Tab')) {
+          event.preventDefault()
+          const suggestion = smartType.suggestions[smartType.activeIndex]
+          if (suggestion && editor) {
+            const { state } = editor
+            const { selection } = state
+            const { $from } = selection
+            
+            const currentNode = $from.node()
+            const nodeText = currentNode?.textContent || ''
+            const posInNode = selection.from - $from.start()
+            
+            const beforeCursor = nodeText.substring(0, posInNode)
+            const match = beforeCursor.match(/[^\s]*$/)
+            const currentWord = match ? match[0] : ''
+            
+            if (currentWord) {
+              const wordStartPos = selection.from - currentWord.length
+              const wordEndPos = selection.from
+              
+              // Для времени автоматически добавляем точку
+              const textToInsert = suggestion.type === 'time' 
+                ? suggestion.text + '.' 
+                : suggestion.text
+              
+              editor
+                .chain()
+                .focus()
+                .deleteRange({ from: wordStartPos, to: wordEndPos })
+                .insertContent(textToInsert)
+                .run()
+              
+              smartType.closeSuggestions()
+            }
+          }
+          return true // Предотвращаем стандартное поведение
+        }
+        
+        // Если SmartType открыт и нажаты стрелки — навигация
+        if (smartType.isOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+          event.preventDefault()
+          smartType.navigateSuggestions(event.key === 'ArrowDown' ? 'down' : 'up')
+          return true
+        }
+        
+        // Если SmartType открыт и нажат Escape — закрываем
+        if (smartType.isOpen && event.key === 'Escape') {
+          event.preventDefault()
+          smartType.closeSuggestions()
+          return true
+        }
+        
+        return false // Пропускаем остальные клавиши
+      },
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
@@ -78,9 +134,16 @@ export default function ScriptEditorTiptap({
       // SmartType — обновляем подсказки
       const { state } = editor
       const { selection } = state
-      const cursorPos = selection.from
+      const { $from } = selection
       const currentType = getCurrentBlockType(editor)
-      smartType.updateSuggestions(text, cursorPos, currentType)
+      
+      // Получаем текст текущей ноды и позицию внутри неё
+      const currentNode = $from.node()
+      const nodeText = currentNode?.textContent || ''
+      const nodeStartPos = $from.start()
+      const posInNode = selection.from - nodeStartPos
+      
+      smartType.updateSuggestions(nodeText, posInNode, currentType)
     },
   })
 
@@ -188,8 +251,29 @@ export default function ScriptEditorTiptap({
     
     // Если определили новый тип и он отличается от текущего — меняем
     if (newType && newType !== currentType) {
-      console.log(`Auto-detect: ${currentType} → ${newType} for "${textContent}"`)
       editor.chain().setNode(newType).run()
+    }
+    
+    // Нормализация текста шапки — всегда капслок
+    if (currentType === 'sceneHeader' || newType === 'sceneHeader') {
+      const upperText = textContent.toUpperCase()
+      if (upperText !== textContent) {
+        // Заменяем текст на капслок
+        const nodeStart = $from.start()
+        const nodeEnd = $from.end()
+        editor
+          .chain()
+          .deleteRange({ from: nodeStart, to: nodeEnd })
+          .insertContent(upperText)
+          .run()
+      }
+      
+      // Если время закончилось точкой — переходим на новую строку
+      const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.$/
+      if (timePattern.test(upperText)) {
+        // Создаём новый блок действия
+        editor.chain().splitBlock().setNode('sceneAction').run()
+      }
     }
   }
 
@@ -313,13 +397,42 @@ export default function ScriptEditorTiptap({
         isOpen={smartType.isOpen}
         onSelect={(suggestion) => {
           if (!editor) return
-          const text = editor.getText()
-          const cursorPos = editor.state.selection.from
-          const result = smartType.selectSuggestion(text, cursorPos, suggestion)
           
-          // Заменяем текст в редакторе
-          editor.commands.setContent(result.newText)
-          editor.commands.setTextSelection(result.newCursorPos)
+          const { state } = editor
+          const { selection } = state
+          const { $from } = selection
+          
+          // Получаем текст текущей ноды и позицию внутри неё
+          const currentNode = $from.node()
+          const nodeText = currentNode?.textContent || ''
+          const nodeStartPos = $from.start()
+          const posInNode = selection.from - nodeStartPos
+          
+          // Получаем текущее слово
+          const beforeCursor = nodeText.substring(0, posInNode)
+          const match = beforeCursor.match(/[^\s]*$/)
+          const currentWord = match ? match[0] : ''
+          
+          if (!currentWord) return
+          
+          // Вычисляем позиции для удаления
+          const wordStartPos = selection.from - currentWord.length
+          const wordEndPos = selection.from
+          
+          // Для времени автоматически добавляем точку
+          const textToInsert = suggestion.type === 'time' 
+            ? suggestion.text + '.' 
+            : suggestion.text
+          
+          // Удаляем текущее слово и вставляем подсказку
+          editor
+            .chain()
+            .focus()
+            .deleteRange({ from: wordStartPos, to: wordEndPos })
+            .insertContent(textToInsert)
+            .run()
+          
+          smartType.closeSuggestions()
         }}
         onClose={smartType.closeSuggestions}
         onNavigate={smartType.navigateSuggestions}
