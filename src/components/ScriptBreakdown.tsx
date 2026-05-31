@@ -160,6 +160,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
     )
   }
 
+  // Режим элементов (activeView === 'elements')
   return (
     <div className="flex-1 flex overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       
@@ -189,7 +190,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
             </button>
             <button
               onClick={() => setActiveView('stats')}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'stats' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${(activeView as 'elements' | 'stats') === 'stats' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
             >
               <BarChart3 size={12} className="inline mr-1" />
               Статистика

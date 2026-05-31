@@ -34,7 +34,7 @@ export default function ScriptPage() {
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
   const [enableAutoFix, setEnableAutoFix] = useState(false)
   const [editorBlocks, setEditorBlocks] = useState<Array<{ id: string; type: string; content: string }>>([])
-  const [focusSceneId, setFocusSceneId] = useState<string>()
+  const [_focusSceneId, setFocusSceneId] = useState<string>()
   const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
