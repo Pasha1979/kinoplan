@@ -1,10 +1,11 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneAction, SceneCharacter, SceneDialog } from './tiptap'
+import { Film, AlignLeft, User, MessageSquare } from 'lucide-react'
 
 interface ScriptEditorTiptapProps {
   format: ScriptFormat
@@ -35,9 +36,7 @@ export default function ScriptEditorTiptap({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        paragraph: false, // Отключаем стандартный paragraph, используем наши ноды
-      }),
+      StarterKit,
       SceneHeader,
       SceneAction,
       SceneCharacter,
@@ -46,7 +45,7 @@ export default function ScriptEditorTiptap({
         placeholder: 'Начните писать сценарий...',
       }),
     ],
-    content: '<div data-type="scene-header">1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</div><div data-type="scene-action"></div>',
+    content: '<p>1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</p><p></p>',
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none',
@@ -118,8 +117,72 @@ export default function ScriptEditorTiptap({
     return null
   }
 
+  // Функция для установки типа блока
+  const setBlockType = useCallback((type: string) => {
+    if (!editor) return
+    
+    const { from, to } = editor.state.selection
+    const text = editor.state.doc.textBetween(from, to, ' ')
+    
+    // Удаляем текущий блок и создаём новый нужного типа
+    editor.chain()
+      .focus()
+      .deleteRange({ from, to })
+      .insertContent(`<div data-type="${type}">${text}</div>`)
+      .run()
+  }, [editor])
+
+  // Получаем текущий тип блока
+  const getCurrentBlockType = () => {
+    if (!editor) return 'paragraph'
+    const { $from } = editor.state.selection
+    const node = $from.node()
+    return node?.attrs?.['data-type'] || node?.type?.name || 'paragraph'
+  }
+
+  const currentType = getCurrentBlockType()
+
+  const blockTypes = [
+    { name: 'sceneHeader', label: 'Шапка', icon: Film, color: '#6366f1' },
+    { name: 'sceneAction', label: 'Действие', icon: AlignLeft, color: '#9ca3af' },
+    { name: 'sceneCharacter', label: 'Персонаж', icon: User, color: '#f97316' },
+    { name: 'sceneDialog', label: 'Диалог', icon: MessageSquare, color: '#22c55e' },
+  ]
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* Панель инструментов */}
+      <div
+        className="shrink-0 flex items-center gap-2 px-4 py-2 border-b"
+        style={{
+          background: isDark ? '#1a1a2e' : '#f8f9fc',
+          borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb',
+        }}
+      >
+        <span className="text-xs mr-2" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+          Тип блока:
+        </span>
+        {blockTypes.map((type) => {
+          const Icon = type.icon
+          const isActive = currentType === type.name
+          return (
+            <button
+              key={type.name}
+              onClick={() => setBlockType(type.name)}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors"
+              style={{
+                background: isActive ? type.color : 'transparent',
+                color: isActive ? '#fff' : isDark ? '#9ca3af' : '#6b7280',
+                border: `1px solid ${isActive ? type.color : isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+              }}
+            >
+              <Icon size={12} />
+              {type.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* Область редактора */}
       <div
         className="flex-1 overflow-y-auto p-8"
@@ -130,7 +193,7 @@ export default function ScriptEditorTiptap({
       >
         <EditorContent
           editor={editor}
-          className="h-full"
+          className="h-full tiptap-editor"
           style={{
             fontFamily,
             fontSize: `${fontSize}pt`,
