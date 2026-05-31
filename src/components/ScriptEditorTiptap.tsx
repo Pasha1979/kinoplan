@@ -31,7 +31,7 @@ interface ScriptEditorTiptapProps {
 }
 
 export default function ScriptEditorTiptap({
-  format,
+  format: _format,
   projectType,
   currentSeries,
   fontFamily,
@@ -71,7 +71,7 @@ export default function ScriptEditorTiptap({
     content: '<p>1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</p><p></p>',
     editorProps: {
       attributes: {
-        class: `tiptap-editor prose prose-sm max-w-none focus:outline-none format-${format || 'russian'}`,
+        class: `tiptap-editor prose prose-sm max-w-none focus:outline-none format-${_format || 'russian'}`,
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
       },
       handleKeyDown: (view, event) => {
@@ -462,7 +462,7 @@ export default function ScriptEditorTiptap({
         >
           <EditorContent
             editor={editor}
-            className={`h-full tiptap-editor format-${format || 'russian'}`}
+            className={`h-full tiptap-editor format-${_format || 'russian'}`}
             style={{
               fontFamily,
               fontSize: `${fontSize}pt`,

@@ -102,7 +102,7 @@ export default function CharacterStats({ characters, totalScenes, isDark }: Char
               </p>
             </div>
           ) : (
-            sortedCharacters.map((char) => {
+            sortedCharacters.map((char, _index) => {
               const category = getCharacterCategory(char.sceneIds.length, totalScenes)
               const percentage = (char.sceneIds.length / totalScenes) * 100
               const barWidth = (char.sceneIds.length / maxScenes) * 100
