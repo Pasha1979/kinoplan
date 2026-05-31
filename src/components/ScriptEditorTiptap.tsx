@@ -4,6 +4,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
+import { SceneHeader, SceneAction, SceneCharacter, SceneDialog } from './tiptap'
 
 interface ScriptEditorTiptapProps {
   format: ScriptFormat
@@ -34,12 +35,18 @@ export default function ScriptEditorTiptap({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        paragraph: false, // Отключаем стандартный paragraph, используем наши ноды
+      }),
+      SceneHeader,
+      SceneAction,
+      SceneCharacter,
+      SceneDialog,
       Placeholder.configure({
         placeholder: 'Начните писать сценарий...',
       }),
     ],
-    content: '<p>1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</p><p></p>',
+    content: '<div data-type="scene-header">1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</div><div data-type="scene-action"></div>',
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none',
