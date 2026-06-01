@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Save, X } from 'lucide-react'
 import { useScriptStore, type ScriptFormat, type TimingSystem } from '../../store/scriptStore'
@@ -13,8 +13,8 @@ export default function CreateScriptPage() {
   const project = getCurrentProject()
   const isDark = theme === 'dark'
 
-  // Добавляем CSS для тултипов
-  if (typeof document !== 'undefined' && !document.getElementById('tooltip-styles')) {
+  useEffect(() => {
+    if (document.getElementById('tooltip-styles')) return
     const style = document.createElement('style')
     style.id = 'tooltip-styles'
     style.textContent = `
@@ -47,7 +47,7 @@ export default function CreateScriptPage() {
       }
     `
     document.head.appendChild(style)
-  }
+  }, [])
 
   const [title, setTitle] = useState(project?.name || '')
   const [format, setFormat] = useState<ScriptFormat>('russian')

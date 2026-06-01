@@ -311,7 +311,7 @@ export default function Sidebar() {
 
         <button
           title={!sidebarExpanded ? 'Настройки' : undefined}
-          onClick={() => alert('Настройки приложения будут реализованы позже')}
+          onClick={() => navigate(`/project/${project.id}/settings`)}
           className="w-full flex items-center gap-3 rounded-xl text-sm transition-all duration-200 cursor-pointer"
           style={{
             padding: sidebarExpanded ? '11px 14px' : '11px 0',

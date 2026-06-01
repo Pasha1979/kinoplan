@@ -153,19 +153,13 @@ const TODAY_TYPE_CONFIG: Record<TodayEvent['type'], { color: string; bg: string;
   rehearsal: { color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '🎙' },
 }
 
-const DEMO_TODAY: TodayEvent[] = [
-  { id: '1', time: '10:00', title: 'Кастинг — роль Максима', type: 'casting', location: 'Студия на Тверской' },
-  { id: '2', time: '14:00', title: 'Общее собрание группы', type: 'meeting', location: 'Zoom' },
-  { id: '3', time: '16:30', title: 'Примерка — Анна Смирнова', type: 'fitting', location: 'Костюмерный цех' },
-]
-
 function TodayWidget({ shootingDays, isDark }: {
   shootingDays: import('../../store/projectStore').ShootingDay[]
   isDark: boolean
 }) {
   const todayStr = new Date().toISOString().slice(0, 10)
   const todayShoot = shootingDays.find(d => d.date === todayStr)
-  const events: TodayEvent[] = DEMO_TODAY
+  const events: TodayEvent[] = []
 
   const cardBg = isDark ? '#1a1a35' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
@@ -209,9 +203,12 @@ function TodayWidget({ shootingDays, isDark }: {
           )
         })}
         {events.length === 0 && (
-          <p className="text-sm text-center py-3" style={{ color: textSecondary }}>На сегодня событий нет</p>
+          <div className="flex flex-col items-center justify-center py-6 gap-2">
+            <span className="text-2xl">📅</span>
+            <p className="text-sm font-medium" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Функция в разработке</p>
+            <p className="text-xs text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>События из календаря появятся в следующем обновлении</p>
+          </div>
         )}
-        <p className="text-xs text-center pt-1" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Демо-данные · события появятся из календаря</p>
       </div>
     </div>
   )
@@ -599,14 +596,6 @@ function TaskBoardMini({ projectId, isDark }: { projectId: string; isDark: boole
   const border        = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
   const rowBg         = isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb'
 
-  const demoTasks = tasks.length === 0 ? [
-    { id: 'd1', title: 'Подготовить сценарный план',    deadline: '', status: 'todo'       as const, module: 'script',   assignee: 'Авт.' },
-    { id: 'd2', title: 'Утвердить локации съёмок',      deadline: '', status: 'inProgress' as const, module: 'locations',assignee: 'Реж.' },
-    { id: 'd3', title: 'Кастинг на главную роль',       deadline: '', status: 'inProgress' as const, module: 'casting',  assignee: 'Каст.' },
-    { id: 'd4', title: 'Сформировать план съёмочных дней', deadline: '', status: 'todo'  as const, module: 'schedule', assignee: '' },
-    { id: 'd5', title: 'Согласовать бюджет съёмочного периода', deadline: '', status: 'todo' as const, module: 'budget', assignee: '' },
-  ] : tasks
-
   return (
     <div className="rounded-2xl p-6"
       style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)' }}
@@ -614,32 +603,36 @@ function TaskBoardMini({ projectId, isDark }: { projectId: string; isDark: boole
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-sm" style={{ color: textPrimary }}>Задачи</h3>
         <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6', color: textSecondary }}>
-          {all.filter(t => t.status !== 'done').length || demoTasks.length} активных
+          {all.filter(t => t.status !== 'done').length} активных
         </span>
       </div>
 
-      <div className="space-y-2">
-        {demoTasks.map((task) => {
-          const cfg = TASK_STATUS_CONFIG[task.status]
-          const isOverdue = task.status === 'overdue'
-          return (
-            <div key={task.id} className="flex items-start gap-3 rounded-xl px-3 py-2.5"
-              style={{ background: isOverdue ? 'rgba(248,113,113,0.08)' : rowBg }}
-            >
-              <span className="mt-0.5 shrink-0" style={{ color: cfg.color }}>{cfg.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm leading-tight truncate" style={{ color: textPrimary }}>{task.title}</p>
-                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>
-                  {task.module}{task.assignee ? ` · ${task.assignee}` : ''}
-                </p>
+      {tasks.length > 0 ? (
+        <div className="space-y-2">
+          {tasks.map((task) => {
+            const cfg = TASK_STATUS_CONFIG[task.status]
+            const isOverdue = task.status === 'overdue'
+            return (
+              <div key={task.id} className="flex items-start gap-3 rounded-xl px-3 py-2.5"
+                style={{ background: isOverdue ? 'rgba(248,113,113,0.08)' : rowBg }}
+              >
+                <span className="mt-0.5 shrink-0" style={{ color: cfg.color }}>{cfg.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm leading-tight truncate" style={{ color: textPrimary }}>{task.title}</p>
+                  <p className="text-xs mt-0.5" style={{ color: textSecondary }}>
+                    {task.module}{task.assignee ? ` · ${task.assignee}` : ''}
+                  </p>
+                </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {tasks.length === 0 && (
-        <p className="text-xs mt-3 text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Демо-данные · задачи появятся из модулей</p>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 gap-2">
+          <span className="text-2xl">📋</span>
+          <p className="text-sm font-medium" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Функция в разработке</p>
+          <p className="text-xs text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Управление задачами появится в следующем обновлении</p>
+        </div>
       )}
     </div>
   )
@@ -665,13 +658,6 @@ function ActivityFeed({ projectId, isDark }: { projectId: string; isDark: boolea
   const cardBg        = isDark ? '#1a1a35' : '#ffffff'
   const border        = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
 
-  const demoEvents = events.length === 0 ? [
-    { id: 'a1', type: 'general'   as const, text: 'Проект создан', timestamp: new Date(Date.now() - 60000 * 5).toISOString() },
-    { id: 'a2', type: 'script'    as const, text: 'Ожидается импорт сценария', timestamp: new Date(Date.now() - 60000 * 30).toISOString() },
-    { id: 'a3', type: 'schedule'  as const, text: 'Расписание пока не заполнено', timestamp: new Date(Date.now() - 60000 * 60).toISOString() },
-    { id: 'a4', type: 'casting'   as const, text: 'Кастинг ещё не начат', timestamp: new Date(Date.now() - 60000 * 120).toISOString() },
-  ] : events
-
   const timeAgo = (iso: string) => {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
     if (diff < 60) return 'только что'
@@ -689,23 +675,27 @@ function ActivityFeed({ projectId, isDark }: { projectId: string; isDark: boolea
         <h3 className="font-bold text-sm" style={{ color: textPrimary }}>Последние события</h3>
       </div>
 
-      <div className="space-y-3">
-        {demoEvents.map((ev) => {
-          const cfg = ACTIVITY_TYPE_CONFIG[ev.type]
-          return (
-            <div key={ev.id} className="flex items-start gap-3">
-              <span className="text-base shrink-0 leading-none mt-0.5">{cfg.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm leading-snug" style={{ color: textPrimary }}>{ev.text}</p>
-                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>{timeAgo(ev.timestamp)}</p>
+      {events.length > 0 ? (
+        <div className="space-y-3">
+          {events.map((ev) => {
+            const cfg = ACTIVITY_TYPE_CONFIG[ev.type]
+            return (
+              <div key={ev.id} className="flex items-start gap-3">
+                <span className="text-base shrink-0 leading-none mt-0.5">{cfg.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm leading-snug" style={{ color: textPrimary }}>{ev.text}</p>
+                  <p className="text-xs mt-0.5" style={{ color: textSecondary }}>{timeAgo(ev.timestamp)}</p>
+                </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {events.length === 0 && (
-        <p className="text-xs mt-3 text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Демо-данные · события появятся при работе</p>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 gap-2">
+          <span className="text-2xl">⚡</span>
+          <p className="text-sm font-medium" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Функция в разработке</p>
+          <p className="text-xs text-center" style={{ color: isDark ? '#374151' : '#d1d5db' }}>Activity Feed появится в следующем обновлении</p>
+        </div>
       )}
     </div>
   )

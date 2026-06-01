@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 type Theme = 'dark' | 'light'
 
@@ -9,13 +10,18 @@ interface UiStore {
   toggleSidebar: () => void
 }
 
-export const useUiStore = create<UiStore>((set) => ({
-  theme: 'dark',
-  sidebarExpanded: true,
+export const useUiStore = create<UiStore>()(
+  persist(
+    (set) => ({
+      theme: 'dark',
+      sidebarExpanded: true,
 
-  toggleTheme: () =>
-    set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+      toggleTheme: () =>
+        set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
 
-  toggleSidebar: () =>
-    set((state) => ({ sidebarExpanded: !state.sidebarExpanded })),
-}))
+      toggleSidebar: () =>
+        set((state) => ({ sidebarExpanded: !state.sidebarExpanded })),
+    }),
+    { name: 'kinoplan-ui' }
+  )
+)

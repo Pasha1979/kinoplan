@@ -19,6 +19,8 @@ import AnalyticsPage from './pages/Analytics/AnalyticsPage'
 import ScheduleVersionsPage from './pages/ScheduleVersions/ScheduleVersionsPage'
 import TagsPage from './pages/Tags/TagsPage'
 import FilesPage from './pages/Files/FilesPage'
+import SchedulePage from './pages/Schedule/SchedulePage'
+import SettingsPage from './pages/Settings/SettingsPage'
 
 function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -50,6 +52,8 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="script" element={<ScriptPage />} />
             <Route path="script/create" element={<CreateScriptPage />} />
+            <Route path="schedule" element={<SchedulePage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="locations" element={<LocationsPage />} />
             <Route path="costumes" element={<CostumesPage />} />
             <Route path="transport" element={<TransportPage />} />

@@ -114,36 +114,6 @@ export function computeAlerts(project: Project): SmartAlert[] {
     })
   }
 
-  // ─── ДЕМО-данные (если нет реальных алертов) ──────────────────────────────
-  if (alerts.length === 0) {
-    alerts.push(
-      {
-        id: 'demo_casting',
-        level: 'warning',
-        title: '3 роли не утверждены',
-        description: 'Главные роли: Максим, Аня, Кирилл — кастинг ещё не закрыт.',
-        module: 'Кастинг',
-        action: { label: 'Открыть кастинг', path: `/project/${project.id}/casting` },
-      },
-      {
-        id: 'demo_locations',
-        level: 'warning',
-        title: '2 локации не выбраны',
-        description: 'Объекты «Завод» и «Квартира главного героя» ещё без кандидатов.',
-        module: 'Локации',
-        action: { label: 'Открыть локации', path: `/project/${project.id}/locations` },
-      },
-      {
-        id: 'demo_scenes',
-        level: 'info',
-        title: '12 сцен не спланированы',
-        description: 'Сцены 15–26 не добавлены в стрипборд.',
-        module: 'Планирование',
-        action: { label: 'Открыть стрипборд', path: `/project/${project.id}/schedule` },
-      }
-    )
-  }
-
   // Сортируем: critical → warning → info
   const order: Record<AlertLevel, number> = { critical: 0, warning: 1, info: 2 }
   return alerts.sort((a, b) => order[a.level] - order[b.level])
