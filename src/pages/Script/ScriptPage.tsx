@@ -33,12 +33,13 @@ export default function ScriptPage() {
   const [, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
   const [enableAutoFix, setEnableAutoFix] = useState(false)
-  const [editorBlocks, setEditorBlocks] = useState<Array<{ id: string; type: string; content: string }>>([])
   const [_focusSceneId, setFocusSceneId] = useState<string>()
   const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
   const prevFormatRef = useRef<ScriptFormat>('russian')
+  // 4.1 Ссылка на функцию конвертации внутри редактора
+  const convertFormatRef = useRef<((from: ScriptFormat, to: ScriptFormat) => void) | null>(null)
 
   // При получении новых сцен из редактора — обновляем список
   const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => {
@@ -75,51 +76,15 @@ export default function ScriptPage() {
     }
   }, [project, scripts])
 
-  // Конвертация блоков при переключении формата
-  useEffect(() => {
-    if (editorBlocks.length === 0) return
-
-    const convertBlocks = (blocks: Array<{ id: string; type: string; content: string }>, from: ScriptFormat, to: ScriptFormat) => {
-      if (from === to) return blocks
-      
-      return blocks.map(block => {
-        if (block.type === 'scene_header') {
-          let content = block.content.trim()
-          
-          if (from === 'russian' && to === 'hollywood') {
-            // RU → EN
-            content = content.replace(/^\d+\.\s*/, '')
-            content = content.replace(/ИНТ\./gi, 'INT.')
-            content = content.replace(/ЭКСТ\./gi, 'EXT.')
-            content = content.replace(/—/g, '-')
-            content = content.replace(/ДЕНЬ/gi, 'DAY')
-            content = content.replace(/НОЧЬ/gi, 'NIGHT')
-            content = content.replace(/УТРО/gi, 'MORNING')
-            content = content.replace(/ВЕЧЕР/gi, 'EVENING')
-          } else if (from === 'hollywood' && to === 'russian') {
-            // EN → RU
-            content = content.replace(/INT\./gi, 'ИНТ.')
-            content = content.replace(/EXT\./gi, 'ЭКСТ.')
-            content = content.replace(/-/g, '—')
-            content = content.replace(/DAY/gi, 'ДЕНЬ')
-            content = content.replace(/NIGHT/gi, 'НОЧЬ')
-            content = content.replace(/MORNING/gi, 'УТРО')
-            content = content.replace(/EVENING/gi, 'ВЕЧЕР')
-          }
-          
-          return { ...block, content }
-        }
-        return block
-      })
+  // 4.1 Конвертация формата — вызываем функцию из редактора при переключении RU/EN
+  const handleFormatSwitch = (newFormat: ScriptFormat) => {
+    if (newFormat === scriptFormat) return
+    if (convertFormatRef.current) {
+      convertFormatRef.current(prevFormatRef.current, newFormat)
     }
-
-    // Конвертация при изменении формата
-    if (prevFormatRef.current !== scriptFormat) {
-      const converted = convertBlocks(editorBlocks, prevFormatRef.current, scriptFormat)
-      setEditorBlocks(converted)
-      prevFormatRef.current = scriptFormat
-    }
-  }, [scriptFormat, editorBlocks])
+    prevFormatRef.current = newFormat
+    setScriptFormat(newFormat)
+  }
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const sidebarBg = isDark ? '#13132a' : '#ffffff'
@@ -324,14 +289,14 @@ export default function ScriptPage() {
             <div className="flex items-center gap-1 rounded-lg p-0.5"
               style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
               <button
-                onClick={() => setScriptFormat('russian')}
+                onClick={() => handleFormatSwitch('russian')}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${scriptFormat === 'russian' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
               >
                 <Globe size={12} />
                 RU
               </button>
               <button
-                onClick={() => setScriptFormat('hollywood')}
+                onClick={() => handleFormatSwitch('hollywood')}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${scriptFormat === 'hollywood' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
               >
                 <Globe size={12} />
@@ -527,6 +492,7 @@ export default function ScriptPage() {
                 onStatsChange={setScriptStats}
                 onScenesChange={handleScenesChange}
                 focusSceneId={_focusSceneId}
+                onConvertReady={(fn) => { convertFormatRef.current = fn }}
               />
             </div>
           </div>
@@ -554,7 +520,7 @@ export default function ScriptPage() {
         {/* Format Assistant — панель проверки форматирования */}
         {activeTab === 'text' && (
           <FormatAssistant
-            blocks={editorBlocks}
+            blocks={[]}
             format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
             isDark={isDark}
             enableAutoFix={enableAutoFix}

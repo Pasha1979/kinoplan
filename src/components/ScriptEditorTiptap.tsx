@@ -25,6 +25,7 @@ interface ScriptEditorTiptapProps {
   onBlocksChange?: (blocks: any[]) => void
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
   focusSceneId?: string
+  onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
   // SmartType данные (вместо hardcoded)
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
@@ -41,6 +42,7 @@ export default function ScriptEditorTiptap({
   isDark,
   onScenesChange,
   focusSceneId,
+  onConvertReady,
   smartTypeCharacters,
   smartTypeLocations,
   smartTypeTimes,
@@ -514,6 +516,45 @@ export default function ScriptEditorTiptap({
       }
     }
   }, [editor])
+
+  // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
+  useEffect(() => {
+    if (!editor || !onConvertReady) return
+
+    const convertFormat = (from: ScriptFormat, to: ScriptFormat) => {
+      if (from === to) return
+      let html = editor.getHTML()
+
+      if (from === 'russian' && to === 'hollywood') {
+        html = html.replace(/ИНТ-ЭКСТ\./gi, 'INT/EXT.')
+        html = html.replace(/ИНТ\./gi, 'INT.')
+        html = html.replace(/ЭКСТ\./gi, 'EXT.')
+        html = html.replace(/—/g, '-')
+        html = html.replace(/\bДЕНЬ\b/gi, 'DAY')
+        html = html.replace(/\bНОЧЬ\b/gi, 'NIGHT')
+        html = html.replace(/\bУТРО\b/gi, 'MORNING')
+        html = html.replace(/\bВЕЧЕР\b/gi, 'EVENING')
+        html = html.replace(/\bРАССВЕТ\b/gi, 'DAWN')
+        html = html.replace(/\bЗАКАТ\b/gi, 'DUSK')
+      } else if (from === 'hollywood' && to === 'russian') {
+        html = html.replace(/INT\/EXT\./gi, 'ИНТ-ЭКСТ.')
+        html = html.replace(/INT\./gi, 'ИНТ.')
+        html = html.replace(/EXT\./gi, 'ЭКСТ.')
+        html = html.replace(/ - /g, ' — ')
+        html = html.replace(/\bDAY\b/gi, 'ДЕНЬ')
+        html = html.replace(/\bNIGHT\b/gi, 'НОЧЬ')
+        html = html.replace(/\bMORNING\b/gi, 'УТРО')
+        html = html.replace(/\bEVENING\b/gi, 'ВЕЧЕР')
+        html = html.replace(/\bDAWN\b/gi, 'РАССВЕТ')
+        html = html.replace(/\bDUSK\b/gi, 'ЗАКАТ')
+      }
+
+      editor.commands.setContent(html)
+      processedHeadersRef.current.clear()
+    }
+
+    onConvertReady(convertFormat)
+  }, [editor, onConvertReady])
 
   // 3.2 Прокрутка редактора к сцене по focusSceneId
   useEffect(() => {
