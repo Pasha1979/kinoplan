@@ -5,14 +5,14 @@ import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 interface SimpleScene {
   id: string
   number: string
-  type: 'INT' | 'EXT'
+  type: string
   location: string
-  timeOfDay: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS'
-  synopsis: string
-  pageCount: number
+  time: string
+  synopsis?: string
   colorTag?: string
   isOmitted?: boolean
   pages?: number
+  cast?: string[]
 }
 
 interface SceneNavigatorProps {
@@ -28,12 +28,14 @@ export default function SceneNavigator({
   onSceneClick,
   activeSceneId,
 }: SceneNavigatorProps) {
-  const [filter, setFilter] = useState<'all' | 'INT' | 'EXT'>('all')
+  const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
 
   const filteredScenes = useMemo(() => {
     if (filter === 'all') return scenes
-    return scenes.filter(s => s.type.includes(filter))
+    if (filter === 'ИНТ') return scenes.filter(s => s.type.includes('ИНТ'))
+    if (filter === 'ЭКСТ') return scenes.filter(s => s.type.includes('ЭКСТ'))
+    return scenes
   }, [scenes, filter])
 
   const toggleExpanded = (sceneId: string) => {
@@ -48,26 +50,33 @@ export default function SceneNavigator({
     })
   }
 
-  const getColorTagStyle = (colorTag?: string) => {
-    const colors: Record<string, { bg: string; border: string }> = {
-      white: { bg: 'bg-white', border: 'border-gray-300' },
-      blue: { bg: 'bg-blue-100', border: 'border-blue-400' },
-      pink: { bg: 'bg-pink-100', border: 'border-pink-400' },
-      yellow: { bg: 'bg-yellow-100', border: 'border-yellow-400' },
-      green: { bg: 'bg-green-100', border: 'border-green-400' },
-      orange: { bg: 'bg-orange-100', border: 'border-orange-400' },
+  const getColorTagColor = (colorTag?: string): string => {
+    const colors: Record<string, string> = {
+      white: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db',
+      blue: '#60a5fa',
+      pink: '#f472b6',
+      yellow: '#facc15',
+      green: '#4ade80',
+      orange: '#fb923c',
     }
-    return colors[colorTag || 'white']
+    return colors[colorTag || 'white'] || (isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb')
   }
 
-  const getTimeIcon = (timeOfDay: string) => {
-    switch (timeOfDay) {
-      case 'DAY': return <span className="text-yellow-500">☀</span>
-      case 'NIGHT': return <span className="text-blue-400">☾</span>
-      case 'DAWN': return <span className="text-orange-400">🌅</span>
-      case 'DUSK': return <span className="text-purple-400">🌆</span>
-      default: return <Clock size={12} />
-    }
+  const getTimeIcon = (time: string) => {
+    const t = (time || '').toUpperCase()
+    if (t === 'ДЕНЬ') return <span className="text-yellow-500">☀</span>
+    if (t === 'НОЧЬ') return <span className="text-blue-400">🌙</span>
+    if (t === 'УТРО') return <span className="text-orange-400">🌅</span>
+    if (t === 'ВЕЧЕР') return <span className="text-purple-400">🌆</span>
+    if (t === 'РАССВЕТ') return <span className="text-orange-400">🌅</span>
+    if (t === 'ЗАКАТ') return <span className="text-purple-400">🌆</span>
+    return <Clock size={12} />
+  }
+
+  const getTypeBadge = (type: string) => {
+    if (type.includes('ИНТ-ЭКСТ')) return { bg: 'rgba(251,146,60,0.2)', color: '#fb923c', label: 'ИНТ-ЭКСТ' }
+    if (type.includes('ЭКСТ')) return { bg: 'rgba(34,197,94,0.2)', color: '#22c55e', label: 'ЭКСТ' }
+    return { bg: 'rgba(139,92,246,0.2)', color: '#8b5cf6', label: 'ИНТ' }
   }
 
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -94,19 +103,22 @@ export default function SceneNavigator({
 
         {/* Фильтры */}
         <div className="flex items-center gap-1">
-          {(['all', 'INT', 'EXT'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-2 py-1 rounded text-xs font-medium transition-all"
-              style={{
-                background: filter === f ? 'rgba(99,102,241,0.2)' : 'transparent',
-                color: filter === f ? '#818cf8' : textSecondary,
-              }}
-            >
-              {f === 'all' ? 'Все' : f}
-            </button>
-          ))}
+          {(['Все', 'ИНТ', 'ЭКСТ'] as const).map((label) => {
+            const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ'
+            return (
+              <button
+                key={label}
+                onClick={() => setFilter(f)}
+                className="px-2 py-1 rounded text-xs font-medium transition-all"
+                style={{
+                  background: filter === f ? 'rgba(99,102,241,0.2)' : 'transparent',
+                  color: filter === f ? '#818cf8' : textSecondary,
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -122,7 +134,8 @@ export default function SceneNavigator({
           filteredScenes.map((scene) => {
             const isActive = activeSceneId === scene.id
             const isExpanded = expandedScenes.has(scene.id)
-            const colorStyle = getColorTagStyle(scene.colorTag)
+            const stripColor = getColorTagColor(scene.colorTag)
+            const badge = getTypeBadge(scene.type || '')
 
             return (
               <div
@@ -137,7 +150,7 @@ export default function SceneNavigator({
                 {/* Основная строка сцены */}
                 <div className="p-3 flex items-start gap-2">
                   {/* Цветная метка */}
-                  <div className={`w-1 h-full min-h-[40px] rounded-full ${colorStyle.bg} ${colorStyle.border}`} />
+                  <div className="w-1 shrink-0 self-stretch rounded-full" style={{ background: stripColor, minHeight: 40 }} />
                   
                   <div className="flex-1 min-w-0">
                     {/* Номер и тип */}
@@ -146,11 +159,8 @@ export default function SceneNavigator({
                         {scene.number}.
                       </span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded"
-                        style={{
-                          background: scene.type === 'INT' ? 'rgba(139,92,246,0.2)' : 'rgba(34,197,94,0.2)',
-                          color: scene.type === 'INT' ? '#8b5cf6' : '#22c55e',
-                        }}>
-                        {scene.type}
+                        style={{ background: badge.bg, color: badge.color }}>
+                        {badge.label}
                       </span>
                       {scene.isOmitted && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
@@ -165,26 +175,46 @@ export default function SceneNavigator({
                       <span className="truncate">{scene.location}</span>
                     </div>
 
+                    {/* Персонажи (cast) */}
+                    {scene.cast && scene.cast.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {scene.cast.slice(0, 3).map((c, i) => (
+                          <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full"
+                            style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                            {c}
+                          </span>
+                        ))}
+                        {scene.cast.length > 3 && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full"
+                            style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
+                            +{scene.cast.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {/* Время и страницы */}
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="flex items-center gap-1 text-[10px]" style={{ color: textSecondary }}>
-                        {getTimeIcon(scene.timeOfDay)}
-                        {scene.timeOfDay}
+                        {getTimeIcon(scene.time)}
+                        {scene.time}
                       </span>
-                      <span className="text-[10px]" style={{ color: textSecondary }}>
-                        {scene.pages} стр
-                      </span>
+                      {scene.pages !== undefined && (
+                        <span className="text-[10px]" style={{ color: textSecondary }}>
+                          {scene.pages} стр
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Кнопка развернуть */}
+                  {/* Кнопка развернуть (если есть синопсис) */}
                   {scene.synopsis && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         toggleExpanded(scene.id)
                       }}
-                      className="p-1 rounded hover:bg-white/10 transition-colors"
+                      className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
                     >
                       {isExpanded ? (
                         <ChevronDown size={14} style={{ color: textSecondary }} />

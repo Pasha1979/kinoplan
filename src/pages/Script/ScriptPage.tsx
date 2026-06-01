@@ -463,11 +463,11 @@ export default function ScriptPage() {
               scenes={scenes.map(s => ({
                 id: s.id,
                 number: s.number,
-                type: s.type === 'ИНТ' ? 'INT' : s.type === 'ЭКСТ' ? 'EXT' : 'INT',
+                type: s.type,
                 location: s.location,
-                timeOfDay: s.time === 'ДЕНЬ' ? 'DAY' : s.time === 'НОЧЬ' ? 'NIGHT' : s.time === 'РАССВЕТ' ? 'DAWN' : s.time === 'ЗАКАТ' ? 'DUSK' : 'DAY',
-                synopsis: '',
-                pageCount: s.pages,
+                time: s.time,
+                pages: s.pages,
+                cast: s.cast,
               }))}
               isDark={isDark}
               onSceneClick={(sceneId) => {

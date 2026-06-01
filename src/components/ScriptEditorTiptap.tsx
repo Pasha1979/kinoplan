@@ -61,8 +61,12 @@ export default function ScriptEditorTiptap({
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
 
-  // 1.1 Ключ localStorage привязан к projectId — каждый проект хранит свой черновик
-  const draftKey = projectId ? `kinoplan_draft_${projectId}` : 'kinoplan_tiptap_draft'
+  // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
+  const draftKey = projectId
+    ? (projectType === 'serial' && currentSeries > 0
+        ? `kinoplan_draft_${projectId}_s${currentSeries}`
+        : `kinoplan_draft_${projectId}`)
+    : 'kinoplan_tiptap_draft'
 
   const editor = useEditor({
     enableInputRules: false,
@@ -224,41 +228,78 @@ export default function ScriptEditorTiptap({
   // 2.1 Исправлен баг: locationPart = headerMatch[3] (не [2])
   const extractScenesFromDocument = () => {
     if (!editor) return
-    
-    const scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }> = []
-    
-    editor.state.doc.descendants((node) => {
-      if (node.type.name === 'sceneHeader') {
-        const headerText = node.textContent.trim()
-        
-        // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ"
-        const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?)\s+(.+)$/i)
-        
-        if (headerMatch) {
-          const sceneNumber = headerMatch[1]
-          const rawType = headerMatch[2].toUpperCase()
-          const locationAndTime = headerMatch[3]
-          
-          const sceneType = rawType.startsWith('ИНТ-') ? 'ИНТ-ЭКСТ' : rawType.startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
-          
-          // Разделяем локацию и время по тире/—
-          const parts = locationAndTime.split(/\s*[—–]\s*/)
-          const location = parts[0]?.trim().replace(/\.$/, '') || ''
-          const time = parts[parts.length - 1]?.trim().replace(/\.$/, '') || 'ДЕНЬ'
-          
-          scenes.push({
-            id: `scene-${sceneNumber}`,
-            number: sceneNumber,
-            type: sceneType,
-            location,
-            time,
-            cast: [],
-            pages: 0.5,
-          })
+
+    type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }
+    const scenes: SceneEntry[] = []
+
+    // Собираем только блоки верхнего уровня документа (не inline-узлы)
+    const blockNodes: any[] = []
+    editor.state.doc.forEach((node: any) => {
+      blockNodes.push(node)
+    })
+
+    blockNodes.forEach((node, index) => {
+      if (node.type.name !== 'sceneHeader') return
+
+      const headerText = node.textContent.trim()
+
+      // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ."
+      const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?)\s+(.+)$/i)
+      if (!headerMatch) return
+
+      const sceneNumber = headerMatch[1]
+      const rawType = headerMatch[2].toUpperCase()
+      const locationAndTime = headerMatch[3]
+
+      const sceneType = rawType.startsWith('ИНТ-') ? 'ИНТ-ЭКСТ' : rawType.startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
+
+      // Варианты времени суток
+      const timeWords = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ']
+
+      // Вариант 1: разделитель — тире/—
+      // Вариант 2: время в конце строки через точку (КВАРТИРА ПЕТИ. ДЕНЬ.)
+      let location = ''
+      let time = ''
+
+      const dashParts = locationAndTime.split(/\s*[—–]\s*/)
+      if (dashParts.length >= 2) {
+        location = dashParts[0].trim().replace(/\.$/, '')
+        time = dashParts[dashParts.length - 1].trim().replace(/\.$/, '')
+      } else {
+        // Ищем время суток в конце строки
+        const timePattern = new RegExp(`[.\\s](${timeWords.join('|')})\\.?$`, 'i')
+        const timeMatch = locationAndTime.match(timePattern)
+        if (timeMatch) {
+          time = timeMatch[1].toUpperCase()
+          location = locationAndTime.slice(0, locationAndTime.lastIndexOf(timeMatch[0])).trim().replace(/\.$/, '')
+        } else {
+          location = locationAndTime.trim().replace(/\.$/, '')
+          time = ''
         }
       }
+
+      // Ищем cast: следующий БЛОК после sceneHeader должен быть sceneCast
+      let cast: string[] = []
+      const nextBlock = blockNodes[index + 1]
+      if (nextBlock?.type.name === 'sceneCast') {
+        const castText = nextBlock.textContent.trim()
+        if (castText) {
+          cast = castText.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+        }
+      }
+
+      // Считаем символы до следующей sceneHeader для приблизительного кол-ва страниц
+      let charCount = headerText.length
+      for (let i = index + 1; i < blockNodes.length; i++) {
+        const n = blockNodes[i]
+        if (n.type.name === 'sceneHeader') break
+        charCount += n.textContent.length
+      }
+      const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+
+      scenes.push({ id: `scene-${sceneNumber}`, number: sceneNumber, type: sceneType, location, time, cast, pages })
     })
-    
+
     if (onScenesChange) {
       onScenesChange(scenes)
     }
@@ -443,16 +484,15 @@ export default function ScriptEditorTiptap({
     el.classList.add(`format-${_format || 'russian'}`)
   }, [editor, _format])
 
-  // Загружаем сохранённый черновик при монтировании
+  // Загружаем черновик при монтировании И при смене серии (draftKey меняется)
   useEffect(() => {
     if (editor) {
       const saved = localStorage.getItem(draftKey)
-      if (saved) {
-        editor.commands.setContent(saved)
-        processedHeadersRef.current.clear()
-      }
+      // При смене серии — очищаем редактор и загружаем нужный черновик (или пустой)
+      editor.commands.setContent(saved || '<p></p>')
+      processedHeadersRef.current.clear()
     }
-  }, [editor])
+  }, [editor, draftKey])
 
   // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
   useEffect(() => {
@@ -629,7 +669,7 @@ export default function ScriptEditorTiptap({
           {editor.getText().length} симв.
         </span>
         <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
-          {(editor.getText().length / 2500).toFixed(1)} стр.
+          {(editor.getText().length / 1800).toFixed(1)} стр.
         </span>
       </div>
 
@@ -639,6 +679,7 @@ export default function ScriptEditorTiptap({
         suggestions={smartType.suggestions}
         activeIndex={smartType.activeIndex}
         isOpen={smartType.isOpen}
+        isDark={isDark}
         onSelect={(suggestion) => {
           if (!editor) return
           
