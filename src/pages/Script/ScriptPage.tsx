@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe, HelpCircle } from 'lucide-react'
+import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe, HelpCircle, ChevronDown } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useScriptStore } from '../../store/scriptStore'
@@ -37,6 +37,7 @@ export default function ScriptPage() {
   const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
+  const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
   const convertFormatRef = useRef<((from: ScriptFormat, to: ScriptFormat) => void) | null>(null)
@@ -259,21 +260,58 @@ export default function ScriptPage() {
             {/* Навигация между сериями (только для сериалов) */}
             {project?.type === 'serial' && (
               <>
-                <select
-                  value={currentSeries}
-                  onChange={e => setCurrentSeries(Number(e.target.value))}
-                  className="text-xs font-medium rounded-lg px-2 py-1.5 cursor-pointer outline-none"
-                  style={{
-                    background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
-                    color: isDark ? '#e5e7eb' : '#374151',
-                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`,
-                  }}
-                >
-                  <option value={0}>Все серии</option>
-                  {Array.from({ length: project.episodesCount || 8 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>Серия {i + 1}</option>
-                  ))}
-                </select>
+                <div className="relative" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSeriesDropdownOpen(false) }}>
+                  <button
+                    onClick={() => setSeriesDropdownOpen(v => !v)}
+                    className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
+                    style={{
+                      background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
+                      color: isDark ? '#e5e7eb' : '#374151',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`,
+                    }}
+                  >
+                    {currentSeries === 0 ? 'Все серии' : `Серия ${currentSeries}`}
+                    <ChevronDown size={11} className={`transition-transform ${seriesDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {seriesDropdownOpen && (
+                    <div
+                      className="absolute top-full left-0 mt-1 rounded-xl overflow-hidden z-50"
+                      style={{
+                        background: isDark ? '#1e1e3a' : '#ffffff',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb'}`,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                        minWidth: 110,
+                      }}
+                    >
+                      {[0, ...Array.from({ length: project.episodesCount || 8 }, (_, i) => i + 1)].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => { setCurrentSeries(n); setSeriesDropdownOpen(false) }}
+                          className="w-full text-left px-3 py-2 text-xs transition-all"
+                          style={{
+                            background: currentSeries === n
+                              ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)')
+                              : 'transparent',
+                            color: currentSeries === n
+                              ? (isDark ? '#818cf8' : '#6366f1')
+                              : (isDark ? '#e5e7eb' : '#374151'),
+                            fontWeight: currentSeries === n ? 600 : 400,
+                          }}
+                          onMouseEnter={e => {
+                            if (currentSeries !== n)
+                              (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'
+                          }}
+                          onMouseLeave={e => {
+                            if (currentSeries !== n)
+                              (e.currentTarget as HTMLElement).style.background = 'transparent'
+                          }}
+                        >
+                          {n === 0 ? 'Все серии' : `Серия ${n}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
               </>
             )}
