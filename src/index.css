@@ -126,6 +126,20 @@ body {
   --transition-margin-bottom: var(--russian-transition-margin-bottom);
 }
 
+/* Scene Node: Container for entire scene (header + content) */
+.tiptap-editor div[data-type="scene"] {
+  position: relative;
+  margin: 2rem 0;
+  padding: 0.5rem 0;
+  border-left: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  transition: border-color 0.2s;
+}
+
+.tiptap-editor div[data-type="scene"]:hover {
+  border-left-color: #6366f1;
+}
+
 /* Scene Header: 2-1. ИНТ. КВАРТИРА ВЛАДЫ.КОМНАТА. НОЧЬ */
 .tiptap-editor div[data-type="scene-header"] {
   position: relative;

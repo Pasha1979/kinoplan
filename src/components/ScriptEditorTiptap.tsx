@@ -4,11 +4,10 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect, useCallback, useRef } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
-import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition } from './tiptap'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode } from './tiptap'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-react'
 import { useSmartType } from '../hooks/useSmartType'
 import { SmartTypePopup } from './SmartTypePopup'
-import { useDebouncedCallback } from '../hooks/useDebounce'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -58,6 +57,7 @@ export default function ScriptEditorTiptap({
   const editor = useEditor({
     extensions: [
       StarterKit,
+      SceneNode,
       SceneHeader,
       SceneCast,
       SceneAction,
@@ -170,13 +170,12 @@ export default function ScriptEditorTiptap({
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
-      const text = editor.getText()
       
       // Сохраняем в localStorage (сразу — легкая операция)
       localStorage.setItem('kinoplan_tiptap_draft', html)
       
-      // Парсим сцены для списка (debounced — тяжёлая операция)
-      debouncedParseScenes(text)
+      // Извлекаем сцены из SceneNode (мгновенно)
+      extractScenesFromDocument()
       
       // Автоопределение типа блока
       autoDetectBlockType(editor)
@@ -203,47 +202,52 @@ export default function ScriptEditorTiptap({
     },
   })
 
-  // Парсинг сцен из текста
-  const parseScenes = (text: string) => {
-    const lines = text.split('\n')
+  // Извлечение сцен из SceneNode (мгновенно, без debounced)
+  const extractScenesFromDocument = () => {
+    if (!editor) return
+    
     const scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }> = []
-    let sceneIndex = 0
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      
-      // Проверяем шапку сцены: только полные формы ИНТ/ЭКСТ/ИНТ-ЭКСТ
-      const headerMatch = line.match(/^(?:\d+(?:-\d+)?\.\s*)?(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)\s+(.+)$/i)
-      
-      if (headerMatch) {
-        sceneIndex++
-        const sceneType = headerMatch[1].toUpperCase().startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
-        const locationPart = headerMatch[2]
+    
+    // Проходим по всем узлам документа и ищем SceneNode
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'scene') {
+        const attrs = node.attrs
+        const headerNode = node.child(0) // Первый ребенок — sceneHeader
         
-        // Разделяем локацию и время
-        const parts = locationPart.split(/[—–\-]/)
-        const location = parts[0]?.trim().replace(/\.$/, '') || ''
-        const time = parts[parts.length - 1]?.trim().replace(/\.$/, '') || 'ДЕНЬ'
-
-        scenes.push({
-          id: `scene-${sceneIndex}`,
-          number: projectType === 'serial' ? `${currentSeries}-${sceneIndex}` : String(sceneIndex),
-          type: sceneType,
-          location,
-          time,
-          cast: [],
-          pages: 0.5,
-        })
+        if (headerNode && headerNode.type.name === 'sceneHeader') {
+          const headerText = headerNode.textContent
+          
+          // Парсим шапку: "1-1. ИНТ. КВАРТИРА — ДЕНЬ"
+          const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)\s+(.+)$/i)
+          
+          if (headerMatch) {
+            const sceneNumber = headerMatch[1]
+            const sceneType = headerMatch[2].toUpperCase().startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
+            const locationPart = headerMatch[2]
+            
+            // Разделяем локацию и время
+            const parts = locationPart.split(/[—–\-]/)
+            const location = parts[0]?.trim().replace(/\.$/, '') || ''
+            const time = parts[parts.length - 1]?.trim().replace(/\.$/, '') || 'ДЕНЬ'
+            
+            scenes.push({
+              id: attrs.id || `scene-${sceneNumber}`,
+              number: sceneNumber,
+              type: sceneType,
+              location,
+              time,
+              cast: [],
+              pages: 0.5,
+            })
+          }
+        }
       }
-    }
-
+    })
+    
     if (onScenesChange) {
       onScenesChange(scenes)
     }
   }
-
-  // Debounced версия для тяжёлого парсинга (300ms)
-  const debouncedParseScenes = useDebouncedCallback(parseScenes, 300)
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
   const autoDetectBlockType = (editor: any) => {
@@ -322,17 +326,41 @@ export default function ScriptEditorTiptap({
     
     // Если определили новый тип и он отличается от текущего — меняем
     if (newType && newType !== currentType) {
-      editor.chain().setNode(newType).run()
+      // Если это sceneHeader — сначала меняем тип, потом оборачиваем в SceneNode
+      if (newType === 'sceneHeader') {
+        const sceneId = `scene-${Date.now()}`
+        editor.chain()
+          .setNode('sceneHeader')
+          .wrapIn('scene', { id: sceneId, seriesNumber: currentSeries, sceneNumber: 1 })
+          .run()
+      } else {
+        editor.chain().setNode(newType).run()
+      }
     }
     
-    // Нормализация текста шапки — всегда капслок
+    // Нормализация текста шапки — всегда капслок + авто-нумерация серий
     if (currentType === 'sceneHeader' || newType === 'sceneHeader') {
-      const upperText = textContent.toUpperCase()
+      let upperText = textContent.toUpperCase()
+      
+      // Авто-нумерация серий для сериалов
+      if (projectType === 'serial' && currentSeries > 0) {
+        // Паттерн: "1. ИНТ." или "1 ИНТ." → "1-1. ИНТ."
+        const sceneNumberPattern = /^(\d+)(?:\.|\s+)(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)/i
+        const match = upperText.match(sceneNumberPattern)
+        
+        if (match) {
+          const sceneNumber = match[1]
+          const extType = match[2]
+          // Заменяем "1. ИНТ." на "1-1. ИНТ." (где первая 1 — номер серии)
+          upperText = upperText.replace(sceneNumberPattern, `${currentSeries}-${sceneNumber}. ${extType}`)
+        }
+      }
+      
       if (upperText !== textContent) {
         // Сохраняем позицию курсора относительно начала ноды
         const cursorOffset = selection.from - $from.start()
         
-        // Заменяем текст на капслок
+        // Заменяем текст на капслок + номер серии
         const nodeStart = $from.start()
         const nodeEnd = $from.end()
         editor
