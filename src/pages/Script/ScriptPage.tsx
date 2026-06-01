@@ -317,9 +317,12 @@ export default function ScriptPage() {
                         {c}
                       </span>
                     ))}
-                    <span className="flex items-center gap-1 text-xs" style={{ color: textSecondary }}>
+                    <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>·</span>
+                    <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#818cf8' : '#6366f1' }}>
                       <AlignLeft size={10} />
-                      {selectedScene.pages} стр.
+                      {scriptStats.pages > 0
+                        ? `${scriptStats.pages.toFixed(1)} стр. ≈ ${Math.round(scriptStats.duration / 60)} мин`
+                        : `${selectedScene.pages} стр.`}
                     </span>
                   </div>
                 </>

@@ -40,8 +40,10 @@ export default function ScriptEditorTiptap({
   fontSize,
   isDark,
   onScenesChange,
+  onStatsChange,
   focusSceneId,
   onConvertReady,
+  genreCoefficient,
   smartTypeCharacters,
   smartTypeLocations,
   smartTypeTimes,
@@ -302,6 +304,15 @@ export default function ScriptEditorTiptap({
 
     if (onScenesChange) {
       onScenesChange(scenes)
+    }
+    if (onStatsChange) {
+      const totalPages = scenes.reduce((sum, s) => sum + s.pages, 0)
+      const coeff = genreCoefficient || 1.0
+      onStatsChange({
+        scenes: scenes.length,
+        pages: parseFloat(totalPages.toFixed(1)),
+        duration: Math.round(totalPages * 55 * coeff),
+      })
     }
   }
 
