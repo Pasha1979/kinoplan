@@ -18,7 +18,6 @@ export function SmartTypePopup({
   isOpen,
   onSelect,
   onClose,
-  onNavigate,
 }: SmartTypePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -39,31 +38,6 @@ export function SmartTypePopup({
       left: coords.left + window.scrollX,
     })
   }, [isOpen, editor, suggestions])
-
-  // Обработка клавиш
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        onNavigate('down')
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        onNavigate('up')
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault()
-        if (suggestions[activeIndex]) {
-          onSelect(suggestions[activeIndex])
-        }
-      } else if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, activeIndex, suggestions, onSelect, onClose, onNavigate])
 
   // Закрытие при клике вне
   useEffect(() => {

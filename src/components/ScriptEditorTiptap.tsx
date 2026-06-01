@@ -22,7 +22,6 @@ interface ScriptEditorTiptapProps {
   genreCoefficient: number
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
-  onBlocksChange?: (blocks: any[]) => void
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
   focusSceneId?: string
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
@@ -199,9 +198,6 @@ export default function ScriptEditorTiptap({
       // Извлекаем сцены из SceneNode (мгновенно)
       extractScenesFromDocument()
       
-      // Авто-перенумерация сцен (при Drag&Drop или изменении порядка)
-      renumberScenes()
-      
       // Автоопределение типа блока
       autoDetectBlockType(editor)
       
@@ -266,79 +262,6 @@ export default function ScriptEditorTiptap({
     if (onScenesChange) {
       onScenesChange(scenes)
     }
-  }
-
-  // Авто-перенумерация сцен при изменении документа
-  const renumberScenes = () => {
-    if (!editor) return
-    
-    let sceneIndex = 0
-    let needsUpdate = false
-    
-    // Проверяем, нужно ли обновлять номера
-    editor.state.doc.descendants((node) => {
-      if (node.type.name === 'scene') {
-        sceneIndex++
-        const currentSceneNumber = node.attrs.sceneNumber
-        if (currentSceneNumber !== sceneIndex) {
-          needsUpdate = true
-        }
-      }
-    })
-    
-    // Если номера уже правильные — не обновляем
-    if (!needsUpdate) return
-    
-    sceneIndex = 0
-    const updates: Array<{ pos: number; attrs: any }> = []
-    
-    // Проходим по всем SceneNode и обновляем номера
-    editor.state.doc.descendants((node, pos) => {
-      if (node.type.name === 'scene') {
-        sceneIndex++
-        const newSceneNumber = projectType === 'serial' ? `${currentSeries}-${sceneIndex}` : String(sceneIndex)
-        
-        // Обновляем атрибуты
-        updates.push({
-          pos,
-          attrs: {
-            ...node.attrs,
-            sceneNumber: sceneIndex,
-          },
-        })
-        
-        // Обновляем текст шапки
-        const headerNode = node.child(0)
-        if (headerNode && headerNode.type.name === 'sceneHeader') {
-          const headerText = headerNode.textContent
-          const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)\s+(.+)$/i)
-          
-          if (headerMatch) {
-            const extType = headerMatch[2]
-            const locationPart = headerMatch[3]
-            const newHeaderText = `${newSceneNumber}. ${extType} ${locationPart}`
-            
-            // Заменяем текст шапки
-            const headerPos = pos + 1 // +1 для SceneNode
-            editor.chain()
-              .deleteRange({ from: headerPos, to: headerPos + headerNode.nodeSize })
-              .insertContentAt(headerPos, newHeaderText)
-              .run()
-          }
-        }
-      }
-    })
-    
-    // Обновляем атрибуты SceneNode
-    updates.forEach(({ pos, attrs }) => {
-      const node = editor.state.doc.nodeAt(pos)
-      if (node && node.type.name === 'scene') {
-        editor.chain()
-          .setNodeSelection(pos)
-          .updateAttributes('scene', attrs)
-          .run()
-      }
-    })
   }
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
@@ -452,9 +375,15 @@ export default function ScriptEditorTiptap({
         const noNumberPattern = /^(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
         const alreadyNumbered = /^\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
         if (noNumberPattern.test(upperText) && !alreadyNumbered.test(upperText)) {
+          // Считаем только уже пронумерованные заголовки (не текущий, который ещё без номера)
           let sceneCount = 0
-          editor.state.doc.descendants((n: any) => { if (n.type.name === 'sceneHeader') sceneCount++ })
-          const newText = `${sceneCount}. ${upperText}`
+          editor.state.doc.descendants((n: any) => {
+            if (n.type.name === 'sceneHeader') {
+              const t = n.textContent.trim()
+              if (/^\d+\./.test(t)) sceneCount++
+            }
+          })
+          const newText = `${sceneCount + 1}. ${upperText}`
           isReplacingRef.current = true
           const nodeStart = $from.start()
           const nodeEnd = $from.end()
