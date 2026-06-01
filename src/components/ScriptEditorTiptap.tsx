@@ -14,6 +14,7 @@ interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
   format?: ScriptFormat
   projectType: ProjectType
+  projectId?: string
   currentSeries: number
   fontFamily: string
   fontSize: number
@@ -33,11 +34,13 @@ interface ScriptEditorTiptapProps {
 export default function ScriptEditorTiptap({
   format: _format,
   projectType,
+  projectId,
   currentSeries,
   fontFamily,
   fontSize,
   isDark,
   onScenesChange,
+  focusSceneId,
   smartTypeCharacters,
   smartTypeLocations,
   smartTypeTimes,
@@ -185,8 +188,8 @@ export default function ScriptEditorTiptap({
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
       
-      // Сохраняем в localStorage (сразу — легкая операция)
-      localStorage.setItem('kinoplan_tiptap_draft', html)
+      // 1.1 Сохраняем в localStorage с ключом по projectId
+      localStorage.setItem(draftKey, html)
       
       // Извлекаем сцены из SceneNode (мгновенно)
       extractScenesFromDocument()
@@ -203,58 +206,54 @@ export default function ScriptEditorTiptap({
       const { $from } = selection
       const currentType = getCurrentBlockType(editor)
       
-      if (currentType === 'sceneHeader' || currentType === 'paragraph') {
+      // 3.1 SmartType работает в шапке, paragraph и блоке персонажа
+      if (currentType === 'sceneHeader' || currentType === 'paragraph' || currentType === 'sceneCharacter') {
         const currentNode = $from.node()
         const nodeText = currentNode?.textContent || ''
         const nodeStartPos = $from.start()
         const posInNode = selection.from - nodeStartPos
-        smartType.updateSuggestions(nodeText, posInNode, 'sceneHeader')
+        smartType.updateSuggestions(nodeText, posInNode, currentType === 'sceneCharacter' ? 'sceneCharacter' : 'sceneHeader')
       } else {
         smartType.closeSuggestions()
       }
     },
   })
 
-  // Извлечение сцен из SceneNode (мгновенно, без debounced)
+  // 2.2 Извлечение сцен напрямую из sceneHeader (без SceneNode)
+  // 2.1 Исправлен баг: locationPart = headerMatch[3] (не [2])
   const extractScenesFromDocument = () => {
     if (!editor) return
     
     const scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }> = []
-    let sceneIndex = 0
     
-    // Проходим по всем узлам документа и ищем SceneNode
     editor.state.doc.descendants((node) => {
-      if (node.type.name === 'scene') {
-        sceneIndex++
-        const attrs = node.attrs
-        const headerNode = node.child(0) // Первый ребенок — sceneHeader
+      if (node.type.name === 'sceneHeader') {
+        const headerText = node.textContent.trim()
         
-        if (headerNode && headerNode.type.name === 'sceneHeader') {
-          const headerText = headerNode.textContent
+        // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ"
+        const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?)\s+(.+)$/i)
+        
+        if (headerMatch) {
+          const sceneNumber = headerMatch[1]
+          const rawType = headerMatch[2].toUpperCase()
+          const locationAndTime = headerMatch[3]
           
-          // Парсим шапку: "1-1. ИНТ. КВАРТИРА — ДЕНЬ"
-          const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)\s+(.+)$/i)
+          const sceneType = rawType.startsWith('ИНТ-') ? 'ИНТ-ЭКСТ' : rawType.startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
           
-          if (headerMatch) {
-            const sceneNumber = headerMatch[1]
-            const sceneType = headerMatch[2].toUpperCase().startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
-            const locationPart = headerMatch[2]
-            
-            // Разделяем локацию и время
-            const parts = locationPart.split(/[—–\-]/)
-            const location = parts[0]?.trim().replace(/\.$/, '') || ''
-            const time = parts[parts.length - 1]?.trim().replace(/\.$/, '') || 'ДЕНЬ'
-            
-            scenes.push({
-              id: attrs.id || `scene-${sceneNumber}`,
-              number: sceneNumber,
-              type: sceneType,
-              location,
-              time,
-              cast: [],
-              pages: 0.5,
-            })
-          }
+          // Разделяем локацию и время по тире/—
+          const parts = locationAndTime.split(/\s*[—–]\s*/)
+          const location = parts[0]?.trim().replace(/\.$/, '') || ''
+          const time = parts[parts.length - 1]?.trim().replace(/\.$/, '') || 'ДЕНЬ'
+          
+          scenes.push({
+            id: `scene-${sceneNumber}`,
+            number: sceneNumber,
+            type: sceneType,
+            location,
+            time,
+            cast: [],
+            pages: 0.5,
+          })
         }
       }
     })
@@ -417,34 +416,77 @@ export default function ScriptEditorTiptap({
       editor.chain().setNode(newType).run()
     }
     
-    // Авто-нумерация серий для сериалов (только когда блок уже sceneHeader)
-    if ((currentType === 'sceneHeader' || newType === 'sceneHeader') && projectType === 'serial' && currentSeries > 0) {
+    const isHeader = currentType === 'sceneHeader' || newType === 'sceneHeader'
+    const isCharacter = currentType === 'sceneCharacter' || newType === 'sceneCharacter'
+    
+    // 1.2 Капслок: реальный текст в шапке и имени персонажа
+    if ((isHeader || isCharacter) && !isReplacingRef.current) {
       const upperText = textContent.toUpperCase()
-      
-      // Паттерн: "1. ИНТ." → "1-1. ИНТ." (без серии в начале)
-      // Срабатывает только когда есть "N. ИНТ." но НЕТ "N-N." формата
-      const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
-      const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
-      
-      const match = upperText.match(needsSeriesPattern)
-      const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
-      
-      
-      if (match && !alreadyHasSeries && !isReplacingRef.current) {
-        const sceneNumber = match[1]
-        const extType = match[2]
-        const newText = `${currentSeries}-${sceneNumber}. ${extType}`
-        
+      if (upperText !== textContent) {
+        const cursorOffset = selection.from - $from.start()
         isReplacingRef.current = true
         const nodeStart = $from.start()
         const nodeEnd = $from.end()
         editor
           .chain()
           .deleteRange({ from: nodeStart, to: nodeEnd })
-          .insertContent(newText)
-          .setTextSelection(nodeStart + newText.length)
+          .insertContent(upperText)
+          .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
           .run()
         setTimeout(() => { isReplacingRef.current = false }, 100)
+        return
+      }
+    }
+    
+    // Авто-нумерация (только когда блок sceneHeader)
+    if (isHeader && !isReplacingRef.current) {
+      const upperText = textContent.toUpperCase()
+
+      // 1.3 Авто-нумерация для ФИЛЬМА: "ИНТ." → "1. ИНТ."
+      if (projectType === 'film') {
+        const noNumberPattern = /^(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+        const alreadyNumbered = /^\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+        if (noNumberPattern.test(upperText) && !alreadyNumbered.test(upperText)) {
+          let sceneCount = 0
+          editor.state.doc.descendants((n: any) => { if (n.type.name === 'sceneHeader') sceneCount++ })
+          const newText = `${sceneCount}. ${upperText}`
+          isReplacingRef.current = true
+          const nodeStart = $from.start()
+          const nodeEnd = $from.end()
+          editor
+            .chain()
+            .deleteRange({ from: nodeStart, to: nodeEnd })
+            .insertContent(newText)
+            .setTextSelection(nodeStart + newText.length)
+            .run()
+          setTimeout(() => { isReplacingRef.current = false }, 100)
+          return
+        }
+      }
+      
+      // Авто-нумерация для СЕРИАЛА: "1. ИНТ." → "1-1. ИНТ."
+      if (projectType === 'serial' && currentSeries > 0) {
+        const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+        const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+        const match = upperText.match(needsSeriesPattern)
+        const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
+        
+        if (match && !alreadyHasSeries) {
+          const sceneNumber = match[1]
+          const extType = match[2]
+          const newText = `${currentSeries}-${sceneNumber}. ${extType}`
+          isReplacingRef.current = true
+          const nodeStart = $from.start()
+          const nodeEnd = $from.end()
+          editor
+            .chain()
+            .deleteRange({ from: nodeStart, to: nodeEnd })
+            .insertContent(newText)
+            .setTextSelection(nodeStart + newText.length)
+            .run()
+          setTimeout(() => { isReplacingRef.current = false }, 100)
+          return
+        }
       }
       
       // Если время закончилось точкой — переходим на новую строку (только один раз)
@@ -459,17 +501,42 @@ export default function ScriptEditorTiptap({
     }
   }
 
+  // 1.1 Ключ localStorage привязан к projectId — каждый проект хранит свой черновик
+  const draftKey = projectId ? `kinoplan_draft_${projectId}` : 'kinoplan_tiptap_draft'
+
   // Загружаем сохранённый черновик при монтировании
   useEffect(() => {
     if (editor) {
-      const saved = localStorage.getItem('kinoplan_tiptap_draft')
+      const saved = localStorage.getItem(draftKey)
       if (saved) {
         editor.commands.setContent(saved)
-        // Сбрасываем отслеживание при загрузке нового контента
         processedHeadersRef.current.clear()
       }
     }
   }, [editor])
+
+  // 3.2 Прокрутка редактора к сцене по focusSceneId
+  useEffect(() => {
+    if (!editor || !focusSceneId) return
+    let found = false
+    editor.state.doc.descendants((node, pos) => {
+      if (found) return false
+      if (node.type.name === 'sceneHeader') {
+        const headerText = node.textContent
+        const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\./)
+        if (headerMatch) {
+          const sceneNum = headerMatch[1]
+          if (focusSceneId.includes(sceneNum) || focusSceneId === `scene-${sceneNum}`) {
+            found = true
+            const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
+            if (domNode) {
+              domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          }
+        }
+      }
+    })
+  }, [focusSceneId, editor])
 
   if (!editor) {
     return null

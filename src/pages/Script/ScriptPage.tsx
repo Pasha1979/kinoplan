@@ -517,6 +517,7 @@ export default function ScriptPage() {
               <ScriptEditorTiptap
                 format={scriptFormat}
                 projectType={project?.type || 'film'}
+                projectId={project?.id}
                 currentSeries={currentSeries}
                 fontFamily="Courier New"
                 fontSize={12}
@@ -524,8 +525,8 @@ export default function ScriptPage() {
                 genreCoefficient={1.0}
                 onSceneCountChange={setSceneCount}
                 onStatsChange={setScriptStats}
-                onBlocksChange={setEditorBlocks}
                 onScenesChange={handleScenesChange}
+                focusSceneId={_focusSceneId}
               />
             </div>
           </div>
