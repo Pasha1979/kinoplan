@@ -259,28 +259,21 @@ export default function ScriptPage() {
             {/* Навигация между сериями (только для сериалов) */}
             {project?.type === 'serial' && (
               <>
-                <div className="flex items-center gap-1 rounded-lg p-0.5"
-                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
-                  <button
-                    onClick={() => setCurrentSeries(Math.max(0, currentSeries - 1))}
-                    disabled={currentSeries <= 0}
-                    className="px-2 py-1 text-xs font-medium transition-all disabled:opacity-30"
-                    style={{ color: isDark ? '#e5e7eb' : '#374151' }}
-                  >
-                    ‹
-                  </button>
-                  <span className="px-3 py-1 text-xs font-medium" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
-                    {currentSeries === 0 ? 'Все серии' : `Серия ${currentSeries}`}
-                  </span>
-                  <button
-                    onClick={() => setCurrentSeries(Math.min((project.episodesCount || 8), currentSeries + 1))}
-                    disabled={currentSeries >= (project.episodesCount || 8)}
-                    className="px-2 py-1 text-xs font-medium transition-all disabled:opacity-30"
-                    style={{ color: isDark ? '#e5e7eb' : '#374151' }}
-                  >
-                    ›
-                  </button>
-                </div>
+                <select
+                  value={currentSeries}
+                  onChange={e => setCurrentSeries(Number(e.target.value))}
+                  className="text-xs font-medium rounded-lg px-2 py-1.5 cursor-pointer outline-none"
+                  style={{
+                    background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
+                    color: isDark ? '#e5e7eb' : '#374151',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`,
+                  }}
+                >
+                  <option value={0}>Все серии</option>
+                  {Array.from({ length: project.episodesCount || 8 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>Серия {i + 1}</option>
+                  ))}
+                </select>
                 <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
               </>
             )}
@@ -290,16 +283,14 @@ export default function ScriptPage() {
               style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
               <button
                 onClick={() => handleFormatSwitch('russian')}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${scriptFormat === 'russian' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
+                className={`rounded-md px-2 py-1 text-xs font-medium transition-all ${scriptFormat === 'russian' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
               >
-                <Globe size={12} />
                 RU
               </button>
               <button
                 onClick={() => handleFormatSwitch('hollywood')}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${scriptFormat === 'hollywood' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
+                className={`rounded-md px-2 py-1 text-xs font-medium transition-all ${scriptFormat === 'hollywood' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
               >
-                <Globe size={12} />
                 EN
               </button>
             </div>
