@@ -54,10 +54,22 @@ export default function ScriptEditorTiptap({
 
   // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
   const processedHeadersRef = useRef<Set<string>>(new Set())
+  // Флаг защиты от двойной авто-замены
+  const isReplacingRef = useRef(false)
 
   const editor = useEditor({
+    enableInputRules: false,
+    enablePasteRules: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        orderedList: false,
+        bulletList: false,
+        listItem: false,
+        codeBlock: false,
+        blockquote: false,
+        horizontalRule: false,
+        hardBreak: false,
+      }),
       SceneNode,
       SceneHeader,
       SceneCast,
@@ -70,7 +82,7 @@ export default function ScriptEditorTiptap({
         placeholder: 'Начните писать сценарий...',
       }),
     ],
-    content: '<p>1. ИНТ. ЛОКАЦИЯ — ДЕНЬ</p><p></p>',
+    content: '<p></p>',
     editorProps: {
       attributes: {
         class: `tiptap-editor prose prose-sm max-w-none focus:outline-none format-${_format || 'russian'}`,
@@ -185,23 +197,19 @@ export default function ScriptEditorTiptap({
       // Автоопределение типа блока
       autoDetectBlockType(editor)
       
-      // SmartType — обновляем подсказки (только для шапки сцены)
+      // SmartType — обновляем подсказки (для шапки сцены и paragraph где набирается шапка)
       const { state } = editor
       const { selection } = state
       const { $from } = selection
       const currentType = getCurrentBlockType(editor)
       
-      // Подсказки ИНТ/ЭКСТ и времени только в шапке сцены
-      if (currentType === 'sceneHeader') {
-        // Получаем текст текущей ноды и позицию внутри неё
+      if (currentType === 'sceneHeader' || currentType === 'paragraph') {
         const currentNode = $from.node()
         const nodeText = currentNode?.textContent || ''
         const nodeStartPos = $from.start()
         const posInNode = selection.from - nodeStartPos
-        
-        smartType.updateSuggestions(nodeText, posInNode, currentType)
+        smartType.updateSuggestions(nodeText, posInNode, 'sceneHeader')
       } else {
-        // Закрываем подсказки если не в шапке
         smartType.closeSuggestions()
       }
     },
@@ -361,8 +369,8 @@ export default function ScriptEditorTiptap({
     let newType: string | null = null
     
     // 1. Шапка сцены: только ИНТ. / ЭКСТ. / ИНТ-ЭКСТ. (полные формы)
-    // Требуем: ИНТ/ЭКСТ/ИНТ-ЭКСТ + пробел + заглавная буква (начало локации)
-    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)(\s+[А-ЯЁA-Z]|\.?$)/i
+    // Требуем: ИНТ/ЭКСТ/ИНТ-ЭКСТ с точкой — "ИНТ." обязательно с точкой!
+    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
     if (headerPattern.test(textContent)) {
       newType = 'sceneHeader'
     }
@@ -406,61 +414,45 @@ export default function ScriptEditorTiptap({
     
     // Если определили новый тип и он отличается от текущего — меняем
     if (newType && newType !== currentType) {
-      // Если это sceneHeader — сначала меняем тип, потом оборачиваем в SceneNode
-      if (newType === 'sceneHeader') {
-        const sceneId = `scene-${Date.now()}`
-        editor.chain()
-          .setNode('sceneHeader')
-          .wrapIn('scene', { id: sceneId, seriesNumber: currentSeries, sceneNumber: 1 })
-          .run()
-      } else {
-        editor.chain().setNode(newType).run()
-      }
+      editor.chain().setNode(newType).run()
     }
     
-    // Нормализация текста шапки — всегда капслок + авто-нумерация серий
-    if (currentType === 'sceneHeader' || newType === 'sceneHeader') {
-      let upperText = textContent.toUpperCase()
+    // Авто-нумерация серий для сериалов (только когда блок уже sceneHeader)
+    if ((currentType === 'sceneHeader' || newType === 'sceneHeader') && projectType === 'serial' && currentSeries > 0) {
+      const upperText = textContent.toUpperCase()
       
-      // Авто-нумерация серий для сериалов
-      if (projectType === 'serial' && currentSeries > 0) {
-        // Паттерн: "1. ИНТ." или "1 ИНТ." → "1-1. ИНТ."
-        const sceneNumberPattern = /^(\d+)(?:\.|\s+)(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)/i
-        const match = upperText.match(sceneNumberPattern)
-        
-        if (match) {
-          const sceneNumber = match[1]
-          const extType = match[2]
-          // Заменяем "1. ИНТ." на "1-1. ИНТ." (где первая 1 — номер серии)
-          upperText = upperText.replace(sceneNumberPattern, `${currentSeries}-${sceneNumber}. ${extType}`)
-        }
-      }
+      // Паттерн: "1. ИНТ." → "1-1. ИНТ." (без серии в начале)
+      // Срабатывает только когда есть "N. ИНТ." но НЕТ "N-N." формата
+      const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+      const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
       
-      if (upperText !== textContent) {
-        // Сохраняем позицию курсора относительно начала ноды
-        const cursorOffset = selection.from - $from.start()
+      const match = upperText.match(needsSeriesPattern)
+      const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
+      
+      
+      if (match && !alreadyHasSeries && !isReplacingRef.current) {
+        const sceneNumber = match[1]
+        const extType = match[2]
+        const newText = `${currentSeries}-${sceneNumber}. ${extType}`
         
-        // Заменяем текст на капслок + номер серии
+        isReplacingRef.current = true
         const nodeStart = $from.start()
         const nodeEnd = $from.end()
         editor
           .chain()
           .deleteRange({ from: nodeStart, to: nodeEnd })
-          .insertContent(upperText)
-          .setTextSelection(nodeStart + cursorOffset)
+          .insertContent(newText)
+          .setTextSelection(nodeStart + newText.length)
           .run()
+        setTimeout(() => { isReplacingRef.current = false }, 100)
       }
       
       // Если время закончилось точкой — переходим на новую строку (только один раз)
       const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.$/
       if (timePattern.test(upperText)) {
-        // Создаём уникальный ключ для шапки (позиция + текст)
         const headerKey = `${$from.pos}-${upperText}`
-        
-        // Только если эту шапку ещё не обрабатывали
         if (!processedHeadersRef.current.has(headerKey)) {
           processedHeadersRef.current.add(headerKey)
-          // Создаём новый блок для списка персонажей (cast)
           editor.chain().splitBlock().setNode('sceneCast').run()
         }
       }

@@ -1,9 +1,22 @@
 import { useState, useMemo } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
-import type { Scene } from '../store/scriptStore'
+
+// Упрощенный тип для сцен из редактора
+interface SimpleScene {
+  id: string
+  number: string
+  type: 'INT' | 'EXT'
+  location: string
+  timeOfDay: 'DAY' | 'NIGHT' | 'CONTINUOUS'
+  synopsis: string
+  pageCount: number
+  colorTag?: string
+  isOmitted?: boolean
+  pages?: number
+}
 
 interface SceneNavigatorProps {
-  scenes: Scene[]
+  scenes: SimpleScene[]
   isDark: boolean
   onSceneClick?: (sceneId: string) => void
   activeSceneId?: string

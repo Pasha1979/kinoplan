@@ -42,17 +42,22 @@ export default function ScriptPage() {
 
   // При получении новых сцен из редактора — обновляем список
   const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => {
-    setScenes(newScenes)
+    // Фильтруем сцены по выбранной серии (для сериалов)
+    const filteredScenes = project?.type === 'serial' && currentSeries > 0
+      ? newScenes.filter(scene => scene.number.startsWith(`${currentSeries}-`))
+      : newScenes
+
+    setScenes(filteredScenes)
     // Если selectedScene больше нет в списке — выбираем первую
-    if (newScenes.length > 0) {
-      const stillExists = selectedScene && newScenes.find(s => s.id === selectedScene.id)
+    if (filteredScenes.length > 0) {
+      const stillExists = selectedScene && filteredScenes.find(s => s.id === selectedScene.id)
       if (!stillExists) {
-        setSelectedScene(newScenes[0])
+        setSelectedScene(filteredScenes[0])
       }
     } else {
       setSelectedScene(null)
     }
-  }, [selectedScene])
+  }, [selectedScene, project?.type, currentSeries])
 
   // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
   useEffect(() => {
@@ -292,19 +297,20 @@ export default function ScriptPage() {
                 <div className="flex items-center gap-1 rounded-lg p-0.5"
                   style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
                   <button
-                    onClick={() => setCurrentSeries(Math.max(1, currentSeries - 1))}
-                    disabled={currentSeries <= 1}
+                    onClick={() => setCurrentSeries(Math.max(0, currentSeries - 1))}
+                    disabled={currentSeries <= 0}
                     className="px-2 py-1 text-xs font-medium transition-all disabled:opacity-30"
                     style={{ color: isDark ? '#e5e7eb' : '#374151' }}
                   >
                     ‹
                   </button>
                   <span className="px-3 py-1 text-xs font-medium" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
-                    Серия {currentSeries}
+                    {currentSeries === 0 ? 'Все серии' : `Серия ${currentSeries}`}
                   </span>
                   <button
-                    onClick={() => setCurrentSeries(currentSeries + 1)}
-                    className="px-2 py-1 text-xs font-medium transition-all"
+                    onClick={() => setCurrentSeries(Math.min((project.episodesCount || 8), currentSeries + 1))}
+                    disabled={currentSeries >= (project.episodesCount || 8)}
+                    className="px-2 py-1 text-xs font-medium transition-all disabled:opacity-30"
                     style={{ color: isDark ? '#e5e7eb' : '#374151' }}
                   >
                     ›
