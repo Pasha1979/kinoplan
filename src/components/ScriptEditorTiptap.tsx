@@ -62,6 +62,9 @@ export default function ScriptEditorTiptap({
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
 
+  // 1.1 Ключ localStorage привязан к projectId — каждый проект хранит свой черновик
+  const draftKey = projectId ? `kinoplan_draft_${projectId}` : 'kinoplan_tiptap_draft'
+
   const editor = useEditor({
     enableInputRules: false,
     enablePasteRules: false,
@@ -503,8 +506,13 @@ export default function ScriptEditorTiptap({
     }
   }
 
-  // 1.1 Ключ localStorage привязан к projectId — каждый проект хранит свой черновик
-  const draftKey = projectId ? `kinoplan_draft_${projectId}` : 'kinoplan_tiptap_draft'
+  // Обновляем CSS-класс формата при переключении RU/EN
+  useEffect(() => {
+    if (!editor) return
+    const el = editor.view.dom as HTMLElement
+    el.classList.remove('format-russian', 'format-hollywood', 'format-custom')
+    el.classList.add(`format-${_format || 'russian'}`)
+  }, [editor, _format])
 
   // Загружаем сохранённый черновик при монтировании
   useEffect(() => {

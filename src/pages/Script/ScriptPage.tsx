@@ -463,9 +463,9 @@ export default function ScriptPage() {
               scenes={scenes.map(s => ({
                 id: s.id,
                 number: s.number,
-                type: s.type === 'ИНТ' ? 'INT' : 'EXT',
+                type: s.type === 'ИНТ' ? 'INT' : s.type === 'ЭКСТ' ? 'EXT' : 'INT',
                 location: s.location,
-                timeOfDay: s.time === 'ДЕНЬ' ? 'DAY' : s.time === 'НОЧЬ' ? 'NIGHT' : 'CONTINUOUS',
+                timeOfDay: s.time === 'ДЕНЬ' ? 'DAY' : s.time === 'НОЧЬ' ? 'NIGHT' : s.time === 'РАССВЕТ' ? 'DAWN' : s.time === 'ЗАКАТ' ? 'DUSK' : 'DAY',
                 synopsis: '',
                 pageCount: s.pages,
               }))}

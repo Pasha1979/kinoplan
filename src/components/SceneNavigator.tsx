@@ -7,7 +7,7 @@ interface SimpleScene {
   number: string
   type: 'INT' | 'EXT'
   location: string
-  timeOfDay: 'DAY' | 'NIGHT' | 'CONTINUOUS'
+  timeOfDay: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS'
   synopsis: string
   pageCount: number
   colorTag?: string
