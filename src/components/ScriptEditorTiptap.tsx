@@ -1,6 +1,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import DragHandle from '@tiptap/extension-drag-handle'
 import { useEffect, useCallback, useRef } from 'react'
 import type { ScriptFormat } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
@@ -64,6 +65,7 @@ export default function ScriptEditorTiptap({
       SceneCharacter,
       SceneDialog,
       SceneTransition,
+      DragHandle,
       Placeholder.configure({
         placeholder: 'Начните писать сценарий...',
       }),
@@ -177,6 +179,9 @@ export default function ScriptEditorTiptap({
       // Извлекаем сцены из SceneNode (мгновенно)
       extractScenesFromDocument()
       
+      // Авто-перенумерация сцен (при Drag&Drop или изменении порядка)
+      renumberScenes()
+      
       // Автоопределение типа блока
       autoDetectBlockType(editor)
       
@@ -207,10 +212,12 @@ export default function ScriptEditorTiptap({
     if (!editor) return
     
     const scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }> = []
+    let sceneIndex = 0
     
     // Проходим по всем узлам документа и ищем SceneNode
     editor.state.doc.descendants((node) => {
       if (node.type.name === 'scene') {
+        sceneIndex++
         const attrs = node.attrs
         const headerNode = node.child(0) // Первый ребенок — sceneHeader
         
@@ -247,6 +254,79 @@ export default function ScriptEditorTiptap({
     if (onScenesChange) {
       onScenesChange(scenes)
     }
+  }
+
+  // Авто-перенумерация сцен при изменении документа
+  const renumberScenes = () => {
+    if (!editor) return
+    
+    let sceneIndex = 0
+    let needsUpdate = false
+    
+    // Проверяем, нужно ли обновлять номера
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'scene') {
+        sceneIndex++
+        const currentSceneNumber = node.attrs.sceneNumber
+        if (currentSceneNumber !== sceneIndex) {
+          needsUpdate = true
+        }
+      }
+    })
+    
+    // Если номера уже правильные — не обновляем
+    if (!needsUpdate) return
+    
+    sceneIndex = 0
+    const updates: Array<{ pos: number; attrs: any }> = []
+    
+    // Проходим по всем SceneNode и обновляем номера
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'scene') {
+        sceneIndex++
+        const newSceneNumber = projectType === 'serial' ? `${currentSeries}-${sceneIndex}` : String(sceneIndex)
+        
+        // Обновляем атрибуты
+        updates.push({
+          pos,
+          attrs: {
+            ...node.attrs,
+            sceneNumber: sceneIndex,
+          },
+        })
+        
+        // Обновляем текст шапки
+        const headerNode = node.child(0)
+        if (headerNode && headerNode.type.name === 'sceneHeader') {
+          const headerText = headerNode.textContent
+          const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ\.?|ЭКСТ\.?|ИНТ-ЭКСТ\.?)\s+(.+)$/i)
+          
+          if (headerMatch) {
+            const extType = headerMatch[2]
+            const locationPart = headerMatch[3]
+            const newHeaderText = `${newSceneNumber}. ${extType} ${locationPart}`
+            
+            // Заменяем текст шапки
+            const headerPos = pos + 1 // +1 для SceneNode
+            editor.chain()
+              .deleteRange({ from: headerPos, to: headerPos + headerNode.nodeSize })
+              .insertContentAt(headerPos, newHeaderText)
+              .run()
+          }
+        }
+      }
+    })
+    
+    // Обновляем атрибуты SceneNode
+    updates.forEach(({ pos, attrs }) => {
+      const node = editor.state.doc.nodeAt(pos)
+      if (node && node.type.name === 'scene') {
+        editor.chain()
+          .setNodeSelection(pos)
+          .updateAttributes('scene', attrs)
+          .run()
+      }
+    })
   }
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
