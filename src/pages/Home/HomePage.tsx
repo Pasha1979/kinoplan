@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useProjectStore } from '../../store/projectStore'
 import { projectService } from '../../services/projectService'
@@ -16,6 +16,9 @@ export default function HomePage() {
   const { theme, toggleTheme } = useUiStore()
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const projectList = Object.values(projects)
 
@@ -43,6 +46,51 @@ export default function HomePage() {
     await projectService.deleteProject(id)
   }
 
+  const handleExport = async (projectId: string, projectName: string) => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const json = await projectService.exportProjectToJSON(projectId)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${projectName.replace(/[^a-zа-яё0-9]/gi, '_')}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Ошибка экспорта:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (isImporting) return
+    setIsImporting(true)
+    try {
+      const text = await file.text()
+      const imported = await projectService.importProjectFromJSON(text)
+      setCurrentProject(imported.id)
+      navigate(`/project/${imported.id}`)
+    } catch (err) {
+      console.error('Ошибка импорта:', err)
+    } finally {
+      setIsImporting(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   return (
     <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Верхняя панель */}
@@ -59,6 +107,18 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Кнопка Импорт */}
+          <button
+            onClick={handleImportClick}
+            disabled={isImporting}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-white hover:bg-white/8 disabled:opacity-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50'
+            }`}
+            title="Импорт проекта">
+            <Upload size={18} />
+          </button>
           {/* Переключатель темы */}
           <button
             onClick={toggleTheme}
@@ -81,6 +141,15 @@ export default function HomePage() {
           </button>
         </div>
       </header>
+
+      {/* Скрытый input для импорта */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleImportFile}
+        style={{ display: 'none' }}
+      />
 
       {/* Основной контент */}
       <main className="flex-1 flex flex-col px-6 py-8 max-w-6xl mx-auto w-full">
@@ -159,6 +228,7 @@ export default function HomePage() {
                   project={project}
                   onClick={() => handleOpen(project)}
                   onDelete={() => handleDelete(project.id)}
+                  onExport={() => handleExport(project.id, project.name)}
                 />
               ))}
               {/* Карточка создания нового */}

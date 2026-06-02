@@ -102,4 +102,65 @@ export const projectService = {
       throw error
     }
   },
+
+  async exportProjectToJSON(projectId: string): Promise<string> {
+    try {
+      const { projects, scenes } = useNormalizedProjectStore.getState()
+      const project = projects[projectId]
+      if (!project) {
+        throw new Error('Проект не найден')
+      }
+      const projectScenes = Object.values(scenes).filter((s) => s.projectId === projectId)
+      const exportData = {
+        project,
+        scenes: projectScenes,
+        exportedAt: new Date().toISOString(),
+      }
+      return JSON.stringify(exportData, null, 2)
+    } catch (error) {
+      useNormalizedProjectStore.getState().setError('Не удалось экспортировать проект')
+      throw error
+    }
+  },
+
+  async importProjectFromJSON(jsonString: string): Promise<Project> {
+    try {
+      useNormalizedProjectStore.getState().setLoading(true)
+      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+
+      const parsed = JSON.parse(jsonString)
+      if (!parsed.project || !parsed.project.id || !parsed.project.name) {
+        throw new Error('Неверный формат JSON: отсутствуют обязательные поля')
+      }
+
+      const importedProject: Project = {
+        ...parsed.project,
+        id: `proj-${Date.now()}`,
+        createdAt: parsed.project.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      const existing = Object.values(useNormalizedProjectStore.getState().projects)
+      useNormalizedProjectStore.getState().setProjects([...existing, importedProject])
+
+      if (parsed.scenes && Array.isArray(parsed.scenes)) {
+        const importedScenes = parsed.scenes.map((s: Scene) => ({
+          ...s,
+          projectId: importedProject.id,
+        }))
+        const { scenes: existingScenes } = useNormalizedProjectStore.getState()
+        useNormalizedProjectStore.getState().setScenesBatch([
+          ...Object.values(existingScenes),
+          ...importedScenes,
+        ])
+      }
+
+      return importedProject
+    } catch (error) {
+      useNormalizedProjectStore.getState().setError('Не удалось импортировать проект')
+      throw error
+    } finally {
+      useNormalizedProjectStore.getState().setLoading(false)
+    }
+  },
 }

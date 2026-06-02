@@ -1,4 +1,4 @@
-import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2 } from 'lucide-react'
+import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download } from 'lucide-react'
 import type { Project } from '../../store/projectStore'
 
 const TYPE_LABELS: Record<Project['type'], string> = {
@@ -51,9 +51,10 @@ interface ProjectCardProps {
   project: Project
   onClick: () => void
   onDelete: () => void
+  onExport?: () => void
 }
 
-export default function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport }: ProjectCardProps) {
   const overallProgress = Math.round(
     (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
   )
@@ -134,19 +135,33 @@ export default function ProjectCard({ project, onClick, onDelete }: ProjectCardP
       </div>
       </button>
 
-      {/* Кнопка удаления */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          if (confirm(`Удалить проект "${project.name}"? Это действие нельзя отменить.`)) {
-            onDelete()
-          }
-        }}
-        className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-500/20"
-        title="Удалить проект"
-      >
-        <Trash2 size={14} />
-      </button>
+      {/* Кнопки действий */}
+      <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onExport && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onExport()
+            }}
+            className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center hover:bg-blue-500/20"
+            title="Экспорт проекта"
+          >
+            <Download size={14} />
+          </button>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            if (confirm(`Удалить проект "${project.name}"? Это действие нельзя отменить.`)) {
+              onDelete()
+            }
+          }}
+          className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/20"
+          title="Удалить проект"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
     </div>
   )
 }
