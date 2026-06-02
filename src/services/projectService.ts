@@ -1,4 +1,5 @@
 import { useNormalizedProjectStore } from '../store/useProjectStore'
+import { useToastStore } from '../store/toastStore'
 import type { Project } from '../store/projectStore'
 import type { Scene } from '../store/useProjectStore'
 
@@ -13,6 +14,7 @@ export const projectService = {
       return Object.values(projects)
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось загрузить проекты')
+      useToastStore.getState().showToast('Не удалось загрузить проекты', 'error')
       throw error
     } finally {
       useNormalizedProjectStore.getState().setLoading(false)
@@ -59,6 +61,7 @@ export const projectService = {
       return newProject
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось создать проект')
+      useToastStore.getState().showToast('Не удалось создать проект', 'error')
       throw error
     } finally {
       useNormalizedProjectStore.getState().setLoading(false)
@@ -73,6 +76,7 @@ export const projectService = {
       useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцены')
+      useToastStore.getState().showToast('Не удалось сохранить сцены', 'error')
       throw error
     } finally {
       useNormalizedProjectStore.getState().setLoading(false)
@@ -86,6 +90,7 @@ export const projectService = {
       useNormalizedProjectStore.getState().deleteProject(projectId)
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось удалить проект')
+      useToastStore.getState().showToast('Не удалось удалить проект', 'error')
       throw error
     } finally {
       useNormalizedProjectStore.getState().setLoading(false)
@@ -99,6 +104,7 @@ export const projectService = {
     } catch (error) {
       useNormalizedProjectStore.getState().revertScene(sceneId)
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцену')
+      useToastStore.getState().showToast('Не удалось сохранить сцену', 'error')
       throw error
     }
   },
@@ -119,6 +125,7 @@ export const projectService = {
       return JSON.stringify(exportData, null, 2)
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось экспортировать проект')
+      useToastStore.getState().showToast('Не удалось экспортировать проект', 'error')
       throw error
     }
   },
@@ -158,6 +165,7 @@ export const projectService = {
       return importedProject
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось импортировать проект')
+      useToastStore.getState().showToast('Не удалось импортировать проект', 'error')
       throw error
     } finally {
       useNormalizedProjectStore.getState().setLoading(false)

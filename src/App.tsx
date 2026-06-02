@@ -21,6 +21,7 @@ import TagsPage from './pages/Tags/TagsPage'
 import FilesPage from './pages/Files/FilesPage'
 import SchedulePage from './pages/Schedule/SchedulePage'
 import SettingsPage from './pages/Settings/SettingsPage'
+import Toast from './components/Toast'
 import { migrateLegacyData } from './utils/migrateLegacyData'
 
 function App() {
@@ -81,6 +82,7 @@ function App() {
             <Route path="files" element={<FilesPage />} />
           </Route>
         </Routes>
+        <Toast />
       </div>
     </BrowserRouter>
   )

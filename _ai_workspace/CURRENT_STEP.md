@@ -71,6 +71,15 @@
 - Простая валидация JSON: проверка наличия `project.id` и `project.name`
 - При импорте генерируется новый ID проекта, сцены привязываются к новому projectId
 - **Следующий шаг: Задача 2.2 (Обработка ошибок, isLoading, toast, удаление console.log)**
+
+### ✅ Задача 2.2 ВЫПОЛНЕНА (02.06.2026)
+- Создана глобальная toast-система: `toastStore.ts` (Zustand) + `Toast.tsx` (UI-компонент)
+- `Toast` подключён в `App.tsx` — отображается в правом верхнем углу
+- Удалены все `console.log` из `src/` (были в `HomePage.tsx`)
+- `projectService.ts` — все методы вызывают `showToast` в catch блоках
+- `HomePage.tsx` — экспорт/импорт показывают toast при успехе/ошибке
+- isLoading состояния проверены: `ScriptPage` (isSaving), `CreateProjectModal` (submitting), `HomePage` (isExporting, isImporting)
+- **Следующий шаг: Задача 2.3 (Фикс cleanup Tiptap + тест на утечки)**
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**

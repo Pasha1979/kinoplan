@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Settings, Film, Search, Upload } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useProjectStore } from '../../store/projectStore'
+import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
 import { useUiStore } from '../../store/uiStore'
 import ProjectCard from './ProjectCard'
@@ -14,6 +15,7 @@ export default function HomePage() {
   const { projects, isLoading, error } = useNormalizedProjectStore()
   const { setCurrentProject } = useProjectStore()
   const { theme, toggleTheme } = useUiStore()
+  const { showToast } = useToastStore()
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
   const [isExporting, setIsExporting] = useState(false)
@@ -60,8 +62,9 @@ export default function HomePage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      showToast('Проект экспортирован', 'success')
     } catch (err) {
-      console.error('Ошибка экспорта:', err)
+      showToast('Не удалось экспортировать проект', 'error')
     } finally {
       setIsExporting(false)
     }
@@ -81,8 +84,9 @@ export default function HomePage() {
       const imported = await projectService.importProjectFromJSON(text)
       setCurrentProject(imported.id)
       navigate(`/project/${imported.id}`)
+      showToast('Проект импортирован', 'success')
     } catch (err) {
-      console.error('Ошибка импорта:', err)
+      showToast('Не удалось импортировать проект', 'error')
     } finally {
       setIsImporting(false)
       if (fileInputRef.current) {
