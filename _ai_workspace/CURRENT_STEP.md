@@ -18,7 +18,13 @@
 - Создан `src/store/useProjectStore.ts` — нормализованный стор (`Record<string, Project>`, `Record<string, Scene>`)
 - Создан `src/store/useProjectStore.test.ts` — 6/6 тестов ✅
 - Старый `projectStore.ts` не тронут
-- **Следующий шаг: Задача 1.2** — создать `src/services/projectService.ts`
+
+### ✅ Задача 1.2 ВЫПОЛНЕНА (02.06.2026)
+- Создан `src/services/projectService.ts` — методы `getProjects`, `createProject`, `updateScene`
+- Все методы возвращают `Promise` с заглушкой задержки 100мс
+- Обработка ошибок через `try/catch` + `setError` + `finally` для `isLoading`
+- Создан `src/services/projectService.test.ts` — 6/6 тестов ✅ (итого 12/12)
+- **Следующий шаг: Задача 1.3** — миграция `ProjectList` на новый стор + сервис
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**
