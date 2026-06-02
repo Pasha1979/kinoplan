@@ -4,7 +4,7 @@ import type { Project, ProjectType } from '../../store/projectStore'
 
 interface CreateProjectModalProps {
   onClose: () => void
-  onCreate: (project: Project) => void
+  onCreate: (data: Partial<Project>) => Promise<void>
 }
 
 const TYPE_OPTIONS: { value: ProjectType; label: string; sub: string; icon: React.ReactNode }[] = [
@@ -110,27 +110,30 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
 
   const plannedDays = calcDays()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
-    const now = new Date().toISOString()
-    const project: Project = {
-      id: `project_${Date.now()}`,
-      name: name.trim(), type, status: 'preproduction',
-      episodesCount: type === 'serial' && episodesCount ? parseInt(episodesCount) : undefined,
-      episodeDuration: type === 'serial' && episodeDuration ? parseInt(episodeDuration) : undefined,
-      totalDuration: type !== 'serial' && totalDuration ? parseInt(totalDuration) : undefined,
-      dailyOutput: dailyOutput ? parseFloat(dailyOutput) : 5, // дефолт 5 минут
-      shootingGroups, plannedShootingDays: plannedDays || 0,
-      startDate: startDate || undefined, endDate: endDate || undefined,
-      cloudStorage, createdAt: now, updatedAt: now,
-      scriptProgress: 0, castingProgress: 0, locationsProgress: 0, scheduleProgress: 0,
-      shotDays: 0, scheduledDays: 0,
-      callSheetsSent: 0, callSheetsConfirmed: 0, shootingDays: [],
-      locationsTotal: 0, locationsApproved: 0, locationsInScout: 0,
-      shotMinutes: 0, totalMinutes: 0, conflicts: 0,
+    if (!name.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      await onCreate({
+        name: name.trim(),
+        type,
+        status: 'preproduction',
+        episodesCount: type === 'serial' && episodesCount ? parseInt(episodesCount) : undefined,
+        episodeDuration: type === 'serial' && episodeDuration ? parseInt(episodeDuration) : undefined,
+        totalDuration: type !== 'serial' && totalDuration ? parseInt(totalDuration) : undefined,
+        dailyOutput: dailyOutput ? parseFloat(dailyOutput) : 5,
+        shootingGroups,
+        plannedShootingDays: plannedDays || 0,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        cloudStorage,
+      })
+    } finally {
+      setSubmitting(false)
     }
-    onCreate(project)
   }
 
   return (
@@ -392,7 +395,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
           >
             Отмена
           </button>
-          <button type="submit" form="create-form" disabled={!name.trim()}
+          <button type="submit" form="create-form" disabled={!name.trim() || submitting}
             className="flex-1 rounded-2xl text-white text-base font-bold transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             style={{
               padding: '16px 32px',
@@ -401,7 +404,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
             }}
           >
             <Film size={18} />
-            Создать проект
+            {submitting ? 'Создание...' : 'Создать проект'}
           </button>
         </div>
 

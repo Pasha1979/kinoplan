@@ -83,3 +83,24 @@
 - Компоненты читают данные ТОЛЬКО из стора
 - Мутации данных ТОЛЬКО через сервис (`projectService.ts`, Task 1.2)
 - Не использовать `projects` как массив — всегда `Object.values(projects)`
+
+---
+
+## ⚠️ Deprecated: старый projectStore.ts (Task 1.3, 02.06.2026)
+
+`src/store/projectStore.ts` → `useProjectStore` — **устарел**, но ещё не удалён.
+
+**Причина сохранения:** другие страницы (`DashboardPage`, `ScriptPage` и др.) читают из него `currentProjectId`, `getCurrentProject()`. Полное удаление — после завершения задачи 1.4.
+
+**Что можно:** читать `currentProjectId`, `setCurrentProject`  
+**Что нельзя:** писать новые проекты через `addProject` — только через `projectService.createProject()`
+
+## 🔄 migrateLegacyData (Task 1.3, 02.06.2026)
+
+**Файл:** `src/utils/migrateLegacyData.ts`  
+**Вызывается:** в `App.tsx` через `useEffect([], [])` — один раз при старте  
+**Логика:**
+1. Проверяет флаг `kinoplan-legacy-migrated` — если уже выполнено, пропускает
+2. Читает старый ключ `kinoplan-projects` из localStorage
+3. Нормализует массив `Project[]` → `Record<string, Project>` через `setProjects()`
+4. Удаляет старый ключ, устанавливает флаг миграции

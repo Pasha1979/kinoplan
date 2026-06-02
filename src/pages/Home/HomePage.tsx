@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Settings, Film, Search } from 'lucide-react'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useProjectStore } from '../../store/projectStore'
+import { projectService } from '../../services/projectService'
 import { useUiStore } from '../../store/uiStore'
 import ProjectCard from './ProjectCard'
 import CreateProjectModal from './CreateProjectModal'
@@ -9,25 +11,36 @@ import type { Project } from '../../store/projectStore'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { projects, addProject, deleteProject, setCurrentProject } = useProjectStore()
+  const { projects, isLoading, error } = useNormalizedProjectStore()
+  const { setCurrentProject } = useProjectStore()
   const { theme, toggleTheme } = useUiStore()
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
 
-  const filteredProjects = projects.filter((p) =>
+  const projectList = Object.values(projects)
+
+  useEffect(() => {
+    projectService.getProjects()
+  }, [])
+
+  const filteredProjects = projectList.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleCreate = (project: Project) => {
-    addProject(project)
-    setCurrentProject(project.id)
+  const handleCreate = async (data: Partial<Project>) => {
+    const created = await projectService.createProject(data)
+    setCurrentProject(created.id)
     setShowModal(false)
-    navigate(`/project/${project.id}`)
+    navigate(`/project/${created.id}`)
   }
 
   const handleOpen = (project: Project) => {
     setCurrentProject(project.id)
     navigate(`/project/${project.id}`)
+  }
+
+  const handleDelete = async (id: string) => {
+    await projectService.deleteProject(id)
   }
 
   return (
@@ -71,7 +84,15 @@ export default function HomePage() {
 
       {/* Основной контент */}
       <main className="flex-1 flex flex-col px-6 py-8 max-w-6xl mx-auto w-full">
-        {projects.length === 0 ? (
+        {isLoading && projectList.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Загрузка...</span>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex items-center justify-center">
+            <span className="text-sm text-red-400">{error}</span>
+          </div>
+        ) : projectList.length === 0 ? (
           /* Приветственный экран — первый запуск */
           <div className="flex-1 flex flex-col items-center justify-center text-center pb-24">
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center mb-6">
@@ -100,7 +121,7 @@ export default function HomePage() {
                   Мои проекты
                 </h1>
                 <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {projects.length} {projects.length === 1 ? 'проект' : projects.length < 5 ? 'проекта' : 'проектов'}
+                  {projectList.length} {projectList.length === 1 ? 'проект' : projectList.length < 5 ? 'проекта' : 'проектов'}
                 </p>
               </div>
               <button
@@ -113,7 +134,7 @@ export default function HomePage() {
             </div>
 
             {/* Поиск */}
-            {projects.length > 3 && (
+            {projectList.length > 3 && (
               <div className={`relative mb-6 max-w-sm`}>
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -137,7 +158,7 @@ export default function HomePage() {
                   key={project.id}
                   project={project}
                   onClick={() => handleOpen(project)}
-                  onDelete={() => deleteProject(project.id)}
+                  onDelete={() => handleDelete(project.id)}
                 />
               ))}
               {/* Карточка создания нового */}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import SplashScreen from './pages/Splash/SplashScreen'
 import HomePage from './pages/Home/HomePage'
@@ -21,10 +21,15 @@ import TagsPage from './pages/Tags/TagsPage'
 import FilesPage from './pages/Files/FilesPage'
 import SchedulePage from './pages/Schedule/SchedulePage'
 import SettingsPage from './pages/Settings/SettingsPage'
+import { migrateLegacyData } from './utils/migrateLegacyData'
 
 function App() {
   const [splashDone, setSplashDone] = useState(false)
   const [appVisible, setAppVisible] = useState(false)
+
+  useEffect(() => {
+    migrateLegacyData()
+  }, [])
 
   const handleSplashFinish = () => {
     setSplashDone(true)

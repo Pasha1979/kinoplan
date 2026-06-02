@@ -23,6 +23,7 @@ interface NormalizedProjectState {
 
 interface NormalizedProjectActions {
   setProjects: (projects: Project[]) => void
+  deleteProject: (projectId: string) => void
   updateScene: (sceneId: string, updates: Partial<Scene>) => void
   revertScene: (sceneId: string) => void
   setError: (error: string | null) => void
@@ -49,6 +50,11 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
             acc[p.id] = p
             return acc
           }, {})
+        }),
+
+      deleteProject: (projectId) =>
+        set((state) => {
+          delete state.projects[projectId]
         }),
 
       updateScene: (sceneId, updates) =>

@@ -25,6 +25,16 @@
 - Обработка ошибок через `try/catch` + `setError` + `finally` для `isLoading`
 - Создан `src/services/projectService.test.ts` — 6/6 тестов ✅ (итого 12/12)
 - **Следующий шаг: Задача 1.3** — миграция `ProjectList` на новый стор + сервис
+
+### ✅ Задача 1.3 ВЫПОЛНЕНА (02.06.2026)
+- `migrateLegacyData()` — читает `kinoplan-projects` → нормализует → пишет в новый стор → удаляет старый ключ
+- Вызывается в `App.tsx` один раз при старте через `useEffect`
+- `CreateProjectModal` — новый интерфейс `onCreate: (data: Partial<Project>) => Promise<void>`
+- `HomePage` мигрирован на `useNormalizedProjectStore` + `projectService`
+- `deleteProject` добавлен в стор и сервис
+- Состояния `isLoading` и `error` отображаются в UI
+- Старый `projectStore.ts` — **deprecated**, но не удалён (нужен для `setCurrentProject` и других страниц)
+- **Следующий шаг: Задача 1.4** — миграция `SceneEditor` / `ScriptPage` на новый стор + сервис
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**

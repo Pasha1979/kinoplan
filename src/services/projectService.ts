@@ -65,6 +65,19 @@ export const projectService = {
     }
   },
 
+  async deleteProject(projectId: string): Promise<void> {
+    try {
+      useNormalizedProjectStore.getState().setLoading(true)
+      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      useNormalizedProjectStore.getState().deleteProject(projectId)
+    } catch (error) {
+      useNormalizedProjectStore.getState().setError('Не удалось удалить проект')
+      throw error
+    } finally {
+      useNormalizedProjectStore.getState().setLoading(false)
+    }
+  },
+
   async updateScene(sceneId: string, updates: Partial<Scene>): Promise<void> {
     try {
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)
