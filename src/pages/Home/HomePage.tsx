@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Settings, Film, Search, Upload } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
@@ -6,6 +6,7 @@ import { useProjectStore } from '../../store/projectStore'
 import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
 import { useUiStore } from '../../store/uiStore'
+import { browserFS } from '../../adapters/BrowserFS'
 import ProjectCard from './ProjectCard'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../store/projectStore'
@@ -20,7 +21,6 @@ export default function HomePage() {
   const [search, setSearch] = useState('')
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const projectList = Object.values(projects)
 
@@ -53,15 +53,8 @@ export default function HomePage() {
     setIsExporting(true)
     try {
       const json = await projectService.exportProjectToJSON(projectId)
-      const blob = new Blob([json], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${projectName.replace(/[^a-zа-яё0-9]/gi, '_')}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const filename = `${projectName.replace(/[^a-zа-яё0-9]/gi, '_')}.json`
+      await browserFS.downloadFile(filename, json, 'application/json')
       showToast('Проект экспортирован', 'success')
     } catch (err) {
       showToast('Не удалось экспортировать проект', 'error')
@@ -70,17 +63,11 @@ export default function HomePage() {
     }
   }
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleImportClick = async () => {
     if (isImporting) return
     setIsImporting(true)
     try {
-      const text = await file.text()
+      const text = await browserFS.uploadFile('.json')
       const imported = await projectService.importProjectFromJSON(text)
       setCurrentProject(imported.id)
       navigate(`/project/${imported.id}`)
@@ -89,9 +76,6 @@ export default function HomePage() {
       showToast('Не удалось импортировать проект', 'error')
     } finally {
       setIsImporting(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
     }
   }
 
@@ -145,15 +129,6 @@ export default function HomePage() {
           </button>
         </div>
       </header>
-
-      {/* Скрытый input для импорта */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleImportFile}
-        style={{ display: 'none' }}
-      />
 
       {/* Основной контент */}
       <main className="flex-1 flex flex-col px-6 py-8 max-w-6xl mx-auto w-full">

@@ -107,6 +107,14 @@
 - AbortController — поддержка отмены устаревших запросов
 
 **Следующий шаг: Этап 3 (Подготовка к десктопу) — Задача 3.1 (Интерфейс FileSystemAdapter + BrowserFS)**
+
+### ✅ Задача 3.1 ВЫПОЛНЕНА (02.06.2026)
+- Создан интерфейс `FileSystemAdapter` с методами: `readData`, `writeData`, `downloadFile`, `uploadFile`
+- Создана браузерная реализация `BrowserFS` через localStorage и стандартные браузерные API
+- `HomePage.tsx` — прямые вызовы `URL.createObjectURL` и `FileReader` заменены на `browserFS.downloadFile` и `browserFS.uploadFile`
+- Убран скрытый input для импорта — browserFS сам создает input при вызове `uploadFile`
+- Паттерн Адаптера позволяет легко добавить реализацию для Electron/Tauri в будущем
+- **Следующий шаг: Задача 3.2 (Изоляция browser-API в утилиты)**
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**
