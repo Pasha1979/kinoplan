@@ -44,6 +44,31 @@
 4. Дублирование state между компонентами
 5. Прямые запросы к SQLite из UI
 
+## ✅ ЭТАП 1: ИТОГИ (02.06.2026)
+
+**Новая архитектура данных:**
+
+| Слой | Что делает | Файл |
+|------|-----------|-------|
+| **Normalized Store** | Zustand + Immer, `Record<string, Project>`, `Record<string, Scene>`, persist | `src/store/useProjectStore.ts` |
+| **Project Service** | Async CRUD методы, mock-задержка 100мс, try/catch/finally, setError/setLoading | `src/services/projectService.ts` |
+| **Legacy Adapter** | Читает старый `kinoplan-projects`, нормализует, пишет в новый стор, удаляет старый ключ | `src/utils/migrateLegacyData.ts` |
+| **Tiptap Flow** | Источник истины для сцен во время редактирования, `onScenesChange` → локальный state | `ScriptPage.tsx` |
+| **Batch Save** | Кнопка "Сохранить" → `saveScenesBatch(projectId, scenes[])` → нормализованный стор | `projectService.saveScenesBatch()` |
+
+**Мигрированные компоненты:**
+- `HomePage.tsx` — использует `useNormalizedProjectStore` + `projectService`
+- `CreateProjectModal.tsx` — `onCreate: Partial<Project> => Promise<void>`
+- `ScriptPage.tsx` — кнопка "Сохранить" без `alert`, показывает "Сохранение..."
+- `ProjectLayout.tsx` — синхронизирует `currentProjectId` в новый стор
+
+**Deprecated:**
+- `src/store/projectStore.ts` — ещё нужен для `currentProjectId` на других страницах, полное удаление после Этапа 2
+
+**Следующий шаг:** Этап 2 (Безопасность и стабильность) — Задача 2.1 (Экспорт/Импорт JSON)
+
+---
+
 ## 📝 ЛОГ АРХИТЕКТУРНЫХ РЕШЕНИЙ
 
 | Дата | Решение | Причина | Статус |
