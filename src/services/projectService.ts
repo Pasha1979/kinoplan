@@ -65,6 +65,20 @@ export const projectService = {
     }
   },
 
+  async saveScenesBatch(projectId: string, scenes: Scene[]): Promise<void> {
+    try {
+      useNormalizedProjectStore.getState().setLoading(true)
+      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      const scopedScenes = scenes.map((s) => ({ ...s, projectId }))
+      useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
+    } catch (error) {
+      useNormalizedProjectStore.getState().setError('Не удалось сохранить сцены')
+      throw error
+    } finally {
+      useNormalizedProjectStore.getState().setLoading(false)
+    }
+  },
+
   async deleteProject(projectId: string): Promise<void> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)

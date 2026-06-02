@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe, HelpCircle, ChevronDown } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useProjectStore } from '../../store/projectStore'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
+import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
 import type { ScriptFormat } from '../../store/scriptStore'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
@@ -37,6 +39,8 @@ export default function ScriptPage() {
   const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
+  const [isSaving, setIsSaving] = useState(false)
+  const { currentProjectId } = useNormalizedProjectStore()
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
@@ -366,26 +370,33 @@ export default function ScriptPage() {
           <div className="flex items-center gap-2">
             {/* Кнопка Сохранить — подтверждает автосохранение */}
             <button
-              onClick={() => {
-                // Сохраняем текущие блоки в localStorage
-                localStorage.setItem('kinoplan_script_saved', JSON.stringify({
-                  projectId: project?.id,
-                  timestamp: new Date().toISOString(),
-                  scenes: scenes.length,
-                }))
-                alert(`Сценарий сохранён!\nСцен: ${scenes.length}\nВремя: ${new Date().toLocaleTimeString()}`)
+              onClick={async () => {
+                if (isSaving) return
+                const pid = currentProjectId ?? project?.id
+                if (!pid) return
+                setIsSaving(true)
+                try {
+                  await projectService.saveScenesBatch(pid, scenes.map(s => ({
+                    ...s,
+                    projectId: pid,
+                    type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
+                  })))
+                } finally {
+                  setIsSaving(false)
+                }
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
+              disabled={isSaving}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
               style={{
                 background: 'rgba(99,102,241,0.15)',
                 color: '#818cf8',
                 border: '1px solid rgba(99,102,241,0.3)',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.25)' }}
+              onMouseEnter={e => { if (!isSaving) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.25)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.15)' }}
             >
               <Save size={13} />
-              Сохранить
+              {isSaving ? 'Сохранение...' : 'Сохранить'}
             </button>
             {/* Кнопка Настройки — заглушка */}
             <button

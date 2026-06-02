@@ -35,6 +35,14 @@
 - Состояния `isLoading` и `error` отображаются в UI
 - Старый `projectStore.ts` — **deprecated**, но не удалён (нужен для `setCurrentProject` и других страниц)
 - **Следующий шаг: Задача 1.4** — миграция `SceneEditor` / `ScriptPage` на новый стор + сервис
+
+### ✅ Задача 1.4 ВЫПОЛНЕНА (02.06.2026)
+- `useProjectStore.ts` — добавлены `currentProjectId`, `setCurrentProjectId`, `setScenesBatch`
+- `ProjectLayout.tsx` — синхронизирует `currentProjectId` в новый стор при навигации
+- `projectService.ts` — добавлен `saveScenesBatch(projectId, scenes[])` с 100мс задержкой
+- `ScriptPage.tsx` — кнопка "Сохранить" вызывает `saveScenesBatch`, показывает "Сохранение...", без `alert`
+- Tiptap остаётся источником истины для массива сцен во время редактирования
+- **Следующий шаг: Задача 1.5** — обновить exemplar-файлы в context/, финализация Этапа 1
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**
