@@ -81,6 +81,7 @@
 | 02.06.2026 | AbortController | Отмена устаревших запросов для будущей синхронизации | ✅ |
 | 02.06.2026 | FileSystemAdapter (паттерн Адаптера) | Абстракция файловых операций для Electron/Tauri | ✅ |
 | 02.06.2026 | Изоляция browser-API в утилиты env.ts | Безопасность при сборке под десктоп (window, document, localStorage) | ✅ |
+| 02.06.2026 | Vite config (base: './') | Подготовка для file:// протокола в Electron/Tauri | ✅ |
 
 ---
 
