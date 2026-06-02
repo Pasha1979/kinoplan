@@ -6,13 +6,22 @@ import type { Scene } from '../store/useProjectStore'
 const MOCK_DELAY = 100
 
 export const projectService = {
-  async getProjects(): Promise<Project[]> {
+  async getProjects(signal?: AbortSignal): Promise<Project[]> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
-      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
       const { projects } = useNormalizedProjectStore.getState()
       return Object.values(projects)
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error
+      }
       useNormalizedProjectStore.getState().setError('Не удалось загрузить проекты')
       useToastStore.getState().showToast('Не удалось загрузить проекты', 'error')
       throw error
@@ -21,10 +30,16 @@ export const projectService = {
     }
   },
 
-  async createProject(data: Partial<Project>): Promise<Project> {
+  async createProject(data: Partial<Project>, signal?: AbortSignal): Promise<Project> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
-      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
 
       const newProject: Project = {
         id: `proj-${Date.now()}`,
@@ -68,10 +83,16 @@ export const projectService = {
     }
   },
 
-  async saveScenesBatch(projectId: string, scenes: Scene[]): Promise<void> {
+  async saveScenesBatch(projectId: string, scenes: Scene[], signal?: AbortSignal): Promise<void> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
-      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
       const scopedScenes = scenes.map((s) => ({ ...s, projectId }))
       useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
     } catch (error) {
@@ -83,10 +104,16 @@ export const projectService = {
     }
   },
 
-  async deleteProject(projectId: string): Promise<void> {
+  async deleteProject(projectId: string, signal?: AbortSignal): Promise<void> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
-      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
       useNormalizedProjectStore.getState().deleteProject(projectId)
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось удалить проект')
@@ -97,10 +124,16 @@ export const projectService = {
     }
   },
 
-  async updateScene(sceneId: string, updates: Partial<Scene>): Promise<void> {
+  async updateScene(sceneId: string, updates: Partial<Scene>, signal?: AbortSignal): Promise<void> {
     try {
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)
-      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
     } catch (error) {
       useNormalizedProjectStore.getState().revertScene(sceneId)
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцену')
@@ -130,10 +163,16 @@ export const projectService = {
     }
   },
 
-  async importProjectFromJSON(jsonString: string): Promise<Project> {
+  async importProjectFromJSON(jsonString: string, signal?: AbortSignal): Promise<Project> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
-      await new Promise((r) => setTimeout(r, MOCK_DELAY))
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
 
       const parsed = JSON.parse(jsonString)
       if (!parsed.project || !parsed.project.id || !parsed.project.name) {

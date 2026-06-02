@@ -45,6 +45,8 @@ export default function ScriptPage() {
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
   const convertFormatRef = useRef<((from: ScriptFormat, to: ScriptFormat) => void) | null>(null)
+  // AbortController для отмены устаревших запросов сохранения
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // При получении новых сцен из редактора — обновляем список
   const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => {
@@ -374,15 +376,28 @@ export default function ScriptPage() {
                 if (isSaving) return
                 const pid = currentProjectId ?? project?.id
                 if (!pid) return
+                // Отменяем предыдущий запрос, если есть
+                if (abortControllerRef.current) {
+                  abortControllerRef.current.abort()
+                }
+                // Создаем новый AbortController
+                const controller = new AbortController()
+                abortControllerRef.current = controller
                 setIsSaving(true)
                 try {
                   await projectService.saveScenesBatch(pid, scenes.map(s => ({
                     ...s,
                     projectId: pid,
                     type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
-                  })))
+                  })), controller.signal)
+                } catch (error) {
+                  // Игнорируем ошибки отмены запроса
+                  if (error instanceof DOMException && error.name === 'AbortError') {
+                    return
+                  }
                 } finally {
                   setIsSaving(false)
+                  abortControllerRef.current = null
                 }
               }}
               disabled={isSaving}

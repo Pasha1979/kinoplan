@@ -88,6 +88,25 @@
 - Создан тест `ScriptEditorTiptap.test.tsx` — проверяет очистку timeout при unmount
 - `useEditor` из `@tiptap/react` автоматически вызывает `editor.destroy()` при unmount (подтверждено документацией)
 - **Следующий шаг: Задача 2.4 (Debounce автосохранения + AbortController)**
+
+### ✅ Задача 2.4 ВЫПОЛНЕНА (02.06.2026)
+- Debounce не добавлен — только ручное сохранение (кнопка "Сохранить")
+- `projectService.ts` — все методы принимают `signal?: AbortSignal`
+- Mock-задержка обёрнута в Promise с проверкой `signal.aborted`
+- При отмене запроса (AbortError) toast не показывается
+- `ScriptPage.tsx` — добавлен `abortControllerRef` для отмены устаревших запросов при сохранении
+- Создан тест `projectService.abort.test.ts` — проверяет отмену запросов и отсутствие toast при abort
+
+---
+
+## ✅ ЭТАП 2 ЗАВЕРШЕН (02.06.2026)
+**Безопасность и стабильность:**
+- Toast-система с 4 уровнями (success, error, warning, info)
+- Все ошибки сервисов показываются через toast
+- Cleanup Tiptap — все timeout очищаются при unmount
+- AbortController — поддержка отмены устаревших запросов
+
+**Следующий шаг: Этап 3 (Подготовка к десктопу) — Задача 3.1 (Интерфейс FileSystemAdapter + BrowserFS)**
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**
