@@ -50,3 +50,36 @@
 |------|---------|---------|--------|
 | 01.06.2026 | Tiptap для редактора | Проверенная архитектура, drag&drop | ✅ |
 | 01.06.2026 | Russian/Hollywood форматы | Стандарты КИТ и WGA | ✅ |
+| 02.06.2026 | Нормализованный стор useProjectStore.ts | Подготовка к синхронизации, эффективные обновления по ID | ✅ |
+
+---
+
+## 📐 Нормализованный стор (Task 1.1, 02.06.2026)
+
+**Файл:** `src/store/useProjectStore.ts`  
+**Экспорт:** `useNormalizedProjectStore`  
+**Старый стор:** `src/store/projectStore.ts` → `useProjectStore` — не трогать до задач 1.3-1.4
+
+### Структура состояния
+```typescript
+{
+  projects: Record<string, Project>  // словарь по ID, не массив
+  scenes: Record<string, Scene>      // словарь по ID, не массив
+  isLoading: boolean
+  error: string | null
+}
+```
+
+### Actions
+| Action | Описание |
+|--------|----------|
+| `setProjects(projects[])` | Нормализует массив → `Record<string, Project>` |
+| `updateScene(id, updates)` | Обновляет сцену по ID через Immer (без мутации) |
+| `revertScene(id)` | Откат сцены при ошибке сохранения (TODO: Этап 2) |
+| `setError(msg\|null)` | Устанавливает/сбрасывает ошибку |
+| `setLoading(bool)` | Устанавливает флаг загрузки |
+
+### Правила использования
+- Компоненты читают данные ТОЛЬКО из стора
+- Мутации данных ТОЛЬКО через сервис (`projectService.ts`, Task 1.2)
+- Не использовать `projects` как массив — всегда `Object.values(projects)`
