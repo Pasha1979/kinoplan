@@ -8,6 +8,7 @@ import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode } from './tiptap'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-react'
 import { useSmartType } from '../hooks/useSmartType'
+import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
 
 interface ScriptEditorTiptapProps {
@@ -201,7 +202,7 @@ export default function ScriptEditorTiptap({
       const html = editor.getHTML()
       
       // 1.1 Сохраняем в localStorage с ключом по projectId
-      localStorage.setItem(draftKey, html)
+      safeSetLocalStorage(draftKey, html)
       
       // Извлекаем сцены из SceneNode (мгновенно)
       extractScenesFromDocument()
@@ -511,7 +512,7 @@ export default function ScriptEditorTiptap({
   // Загружаем черновик при монтировании И при смене серии (draftKey меняется)
   useEffect(() => {
     if (editor) {
-      const saved = localStorage.getItem(draftKey)
+      const saved = safeGetLocalStorage(draftKey)
       // При смене серии — очищаем редактор и загружаем нужный черновик (или пустой)
       editor.commands.setContent(saved || '<p></p>')
       processedHeadersRef.current.clear()

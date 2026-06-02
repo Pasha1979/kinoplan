@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SmartTypeSuggestion } from '../hooks/useSmartType'
+import { safeGetWindow } from '../utils/env'
 
 interface SmartTypePopupProps {
   editor: any
@@ -34,10 +35,11 @@ export function SmartTypePopup({
 
     // Получаем координаты курсора
     const coords = editor.view.coordsAtPos(from)
+    const win = safeGetWindow()
     
     setPosition({
-      top: coords.bottom + window.scrollY + 5,
-      left: coords.left + window.scrollX,
+      top: coords.bottom + (win?.scrollY || 0) + 5,
+      left: coords.left + (win?.scrollX || 0),
     })
   }, [isOpen, editor, suggestions])
 
@@ -51,8 +53,9 @@ export function SmartTypePopup({
       }
     }
 
-    window.addEventListener('click', handleClickOutside)
-    return () => window.removeEventListener('click', handleClickOutside)
+    const win = safeGetWindow()
+    win?.addEventListener('click', handleClickOutside)
+    return () => win?.removeEventListener('click', handleClickOutside)
   }, [isOpen, onClose])
 
   if (!isOpen || suggestions.length === 0) return null

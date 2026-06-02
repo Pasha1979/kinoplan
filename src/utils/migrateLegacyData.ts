@@ -1,4 +1,5 @@
 import { useNormalizedProjectStore } from '../store/useProjectStore'
+import { safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from './env'
 
 const LEGACY_KEY = 'kinoplan-projects'
 const MIGRATED_FLAG = 'kinoplan-legacy-migrated'
@@ -11,18 +12,18 @@ interface LegacyStorage {
 }
 
 export function migrateLegacyData(): void {
-  if (localStorage.getItem(MIGRATED_FLAG) === 'true') return
+  if (safeGetLocalStorage(MIGRATED_FLAG) === 'true') return
 
   const normalizedProjects = useNormalizedProjectStore.getState().projects
   if (Object.keys(normalizedProjects).length > 0) {
-    localStorage.setItem(MIGRATED_FLAG, 'true')
+    safeSetLocalStorage(MIGRATED_FLAG, 'true')
     return
   }
 
   try {
-    const raw = localStorage.getItem(LEGACY_KEY)
+    const raw = safeGetLocalStorage(LEGACY_KEY)
     if (!raw) {
-      localStorage.setItem(MIGRATED_FLAG, 'true')
+      safeSetLocalStorage(MIGRATED_FLAG, 'true')
       return
     }
 
@@ -30,15 +31,15 @@ export function migrateLegacyData(): void {
     const legacyProjects = parsed?.state?.projects
 
     if (!Array.isArray(legacyProjects) || legacyProjects.length === 0) {
-      localStorage.setItem(MIGRATED_FLAG, 'true')
+      safeSetLocalStorage(MIGRATED_FLAG, 'true')
       return
     }
 
     useNormalizedProjectStore.getState().setProjects(legacyProjects as never)
-    localStorage.setItem(MIGRATED_FLAG, 'true')
-    localStorage.removeItem(LEGACY_KEY)
+    safeSetLocalStorage(MIGRATED_FLAG, 'true')
+    safeRemoveLocalStorage(LEGACY_KEY)
   } catch {
     // Миграция не критична — если не удалась, пользователь просто начнёт с чистого листа
-    localStorage.setItem(MIGRATED_FLAG, 'true')
+    safeSetLocalStorage(MIGRATED_FLAG, 'true')
   }
 }

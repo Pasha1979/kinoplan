@@ -4,6 +4,7 @@ import { ChevronLeft, Save, X } from 'lucide-react'
 import { useScriptStore, type ScriptFormat, type TimingSystem } from '../../store/scriptStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
+import { safeGetDocument } from '../../utils/env'
 
 export default function CreateScriptPage() {
   const navigate = useNavigate()
@@ -14,8 +15,10 @@ export default function CreateScriptPage() {
   const isDark = theme === 'dark'
 
   useEffect(() => {
-    if (document.getElementById('tooltip-styles')) return
-    const style = document.createElement('style')
+    const doc = safeGetDocument()
+    if (!doc) return
+    if (doc.getElementById('tooltip-styles')) return
+    const style = doc.createElement('style')
     style.id = 'tooltip-styles'
     style.textContent = `
       [data-tooltip]:hover::after {
@@ -46,7 +49,7 @@ export default function CreateScriptPage() {
         z-index: 1000;
       }
     `
-    document.head.appendChild(style)
+    doc.head.appendChild(style)
   }, [])
 
   const [title, setTitle] = useState(project?.name || '')

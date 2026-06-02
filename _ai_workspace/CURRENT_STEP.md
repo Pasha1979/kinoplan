@@ -115,6 +115,16 @@
 - Убран скрытый input для импорта — browserFS сам создает input при вызове `uploadFile`
 - Паттерн Адаптера позволяет легко добавить реализацию для Electron/Tauri в будущем
 - **Следующий шаг: Задача 3.2 (Изоляция browser-API в утилиты)**
+
+### ✅ Задача 3.2 ВЫПОЛНЕНА (02.06.2026)
+- Создан файл `src/utils/env.ts` с безопасными функциями-обертками: `isBrowser`, `safeGetLocalStorage`, `safeSetLocalStorage`, `safeRemoveLocalStorage`, `safeGetWindow`, `safeGetDocument`
+- `migrateLegacyData.ts` — все прямые вызовы `localStorage` заменены на безопасные утилиты
+- `CreateScriptPage.tsx` — `document` заменен на `safeGetDocument`
+- `SmartTypePopup.tsx` — `window` заменен на `safeGetWindow` с защитой от null
+- `ScriptEditorTiptap.tsx` — `localStorage.getItem/setItem` заменены на безопасные утилиты
+- `main.tsx` — оставлен без изменений (критичный код монтирования React, работает только в браузере)
+- Все глобальные обращения теперь проходят через `src/utils/env.ts`, что гарантирует безопасность при сборке под десктоп
+- **Следующий шаг: Задача 3.3 (Конфиг сборки под Electron/Tauri)**
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**
