@@ -62,6 +62,8 @@ export default function ScriptEditorTiptap({
   const processedHeadersRef = useRef<Set<string>>(new Set())
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
+  // Храним timeout IDs для очистки при unmount
+  const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
   const draftKey = projectId
@@ -413,7 +415,8 @@ export default function ScriptEditorTiptap({
           .insertContent(upperText)
           .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
           .run()
-        setTimeout(() => { isReplacingRef.current = false }, 100)
+        const timeoutId = setTimeout(() => { isReplacingRef.current = false }, 100)
+        timeoutIdsRef.current.push(timeoutId)
         return
       }
     }
@@ -445,7 +448,8 @@ export default function ScriptEditorTiptap({
             .insertContent(newText)
             .setTextSelection(nodeStart + newText.length)
             .run()
-          setTimeout(() => { isReplacingRef.current = false }, 100)
+          const timeoutId = setTimeout(() => { isReplacingRef.current = false }, 100)
+          timeoutIdsRef.current.push(timeoutId)
           return
         }
       }
@@ -470,7 +474,8 @@ export default function ScriptEditorTiptap({
             .insertContent(newText)
             .setTextSelection(nodeStart + newText.length)
             .run()
-          setTimeout(() => { isReplacingRef.current = false }, 100)
+          const timeoutId = setTimeout(() => { isReplacingRef.current = false }, 100)
+          timeoutIdsRef.current.push(timeoutId)
           return
         }
       }
@@ -494,6 +499,14 @@ export default function ScriptEditorTiptap({
     el.classList.remove('format-russian', 'format-hollywood', 'format-custom')
     el.classList.add(`format-${_format || 'russian'}`)
   }, [editor, _format])
+
+  // Cleanup: очищаем все timeout при unmount
+  useEffect(() => {
+    return () => {
+      timeoutIdsRef.current.forEach((id) => clearTimeout(id))
+      timeoutIdsRef.current = []
+    }
+  }, [])
 
   // Загружаем черновик при монтировании И при смене серии (draftKey меняется)
   useEffect(() => {

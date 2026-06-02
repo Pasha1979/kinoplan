@@ -80,6 +80,14 @@
 - `HomePage.tsx` — экспорт/импорт показывают toast при успехе/ошибке
 - isLoading состояния проверены: `ScriptPage` (isSaving), `CreateProjectModal` (submitting), `HomePage` (isExporting, isImporting)
 - **Следующий шаг: Задача 2.3 (Фикс cleanup Tiptap + тест на утечки)**
+
+### ✅ Задача 2.3 ВЫПОЛНЕНА (02.06.2026)
+- `ScriptEditorTiptap.tsx` — добавлен `timeoutIdsRef` для хранения всех timeout IDs
+- Все setTimeout (3 места) теперь сохраняют ID в `timeoutIdsRef`
+- Добавлен useEffect с cleanup функцией для очистки всех timeout при unmount
+- Создан тест `ScriptEditorTiptap.test.tsx` — проверяет очистку timeout при unmount
+- `useEditor` из `@tiptap/react` автоматически вызывает `editor.destroy()` при unmount (подтверждено документацией)
+- **Следующий шаг: Задача 2.4 (Debounce автосохранения + AbortController)**
 ---
 
 **🔄 СМЕНА АРХИТЕКТУРЫ:**
