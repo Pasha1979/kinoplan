@@ -9,7 +9,7 @@ import {
   ScrollText, Tag, History
 } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
-import { useProjectStore } from '../../store/projectStore'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
 
 interface NavItem {
   icon: React.ReactNode
@@ -55,8 +55,8 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { sidebarExpanded, toggleSidebar } = useUiStore()
-  const { getCurrentProject } = useProjectStore()
-  const project = getCurrentProject()
+  const { currentProjectId, projects } = useNormalizedProjectStore()
+  const project = currentProjectId ? projects[currentProjectId] : null
 
   const [preproOpen, setPreproOpen] = useState(true)
   const [productionOpen, setProductionOpen] = useState(true)

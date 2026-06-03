@@ -558,10 +558,12 @@ export default function ScriptEditorTiptap({
     onConvertReady(convertFormat)
   }, [editor, onConvertReady])
 
-  // 3.2 Прокрутка редактора к сцене по focusSceneId
+  // 3.2 Прокрутка редактора к сцене по focusSceneId и установка курсора
   useEffect(() => {
     if (!editor || !focusSceneId) return
     let found = false
+    let actionPos: number | null = null
+
     editor.state.doc.descendants((node, pos) => {
       if (found) return false
       if (node.type.name === 'sceneHeader') {
@@ -569,16 +571,33 @@ export default function ScriptEditorTiptap({
         const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\./)
         if (headerMatch) {
           const sceneNum = headerMatch[1]
-          if (focusSceneId.includes(sceneNum) || focusSceneId === `scene-${sceneNum}`) {
+          // Точное совпадение номера сцены
+          if (focusSceneId === sceneNum) {
             found = true
             const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
             if (domNode) {
-              domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              domNode.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }
+
+            // Ищем следующий блок action после шапки
+            let nextPos = pos + node.nodeSize
+            editor.state.doc.descendants((innerNode, innerPos) => {
+              if (innerPos >= nextPos && innerNode.type.name === 'sceneAction') {
+                actionPos = innerPos
+                return false
+              }
+            })
           }
         }
       }
     })
+
+    // Устанавливаем курсор в начало блока action
+    if (actionPos !== null) {
+      setTimeout(() => {
+        editor.chain().focus().setTextSelection(actionPos + 1).run()
+      }, 300)
+    }
   }, [focusSceneId, editor])
 
   if (!editor) {
@@ -616,7 +635,7 @@ export default function ScriptEditorTiptap({
   ]
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
+    <div className="flex-1 flex flex-col overflow-hidden relative h-full">
       {/* Панель инструментов */}
       <div
         className="shrink-0 flex items-center gap-2 px-4 py-2 border-b"

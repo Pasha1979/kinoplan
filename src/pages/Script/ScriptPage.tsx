@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe, HelpCircle, ChevronDown } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
-import { useProjectStore } from '../../store/projectStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
@@ -20,9 +19,9 @@ type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statisti
 export default function ScriptPage() {
   const navigate = useNavigate()
   const { theme } = useUiStore()
-  const { getCurrentProject } = useProjectStore()
+  const { currentProjectId, projects } = useNormalizedProjectStore()
   const { scripts } = useScriptStore()
-  const project = getCurrentProject()
+  const project = currentProjectId ? projects[currentProjectId] : null
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<ScriptView>('empty')
@@ -40,7 +39,6 @@ export default function ScriptPage() {
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [currentSeries, setCurrentSeries] = useState(1)
   const [isSaving, setIsSaving] = useState(false)
-  const { currentProjectId } = useNormalizedProjectStore()
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
@@ -529,14 +527,15 @@ export default function ScriptPage() {
               }))}
               isDark={isDark}
               onSceneClick={(sceneId) => {
-                setSelectedScene(scenes.find(s => s.id === sceneId) || scenes[0])
-                setFocusSceneId(sceneId)
+                const selected = scenes.find(s => s.id === sceneId) || scenes[0]
+                setSelectedScene(selected)
+                setFocusSceneId(selected.number)
               }}
               activeSceneId={selectedScene?.id || ''}
             />
             
             {/* Редактор — справа */}
-            <div className="flex-1">
+            <div className="flex-1 h-full">
               <ScriptEditorTiptap
                 format={scriptFormat}
                 projectType={project?.type || 'film'}

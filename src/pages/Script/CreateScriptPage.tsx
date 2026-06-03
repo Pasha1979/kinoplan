@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Save, X } from 'lucide-react'
 import { useScriptStore, type ScriptFormat, type TimingSystem } from '../../store/scriptStore'
-import { useProjectStore } from '../../store/projectStore'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useUiStore } from '../../store/uiStore'
 import { safeGetDocument } from '../../utils/env'
 
 export default function CreateScriptPage() {
   const navigate = useNavigate()
   const { addScript } = useScriptStore()
-  const { getCurrentProject } = useProjectStore()
+  const { currentProjectId, projects } = useNormalizedProjectStore()
   const { theme } = useUiStore()
-  const project = getCurrentProject()
+  const project = currentProjectId ? projects[currentProjectId] : null
   const isDark = theme === 'dark'
 
   useEffect(() => {

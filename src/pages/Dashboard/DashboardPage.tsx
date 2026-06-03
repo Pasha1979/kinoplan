@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, FileText, ClipboardList, Users, TrendingUp, AlertCircle, CheckCircle2, Circle, Clock, Zap, ChevronDown, Info } from 'lucide-react'
-import { useProjectStore } from '../../store/projectStore'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import type { ShootingDayType } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { useTaskStore } from '../../store/taskStore'
@@ -858,9 +858,9 @@ function MiniCalendar({ startDate, endDate, isDark }: {
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const { getCurrentProject } = useProjectStore()
+  const { currentProjectId, projects } = useNormalizedProjectStore()
   const { theme } = useUiStore()
-  const project = getCurrentProject()
+  const project = currentProjectId ? projects[currentProjectId] : null
 
   if (!project) {
     return (

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Settings, Film, Search, Upload } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
-import { useProjectStore } from '../../store/projectStore'
 import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
 import { useUiStore } from '../../store/uiStore'
@@ -14,7 +13,6 @@ import type { Project } from '../../store/projectStore'
 export default function HomePage() {
   const navigate = useNavigate()
   const { projects, isLoading, error } = useNormalizedProjectStore()
-  const { setCurrentProject } = useProjectStore()
   const { theme, toggleTheme } = useUiStore()
   const { showToast } = useToastStore()
   const [showModal, setShowModal] = useState(false)
@@ -34,13 +32,11 @@ export default function HomePage() {
 
   const handleCreate = async (data: Partial<Project>) => {
     const created = await projectService.createProject(data)
-    setCurrentProject(created.id)
     setShowModal(false)
     navigate(`/project/${created.id}`)
   }
 
   const handleOpen = (project: Project) => {
-    setCurrentProject(project.id)
     navigate(`/project/${project.id}`)
   }
 
@@ -69,7 +65,6 @@ export default function HomePage() {
     try {
       const text = await browserFS.uploadFile('.json')
       const imported = await projectService.importProjectFromJSON(text)
-      setCurrentProject(imported.id)
       navigate(`/project/${imported.id}`)
       showToast('Проект импортирован', 'success')
     } catch (err) {

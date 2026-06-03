@@ -147,7 +147,6 @@ body {
   margin: var(--header-margin-top) 0 var(--header-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
-  border-left: 3px solid #6366f1;
 }
 
 /* Scene Cast (Characters in scene): ВЛАДА, СВЕТА, РЯБИНИНА, ХАН */
@@ -157,7 +156,6 @@ body {
   margin: var(--cast-margin-top) 0 var(--cast-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
-  border-left: 3px solid #8b5cf6; /* Purple */
 }
 
 /* Scene Action (Description): "Влада лежит на кровати..." */
@@ -165,7 +163,6 @@ body {
   position: relative;
   padding-left: 0 !important;
   margin: var(--action-margin-top) 0 var(--action-margin-bottom) 0 !important;
-  border-left: 3px solid #9ca3af;
 }
 
 /* Scene Character (Speaking): "ВЛАДА" — Russian: центрирование */
@@ -177,7 +174,6 @@ body {
   margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
-  border-left: 3px solid #f97316;
 }
 
 /* Scene Character — Hollywood: отступ от левого края, без центрирования */
@@ -188,7 +184,6 @@ body {
   margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
-  border-left: 3px solid #f97316;
   width: auto;
 }
 
@@ -199,7 +194,6 @@ body {
   padding-left: var(--dialog-left-indent) !important;
   padding-right: var(--dialog-right-indent) !important;
   margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0 !important;
-  border-left: 3px solid #22c55e;
 }
 
 /* Scene Transition: "НАЧАЛО ДНЯ" or "FADE IN:" */
@@ -211,7 +205,6 @@ body {
   text-align: right;
   font-weight: 600;
   text-transform: uppercase;
-  border-left: 3px solid #ec4899;
 }
 
 /* Tiptap placeholder */
