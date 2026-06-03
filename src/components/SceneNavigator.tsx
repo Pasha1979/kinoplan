@@ -1,5 +1,21 @@
 import { useState, useMemo } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 // Упрощенный тип для сцен из редактора
 interface SimpleScene {
@@ -20,6 +36,7 @@ interface SceneNavigatorProps {
   isDark: boolean
   onSceneClick?: (sceneId: string) => void
   activeSceneId?: string
+  onSceneReorder?: (fromIndex: number, toIndex: number) => void
 }
 
 export default function SceneNavigator({
@@ -27,6 +44,7 @@ export default function SceneNavigator({
   isDark,
   onSceneClick,
   activeSceneId,
+  onSceneReorder,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
@@ -37,6 +55,30 @@ export default function SceneNavigator({
     if (filter === 'ЭКСТ') return scenes.filter(s => s.type.includes('ЭКСТ'))
     return scenes
   }, [scenes, filter])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Начинать drag после перемещения на 8px
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = filteredScenes.findIndex((scene) => scene.id === active.id)
+      const newIndex = filteredScenes.findIndex((scene) => scene.id === over.id)
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        onSceneReorder?.(oldIndex, newIndex)
+      }
+    }
+  }
 
   const toggleExpanded = (sceneId: string) => {
     setExpandedScenes(prev => {
@@ -77,6 +119,132 @@ export default function SceneNavigator({
     if (type.includes('ИНТ-ЭКСТ')) return { bg: 'rgba(251,146,60,0.2)', color: '#fb923c', label: 'ИНТ-ЭКСТ' }
     if (type.includes('ЭКСТ')) return { bg: 'rgba(34,197,94,0.2)', color: '#22c55e', label: 'ЭКСТ' }
     return { bg: 'rgba(139,92,246,0.2)', color: '#8b5cf6', label: 'ИНТ' }
+  }
+
+  // Компонент для сортируемой карточки сцены
+  function SortableSceneCard({ scene, isActive, isExpanded, stripColor, badge }: {
+    scene: SimpleScene
+    isActive: boolean
+    isExpanded: boolean
+    stripColor: string
+    badge: { bg: string; color: string; label: string }
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: scene.id })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
+
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className={`rounded-lg border overflow-hidden transition-all cursor-pointer hover:scale-[1.02] hover:shadow-md ${isActive ? 'ring-1 ring-indigo-500' : ''} ${isDark ? 'hover:bg-white/8' : 'hover:bg-gray-50'}`}
+        style={{
+          background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
+          borderColor: isActive ? '#6366f1' : border,
+          ...style,
+        }}
+        onClick={() => onSceneClick?.(scene.id)}
+      >
+        {/* Основная строка сцены */}
+        <div className="p-3 flex items-start gap-2">
+          {/* Цветная метка */}
+          <div className="w-1 shrink-0 self-stretch rounded-full" style={{ background: stripColor, minHeight: 40 }} />
+
+          <div className="flex-1 min-w-0">
+            {/* Номер и тип */}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold" style={{ color: textPrimary }}>
+                {scene.number}.
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded"
+                style={{ background: badge.bg, color: badge.color }}>
+                {badge.label}
+              </span>
+              {scene.isOmitted && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+                  ВЫЧ
+                </span>
+              )}
+            </div>
+
+            {/* Локация */}
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: textPrimary }}>
+              <MapPin size={12} style={{ color: textSecondary }} />
+              <span className="truncate">{scene.location}</span>
+            </div>
+
+            {/* Персонажи (cast) */}
+            {scene.cast && scene.cast.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {scene.cast.slice(0, 3).map((c, i) => (
+                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full"
+                    style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                    {c}
+                  </span>
+                ))}
+                {scene.cast.length > 3 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full"
+                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
+                    +{scene.cast.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Время и страницы */}
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="flex items-center gap-1 text-[10px]" style={{ color: textSecondary }}>
+                {getTimeIcon(scene.time)}
+                {scene.time}
+              </span>
+              {scene.pages !== undefined && (
+                <span className="text-[10px]" style={{ color: textSecondary }}>
+                  {scene.pages} стр
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Кнопка развернуть (если есть синопсис) */}
+          {scene.synopsis && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleExpanded(scene.id)
+              }}
+              className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
+            >
+              {isExpanded ? (
+                <ChevronDown size={14} style={{ color: textSecondary }} />
+              ) : (
+                <ChevronRight size={14} style={{ color: textSecondary }} />
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Синопсис (раскрывается) */}
+        {isExpanded && scene.synopsis && (
+          <div className="px-3 pb-3 pt-0">
+            <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+              {scene.synopsis}
+            </p>
+          </div>
+        )}
+      </div>
+    )
   }
 
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -131,111 +299,34 @@ export default function SceneNavigator({
             </p>
           </div>
         ) : (
-          filteredScenes.map((scene) => {
-            const isActive = activeSceneId === scene.id
-            const isExpanded = expandedScenes.has(scene.id)
-            const stripColor = getColorTagColor(scene.colorTag)
-            const badge = getTypeBadge(scene.type || '')
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={filteredScenes.map(s => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {filteredScenes.map((scene) => {
+                const isActive = activeSceneId === scene.id
+                const isExpanded = expandedScenes.has(scene.id)
+                const stripColor = getColorTagColor(scene.colorTag)
+                const badge = getTypeBadge(scene.type || '')
 
-            return (
-              <div
-                key={scene.id}
-                className={`rounded-lg border overflow-hidden transition-all cursor-pointer hover:scale-[1.02] hover:shadow-md ${isActive ? 'ring-1 ring-indigo-500' : ''} ${isDark ? 'hover:bg-white/8' : 'hover:bg-gray-50'}`}
-                style={{
-                  background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
-                  borderColor: isActive ? '#6366f1' : border,
-                }}
-                onClick={() => onSceneClick?.(scene.id)}
-              >
-                {/* Основная строка сцены */}
-                <div className="p-3 flex items-start gap-2">
-                  {/* Цветная метка */}
-                  <div className="w-1 shrink-0 self-stretch rounded-full" style={{ background: stripColor, minHeight: 40 }} />
-                  
-                  <div className="flex-1 min-w-0">
-                    {/* Номер и тип */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold" style={{ color: textPrimary }}>
-                        {scene.number}.
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded"
-                        style={{ background: badge.bg, color: badge.color }}>
-                        {badge.label}
-                      </span>
-                      {scene.isOmitted && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-                          ВЫЧ
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Локация */}
-                    <div className="flex items-center gap-1.5 text-xs" style={{ color: textPrimary }}>
-                      <MapPin size={12} style={{ color: textSecondary }} />
-                      <span className="truncate">{scene.location}</span>
-                    </div>
-
-                    {/* Персонажи (cast) */}
-                    {scene.cast && scene.cast.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {scene.cast.slice(0, 3).map((c, i) => (
-                          <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full"
-                            style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', color: isDark ? '#a5b4fc' : '#6366f1' }}>
-                            {c}
-                          </span>
-                        ))}
-                        {scene.cast.length > 3 && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full"
-                            style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
-                            +{scene.cast.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Время и страницы */}
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="flex items-center gap-1 text-[10px]" style={{ color: textSecondary }}>
-                        {getTimeIcon(scene.time)}
-                        {scene.time}
-                      </span>
-                      {scene.pages !== undefined && (
-                        <span className="text-[10px]" style={{ color: textSecondary }}>
-                          {scene.pages} стр
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Кнопка развернуть (если есть синопсис) */}
-                  {scene.synopsis && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleExpanded(scene.id)
-                      }}
-                      className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown size={14} style={{ color: textSecondary }} />
-                      ) : (
-                        <ChevronRight size={14} style={{ color: textSecondary }} />
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {/* Синопсис (раскрывается) */}
-                {isExpanded && scene.synopsis && (
-                  <div className="px-3 pb-3 pt-0">
-                    <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-                      {scene.synopsis}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )
-          })
+                return (
+                  <SortableSceneCard
+                    key={scene.id}
+                    scene={scene}
+                    isActive={isActive}
+                    isExpanded={isExpanded}
+                    stripColor={stripColor}
+                    badge={badge}
+                  />
+                )
+              })}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 

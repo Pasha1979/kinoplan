@@ -26,6 +26,8 @@ interface ScriptEditorTiptapProps {
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
   focusSceneId?: string
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
+  onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number) => void) => void
+  onUpdateNumbersReady?: (updateFn: (scenes: Array<{ id: string; number: string }>) => void) => void
   // SmartType данные (вместо hardcoded)
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
@@ -44,6 +46,8 @@ export default function ScriptEditorTiptap({
   onStatsChange,
   focusSceneId,
   onConvertReady,
+  onReorderReady,
+  onUpdateNumbersReady,
   genreCoefficient,
   smartTypeCharacters,
   smartTypeLocations,
@@ -558,11 +562,11 @@ export default function ScriptEditorTiptap({
     onConvertReady(convertFormat)
   }, [editor, onConvertReady])
 
-  // 3.2 Прокрутка редактора к сцене по focusSceneId и установка курсора
+  // 3.2 Прокрутка редактора к сцене по focusSceneId
   useEffect(() => {
     if (!editor || !focusSceneId) return
     let found = false
-    let actionPos: number | null = null
+    let scrollPos: number | null = null
 
     editor.state.doc.descendants((node, pos) => {
       if (found) return false
@@ -574,31 +578,131 @@ export default function ScriptEditorTiptap({
           // Точное совпадение номера сцены
           if (focusSceneId === sceneNum) {
             found = true
+            scrollPos = pos
             const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
             if (domNode) {
-              domNode.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
-
-            // Ищем следующий блок action после шапки
-            let nextPos = pos + node.nodeSize
-            editor.state.doc.descendants((innerNode, innerPos) => {
-              if (innerPos >= nextPos && innerNode.type.name === 'sceneAction') {
-                actionPos = innerPos
-                return false
-              }
-            })
           }
         }
       }
     })
 
-    // Устанавливаем курсор в начало блока action
-    if (actionPos !== null) {
+    // Повторяем скролл с задержкой чтобы гарантировать позицию
+    if (scrollPos !== null) {
       setTimeout(() => {
-        editor.chain().focus().setTextSelection(actionPos + 1).run()
-      }, 300)
+        const domNode = editor.view.nodeDOM(scrollPos) as HTMLElement | null
+        if (domNode) {
+          domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 500)
     }
   }, [focusSceneId, editor])
+
+  // 3.3 Перестановка сцен в редакторе при изменении порядка в навигаторе
+  useEffect(() => {
+    if (!editor || !onReorderReady) return
+
+    // Функция перестановки сцен
+    const handleReorder = (fromIndex: number, toIndex: number) => {
+      if (!editor) return
+
+      // Получаем текущий документ как JSON
+      const doc = editor.getJSON()
+      const content = doc.content || []
+
+      // Находим все sceneHeader в JSON
+      const sceneIndices: number[] = []
+      content.forEach((node: any, index: number) => {
+        if (node.type === 'sceneHeader') {
+          sceneIndices.push(index)
+        }
+      })
+
+      if (sceneIndices.length <= fromIndex || sceneIndices.length <= toIndex) return
+
+      // Определяем границы сцен для перестановки
+      const fromStart = sceneIndices[fromIndex]
+      const toStart = sceneIndices[toIndex]
+
+      const findSceneEnd = (startIndex: number) => {
+        for (let i = startIndex + 1; i < content.length; i++) {
+          if (content[i].type === 'sceneHeader') {
+            return i
+          }
+        }
+        return content.length
+      }
+
+      const fromEnd = findSceneEnd(fromStart)
+      const toEnd = findSceneEnd(toStart)
+
+      // Вырезаем сцену из старой позиции
+      const sceneNodes = content.slice(fromStart, fromEnd)
+
+      // Создаем новый массив с переставленной сценой
+      const newContent = [...content]
+
+      // Удаляем сцену из старой позиции
+      newContent.splice(fromStart, fromEnd - fromStart)
+
+      // Вычисляем новую позицию для вставки
+      const newInsertPos = fromIndex < toIndex
+        ? toEnd - (fromEnd - fromStart)
+        : toStart
+
+      // Вставляем сцену в новую позицию
+      newContent.splice(newInsertPos, 0, ...sceneNodes)
+
+      // Устанавливаем новый документ
+      editor.commands.setContent({ type: 'doc', content: newContent })
+
+      // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
+      setTimeout(() => {
+        extractScenesFromDocument()
+      }, 100)
+    }
+
+    // Передаем функцию родителю
+    onReorderReady(handleReorder)
+  }, [editor, onReorderReady])
+
+  // Экспортируем функцию обновления номеров
+  useEffect(() => {
+    if (!editor || !onUpdateNumbersReady) return
+    onUpdateNumbersReady(updateSceneNumbers)
+  }, [editor, onUpdateNumbersReady])
+
+  // Функция для обновления номеров в редакторе на основе массива сцен из навигатора
+  const updateSceneNumbers = (scenes: Array<{ id: string; number: string }>) => {
+    if (!editor) return
+
+    const doc = editor.getJSON()
+    const content = doc.content || []
+    let sceneIndex = 0
+
+    content.forEach((node: any) => {
+      if (node.type === 'sceneHeader' && node.content && node.content[0]) {
+        const text = node.content[0].text || ''
+        const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
+
+        if (headerMatch && sceneIndex < scenes.length) {
+          const oldNumber = headerMatch[1]
+          const newNumber = scenes[sceneIndex].number
+
+          if (oldNumber !== newNumber) {
+            // Заменяем номер в тексте
+            node.content[0].text = text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`)
+          }
+
+          sceneIndex++
+        }
+      }
+    })
+
+    // Устанавливаем обновленный документ
+    editor.commands.setContent(doc)
+  }
 
   if (!editor) {
     return null

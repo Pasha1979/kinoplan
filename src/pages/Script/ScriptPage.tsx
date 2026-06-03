@@ -43,11 +43,28 @@ export default function ScriptPage() {
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
   const convertFormatRef = useRef<((from: ScriptFormat, to: ScriptFormat) => void) | null>(null)
+  // Ссылка на функцию перестановки сцен в редакторе
+  const reorderEditorRef = useRef<((fromIndex: number, toIndex: number) => void) | null>(null)
+  // Ссылка на функцию обновления номеров в редакторе
+  const updateNumbersRef = useRef<((scenes: Array<{ id: string; number: string }>) => void) | null>(null)
+  // Флаг для предотвращения обновления scenes во время перестановки
+  const isReorderingRef = useRef(false)
+  // Флаг для принудительного обновления навигатора после перестановки
+  const forceUpdateRef = useRef(false)
   // AbortController для отмены устаревших запросов сохранения
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // При получении новых сцен из редактора — обновляем список
   const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => {
+    // Если идёт перестановка — не обновляем scenes (чтобы не перезаписать)
+    // Но если forceUpdate = true — разрешаем обновление
+    if (isReorderingRef.current && !forceUpdateRef.current) return
+
+    // Сбрасываем флаг forceUpdate после использования
+    if (forceUpdateRef.current) {
+      forceUpdateRef.current = false
+    }
+
     // Фильтруем сцены по выбранной серии (для сериалов)
     const filteredScenes = project?.type === 'serial' && currentSeries > 0
       ? newScenes.filter(scene => scene.number.startsWith(`${currentSeries}-`))
@@ -531,6 +548,46 @@ export default function ScriptPage() {
                 setSelectedScene(selected)
                 setFocusSceneId(selected.number)
               }}
+              onSceneReorder={(fromIndex, toIndex) => {
+                // Устанавливаем флаг перестановки
+                isReorderingRef.current = true
+
+                // Переставляем сцены в навигаторе
+                const newScenes = [...scenes]
+                const [movedScene] = newScenes.splice(fromIndex, 1)
+                newScenes.splice(toIndex, 0, movedScene)
+
+                // Перенумеровываем сцены по новому порядку
+                const isSerial = project?.type === 'serial' && currentSeries > 0
+                const seriesNumber = currentSeries
+
+                newScenes.forEach((scene, index) => {
+                  if (isSerial) {
+                    scene.number = `${seriesNumber}-${index + 1}`
+                  } else {
+                    scene.number = (index + 1).toString()
+                  }
+                })
+
+                setScenes(newScenes)
+
+                // Переставляем сцены в редакторе на основе порядка из навигатора
+                if (reorderEditorRef.current) {
+                  reorderEditorRef.current(fromIndex, toIndex)
+                }
+
+                // Обновляем номера в редакторе на основе перенумерованного массива scenes
+                setTimeout(() => {
+                  if (updateNumbersRef.current) {
+                    updateNumbersRef.current(newScenes)
+                  }
+                }, 200)
+
+                // После перестановки сбрасываем флаг
+                setTimeout(() => {
+                  isReorderingRef.current = false
+                }, 1000)
+              }}
               activeSceneId={selectedScene?.id || ''}
             />
             
@@ -550,6 +607,8 @@ export default function ScriptPage() {
                 onScenesChange={handleScenesChange}
                 focusSceneId={_focusSceneId}
                 onConvertReady={(fn) => { convertFormatRef.current = fn }}
+                onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
+                onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
               />
             </div>
           </div>
