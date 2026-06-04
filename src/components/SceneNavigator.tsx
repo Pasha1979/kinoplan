@@ -60,7 +60,7 @@ export default function SceneNavigator({
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
 
   // Функция расчёта хронометража сцены в зависимости от системы
-  const calculateSceneDuration = (scene: SimpleScene): number => {
+  const calculateSceneTiming = (scene: SimpleScene): { pages: number; duration: number } => {
     const coeff = genreCoefficient || 1.0
     const charCount = scene.charCount || (scene.pages ? scene.pages * 1800 : 0)
     
@@ -68,25 +68,31 @@ export default function SceneNavigator({
       case 'page':
         // Постраничный: 1 страница = 55 секунд
         const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        return Math.round(pages * 55 * coeff)
+        const duration = Math.round(pages * 55 * coeff)
+        return { pages, duration }
       
       case 'character':
         // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
-        return Math.round(charCount * 0.05 * coeff)
+        const charDuration = Math.round(charCount * 0.05 * coeff)
+        const charPages = Math.max(0.1, parseFloat((charDuration / 55).toFixed(1)))
+        return { pages: charPages, duration: charDuration }
       
       case 'flexible':
         // Гибкий: базовый расчёт по страницам
         const basePages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        return Math.round(basePages * 55 * coeff)
+        const flexibleDuration = Math.round(basePages * 55 * coeff)
+        return { pages: basePages, duration: flexibleDuration }
       
       case 'manual':
         // Ручной: пока fallback на постраничный
         const manualPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        return Math.round(manualPages * 55 * coeff)
+        const manualDuration = Math.round(manualPages * 55 * coeff)
+        return { pages: manualPages, duration: manualDuration }
       
       default:
         const defaultPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        return Math.round(defaultPages * 55 * coeff)
+        const defaultDuration = Math.round(defaultPages * 55 * coeff)
+        return { pages: defaultPages, duration: defaultDuration }
     }
   }
 
@@ -94,7 +100,7 @@ export default function SceneNavigator({
   const currentSeriesDuration = useMemo(() => {
     return scenes.reduce((total, scene) => {
       if (scene.pages !== undefined) {
-        return total + calculateSceneDuration(scene)
+        return total + calculateSceneTiming(scene).duration
       }
       return total
     }, 0)
@@ -276,11 +282,11 @@ export default function SceneNavigator({
               {scene.pages !== undefined && (
                 <>
                   <span className="text-[10px]" style={{ color: textSecondary }}>
-                    {scene.pages} стр
+                    {calculateSceneTiming(scene).pages} стр
                   </span>
                   <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
                     <Clock size={11} />
-                    {Math.floor(calculateSceneDuration(scene) / 60)}:{(calculateSceneDuration(scene) % 60).toFixed(0).padStart(2, '0')}
+                    {Math.floor(calculateSceneTiming(scene).duration / 60)}:{(calculateSceneTiming(scene).duration % 60).toFixed(0).padStart(2, '0')}
                   </span>
                 </>
               )}
