@@ -387,7 +387,7 @@ export default function ScriptPage() {
                       <AlignLeft size={10} />
                       {scriptStats.pages > 0
                         ? `${scriptStats.pages.toFixed(1)} стр.`
-                        : `${selectedScene.pages} стр.`}
+                        : `${selectedScene?.charCount ? (selectedScene.charCount / 1800).toFixed(1) : '0'} стр.`}
                     </span>
                     <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>·</span>
                     <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
@@ -579,7 +579,7 @@ export default function ScriptPage() {
                 type: s.type,
                 location: s.location,
                 time: s.time,
-                pages: s.pages,
+                pages: s.charCount ? (s.charCount / 1800) : (s.pages || 0),
                 charCount: s.charCount,
                 cast: s.cast,
               }))}

@@ -94,6 +94,12 @@ export default function SceneNavigator({
     }
   }
 
+  // Вспомогательная функция для расчёта только страниц (для отображения)
+  const calculateScenePages = (scene: SimpleScene): number => {
+    const charCount = scene.charCount || (scene.pages ? scene.pages * 1800 : 0)
+    return Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+  }
+
   // Расчёт текущего хронометража серии
   const currentSeriesDuration = useMemo(() => {
     return scenes.reduce((total, scene) => {
@@ -280,7 +286,7 @@ export default function SceneNavigator({
               {scene.pages !== undefined && (
                 <>
                   <span className="text-[10px]" style={{ color: textSecondary }}>
-                    {calculateSceneTiming(scene).pages} стр
+                    {calculateScenePages(scene)} стр
                   </span>
                   <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
                     <Clock size={11} />
