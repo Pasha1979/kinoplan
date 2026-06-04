@@ -210,9 +210,15 @@ export default function SceneNavigator({
                 {scene.time}
               </span>
               {scene.pages !== undefined && (
-                <span className="text-[10px]" style={{ color: textSecondary }}>
-                  {scene.pages} стр
-                </span>
+                <>
+                  <span className="text-[10px]" style={{ color: textSecondary }}>
+                    {scene.pages} стр
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px]" style={{ color: isDark ? '#10b981' : '#059669' }}>
+                    <Clock size={10} />
+                    {Math.floor(scene.pages * 60)}:{((scene.pages * 60) % 60).toString().padStart(2, '0')}
+                  </span>
+                </>
               )}
             </div>
           </div>
