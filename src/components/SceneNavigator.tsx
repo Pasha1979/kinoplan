@@ -314,7 +314,7 @@ export default function SceneNavigator({
               items={filteredScenes.map(s => s.id)}
               strategy={verticalListSortingStrategy}
             >
-              {filteredScenes.map((scene) => {
+              {filteredScenes.map((scene, index) => {
                 const isActive = activeSceneId === scene.id
                 const isExpanded = expandedScenes.has(scene.id)
                 const stripColor = getColorTagColor(scene.colorTag)
@@ -322,7 +322,7 @@ export default function SceneNavigator({
 
                 return (
                   <SortableSceneCard
-                    key={scene.id}
+                    key={`${scene.id}-${index}`}
                     scene={scene}
                     isActive={isActive}
                     isExpanded={isExpanded}

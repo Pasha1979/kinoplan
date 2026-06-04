@@ -873,10 +873,12 @@ export default function ScriptPage() {
                   // Сохраняем настройки в текущий сценарий
                   if (currentScript) {
                     const coefficient = tempGenreCoefficient === 'auto' ? 1.0 : parseFloat(tempGenreCoefficient)
+                    console.log('Saving timing settings:', { timingSystem: tempTimingSystem, genreCoefficient: coefficient, scriptId: currentScript.id })
                     updateScript(currentScript.id, {
                       timingSystem: tempTimingSystem,
                       genreCoefficient: coefficient,
                     })
+                    console.log('After updateScript, currentScript:', useScriptStore.getState().getCurrentScript())
                   }
                   setShowTimingSettingsModal(false)
                 }}
