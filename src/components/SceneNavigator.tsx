@@ -64,35 +64,33 @@ export default function SceneNavigator({
     const coeff = genreCoefficient || 1.0
     const charCount = scene.charCount || (scene.pages ? scene.pages * 1800 : 0)
     
+    // Страницы всегда считаются одинаково - это физический размер текста
+    const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+
     switch (timingSystem) {
       case 'page':
         // Постраничный: 1 страница = 55 секунд
-        const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
         const duration = Math.round(pages * 55 * coeff)
         return { pages, duration }
       
       case 'character':
         // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
         const charDuration = Math.round(charCount * 0.05 * coeff)
-        const charPages = Math.max(0.1, parseFloat((charDuration / 55).toFixed(1)))
-        return { pages: charPages, duration: charDuration }
+        return { pages, duration: charDuration }
       
       case 'flexible':
         // Гибкий: базовый расчёт по страницам
-        const basePages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        const flexibleDuration = Math.round(basePages * 55 * coeff)
-        return { pages: basePages, duration: flexibleDuration }
+        const flexibleDuration = Math.round(pages * 55 * coeff)
+        return { pages, duration: flexibleDuration }
       
       case 'manual':
         // Ручной: пока fallback на постраничный
-        const manualPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        const manualDuration = Math.round(manualPages * 55 * coeff)
-        return { pages: manualPages, duration: manualDuration }
+        const manualDuration = Math.round(pages * 55 * coeff)
+        return { pages, duration: manualDuration }
       
       default:
-        const defaultPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        const defaultDuration = Math.round(defaultPages * 55 * coeff)
-        return { pages: defaultPages, duration: defaultDuration }
+        const defaultDuration = Math.round(pages * 55 * coeff)
+        return { pages, duration: defaultDuration }
     }
   }
 

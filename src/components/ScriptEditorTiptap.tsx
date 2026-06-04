@@ -61,41 +61,37 @@ export default function ScriptEditorTiptap({
   // Функция расчёта хронометража сцены в зависимости от системы
   const calculateSceneTiming = (charCount: number, dialogLines: number = 0): { pages: number; duration: number } => {
     const coeff = genreCoefficient || 1.0
+    
+    // Страницы всегда считаются одинаково - это физический размер текста
+    const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
 
     switch (timingSystem) {
       case 'page':
         // Постраничный: 1 страница = 55 секунд
-        const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
         const duration = Math.round(pages * 55 * coeff)
         return { pages, duration }
 
       case 'character':
         // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
         const charDuration = Math.round(charCount * 0.05 * coeff)
-        const charPages = Math.max(0.1, parseFloat((charDuration / 55).toFixed(1)))
-        return { pages: charPages, duration: charDuration }
+        return { pages, duration: charDuration }
 
       case 'flexible':
-        // Гибкий: комбинация страниц и диалогов
-        // Базовый расчёт по страницам + вес диалогов
-        const basePages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        // Гибкий: базовый расчёт по страницам + вес диалогов
         const dialogWeight = dialogLines * 0.1 // каждая строка диалога добавляет 0.1 страницы
-        const flexiblePages = Math.max(0.1, parseFloat((basePages + dialogWeight).toFixed(1)))
-        const flexibleDuration = Math.round(flexiblePages * 55 * coeff)
-        return { pages: flexiblePages, duration: flexibleDuration }
+        const flexibleDuration = Math.round((pages + dialogWeight) * 55 * coeff)
+        return { pages, duration: flexibleDuration }
 
       case 'manual':
         // Ручной: пока используем постраничный как fallback
         // В будущем будет храниться в стор для каждой сцены
-        const manualPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        const manualDuration = Math.round(manualPages * 55 * coeff)
-        return { pages: manualPages, duration: manualDuration }
+        const manualDuration = Math.round(pages * 55 * coeff)
+        return { pages, duration: manualDuration }
 
       default:
         // Fallback на постраничный
-        const defaultPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-        const defaultDuration = Math.round(defaultPages * 55 * coeff)
-        return { pages: defaultPages, duration: defaultDuration }
+        const defaultDuration = Math.round(pages * 55 * coeff)
+        return { pages, duration: defaultDuration }
     }
   }
 
