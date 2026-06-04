@@ -20,7 +20,7 @@ export default function ScriptPage() {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
-  const { scripts, updateScript } = useScriptStore()
+  const { scripts, currentScriptId, updateScript, setCurrentScript } = useScriptStore()
   const currentScript = useScriptStore(state => 
     state.scripts.find(s => s.id === state.currentScriptId) || null
   )
@@ -105,9 +105,13 @@ export default function ScriptPage() {
           setScriptFormat(currentScript.format)
           prevFormatRef.current = currentScript.format
         }
+        // Устанавливаем currentScriptId если не установлен
+        if (!currentScriptId) {
+          setCurrentScript(currentScript.id)
+        }
       }
     }
-  }, [project, scripts])
+  }, [project, scripts, currentScriptId, setCurrentScript])
 
   // 4.1 Конвертация формата — вызываем функцию из редактора при переключении RU/EN
   const handleFormatSwitch = (newFormat: ScriptFormat) => {
@@ -579,6 +583,8 @@ export default function ScriptPage() {
                 cast: s.cast,
               }))}
               isDark={isDark}
+              timingSystem={currentScript?.timingSystem || 'page'}
+              genreCoefficient={currentScript?.genreCoefficient || 1.0}
               onSceneClick={(sceneId) => {
                 const selected = scenes.find(s => s.id === sceneId) || scenes[0]
                 setSelectedScene(selected)
@@ -873,12 +879,10 @@ export default function ScriptPage() {
                   // Сохраняем настройки в текущий сценарий
                   if (currentScript) {
                     const coefficient = tempGenreCoefficient === 'auto' ? 1.0 : parseFloat(tempGenreCoefficient)
-                    console.log('Saving timing settings:', { timingSystem: tempTimingSystem, genreCoefficient: coefficient, scriptId: currentScript.id })
                     updateScript(currentScript.id, {
                       timingSystem: tempTimingSystem,
                       genreCoefficient: coefficient,
                     })
-                    console.log('After updateScript, currentScript:', useScriptStore.getState().getCurrentScript())
                   }
                   setShowTimingSettingsModal(false)
                 }}

@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import type { TimingSystem } from '../store/scriptStore'
 
 // Упрощенный тип для сцен из редактора
 interface SimpleScene {
@@ -37,6 +38,8 @@ interface SceneNavigatorProps {
   onSceneClick?: (sceneId: string) => void
   activeSceneId?: string
   onSceneReorder?: (fromIndex: number, toIndex: number) => void
+  timingSystem?: TimingSystem
+  genreCoefficient?: number
 }
 
 export default function SceneNavigator({
@@ -45,9 +48,38 @@ export default function SceneNavigator({
   onSceneClick,
   activeSceneId,
   onSceneReorder,
+  timingSystem = 'page',
+  genreCoefficient = 1.0,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
+
+  // Функция расчёта хронометража сцены в зависимости от системы
+  const calculateSceneDuration = (pages: number): number => {
+    const coeff = genreCoefficient || 1.0
+    
+    switch (timingSystem) {
+      case 'page':
+        // Постраничный: 1 страница = 55 секунд
+        return Math.round(pages * 55 * coeff)
+      
+      case 'character':
+        // Посимвольный: 1 страница ≈ 1800 символов, 1 символ = 0.05 секунды
+        const charCount = pages * 1800
+        return Math.round(charCount * 0.05 * coeff)
+      
+      case 'flexible':
+        // Гибкий: базовый расчёт по страницам
+        return Math.round(pages * 55 * coeff)
+      
+      case 'manual':
+        // Ручной: пока fallback на постраничный
+        return Math.round(pages * 55 * coeff)
+      
+      default:
+        return Math.round(pages * 55 * coeff)
+    }
+  }
 
   const filteredScenes = useMemo(() => {
     if (filter === 'all') return scenes
@@ -216,7 +248,7 @@ export default function SceneNavigator({
                   </span>
                   <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
                     <Clock size={11} />
-                    {Math.floor(scene.pages)}:{((scene.pages % 1) * 60).toFixed(0).padStart(2, '0')}
+                    {Math.floor(calculateSceneDuration(scene.pages) / 60)}:{(calculateSceneDuration(scene.pages) % 60).toFixed(0).padStart(2, '0')}
                   </span>
                 </>
               )}
