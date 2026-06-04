@@ -567,6 +567,7 @@ export default function ScriptEditorTiptap({
     if (!editor || !focusSceneId) return
     let found = false
     let scrollPos: number | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     editor.state.doc.descendants((node, pos) => {
       if (found) return false
@@ -590,12 +591,19 @@ export default function ScriptEditorTiptap({
 
     // Повторяем скролл с задержкой чтобы гарантировать позицию
     if (scrollPos !== null) {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         const domNode = editor.view.nodeDOM(scrollPos) as HTMLElement | null
         if (domNode) {
           domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
       }, 500)
+    }
+
+    // Cleanup
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
   }, [focusSceneId, editor])
 
@@ -607,9 +615,15 @@ export default function ScriptEditorTiptap({
     const handleReorder = (fromIndex: number, toIndex: number) => {
       if (!editor) return
 
+      // Валидация индексов
+      if (fromIndex < 0 || toIndex < 0) return
+      if (fromIndex === toIndex) return
+
       // Получаем текущий документ как JSON
       const doc = editor.getJSON()
       const content = doc.content || []
+
+      if (content.length === 0) return
 
       // Находим все sceneHeader в JSON
       const sceneIndices: number[] = []
@@ -619,7 +633,8 @@ export default function ScriptEditorTiptap({
         }
       })
 
-      if (sceneIndices.length <= fromIndex || sceneIndices.length <= toIndex) return
+      if (sceneIndices.length === 0) return
+      if (fromIndex >= sceneIndices.length || toIndex >= sceneIndices.length) return
 
       // Определяем границы сцен для перестановки
       const fromStart = sceneIndices[fromIndex]
@@ -658,9 +673,14 @@ export default function ScriptEditorTiptap({
       editor.commands.setContent({ type: 'doc', content: newContent })
 
       // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         extractScenesFromDocument()
       }, 100)
+
+      // Возвращаем cleanup функцию
+      return () => {
+        clearTimeout(timeoutId)
+      }
     }
 
     // Передаем функцию родителю
@@ -676,32 +696,48 @@ export default function ScriptEditorTiptap({
   // Функция для обновления номеров в редакторе на основе массива сцен из навигатора
   const updateSceneNumbers = (scenes: Array<{ id: string; number: string }>) => {
     if (!editor) return
+    if (!scenes || scenes.length === 0) return
 
     const doc = editor.getJSON()
     const content = doc.content || []
+
+    if (content.length === 0) return
+
     let sceneIndex = 0
 
-    content.forEach((node: any) => {
-      if (node.type === 'sceneHeader' && node.content && node.content[0]) {
+    // Создаем новый контент с обновлёнными номерами (без мутации)
+    const newContent = content.map((node: any) => {
+      if (node.type === 'sceneHeader' && node.content && node.content[0] && sceneIndex < scenes.length) {
         const text = node.content[0].text || ''
         const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
 
-        if (headerMatch && sceneIndex < scenes.length) {
+        if (headerMatch) {
           const oldNumber = headerMatch[1]
           const newNumber = scenes[sceneIndex].number
 
           if (oldNumber !== newNumber) {
-            // Заменяем номер в тексте
-            node.content[0].text = text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`)
+            // Создаем новый узел с обновлённым текстом
+            return {
+              ...node,
+              content: [
+                {
+                  ...node.content[0],
+                  text: text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`)
+                },
+                ...node.content.slice(1)
+              ]
+            }
           }
 
           sceneIndex++
         }
       }
+
+      return node
     })
 
     // Устанавливаем обновленный документ
-    editor.commands.setContent(doc)
+    editor.commands.setContent({ type: 'doc', content: newContent })
   }
 
   if (!editor) {

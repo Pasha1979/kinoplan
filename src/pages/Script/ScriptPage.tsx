@@ -549,6 +549,12 @@ export default function ScriptPage() {
                 setFocusSceneId(selected.number)
               }}
               onSceneReorder={(fromIndex, toIndex) => {
+                // Валидация индексов
+                if (scenes.length === 0) return
+                if (fromIndex < 0 || fromIndex >= scenes.length) return
+                if (toIndex < 0 || toIndex >= scenes.length) return
+                if (fromIndex === toIndex) return
+
                 // Устанавливаем флаг перестановки
                 isReorderingRef.current = true
 
@@ -557,19 +563,16 @@ export default function ScriptPage() {
                 const [movedScene] = newScenes.splice(fromIndex, 1)
                 newScenes.splice(toIndex, 0, movedScene)
 
-                // Перенумеровываем сцены по новому порядку
+                // Перенумеровываем сцены по новому порядку (без мутации)
                 const isSerial = project?.type === 'serial' && currentSeries > 0
                 const seriesNumber = currentSeries
 
-                newScenes.forEach((scene, index) => {
-                  if (isSerial) {
-                    scene.number = `${seriesNumber}-${index + 1}`
-                  } else {
-                    scene.number = (index + 1).toString()
-                  }
-                })
+                const renumberedScenes = newScenes.map((scene, index) => ({
+                  ...scene,
+                  number: isSerial ? `${seriesNumber}-${index + 1}` : (index + 1).toString()
+                }))
 
-                setScenes(newScenes)
+                setScenes(renumberedScenes)
 
                 // Переставляем сцены в редакторе на основе порядка из навигатора
                 if (reorderEditorRef.current) {
@@ -579,7 +582,7 @@ export default function ScriptPage() {
                 // Обновляем номера в редакторе на основе перенумерованного массива scenes
                 setTimeout(() => {
                   if (updateNumbersRef.current) {
-                    updateNumbersRef.current(newScenes)
+                    updateNumbersRef.current(renumberedScenes)
                   }
                 }, 200)
 
