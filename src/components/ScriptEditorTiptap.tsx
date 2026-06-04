@@ -24,7 +24,7 @@ interface ScriptEditorTiptapProps {
   timingSystem: TimingSystem
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
-  onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
+  onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount: number }>) => void
   focusSceneId?: string
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
   onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number) => void) => void
@@ -281,7 +281,7 @@ export default function ScriptEditorTiptap({
   const extractScenesFromDocument = () => {
     if (!editor) return
 
-    type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number }
+    type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number; charCount: number }
     const scenes: SceneEntry[] = []
 
     // Собираем только блоки верхнего уровня документа (не inline-узлы)
@@ -355,7 +355,7 @@ export default function ScriptEditorTiptap({
       // Расчитываем хронометраж сцены в зависимости от выбранной системы
       const { pages, duration } = calculateSceneTiming(charCount, dialogLines)
 
-      scenes.push({ id: `scene-${sceneNumber}`, number: sceneNumber, type: sceneType, location, time, cast, pages, duration })
+      scenes.push({ id: `scene-${sceneNumber}`, number: sceneNumber, type: sceneType, location, time, cast, pages, duration, charCount })
     })
 
     if (onScenesChange) {

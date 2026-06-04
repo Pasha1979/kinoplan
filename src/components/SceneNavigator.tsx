@@ -29,6 +29,7 @@ interface SimpleScene {
   colorTag?: string
   isOmitted?: boolean
   pages?: number
+  charCount?: number
   cast?: string[]
 }
 
@@ -40,6 +41,8 @@ interface SceneNavigatorProps {
   onSceneReorder?: (fromIndex: number, toIndex: number) => void
   timingSystem?: TimingSystem
   genreCoefficient?: number
+  currentSeries?: number
+  episodeDuration?: number
 }
 
 export default function SceneNavigator({
@@ -50,36 +53,65 @@ export default function SceneNavigator({
   onSceneReorder,
   timingSystem = 'page',
   genreCoefficient = 1.0,
+  currentSeries = 1,
+  episodeDuration,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
 
   // Функция расчёта хронометража сцены в зависимости от системы
-  const calculateSceneDuration = (pages: number): number => {
+  const calculateSceneDuration = (scene: SimpleScene): number => {
     const coeff = genreCoefficient || 1.0
+    const charCount = scene.charCount || (scene.pages ? scene.pages * 1800 : 0)
     
     switch (timingSystem) {
       case 'page':
         // Постраничный: 1 страница = 55 секунд
+        const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
         return Math.round(pages * 55 * coeff)
       
       case 'character':
-        // Посимвольный: 1 страница ≈ 1800 символов, 1 символ = 0.05 секунды
-        const charCount = pages * 1800
+        // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
         return Math.round(charCount * 0.05 * coeff)
       
       case 'flexible':
         // Гибкий: базовый расчёт по страницам
-        return Math.round(pages * 55 * coeff)
+        const basePages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        return Math.round(basePages * 55 * coeff)
       
       case 'manual':
         // Ручной: пока fallback на постраничный
-        return Math.round(pages * 55 * coeff)
+        const manualPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        return Math.round(manualPages * 55 * coeff)
       
       default:
-        return Math.round(pages * 55 * coeff)
+        const defaultPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        return Math.round(defaultPages * 55 * coeff)
     }
   }
+
+  // Расчёт текущего хронометража серии
+  const currentSeriesDuration = useMemo(() => {
+    return scenes.reduce((total, scene) => {
+      if (scene.pages !== undefined) {
+        return total + calculateSceneDuration(scene)
+      }
+      return total
+    }, 0)
+  }, [scenes, timingSystem, genreCoefficient])
+
+  // Расчёт прогресса серии
+  const seriesProgress = useMemo(() => {
+    if (!episodeDuration) return null
+    const targetSeconds = episodeDuration * 60
+    const progress = Math.min(100, (currentSeriesDuration / targetSeconds) * 100)
+    return {
+      current: currentSeriesDuration,
+      target: targetSeconds,
+      progress: progress,
+      isOver: currentSeriesDuration > targetSeconds
+    }
+  }, [currentSeriesDuration, episodeDuration])
 
   const filteredScenes = useMemo(() => {
     if (filter === 'all') return scenes
@@ -248,7 +280,7 @@ export default function SceneNavigator({
                   </span>
                   <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
                     <Clock size={11} />
-                    {Math.floor(calculateSceneDuration(scene.pages) / 60)}:{(calculateSceneDuration(scene.pages) % 60).toFixed(0).padStart(2, '0')}
+                    {Math.floor(calculateSceneDuration(scene) / 60)}:{(calculateSceneDuration(scene) % 60).toFixed(0).padStart(2, '0')}
                   </span>
                 </>
               )}
@@ -327,6 +359,29 @@ export default function SceneNavigator({
           })}
         </div>
       </div>
+
+      {/* Прогресс-бар хронометража серии */}
+      {seriesProgress && (
+        <div className="px-3 py-2 border-b" style={{ borderColor: border }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px]" style={{ color: textSecondary }}>
+              Серия {currentSeries}
+            </span>
+            <span className="text-[10px]" style={{ color: seriesProgress.isOver ? '#ef4444' : textPrimary }}>
+              {Math.floor(seriesProgress.current / 60)}:{(seriesProgress.current % 60).toFixed(0).padStart(2, '0')} / {episodeDuration} мин
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${seriesProgress.progress}%`,
+                background: seriesProgress.isOver ? '#ef4444' : '#10b981'
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Список сцен */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">

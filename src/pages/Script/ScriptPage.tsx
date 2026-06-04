@@ -28,8 +28,8 @@ export default function ScriptPage() {
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<ScriptView>('empty')
-  const [scenes, setScenes] = useState<Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>>([])
-  const [selectedScene, setSelectedScene] = useState<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number } | null>(null)
+  const [scenes, setScenes] = useState<Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number }>>([])
+  const [selectedScene, setSelectedScene] = useState<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number } | null>(null)
   const [importHover, setImportHover] = useState(false)
   const [createHover, setCreateHover] = useState(false)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
@@ -580,11 +580,14 @@ export default function ScriptPage() {
                 location: s.location,
                 time: s.time,
                 pages: s.pages,
+                charCount: s.charCount,
                 cast: s.cast,
               }))}
               isDark={isDark}
               timingSystem={currentScript?.timingSystem || 'page'}
               genreCoefficient={currentScript?.genreCoefficient || 1.0}
+              currentSeries={currentSeries}
+              episodeDuration={project?.episodeDuration}
               onSceneClick={(sceneId) => {
                 const selected = scenes.find(s => s.id === sceneId) || scenes[0]
                 setSelectedScene(selected)
