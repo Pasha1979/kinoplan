@@ -20,8 +20,9 @@ export default function ScriptPage() {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
-  const { scripts } = useScriptStore()
+  const { scripts, getCurrentScript } = useScriptStore()
   const project = currentProjectId ? projects[currentProjectId] : null
+  const currentScript = getCurrentScript()
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<ScriptView>('empty')
@@ -629,7 +630,8 @@ export default function ScriptPage() {
                 fontFamily="Courier New"
                 fontSize={12}
                 isDark={isDark}
-                genreCoefficient={1.0}
+                genreCoefficient={currentScript?.genreCoefficient || 1.0}
+                timingSystem={currentScript?.timingSystem || 'page'}
                 onSceneCountChange={setSceneCount}
                 onStatsChange={setScriptStats}
                 onScenesChange={handleScenesChange}

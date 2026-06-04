@@ -3,7 +3,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
 import { useEffect, useCallback, useRef } from 'react'
-import type { ScriptFormat } from '../store/scriptStore'
+import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode } from './tiptap'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-react'
@@ -21,6 +21,7 @@ interface ScriptEditorTiptapProps {
   fontSize: number
   isDark: boolean
   genreCoefficient: number
+  timingSystem: TimingSystem
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => void
@@ -49,12 +50,54 @@ export default function ScriptEditorTiptap({
   onReorderReady,
   onUpdateNumbersReady,
   genreCoefficient,
+  timingSystem,
   smartTypeCharacters,
   smartTypeLocations,
   smartTypeTimes,
 }: ScriptEditorTiptapProps) {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
+
+  // Функция расчёта хронометража сцены в зависимости от системы
+  const calculateSceneTiming = (charCount: number, dialogLines: number = 0): { pages: number; duration: number } => {
+    const coeff = genreCoefficient || 1.0
+
+    switch (timingSystem) {
+      case 'page':
+        // Постраничный: 1 страница = 55 секунд
+        const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        const duration = Math.round(pages * 55 * coeff)
+        return { pages, duration }
+
+      case 'character':
+        // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
+        const charDuration = Math.round(charCount * 0.05 * coeff)
+        const charPages = Math.max(0.1, parseFloat((charDuration / 55).toFixed(1)))
+        return { pages: charPages, duration: charDuration }
+
+      case 'flexible':
+        // Гибкий: комбинация страниц и диалогов
+        // Базовый расчёт по страницам + вес диалогов
+        const basePages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        const dialogWeight = dialogLines * 0.1 // каждая строка диалога добавляет 0.1 страницы
+        const flexiblePages = Math.max(0.1, parseFloat((basePages + dialogWeight).toFixed(1)))
+        const flexibleDuration = Math.round(flexiblePages * 55 * coeff)
+        return { pages: flexiblePages, duration: flexibleDuration }
+
+      case 'manual':
+        // Ручной: пока используем постраничный как fallback
+        // В будущем будет храниться в стор для каждой сцены
+        const manualPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        const manualDuration = Math.round(manualPages * 55 * coeff)
+        return { pages: manualPages, duration: manualDuration }
+
+      default:
+        // Fallback на постраничный
+        const defaultPages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+        const defaultDuration = Math.round(defaultPages * 55 * coeff)
+        return { pages: defaultPages, duration: defaultDuration }
+    }
+  }
 
   // SmartType — подсказки при наборе (с дефолтами если пропсы не переданы)
   const smartType = useSmartType({
@@ -238,7 +281,7 @@ export default function ScriptEditorTiptap({
   const extractScenesFromDocument = () => {
     if (!editor) return
 
-    type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }
+    type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number }
     const scenes: SceneEntry[] = []
 
     // Собираем только блоки верхнего уровня документа (не inline-узлы)
@@ -299,14 +342,20 @@ export default function ScriptEditorTiptap({
 
       // Считаем символы до следующей sceneHeader для приблизительного кол-ва страниц
       let charCount = headerText.length
+      let dialogLines = 0
       for (let i = index + 1; i < blockNodes.length; i++) {
         const n = blockNodes[i]
         if (n.type.name === 'sceneHeader') break
         charCount += n.textContent.length
+        if (n.type.name === 'sceneDialog') {
+          dialogLines++
+        }
       }
-      const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
 
-      scenes.push({ id: `scene-${sceneNumber}`, number: sceneNumber, type: sceneType, location, time, cast, pages })
+      // Расчитываем хронометраж сцены в зависимости от выбранной системы
+      const { pages, duration } = calculateSceneTiming(charCount, dialogLines)
+
+      scenes.push({ id: `scene-${sceneNumber}`, number: sceneNumber, type: sceneType, location, time, cast, pages, duration })
     })
 
     if (onScenesChange) {
@@ -314,11 +363,11 @@ export default function ScriptEditorTiptap({
     }
     if (onStatsChange) {
       const totalPages = scenes.reduce((sum, s) => sum + s.pages, 0)
-      const coeff = genreCoefficient || 1.0
+      const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
       onStatsChange({
         scenes: scenes.length,
         pages: parseFloat(totalPages.toFixed(1)),
-        duration: Math.round(totalPages * 55 * coeff),
+        duration: totalDuration,
       })
     }
   }
