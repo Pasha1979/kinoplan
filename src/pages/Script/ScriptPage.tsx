@@ -34,6 +34,11 @@ export default function ScriptPage() {
   const [, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
   const [enableAutoFix, setEnableAutoFix] = useState(false)
+
+  // Целевой хронометраж из настроек проекта
+  const targetDuration = project?.type === 'serial' 
+    ? project.episodeDuration 
+    : project?.totalDuration
   const [_focusSceneId, setFocusSceneId] = useState<string>()
   const [scriptFormat, setScriptFormat] = useState<ScriptFormat>('russian')
   const [showFormatModal, setShowFormatModal] = useState(false)
@@ -373,6 +378,19 @@ export default function ScriptPage() {
                       {scriptStats.pages > 0
                         ? `${scriptStats.pages.toFixed(1)} стр. ≈ ${Math.round(scriptStats.duration / 60)} мин`
                         : `${selectedScene.pages} стр.`}
+                      {targetDuration && scriptStats.duration > 0 && (
+                        <span className="flex items-center gap-1 ml-1" style={{ 
+                          color: scriptStats.duration / 60 > targetDuration ? '#ef4444' : isDark ? 'rgba(255,255,255,0.6)' : '#6b7280'
+                        }}>
+                          {scriptStats.duration / 60 > targetDuration && <AlertTriangle size={10} />}
+                          / {targetDuration} мин
+                          {Math.abs(Math.round(scriptStats.duration / 60) - targetDuration) > 0 && (
+                            <span className="ml-1" style={{ fontSize: '10px' }}>
+                              ({Math.round(scriptStats.duration / 60) > targetDuration ? '+' : ''}{Math.round(scriptStats.duration / 60) - targetDuration})
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </span>
                   </div>
                 </>
