@@ -20,9 +20,11 @@ export default function ScriptPage() {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
-  const { scripts, getCurrentScript } = useScriptStore()
+  const { scripts, updateScript } = useScriptStore()
+  const currentScript = useScriptStore(state => 
+    state.scripts.find(s => s.id === state.currentScriptId) || null
+  )
   const project = currentProjectId ? projects[currentProjectId] : null
-  const currentScript = getCurrentScript()
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<ScriptView>('empty')
@@ -870,7 +872,6 @@ export default function ScriptPage() {
                 onClick={() => {
                   // Сохраняем настройки в текущий сценарий
                   if (currentScript) {
-                    const { updateScript } = useScriptStore.getState()
                     const coefficient = tempGenreCoefficient === 'auto' ? 1.0 : parseFloat(tempGenreCoefficient)
                     updateScript(currentScript.id, {
                       timingSystem: tempTimingSystem,
