@@ -357,7 +357,7 @@ export default function SceneNavigator({
       }}>
       
       {/* Шапка с градиентом */}
-      <div className="p-4 border-b relative overflow-hidden" 
+      <div className="p-4 border-b relative" 
         style={{ 
           borderColor: border,
           background: isDark 
@@ -367,7 +367,7 @@ export default function SceneNavigator({
         {/* Декоративный элемент */}
         <div className="absolute top-0 left-0 w-1 h-full" style={{ background: accentColor }} />
         
-        <div className="flex items-center justify-between mb-3 pl-2">
+        <div className="flex items-center justify-between mb-3 pl-2 gap-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)' }}>
@@ -378,23 +378,17 @@ export default function SceneNavigator({
               <p className="text-[10px]" style={{ color: textSecondary }}>Drag & drop для reorder</p>
             </div>
           </div>
-          <span className="text-xs px-2 py-1 rounded-full font-medium"
-            style={{ background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)', color: accentColor }}>
-            {filteredScenes.length}
-          </span>
-        </div>
-
-        {/* Выбор серии (только для сериалов) */}
-        {isSerial && (
-          <div className="flex items-center gap-1 pl-2 mb-2">
-            <div className="relative" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSeriesDropdownOpen(false) }}>
+          
+          {/* Выбор серии (только для сериалов) — в одну строку с заголовком */}
+          {isSerial && (
+            <div className="relative z-50" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSeriesDropdownOpen(false) }}>
               <button
                 onClick={() => setSeriesDropdownOpen(v => !v)}
                 className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
                 style={{
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.6)',
+                  background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)',
                   color: isDark ? '#e5e7eb' : '#374151',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'}`,
                 }}
               >
                 <span style={{ color: accentColor }}>●</span>
@@ -407,8 +401,9 @@ export default function SceneNavigator({
                   style={{
                     background: isDark ? '#1e1e3a' : '#ffffff',
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb'}`,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                    minWidth: 110,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    minWidth: 130,
+                    zIndex: 9999,
                   }}
                 >
                   {[0, ...Array.from({ length: episodesCount }, (_, i) => i + 1)].map(n => (
@@ -443,8 +438,13 @@ export default function SceneNavigator({
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+          
+          <span className="text-xs px-2 py-1 rounded-full font-medium shrink-0"
+            style={{ background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)', color: accentColor }}>
+            {filteredScenes.length}
+          </span>
+        </div>
 
         {/* Фильтры - стильные кнопки */}
         <div className="flex items-center gap-1 pl-2">
