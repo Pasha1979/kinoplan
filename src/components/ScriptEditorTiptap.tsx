@@ -36,56 +36,45 @@ interface ScriptEditorTiptapProps {
   smartTypeTimes?: string[]
 }
 
-// Получает вычисленные стили из реального DOM редактора
-function getComputedStylesFromEditor(element: HTMLElement, editorDom: HTMLElement): string {
-  // Находим соответствующий элемент в редакторе по data-type
-  const dataType = element.getAttribute('data-type')
-  if (!dataType) return ''
-  
-  const editorElement = editorDom.querySelector(`[data-type="${dataType}"]`)
-  if (!editorElement) return ''
-  
-  const computed = window.getComputedStyle(editorElement)
-  
-  // Собираем важные стили для Word
-  const styles: string[] = []
-  
-  // Отступы
-  const marginTop = computed.marginTop
-  const marginBottom = computed.marginBottom
-  const paddingLeft = computed.paddingLeft
-  const paddingRight = computed.paddingRight
-  
-  if (marginTop && marginTop !== '0px') styles.push(`margin-top: ${marginTop}`)
-  if (marginBottom && marginBottom !== '0px') styles.push(`margin-bottom: ${marginBottom}`)
-  if (paddingLeft && paddingLeft !== '0px') styles.push(`padding-left: ${paddingLeft}`)
-  if (paddingRight && paddingRight !== '0px') styles.push(`padding-right: ${paddingRight}`)
-  
-  // Выравнивание
-  const textAlign = computed.textAlign
-  if (textAlign && textAlign !== 'start') styles.push(`text-align: ${textAlign}`)
-  
-  // Шрифт
-  const fontWeight = computed.fontWeight
-  if (fontWeight && fontWeight !== '400') styles.push(`font-weight: ${fontWeight}`)
-  
-  const textTransform = computed.textTransform
-  if (textTransform && textTransform !== 'none') styles.push(`text-transform: ${textTransform}`)
-  
-  return styles.join('; ')
+// Жёстко задаём стили для каждого типа блока (соответствует index.css)
+const SCRIPT_STYLES: Record<string, { russian: string; hollywood: string }> = {
+  'scene-header': {
+    russian: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    hollywood: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; padding-left: 0',
+  },
+  'scene-cast': {
+    russian: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    hollywood: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; padding-left: 0',
+  },
+  'scene-action': {
+    russian: 'margin-top: 12px; margin-bottom: 12px; padding-left: 0',
+    hollywood: 'margin-top: 12px; margin-bottom: 12px; padding-left: 0',
+  },
+  'scene-character': {
+    russian: 'margin-top: 16px; margin-bottom: 0; text-align: center; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    hollywood: 'margin-top: 16px; margin-bottom: 0; padding-left: 9.3cm; font-weight: 600; text-transform: uppercase',
+  },
+  'scene-dialog': {
+    russian: 'margin-top: 0; margin-bottom: 16px; padding-left: 3.75cm; padding-right: 3.75cm',
+    hollywood: 'margin-top: 0; margin-bottom: 16px; padding-left: 6.35cm; padding-right: 2.5cm',
+  },
+  'scene-transition': {
+    russian: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    hollywood: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; padding-left: 0',
+  },
 }
 
 // Конвертирует HTML в Word-совместимый HTML с inline-стилями
-function convertToWordCompatibleHtml(html: string, editorDom: HTMLElement): string {
+function convertToWordCompatibleHtml(html: string, _editorDom: HTMLElement, format: 'russian' | 'hollywood' = 'russian'): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
   
-  // Применяем inline-стили на основе computed styles из редактора
   const applyStyles = (element: HTMLElement) => {
-    const inlineStyles = getComputedStylesFromEditor(element, editorDom)
-    if (inlineStyles) {
+    const dataType = element.getAttribute('data-type')
+    if (dataType && SCRIPT_STYLES[dataType]) {
       const current = element.getAttribute('style') || ''
-      element.setAttribute('style', current + (current ? '; ' : '') + inlineStyles)
+      const newStyles = SCRIPT_STYLES[dataType][format]
+      element.setAttribute('style', current + (current ? '; ' : '') + newStyles)
     }
     
     Array.from(element.children).forEach(child => {
@@ -95,7 +84,7 @@ function convertToWordCompatibleHtml(html: string, editorDom: HTMLElement): stri
   
   applyStyles(doc.body)
   
-  // Word wrapper с inline-стилями
+  // Word wrapper
   const wrapper = document.createElement('div')
   wrapper.innerHTML = doc.body.innerHTML
   wrapper.setAttribute('style', 
@@ -234,7 +223,7 @@ export default function ScriptEditorTiptap({
           div.appendChild(serializer.serializeFragment(selection.content().content))
           
           // Конвертируем CSS-классы в inline-стили для Word
-          const html = convertToWordCompatibleHtml(div.innerHTML, view.dom)
+          const html = convertToWordCompatibleHtml(div.innerHTML, view.dom, (_format as 'russian' | 'hollywood') || 'russian')
           
           event.clipboardData?.setData('text/html', html)
           event.clipboardData?.setData('text/plain', div.textContent || '')
