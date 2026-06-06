@@ -48,6 +48,7 @@ export default function ScriptPage() {
   const [showTimingSettingsModal, setShowTimingSettingsModal] = useState(false)
   const [tempTimingSystem, setTempTimingSystem] = useState<TimingSystem>('page')
   const [tempGenreCoefficient, setTempGenreCoefficient] = useState('auto')
+  const [tempFormat, setTempFormat] = useState<ScriptFormat>('russian')
   const [currentSeries, setCurrentSeries] = useState(1)
   const [isSaving, setIsSaving] = useState(false)
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
@@ -353,22 +354,6 @@ export default function ScriptPage() {
             )}
             
             {/* Переключатель форматов */}
-            <div className="flex items-center gap-1 rounded-lg p-0.5"
-              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
-              <button
-                onClick={() => handleFormatSwitch('russian')}
-                className={`rounded-md px-2 py-1 text-xs font-medium transition-all ${scriptFormat === 'russian' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
-              >
-                RU
-              </button>
-              <button
-                onClick={() => handleFormatSwitch('hollywood')}
-                className={`rounded-md px-2 py-1 text-xs font-medium transition-all ${scriptFormat === 'hollywood' ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/10 text-indigo-600') : (isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}`}
-              >
-                EN
-              </button>
-            </div>
-            <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
             <div>
               {selectedScene ? (
                 <>
@@ -472,6 +457,7 @@ export default function ScriptPage() {
               onClick={() => {
                 setTempTimingSystem(currentScript?.timingSystem || 'page')
                 setTempGenreCoefficient(currentScript?.genreCoefficient === 1.0 ? 'auto' : currentScript?.genreCoefficient?.toString() || 'auto')
+                setTempFormat(scriptFormat)
                 setShowTimingSettingsModal(true)
               }}
               className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
@@ -875,7 +861,7 @@ export default function ScriptPage() {
           <div className="max-w-md w-full mx-4 p-6 rounded-2xl"
             style={{ background: isDark ? '#1a1a35' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold" style={{ color: textPrimary }}>Настройки хронометража</h3>
+              <h3 className="text-lg font-bold" style={{ color: textPrimary }}>Настройки сценария</h3>
               <button
                 onClick={() => setShowTimingSettingsModal(false)}
                 className="p-1 rounded-lg hover:bg-white/10 transition-colors"
@@ -883,6 +869,52 @@ export default function ScriptPage() {
               >
                 <X size={18} />
               </button>
+            </div>
+            
+            {/* Переключатель языка формата */}
+            <div className="mb-4 p-3 rounded-xl"
+              style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
+              <label className="text-xs font-medium mb-2 block" style={{ color: textPrimary }}>
+                Формат сценария
+              </label>
+              <div className="flex items-center gap-1 p-1 rounded-lg"
+                style={{ background: isDark ? 'rgba(0,0,0,0.3)' : '#e5e7eb' }}>
+                <button
+                  onClick={() => {
+                    setTempFormat('russian')
+                    handleFormatSwitch('russian')
+                  }}
+                  className="flex-1 py-2 rounded-md text-xs font-medium transition-all"
+                  style={{
+                    background: tempFormat === 'russian' 
+                      ? (isDark ? 'rgba(99,102,241,0.9)' : 'rgba(99,102,241,0.95)') 
+                      : 'transparent',
+                    color: tempFormat === 'russian' ? '#ffffff' : (isDark ? '#9ca3af' : '#64748b'),
+                    boxShadow: tempFormat === 'russian' ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
+                  }}
+                >
+                  🇷🇺 Русский (RU)
+                </button>
+                <button
+                  onClick={() => {
+                    setTempFormat('hollywood')
+                    handleFormatSwitch('hollywood')
+                  }}
+                  className="flex-1 py-2 rounded-md text-xs font-medium transition-all"
+                  style={{
+                    background: tempFormat === 'hollywood' 
+                      ? (isDark ? 'rgba(99,102,241,0.9)' : 'rgba(99,102,241,0.95)') 
+                      : 'transparent',
+                    color: tempFormat === 'hollywood' ? '#ffffff' : (isDark ? '#9ca3af' : '#64748b'),
+                    boxShadow: tempFormat === 'hollywood' ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
+                  }}
+                >
+                  🇺🇸 Hollywood (EN)
+                </button>
+              </div>
+              <p className="text-[10px] mt-2" style={{ color: textSecondary }}>
+                Переключает форматирование сценария между русским и голливудским стандартом
+              </p>
             </div>
             
             <p className="text-sm mb-4" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
