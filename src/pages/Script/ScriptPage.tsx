@@ -382,33 +382,6 @@ export default function ScriptPage() {
                         {c}
                       </span>
                     ))}
-                    <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>·</span>
-                    <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#818cf8' : '#6366f1' }}>
-                      <AlignLeft size={10} />
-                      {scriptStats.pages > 0
-                        ? `${scriptStats.pages.toFixed(1)} стр.`
-                        : `${selectedScene?.charCount ? (selectedScene.charCount / 1800).toFixed(1) : '0'} стр.`}
-                    </span>
-                    <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>·</span>
-                    <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
-                      <Clock size={10} />
-                      {scriptStats.duration > 0
-                        ? `${Math.floor(scriptStats.duration / 60)}:${(scriptStats.duration % 60).toString().padStart(2, '0')}`
-                        : '0:00'}
-                      {targetDuration && scriptStats.duration > 0 && (
-                        <span className="flex items-center gap-1 ml-1" style={{ 
-                          color: scriptStats.duration / 60 > targetDuration ? '#ef4444' : isDark ? 'rgba(255,255,255,0.6)' : '#6b7280'
-                        }}>
-                          {scriptStats.duration / 60 > targetDuration && <AlertTriangle size={10} />}
-                          / ${targetDuration}:00
-                          {Math.abs(Math.round(scriptStats.duration / 60) - targetDuration) > 0 && (
-                            <span className="ml-1" style={{ fontSize: '10px' }}>
-                              ({Math.round(scriptStats.duration / 60) > targetDuration ? '+' : ''}{Math.round(scriptStats.duration / 60) - targetDuration})
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </span>
                   </div>
                 </>
               ) : (
