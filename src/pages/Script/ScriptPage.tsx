@@ -678,8 +678,28 @@ export default function ScriptPage() {
             </span>
             <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
               <Clock size={11} />
-              ≈ {Math.round(scriptStats.duration / 60)} мин
+              {Math.floor(scriptStats.duration / 60)}:{(scriptStats.duration % 60).toString().padStart(2, '0')}
             </span>
+            
+            {/* Прогресс-бар хронометража серии */}
+            {targetDuration && (
+              <div className="flex-1 flex items-center gap-3">
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, (scriptStats.duration / 60 / targetDuration) * 100)}%`,
+                      background: scriptStats.duration / 60 > targetDuration ? '#ef4444' : '#10b981'
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] whitespace-nowrap" style={{ 
+                  color: scriptStats.duration / 60 > targetDuration ? '#ef4444' : textSecondary 
+                }}>
+                  {Math.floor(scriptStats.duration / 60)} / {targetDuration} мин
+                </span>
+              </div>
+            )}
           </div>
         )}
 
