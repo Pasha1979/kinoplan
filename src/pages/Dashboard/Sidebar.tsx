@@ -107,20 +107,44 @@ export default function Sidebar() {
         minHeight: '100vh',
       }}
     >
-      {/* Шапка — логотип + название проекта */}
+      {/* Шапка — логотип + название проекта + кнопка сворачивания */}
       <div
         className="shrink-0 flex items-center gap-3 border-b border-white/8 overflow-hidden"
-        style={{ padding: sidebarExpanded ? '20px 20px 18px' : '20px 0 18px', justifyContent: sidebarExpanded ? 'flex-start' : 'center' }}
+        style={{ padding: sidebarExpanded ? '16px 16px 14px' : '16px 0 14px', justifyContent: sidebarExpanded ? 'flex-start' : 'center' }}
       >
         <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
           <Film size={18} className="text-white" />
         </div>
         {sidebarExpanded && (
-          <div className="overflow-hidden">
+          <div className="overflow-hidden flex-1">
             <p className="text-white text-sm font-bold truncate leading-tight">{project.name}</p>
             <p className="text-gray-500 text-xs mt-0.5">КиноПлан</p>
           </div>
         )}
+        
+        {/* Кнопка сворачивания — теперь внутри шапки */}
+        <button
+          onClick={toggleSidebar}
+          className="w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0"
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#9ca3af',
+          }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.12)'
+            ;(e.currentTarget as HTMLElement).style.color = '#fb923c'
+            ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(249,115,22,0.5)'
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'
+            ;(e.currentTarget as HTMLElement).style.color = '#9ca3af'
+            ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'
+          }}
+          title={sidebarExpanded ? 'Свернуть меню' : 'Развернуть меню'}
+        >
+          {sidebarExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </button>
       </div>
 
       {/* Навигация */}
@@ -332,26 +356,6 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Кнопка сворачивания */}
-      <button
-        onClick={toggleSidebar}
-        className="absolute -right-3.5 top-24 w-7 h-7 rounded-full flex items-center justify-center transition-all z-10"
-        style={{
-          background: '#1e1e3a',
-          border: '1px solid rgba(255,255,255,0.15)',
-          color: '#6b7280',
-        }}
-        onMouseEnter={(e) => {
-          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(249,115,22,0.5)'
-          ;(e.currentTarget as HTMLElement).style.color = '#fb923c'
-        }}
-        onMouseLeave={(e) => {
-          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'
-          ;(e.currentTarget as HTMLElement).style.color = '#6b7280'
-        }}
-      >
-        {sidebarExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-      </button>
     </aside>
   )
 }
