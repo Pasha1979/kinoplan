@@ -36,52 +36,75 @@ interface ScriptEditorTiptapProps {
   smartTypeTimes?: string[]
 }
 
-// Конвертирует HTML с CSS-классами в Word-совместимый HTML с inline-стилями
+// Получает вычисленные стили из реального DOM редактора
+function getComputedStylesFromEditor(element: HTMLElement, editorDom: HTMLElement): string {
+  // Находим соответствующий элемент в редакторе по data-type
+  const dataType = element.getAttribute('data-type')
+  if (!dataType) return ''
+  
+  const editorElement = editorDom.querySelector(`[data-type="${dataType}"]`)
+  if (!editorElement) return ''
+  
+  const computed = window.getComputedStyle(editorElement)
+  
+  // Собираем важные стили для Word
+  const styles: string[] = []
+  
+  // Отступы
+  const marginTop = computed.marginTop
+  const marginBottom = computed.marginBottom
+  const paddingLeft = computed.paddingLeft
+  const paddingRight = computed.paddingRight
+  
+  if (marginTop && marginTop !== '0px') styles.push(`margin-top: ${marginTop}`)
+  if (marginBottom && marginBottom !== '0px') styles.push(`margin-bottom: ${marginBottom}`)
+  if (paddingLeft && paddingLeft !== '0px') styles.push(`padding-left: ${paddingLeft}`)
+  if (paddingRight && paddingRight !== '0px') styles.push(`padding-right: ${paddingRight}`)
+  
+  // Выравнивание
+  const textAlign = computed.textAlign
+  if (textAlign && textAlign !== 'start') styles.push(`text-align: ${textAlign}`)
+  
+  // Шрифт
+  const fontWeight = computed.fontWeight
+  if (fontWeight && fontWeight !== '400') styles.push(`font-weight: ${fontWeight}`)
+  
+  const textTransform = computed.textTransform
+  if (textTransform && textTransform !== 'none') styles.push(`text-transform: ${textTransform}`)
+  
+  return styles.join('; ')
+}
+
+// Конвертирует HTML в Word-совместимый HTML с inline-стилями
 function convertToWordCompatibleHtml(html: string, editorDom: HTMLElement): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
   
-  // Получаем computed styles из редактора для конвертации
-  const computedStyles: Record<string, string> = {}
-  const styleSheets = document.styleSheets
-  
-  for (const sheet of Array.from(styleSheets)) {
-    try {
-      const rules = Array.from(sheet.cssRules || sheet.rules || [])
-      for (const rule of rules) {
-        if (rule instanceof CSSStyleRule) {
-          computedStyles[rule.selectorText] = rule.cssText.replace(rule.selectorText, '')
-        }
-      }
-    } catch {
-      // Игнорируем cross-origin stylesheets
-    }
-  }
-  
-  // Применяем inline-стили к элементам
-  const applyInlineStyles = (element: HTMLElement) => {
-    const classes = Array.from(element.classList)
-    for (const cls of classes) {
-      const selector = '.' + cls
-      if (computedStyles[selector]) {
-        const currentStyle = element.getAttribute('style') || ''
-        const newStyle = computedStyles[selector].replace(/[{}]/g, '').trim()
-        element.setAttribute('style', currentStyle + '; ' + newStyle)
-      }
+  // Применяем inline-стили на основе computed styles из редактора
+  const applyStyles = (element: HTMLElement) => {
+    const inlineStyles = getComputedStylesFromEditor(element, editorDom)
+    if (inlineStyles) {
+      const current = element.getAttribute('style') || ''
+      element.setAttribute('style', current + (current ? '; ' : '') + inlineStyles)
     }
     
-    // Рекурсивно обрабатываем детей
     Array.from(element.children).forEach(child => {
-      if (child instanceof HTMLElement) applyInlineStyles(child)
+      if (child instanceof HTMLElement) applyStyles(child)
     })
   }
   
-  applyInlineStyles(doc.body)
+  applyStyles(doc.body)
   
-  // Добавляем базовые стили для Word
+  // Word wrapper с inline-стилями
   const wrapper = document.createElement('div')
   wrapper.innerHTML = doc.body.innerHTML
-  wrapper.setAttribute('style', 'font-family: "Courier New", Courier, monospace; font-size: 12pt; line-height: 1.5;')
+  wrapper.setAttribute('style', 
+    'font-family: "Courier New", Courier, monospace; ' +
+    'font-size: 12pt; ' +
+    'line-height: 1.5; ' +
+    'max-width: 21cm; ' +
+    'margin: 0 auto;'
+  )
   
   return wrapper.outerHTML
 }
