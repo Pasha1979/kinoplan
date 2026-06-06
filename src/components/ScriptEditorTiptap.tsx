@@ -11,6 +11,7 @@ import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-
 import { useSmartType } from '../hooks/useSmartType'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
+import { getPageCounter } from '../services/pageCounter'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -187,6 +188,8 @@ export default function ScriptEditorTiptap({
   const isReplacingRef = useRef(false)
   // Храним timeout IDs для очистки при unmount
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  // Точное количество страниц (через виртуальный A4-рендеринг)
+  const precisePagesRef = useRef<number>(0.1)
 
   // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
   // При "Все серии" (currentSeries === 0) загружаем первую серию, чтобы не было пустого экрана
@@ -347,6 +350,9 @@ export default function ScriptEditorTiptap({
       // 1.1 Сохраняем в localStorage с ключом по projectId
       safeSetLocalStorage(draftKey, html)
       
+      // Точный подсчёт страниц через виртуальный A4-рендеринг
+      precisePagesRef.current = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
+      
       // Извлекаем сцены из SceneNode (мгновенно)
       extractScenesFromDocument()
       
@@ -458,14 +464,11 @@ export default function ScriptEditorTiptap({
       onScenesChange(scenes)
     }
     if (onStatsChange) {
-      // Считаем страницы от общего кол-ва символов (как под редактором),
-      // а не суммируя округлённые по сценам — чтобы не было расхождения
-      const totalCharCount = scenes.reduce((sum, s) => sum + s.charCount, 0)
-      const totalPages = parseFloat((totalCharCount / 1800).toFixed(1))
+      // Используем точный подсчёт страниц через виртуальный A4-рендеринг
       const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
       onStatsChange({
         scenes: scenes.length,
-        pages: totalPages,
+        pages: precisePagesRef.current,
         duration: totalDuration,
       })
     }
@@ -1002,7 +1005,7 @@ export default function ScriptEditorTiptap({
           {editor.getText().length} симв.
         </span>
         <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
-          {(editor.getText().length / 1800).toFixed(1)} стр.
+          {precisePagesRef.current.toFixed(1)} стр.
         </span>
       </div>
 
