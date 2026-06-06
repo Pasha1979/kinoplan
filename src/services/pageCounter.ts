@@ -79,6 +79,9 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
 export class PageCounter {
   private container: HTMLDivElement | null = null
   private mmToPx = 3.7795 // 1 mm ≈ 3.7795 px при 96 dpi
+  // Калибровочный коэффициент: браузер рендерит шрифт крупнее, чем Word
+  // Если КИНОплан показывает 2.5, а Word ~1.9 → коэффициент ~0.76
+  private calibrationFactor = 0.78
 
   constructor() {
     this.createContainer()
@@ -87,12 +90,13 @@ export class PageCounter {
   private createContainer() {
     this.container = document.createElement('div')
     // Скрытый A4-контейнер с точными полями как в редакторе
+    // Важно: без overflow:hidden (иначе текст обрезается)
+    // Без min-height (чтобы scrollHeight = реальная высота контента)
     this.container.style.cssText = `
       position: fixed;
       left: -9999px;
       top: -9999px;
       width: 210mm;
-      min-height: 297mm;
       padding: 2cm 2cm 2cm 3cm;
       box-sizing: border-box;
       font-family: "Courier New", Courier, monospace;
@@ -100,14 +104,15 @@ export class PageCounter {
       line-height: 1.5;
       visibility: hidden;
       pointer-events: none;
-      overflow: hidden;
       word-wrap: break-word;
+      white-space: pre-wrap;
     `
     document.body.appendChild(this.container)
   }
 
   /**
    * Возвращает точное количество страниц A4 для заданного HTML.
+   * Учитывает калибровочный коэффициент для соответствия Word.
    */
   calculatePages(html: string, format: 'russian' | 'hollywood' = 'russian'): number {
     if (!this.container) {
@@ -117,7 +122,7 @@ export class PageCounter {
     const styledHtml = applyScriptStyles(html, format)
     this.container!.innerHTML = styledHtml
 
-    // Высота контента в px
+    // Высота контента в px (без min-height это реальная высота)
     const contentHeightPx = this.container!.scrollHeight
     // Конвертируем в mm
     const contentHeightMm = contentHeightPx / this.mmToPx
@@ -125,8 +130,10 @@ export class PageCounter {
     // Поля: top 2cm + bottom 2cm = 4cm = 40mm
     const usablePageHeightMm = 297 - 40
 
-    const pages = contentHeightMm / usablePageHeightMm
-    return Math.max(0.1, parseFloat(pages.toFixed(1)))
+    const rawPages = contentHeightMm / usablePageHeightMm
+    // Применяем калибровку (браузер рендерит крупнее, чем Word)
+    const calibratedPages = rawPages * this.calibrationFactor
+    return Math.max(0.1, parseFloat(calibratedPages.toFixed(1)))
   }
 
   /**
