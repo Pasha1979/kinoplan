@@ -382,6 +382,37 @@ export default function ScriptPage() {
                         {c}
                       </span>
                     ))}
+                    {/* Хронометраж выбранной сцены */}
+                    {selectedScene.pages > 0 && (
+                      <>
+                        <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>·</span>
+                        <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
+                          <Clock size={10} />
+                          {(() => {
+                            const timingSystem = currentScript?.timingSystem || 'page'
+                            const coeff = currentScript?.genreCoefficient || 1.0
+                            const pages = selectedScene.pages || 0
+                            const charCount = selectedScene.charCount || Math.round(pages * 1800)
+                            
+                            let duration = 0
+                            switch (timingSystem) {
+                              case 'page':
+                                duration = Math.round(pages * 55 * coeff)
+                                break
+                              case 'character':
+                                duration = Math.round(charCount * 0.05 * coeff)
+                                break
+                              case 'flexible':
+                              case 'manual':
+                              default:
+                                duration = Math.round(pages * 55 * coeff)
+                            }
+                            
+                            return `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`
+                          })()}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </>
               ) : (
