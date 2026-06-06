@@ -352,18 +352,22 @@ export default function ScriptEditorTiptap({
       // 1.1 Сохраняем в localStorage с ключом по projectId
       safeSetLocalStorage(draftKey, html)
       
-      // Точный подсчёт страниц через виртуальный A4-рендеринг (с дебаунсом 400мс)
+      // Точный подсчёт страниц через виртуальный A4-рендеринг
+      // (с дебаунсом 400мс чтобы не тормозить при наборе)
       if (pageCountTimeoutRef.current) {
         clearTimeout(pageCountTimeoutRef.current)
       }
       pageCountTimeoutRef.current = setTimeout(() => {
-        precisePagesRef.current = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
+        const pages = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
+        precisePagesRef.current = pages
+        // eslint-disable-next-line no-console
+        console.log('[onUpdate] precisePages:', pages, '| html.length:', html.length, '| html:', html.substring(0, 100))
         // Форсируем обновление UI
         extractScenesFromDocument()
         pageCountTimeoutRef.current = null
       }, 400)
       
-      // Извлекаем сцены из SceneNode (мгновенно)
+      // Извлекаем сцены мгновенно (без страниц — они обновятся через таймаут)
       extractScenesFromDocument()
       
       // Автоопределение типа блока

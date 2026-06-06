@@ -86,12 +86,13 @@ export class PageCounter {
 
   private createContainer() {
     this.container = document.createElement('div')
-    // Важно: opacity:0 вместо visibility:hidden — браузер ДОЛЖЕН отрендерить
-    // контент, иначе scrollHeight === 0. position:absolute вместо fixed.
+    // Важно: браузер должен отрендерить контент для корректного scrollHeight.
+    // opacity:0 рендерит (в отличие от visibility:hidden или display:none).
+    // position:fixed в viewport — браузер не оптимизирует рендеринг.
     this.container.style.cssText = `
-      position: absolute;
-      left: -9999px;
-      top: -9999px;
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 210mm;
       padding: 2cm 2cm 2cm 3cm;
       box-sizing: border-box;
@@ -102,6 +103,7 @@ export class PageCounter {
       pointer-events: none;
       word-wrap: break-word;
       white-space: pre-wrap;
+      z-index: -1;
     `
     document.body.appendChild(this.container)
   }
@@ -129,7 +131,9 @@ export class PageCounter {
 
     // Debug: можно увидеть в консоли F12
     // eslint-disable-next-line no-console
-    console.log('[PageCounter] scrollHeight:', contentHeightPx, 'px →', contentHeightMm.toFixed(1), 'mm →', pages.toFixed(2), 'pages')
+    console.log('[PageCounter] html.len:', html.length, 'styled.len:', styledHtml.length, 'scrollHeight:', contentHeightPx, 'px →', contentHeightMm.toFixed(1), 'mm →', pages.toFixed(2), 'pages')
+    // eslint-disable-next-line no-console
+    console.log('[PageCounter] styledHtml preview:', styledHtml.substring(0, 200))
 
     return Math.max(0.1, parseFloat(pages.toFixed(1)))
   }
