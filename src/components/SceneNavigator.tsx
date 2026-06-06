@@ -43,6 +43,9 @@ interface SceneNavigatorProps {
   genreCoefficient?: number
   currentSeries?: number
   episodeDuration?: number
+  isSerial?: boolean
+  episodesCount?: number
+  onSeriesChange?: (series: number) => void
 }
 
 export default function SceneNavigator({
@@ -55,9 +58,13 @@ export default function SceneNavigator({
   genreCoefficient = 1.0,
   currentSeries = 1,
   episodeDuration,
+  isSerial,
+  episodesCount = 8,
+  onSeriesChange,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
+  const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
 
   // Функция расчёта хронометража сцены в зависимости от системы
   const calculateSceneTiming = (scene: SimpleScene): { pages: number; duration: number } => {
@@ -376,6 +383,68 @@ export default function SceneNavigator({
             {filteredScenes.length}
           </span>
         </div>
+
+        {/* Выбор серии (только для сериалов) */}
+        {isSerial && (
+          <div className="flex items-center gap-1 pl-2 mb-2">
+            <div className="relative" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSeriesDropdownOpen(false) }}>
+              <button
+                onClick={() => setSeriesDropdownOpen(v => !v)}
+                className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
+                style={{
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.6)',
+                  color: isDark ? '#e5e7eb' : '#374151',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                }}
+              >
+                <span style={{ color: accentColor }}>●</span>
+                {currentSeries === 0 ? 'Все серии' : `Серия ${currentSeries}`}
+                <ChevronDown size={11} className={`transition-transform ${seriesDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {seriesDropdownOpen && (
+                <div
+                  className="absolute top-full left-0 mt-1 rounded-xl overflow-hidden z-50"
+                  style={{
+                    background: isDark ? '#1e1e3a' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb'}`,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                    minWidth: 110,
+                  }}
+                >
+                  {[0, ...Array.from({ length: episodesCount }, (_, i) => i + 1)].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => { 
+                        onSeriesChange?.(n)
+                        setSeriesDropdownOpen(false) 
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs transition-all"
+                      style={{
+                        background: currentSeries === n
+                          ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)')
+                          : 'transparent',
+                        color: currentSeries === n
+                          ? accentColor
+                          : (isDark ? '#e5e7eb' : '#374151'),
+                        fontWeight: currentSeries === n ? 600 : 400,
+                      }}
+                      onMouseEnter={e => {
+                        if (currentSeries !== n)
+                          (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'
+                      }}
+                      onMouseLeave={e => {
+                        if (currentSeries !== n)
+                          (e.currentTarget as HTMLElement).style.background = 'transparent'
+                      }}
+                    >
+                      {n === 0 ? 'Все серии' : `Серия ${n}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Фильтры - стильные кнопки */}
         <div className="flex items-center gap-1 pl-2">
