@@ -223,10 +223,16 @@ export default function SceneNavigator({
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        className={`rounded-lg border overflow-hidden transition-all cursor-pointer hover:scale-[1.02] hover:shadow-md ${isActive ? 'ring-1 ring-indigo-500' : ''} ${isDark ? 'hover:bg-white/8' : 'hover:bg-gray-50'}`}
+        className={`group rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 ring-offset-1' : ''} ${isDark ? 'hover:bg-white/5' : 'hover:bg-white'}`}
         style={{
-          background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
-          borderColor: isActive ? '#6366f1' : border,
+          background: isActive 
+            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)') 
+            : (isDark ? 'rgba(255,255,255,0.04)' : '#ffffff'),
+          borderColor: isActive ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+          boxShadow: isActive 
+            ? (isDark ? '0 4px 20px rgba(99,102,241,0.25)' : '0 4px 20px rgba(99,102,241,0.2)') 
+            : (isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)'),
+          transform: isActive ? 'translateX(4px)' : undefined,
           ...style,
         }}
         onClick={() => onSceneClick?.(scene.id)}
@@ -327,40 +333,71 @@ export default function SceneNavigator({
     )
   }
 
-  const cardBg = isDark ? '#13132a' : '#ffffff'
-  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const cardBg = isDark ? '#0f0f1a' : '#f8fafc'
+  const border = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
-  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const textSecondary = isDark ? '#6b7280' : '#64748b'
+  const accentColor = isDark ? '#6366f1' : '#4f46e5'
 
   return (
-    <div className="w-72 flex flex-col border-r h-full"
-      style={{ background: cardBg, borderColor: border }}>
+    <div className="w-72 flex flex-col h-full relative"
+      style={{ 
+        background: cardBg,
+        borderRight: `1px solid ${border}`,
+        boxShadow: isDark 
+          ? '4px 0 24px rgba(0,0,0,0.4)' 
+          : '4px 0 24px rgba(0,0,0,0.08)'
+      }}>
       
-      {/* Шапка */}
-      <div className="p-4 border-b" style={{ borderColor: border }}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold flex items-center gap-2" style={{ color: textPrimary }}>
-            <Film size={16} />
-            Сцены
-          </h2>
-          <span className="text-xs px-2 py-1 rounded-full"
-            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#f0f0f0', color: textSecondary }}>
+      {/* Шапка с градиентом */}
+      <div className="p-4 border-b relative overflow-hidden" 
+        style={{ 
+          borderColor: border,
+          background: isDark 
+            ? 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.05) 100%)' 
+            : 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.02) 100%)'
+        }}>
+        {/* Декоративный элемент */}
+        <div className="absolute top-0 left-0 w-1 h-full" style={{ background: accentColor }} />
+        
+        <div className="flex items-center justify-between mb-3 pl-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)' }}>
+              <Film size={16} style={{ color: accentColor }} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold" style={{ color: textPrimary }}>Навигатор сцен</h2>
+              <p className="text-[10px]" style={{ color: textSecondary }}>Drag & drop для reorder</p>
+            </div>
+          </div>
+          <span className="text-xs px-2 py-1 rounded-full font-medium"
+            style={{ background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)', color: accentColor }}>
             {filteredScenes.length}
           </span>
         </div>
 
-        {/* Фильтры */}
-        <div className="flex items-center gap-1">
+        {/* Фильтры - стильные кнопки */}
+        <div className="flex items-center gap-1 pl-2">
           {(['Все', 'ИНТ', 'ЭКСТ'] as const).map((label) => {
             const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ'
+            const isActive = filter === f
             return (
               <button
                 key={label}
                 onClick={() => setFilter(f)}
-                className="px-2 py-1 rounded text-xs font-medium transition-all"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                 style={{
-                  background: filter === f ? 'rgba(99,102,241,0.2)' : 'transparent',
-                  color: filter === f ? '#818cf8' : textSecondary,
+                  background: isActive 
+                    ? (isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.2)') 
+                    : 'transparent',
+                  color: isActive ? accentColor : textSecondary,
+                  boxShadow: isActive 
+                    ? (isDark ? '0 2px 8px rgba(99,102,241,0.3)' : '0 2px 8px rgba(99,102,241,0.2)') 
+                    : 'none',
+                  border: isActive 
+                    ? `1px solid ${isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.3)'}` 
+                    : `1px solid transparent`
                 }}
               >
                 {label}
@@ -393,8 +430,9 @@ export default function SceneNavigator({
         </div>
       )}
 
-      {/* Список сцен */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      {/* Список сцен с улучшенным стилем */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2" 
+        style={{ background: isDark ? 'transparent' : 'rgba(255,255,255,0.5)' }}>
         {filteredScenes.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs" style={{ color: textSecondary }}>
@@ -434,10 +472,19 @@ export default function SceneNavigator({
       </div>
 
       {/* Нижняя панель */}
-      <div className="p-3 border-t text-center" style={{ borderColor: border }}>
-        <p className="text-[10px]" style={{ color: textSecondary }}>
-          Кликните на сцену для перехода
-        </p>
+      <div className="p-3 border-t" 
+        style={{ 
+          borderColor: border,
+          background: isDark 
+            ? 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%)' 
+            : 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.8) 100%)'
+        }}>
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
+          <p className="text-[10px] font-medium" style={{ color: textSecondary }}>
+            Кликните на сцену для перехода
+          </p>
+        </div>
       </div>
     </div>
   )
