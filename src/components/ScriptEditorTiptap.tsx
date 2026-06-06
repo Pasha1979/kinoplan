@@ -458,11 +458,14 @@ export default function ScriptEditorTiptap({
       onScenesChange(scenes)
     }
     if (onStatsChange) {
-      const totalPages = scenes.reduce((sum, s) => sum + s.pages, 0)
+      // Считаем страницы от общего кол-ва символов (как под редактором),
+      // а не суммируя округлённые по сценам — чтобы не было расхождения
+      const totalCharCount = scenes.reduce((sum, s) => sum + s.charCount, 0)
+      const totalPages = parseFloat((totalCharCount / 1800).toFixed(1))
       const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
       onStatsChange({
         scenes: scenes.length,
-        pages: parseFloat(totalPages.toFixed(1)),
+        pages: totalPages,
         duration: totalDuration,
       })
     }
