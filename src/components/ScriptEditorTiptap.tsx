@@ -3,6 +3,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
 import { useEffect, useCallback, useRef } from 'react'
+import { DOMSerializer } from 'prosemirror-model'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode } from './tiptap'
@@ -33,6 +34,56 @@ interface ScriptEditorTiptapProps {
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
+}
+
+// Конвертирует HTML с CSS-классами в Word-совместимый HTML с inline-стилями
+function convertToWordCompatibleHtml(html: string, editorDom: HTMLElement): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  
+  // Получаем computed styles из редактора для конвертации
+  const computedStyles: Record<string, string> = {}
+  const styleSheets = document.styleSheets
+  
+  for (const sheet of Array.from(styleSheets)) {
+    try {
+      const rules = Array.from(sheet.cssRules || sheet.rules || [])
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule) {
+          computedStyles[rule.selectorText] = rule.cssText.replace(rule.selectorText, '')
+        }
+      }
+    } catch {
+      // Игнорируем cross-origin stylesheets
+    }
+  }
+  
+  // Применяем inline-стили к элементам
+  const applyInlineStyles = (element: HTMLElement) => {
+    const classes = Array.from(element.classList)
+    for (const cls of classes) {
+      const selector = '.' + cls
+      if (computedStyles[selector]) {
+        const currentStyle = element.getAttribute('style') || ''
+        const newStyle = computedStyles[selector].replace(/[{}]/g, '').trim()
+        element.setAttribute('style', currentStyle + '; ' + newStyle)
+      }
+    }
+    
+    // Рекурсивно обрабатываем детей
+    Array.from(element.children).forEach(child => {
+      if (child instanceof HTMLElement) applyInlineStyles(child)
+    })
+  }
+  
+  applyInlineStyles(doc.body)
+  
+  // Добавляем базовые стили для Word
+  const wrapper = document.createElement('div')
+  wrapper.innerHTML = doc.body.innerHTML
+  wrapper.setAttribute('style', 'font-family: "Courier New", Courier, monospace; font-size: 12pt; line-height: 1.5;')
+  
+  return wrapper.outerHTML
 }
 
 export default function ScriptEditorTiptap({
@@ -147,6 +198,26 @@ export default function ScriptEditorTiptap({
       attributes: {
         class: `tiptap-editor prose prose-sm max-w-none focus:outline-none format-${_format || 'russian'}`,
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
+      },
+      handleDOMEvents: {
+        copy: (view, event) => {
+          const { state } = view
+          const { selection } = state
+          if (selection.empty) return false
+          
+          // Генерируем Word-совместимый HTML с inline-стилями
+          const div = document.createElement('div')
+          const serializer = DOMSerializer.fromSchema(state.schema)
+          div.appendChild(serializer.serializeFragment(selection.content().content))
+          
+          // Конвертируем CSS-классы в inline-стили для Word
+          const html = convertToWordCompatibleHtml(div.innerHTML, view.dom)
+          
+          event.clipboardData?.setData('text/html', html)
+          event.clipboardData?.setData('text/plain', div.textContent || '')
+          event.preventDefault()
+          return true
+        },
       },
       handleKeyDown: (view, event) => {
         // Если SmartType открыт и нажат Enter — выбираем подсказку
