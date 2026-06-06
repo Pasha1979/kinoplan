@@ -36,53 +36,69 @@ interface ScriptEditorTiptapProps {
   smartTypeTimes?: string[]
 }
 
-// Жёстко задаём стили для каждого типа блока (соответствует index.css)
+// Жёстко задаём стили для каждого типа блока (margin-left работает в Word, padding-left — нет)
 const SCRIPT_STYLES: Record<string, { russian: string; hollywood: string }> = {
   'scene-header': {
-    russian: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; padding-left: 0',
-    hollywood: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    russian: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; margin-left: 0',
+    hollywood: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; margin-left: 0',
   },
   'scene-cast': {
-    russian: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; padding-left: 0',
-    hollywood: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    russian: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; margin-left: 0',
+    hollywood: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; margin-left: 0',
   },
   'scene-action': {
-    russian: 'margin-top: 12px; margin-bottom: 12px; padding-left: 0',
-    hollywood: 'margin-top: 12px; margin-bottom: 12px; padding-left: 0',
+    russian: 'margin-top: 12px; margin-bottom: 12px; margin-left: 0',
+    hollywood: 'margin-top: 12px; margin-bottom: 12px; margin-left: 0',
   },
   'scene-character': {
-    russian: 'margin-top: 16px; margin-bottom: 0; text-align: center; font-weight: 600; text-transform: uppercase; padding-left: 0',
-    hollywood: 'margin-top: 16px; margin-bottom: 0; padding-left: 9.3cm; font-weight: 600; text-transform: uppercase',
+    russian: 'margin-top: 16px; margin-bottom: 0; text-align: center; font-weight: 600; text-transform: uppercase; margin-left: 0',
+    hollywood: 'margin-top: 16px; margin-bottom: 0; margin-left: 9.3cm; font-weight: 600; text-transform: uppercase',
   },
   'scene-dialog': {
-    russian: 'margin-top: 0; margin-bottom: 16px; padding-left: 3.75cm; padding-right: 3.75cm',
-    hollywood: 'margin-top: 0; margin-bottom: 16px; padding-left: 6.35cm; padding-right: 2.5cm',
+    russian: 'margin-top: 0; margin-bottom: 16px; margin-left: 3.75cm; margin-right: 3.75cm',
+    hollywood: 'margin-top: 0; margin-bottom: 16px; margin-left: 6.35cm; margin-right: 2.5cm',
   },
   'scene-transition': {
-    russian: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; padding-left: 0',
-    hollywood: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; padding-left: 0',
+    russian: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; margin-left: 0',
+    hollywood: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; margin-left: 0',
   },
 }
 
-// Конвертирует HTML в Word-совместимый HTML с inline-стилями
+// Преобразуем div[data-type] в p для Word-совместимости
 function convertToWordCompatibleHtml(html: string, _editorDom: HTMLElement, format: 'russian' | 'hollywood' = 'russian'): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
   
-  const applyStyles = (element: HTMLElement) => {
+  // Преобразуем все div[data-type] в p с inline-стилями
+  const convertElements = (element: HTMLElement) => {
     const dataType = element.getAttribute('data-type')
     if (dataType && SCRIPT_STYLES[dataType]) {
+      // Создаём <p> вместо <div> — Word лучше понимает <p>
+      const p = document.createElement('p')
+      p.innerHTML = element.innerHTML
+      
       const current = element.getAttribute('style') || ''
       const newStyles = SCRIPT_STYLES[dataType][format]
-      element.setAttribute('style', current + (current ? '; ' : '') + newStyles)
+      p.setAttribute('style', current + (current ? '; ' : '') + newStyles)
+      
+      // Заменяем элемент
+      element.parentNode?.replaceChild(p, element)
+      
+      // Рекурсивно обрабатываем детей нового <p>
+      Array.from(p.children).forEach(child => {
+        if (child instanceof HTMLElement) convertElements(child)
+      })
+    } else {
+      Array.from(element.children).forEach(child => {
+        if (child instanceof HTMLElement) convertElements(child)
+      })
     }
-    
-    Array.from(element.children).forEach(child => {
-      if (child instanceof HTMLElement) applyStyles(child)
-    })
   }
   
-  applyStyles(doc.body)
+  // Обрабатываем body
+  Array.from(doc.body.children).forEach(child => {
+    if (child instanceof HTMLElement) convertElements(child)
+  })
   
   // Word wrapper
   const wrapper = document.createElement('div')
