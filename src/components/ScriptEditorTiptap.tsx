@@ -110,9 +110,10 @@ export default function ScriptEditorTiptap({
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
+  // При "Все серии" (currentSeries === 0) загружаем первую серию, чтобы не было пустого экрана
   const draftKey = projectId
-    ? (projectType === 'serial' && currentSeries > 0
-        ? `kinoplan_draft_${projectId}_s${currentSeries}`
+    ? (projectType === 'serial'
+        ? `kinoplan_draft_${projectId}_s${currentSeries > 0 ? currentSeries : 1}`
         : `kinoplan_draft_${projectId}`)
     : 'kinoplan_tiptap_draft'
 
