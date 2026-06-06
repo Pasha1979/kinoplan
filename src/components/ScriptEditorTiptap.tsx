@@ -190,6 +190,8 @@ export default function ScriptEditorTiptap({
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
   // Точное количество страниц (через виртуальный A4-рендеринг)
   const precisePagesRef = useRef<number>(0.1)
+  // Дебаунс для подсчёта страниц (не считать на каждый символ)
+  const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
   // При "Все серии" (currentSeries === 0) загружаем первую серию, чтобы не было пустого экрана
@@ -350,8 +352,16 @@ export default function ScriptEditorTiptap({
       // 1.1 Сохраняем в localStorage с ключом по projectId
       safeSetLocalStorage(draftKey, html)
       
-      // Точный подсчёт страниц через виртуальный A4-рендеринг
-      precisePagesRef.current = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
+      // Точный подсчёт страниц через виртуальный A4-рендеринг (с дебаунсом 400мс)
+      if (pageCountTimeoutRef.current) {
+        clearTimeout(pageCountTimeoutRef.current)
+      }
+      pageCountTimeoutRef.current = setTimeout(() => {
+        precisePagesRef.current = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
+        // Форсируем обновление UI
+        extractScenesFromDocument()
+        pageCountTimeoutRef.current = null
+      }, 400)
       
       // Извлекаем сцены из SceneNode (мгновенно)
       extractScenesFromDocument()
@@ -661,6 +671,10 @@ export default function ScriptEditorTiptap({
     return () => {
       timeoutIdsRef.current.forEach((id) => clearTimeout(id))
       timeoutIdsRef.current = []
+      if (pageCountTimeoutRef.current) {
+        clearTimeout(pageCountTimeoutRef.current)
+        pageCountTimeoutRef.current = null
+      }
     }
   }, [])
 
