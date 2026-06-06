@@ -760,6 +760,9 @@ export default function ScriptEditorTiptap({
           const oldNumber = headerMatch[1]
           const newNumber = scenes[sceneIndex].number
 
+          // Важно: увеличиваем индекс для КАЖДОЙ сцены, независимо от изменения номера
+          sceneIndex++
+
           if (oldNumber !== newNumber) {
             // Создаем новый узел с обновлённым текстом
             return {
@@ -773,8 +776,6 @@ export default function ScriptEditorTiptap({
               ]
             }
           }
-
-          sceneIndex++
         }
       }
 
