@@ -73,15 +73,12 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
     'line-height: 1.5;'
   )
 
-  return wrapper.innerHTML
+  return wrapper.outerHTML
 }
 
 export class PageCounter {
   private container: HTMLDivElement | null = null
   private mmToPx = 3.7795 // 1 mm ≈ 3.7795 px при 96 dpi
-  // Калибровочный коэффициент: браузер рендерит шрифт крупнее, чем Word
-  // Если КИНОплан показывает 2.5, а Word ~1.9 → коэффициент ~0.76
-  private calibrationFactor = 0.78
 
   constructor() {
     this.createContainer()
@@ -89,11 +86,10 @@ export class PageCounter {
 
   private createContainer() {
     this.container = document.createElement('div')
-    // Скрытый A4-контейнер с точными полями как в редакторе
-    // Важно: без overflow:hidden (иначе текст обрезается)
-    // Без min-height (чтобы scrollHeight = реальная высота контента)
+    // Важно: opacity:0 вместо visibility:hidden — браузер ДОЛЖЕН отрендерить
+    // контент, иначе scrollHeight === 0. position:absolute вместо fixed.
     this.container.style.cssText = `
-      position: fixed;
+      position: absolute;
       left: -9999px;
       top: -9999px;
       width: 210mm;
@@ -102,7 +98,7 @@ export class PageCounter {
       font-family: "Courier New", Courier, monospace;
       font-size: 12pt;
       line-height: 1.5;
-      visibility: hidden;
+      opacity: 0;
       pointer-events: none;
       word-wrap: break-word;
       white-space: pre-wrap;
@@ -112,7 +108,6 @@ export class PageCounter {
 
   /**
    * Возвращает точное количество страниц A4 для заданного HTML.
-   * Учитывает калибровочный коэффициент для соответствия Word.
    */
   calculatePages(html: string, format: 'russian' | 'hollywood' = 'russian'): number {
     if (!this.container) {
@@ -122,7 +117,7 @@ export class PageCounter {
     const styledHtml = applyScriptStyles(html, format)
     this.container!.innerHTML = styledHtml
 
-    // Высота контента в px (без min-height это реальная высота)
+    // Высота контента в px
     const contentHeightPx = this.container!.scrollHeight
     // Конвертируем в mm
     const contentHeightMm = contentHeightPx / this.mmToPx
@@ -130,10 +125,13 @@ export class PageCounter {
     // Поля: top 2cm + bottom 2cm = 4cm = 40mm
     const usablePageHeightMm = 297 - 40
 
-    const rawPages = contentHeightMm / usablePageHeightMm
-    // Применяем калибровку (браузер рендерит крупнее, чем Word)
-    const calibratedPages = rawPages * this.calibrationFactor
-    return Math.max(0.1, parseFloat(calibratedPages.toFixed(1)))
+    const pages = contentHeightMm / usablePageHeightMm
+
+    // Debug: можно увидеть в консоли F12
+    // eslint-disable-next-line no-console
+    console.log('[PageCounter] scrollHeight:', contentHeightPx, 'px →', contentHeightMm.toFixed(1), 'mm →', pages.toFixed(2), 'pages')
+
+    return Math.max(0.1, parseFloat(pages.toFixed(1)))
   }
 
   /**
