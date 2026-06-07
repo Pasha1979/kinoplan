@@ -2,7 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { DOMSerializer } from 'prosemirror-model'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
@@ -189,7 +189,7 @@ export default function ScriptEditorTiptap({
   // Храним timeout IDs для очистки при unmount
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
   // Точное количество страниц (через виртуальный A4-рендеринг)
-  const precisePagesRef = useRef<number>(0.1)
+  const [precisePages, setPrecisePages] = useState<number>(0.1)
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
   const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -359,15 +359,15 @@ export default function ScriptEditorTiptap({
       }
       pageCountTimeoutRef.current = setTimeout(() => {
         const pages = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
-        precisePagesRef.current = pages
+        setPrecisePages(pages)
         // eslint-disable-next-line no-console
         console.log('[onUpdate] precisePages:', pages, '| html.length:', html.length, '| html:', html.substring(0, 100))
-        // Форсируем обновление UI
+        // Форсируем обновление UI (теперь precisePages — state, поэтому React перерисует)
         extractScenesFromDocument()
         pageCountTimeoutRef.current = null
       }, 400)
       
-      // Извлекаем сцены мгновенно (без страниц — они обновятся через таймаут)
+      // Извлекаем сцены мгновенно (страницы обновятся через setPrecisePages → перерисовку)
       extractScenesFromDocument()
       
       // Автоопределение типа блока
@@ -482,7 +482,7 @@ export default function ScriptEditorTiptap({
       const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
       onStatsChange({
         scenes: scenes.length,
-        pages: precisePagesRef.current,
+        pages: precisePages,
         duration: totalDuration,
       })
     }
@@ -1023,7 +1023,7 @@ export default function ScriptEditorTiptap({
           {editor.getText().length} симв.
         </span>
         <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
-          {precisePagesRef.current.toFixed(1)} стр.
+          {precisePages.toFixed(1)} стр.
         </span>
       </div>
 
