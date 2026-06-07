@@ -12,6 +12,7 @@ import { useSmartType } from '../hooks/useSmartType'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
 import { getPageCounter, destroyPageCounter } from '../services/pageCounter'
+import { SCRIPT_STYLES } from '../constants/scriptStyles'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -35,34 +36,6 @@ interface ScriptEditorTiptapProps {
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
-}
-
-// Жёстко задаём стили для каждого типа блока (margin-left работает в Word, padding-left — нет)
-const SCRIPT_STYLES: Record<string, { russian: string; hollywood: string }> = {
-  'scene-header': {
-    russian: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; margin-left: 0',
-    hollywood: 'margin-top: 16px; margin-bottom: 0; font-weight: 600; text-transform: uppercase; margin-left: 0',
-  },
-  'scene-cast': {
-    russian: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; margin-left: 0',
-    hollywood: 'margin-top: 0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; margin-left: 0',
-  },
-  'scene-action': {
-    russian: 'margin-top: 12px; margin-bottom: 12px; margin-left: 0',
-    hollywood: 'margin-top: 12px; margin-bottom: 12px; margin-left: 0',
-  },
-  'scene-character': {
-    russian: 'margin-top: 16px; margin-bottom: 0; text-align: center; font-weight: 600; text-transform: uppercase; margin-left: 0',
-    hollywood: 'margin-top: 16px; margin-bottom: 0; margin-left: 9.3cm; font-weight: 600; text-transform: uppercase',
-  },
-  'scene-dialog': {
-    russian: 'margin-top: 0; margin-bottom: 16px; margin-left: 3.75cm; margin-right: 3.75cm',
-    hollywood: 'margin-top: 0; margin-bottom: 16px; margin-left: 6.35cm; margin-right: 2.5cm',
-  },
-  'scene-transition': {
-    russian: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; margin-left: 0',
-    hollywood: 'margin-top: 16px; margin-bottom: 16px; text-align: right; font-weight: 600; text-transform: uppercase; margin-left: 0',
-  },
 }
 
 // Преобразуем div[data-type] в p для Word-совместимости
