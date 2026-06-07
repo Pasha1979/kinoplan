@@ -591,9 +591,29 @@ export default function ScriptEditorTiptap({
       clearTimeout(pageCountTimeoutRef.current)
     }
     pageCountTimeoutRef.current = setTimeout(() => {
-      const pages = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
-      setPrecisePages(pages)
-      extractScenesFromDocument(pages)
+      const result = getPageCounter().calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
+      setPrecisePages(result.totalPages)
+      extractScenesFromDocument(result.totalPages)
+
+      // Визуальное разделение страниц в редакторе
+      if (editor && result.breaks.length > 1) {
+        const editorDom = editor.view.dom as HTMLElement
+        const children = Array.from(editorDom.children) as HTMLElement[]
+        // Сбрасываем старые разделители
+        children.forEach(child => {
+          child.classList.remove('page-start')
+          child.removeAttribute('data-page')
+        })
+        // Применяем новые (пропускаем первую страницу)
+        result.breaks.slice(1).forEach(breakInfo => {
+          const child = children[breakInfo.startIndex]
+          if (child) {
+            child.classList.add('page-start')
+            child.setAttribute('data-page', `Страница ${breakInfo.page}`)
+          }
+        })
+      }
+
       pageCountTimeoutRef.current = null
     }, 400)
 

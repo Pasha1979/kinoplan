@@ -48,6 +48,16 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
   return wrapper.outerHTML
 }
 
+export interface PageBreak {
+  page: number
+  startIndex: number // индекс первого child-элемента на этой странице
+}
+
+export interface PageResult {
+  totalPages: number
+  breaks: PageBreak[]
+}
+
 export class PageCounter {
   private container: HTMLDivElement | null = null
   private mmToPx = 3.7795 // 1 mm ≈ 3.7795 px при 96 dpi
@@ -83,9 +93,9 @@ export class PageCounter {
   }
 
   /**
-   * Возвращает точное количество страниц A4 для заданного HTML.
+   * Возвращает точное количество страниц A4 и массив page breaks.
    */
-  calculatePages(html: string, format: 'russian' | 'hollywood' = 'russian'): number {
+  calculatePagesWithBreaks(html: string, format: 'russian' | 'hollywood' = 'russian'): PageResult {
     if (!this.container) {
       this.createContainer()
     }
@@ -93,25 +103,50 @@ export class PageCounter {
     const styledHtml = applyScriptStyles(html, format)
     this.container!.innerHTML = styledHtml
 
-    // Высота контента в px
+    // --- total pages (via scrollHeight, same as before) ---
     const contentHeightPx = this.container!.scrollHeight
-    // Конвертируем в mm
     const contentHeightMm = contentHeightPx / this.mmToPx
-    // Доступная высота на одной странице (A4 - поля)
-    // Поля: top 2cm + bottom 2cm = 4cm = 40mm
     const usablePageHeightMm = 297 - 40
-
     const rawPages = contentHeightMm / usablePageHeightMm
-    // Калибровка: браузер рендерит шрифт крупнее, чем Word
     const pages = rawPages * this.wordCalibration
+    const totalPages = Math.max(0.1, parseFloat(pages.toFixed(1)))
 
-    // Debug: можно увидеть в консоли F12
-    // eslint-disable-next-line no-console
-    console.log('[PageCounter] html.len:', html.length, 'styled.len:', styledHtml.length, 'scrollHeight:', contentHeightPx, 'px →', contentHeightMm.toFixed(1), 'mm → raw:', rawPages.toFixed(2), 'calibrated:', pages.toFixed(2), 'pages')
-    // eslint-disable-next-line no-console
-    console.log('[PageCounter] styledHtml preview:', styledHtml.substring(0, 200))
+    // --- page breaks (via per-element offsetHeight) ---
+    const children = Array.from(this.container!.children) as HTMLElement[]
+    let accumulatedMm = 0
+    const breaks: PageBreak[] = []
+    let page = 1
+    let pageStartIndex = 0
 
-    return Math.max(0.1, parseFloat(pages.toFixed(1)))
+    children.forEach((child, index) => {
+      const heightPx = child.offsetHeight
+      const heightMm = heightPx / this.mmToPx
+      accumulatedMm += heightMm
+
+      if (accumulatedMm > usablePageHeightMm && pageStartIndex < index) {
+        breaks.push({ page, startIndex: pageStartIndex })
+        page++
+        pageStartIndex = index
+        accumulatedMm = heightMm
+      }
+    })
+
+    // last page
+    if (children.length > 0) {
+      breaks.push({ page, startIndex: pageStartIndex })
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('[PageCounter] breaks:', breaks, 'totalPages:', totalPages)
+
+    return { totalPages, breaks }
+  }
+
+  /**
+   * Возвращает точное количество страниц A4 для заданного HTML.
+   */
+  calculatePages(html: string, format: 'russian' | 'hollywood' = 'russian'): number {
+    return this.calculatePagesWithBreaks(html, format).totalPages
   }
 
   /**
