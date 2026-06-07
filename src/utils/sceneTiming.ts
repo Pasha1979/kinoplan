@@ -34,7 +34,8 @@ export function calculateSceneTiming(
       return { pages, duration: Math.round(pages * 55 * coeff) }
 
     case 'manual':
-      return { pages, duration: Math.round(pages * 55 * coeff) }
+      // Ручной: пользователь задаёт duration сам, здесь возвращаем 0
+      return { pages, duration: 0 }
 
     default:
       return { pages, duration: Math.round(pages * 55 * coeff) }

@@ -596,7 +596,6 @@ export default function ScriptPage() {
             {/* Редактор — справа */}
             <div className="flex-1 h-full">
               <ScriptEditorTiptap
-                key={`${currentScript?.timingSystem}-${currentScript?.genreCoefficient}`}
                 format={scriptFormat}
                 projectType={project?.type || 'film'}
                 projectId={project?.id}

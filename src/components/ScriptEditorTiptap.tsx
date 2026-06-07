@@ -11,7 +11,7 @@ import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-
 import { useSmartType } from '../hooks/useSmartType'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
-import { getPageCounter, destroyPageCounter } from '../services/pageCounter'
+import { PageCounter } from '../services/pageCounter'
 import { SCRIPT_STYLES } from '../constants/scriptStyles'
 import { calculateSceneTiming } from '../utils/sceneTiming'
 
@@ -122,6 +122,13 @@ export default function ScriptEditorTiptap({
   const [precisePages, setPrecisePages] = useState<number>(0.1)
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
   const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Сохраняем page breaks для повторного применения после ProseMirror рендера
+  const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
+  // Per-component PageCounter instance (убран singleton)
+  const pageCounterRef = useRef<PageCounter | null>(null)
+  if (!pageCounterRef.current) {
+    pageCounterRef.current = new PageCounter()
+  }
 
   // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
   // При "Все серии" (currentSeries === 0) загружаем первую серию, чтобы не было пустого экрана
@@ -302,6 +309,26 @@ export default function ScriptEditorTiptap({
     }
   }
 
+  // Применяем page-start классы к DOM редактора (RAF — чтобы ProseMirror уже отрисовал)
+  const applyPageBreaks = useCallback(() => {
+    if (!editor || pageBreaksRef.current.length <= 1) return
+    requestAnimationFrame(() => {
+      const editorDom = editor.view.dom as HTMLElement
+      const children = Array.from(editorDom.children) as HTMLElement[]
+      children.forEach(child => {
+        child.classList.remove('page-start')
+        child.removeAttribute('data-page')
+      })
+      pageBreaksRef.current.slice(1).forEach(breakInfo => {
+        const child = children[breakInfo.startIndex]
+        if (child) {
+          child.classList.add('page-start')
+          child.setAttribute('data-page', `Страница ${breakInfo.page}`)
+        }
+      })
+    })
+  }, [editor])
+
   // Автоопределение типа блока по тексту (Фаза 2.5)
   const autoDetectBlockType = (editor: any) => {
     const { state } = editor
@@ -377,13 +404,15 @@ export default function ScriptEditorTiptap({
       }
     }
     
-    // Если определили новый тип и он отличается от текущего — меняем
+    // Если определили новый тип и он отличается от текущего — меняем и выходим.
+    // Следующий onUpdate обработает uppercase/нумерацию со свежими позициями.
     if (newType && newType !== currentType) {
       editor.chain().setNode(newType).run()
+      return
     }
-    
-    const isHeader = currentType === 'sceneHeader' || newType === 'sceneHeader'
-    const isCharacter = currentType === 'sceneCharacter' || newType === 'sceneCharacter'
+
+    const isHeader = currentType === 'sceneHeader'
+    const isCharacter = currentType === 'sceneCharacter'
     
     // 1.2 Капслок: реальный текст в шапке и имени персонажа
     if ((isHeader || isCharacter) && !isReplacingRef.current) {
@@ -483,13 +512,13 @@ export default function ScriptEditorTiptap({
     const { state } = view
     const { selection } = state
     if (selection.empty) return false
-    
+
     const div = document.createElement('div')
     const serializer = DOMSerializer.fromSchema(state.schema)
     div.appendChild(serializer.serializeFragment(selection.content().content))
-    
+
     const html = convertToWordCompatibleHtml(div.innerHTML, view.dom, (_format as 'russian' | 'hollywood') || 'russian')
-    
+
     event.clipboardData?.setData('text/html', html)
     event.clipboardData?.setData('text/plain', div.textContent || '')
     event.preventDefault()
@@ -591,39 +620,13 @@ export default function ScriptEditorTiptap({
       clearTimeout(pageCountTimeoutRef.current)
     }
     pageCountTimeoutRef.current = setTimeout(() => {
-      const result = getPageCounter().calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
+      const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
       setPrecisePages(result.totalPages)
       extractScenesFromDocument(result.totalPages)
 
-      // Визуальное разделение страниц в редакторе
-      // eslint-disable-next-line no-console
-      console.log('[ScriptEditor] totalPages:', result.totalPages, 'breaks:', result.breaks)
-      if (editor) {
-        const editorDom = editor.view.dom as HTMLElement
-        const children = Array.from(editorDom.children) as HTMLElement[]
-        // eslint-disable-next-line no-console
-        console.log('[ScriptEditor] editor children count:', children.length)
-        // Сбрасываем старые разделители
-        children.forEach(child => {
-          child.classList.remove('page-start')
-          child.removeAttribute('data-page')
-        })
-        // Применяем новые (пропускаем первую страницу)
-        result.breaks.slice(1).forEach(breakInfo => {
-          // eslint-disable-next-line no-console
-          console.log('[ScriptEditor] applying page-start to index', breakInfo.startIndex, 'of', children.length)
-          const child = children[breakInfo.startIndex]
-          if (child) {
-            child.classList.add('page-start')
-            child.setAttribute('data-page', `Страница ${breakInfo.page}`)
-            // eslint-disable-next-line no-console
-            console.log('[ScriptEditor] applied to:', child.tagName, child.getAttribute('data-type'))
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn('[ScriptEditor] no child at index', breakInfo.startIndex)
-          }
-        })
-      }
+      // Сохраняем breaks для повторного применения после ProseMirror рендера
+      pageBreaksRef.current = result.breaks
+      applyPageBreaks()
 
       pageCountTimeoutRef.current = null
     }, 400)
@@ -674,7 +677,8 @@ export default function ScriptEditorTiptap({
         clearTimeout(pageCountTimeoutRef.current)
         pageCountTimeoutRef.current = null
       }
-      destroyPageCounter()
+      pageCounterRef.current?.destroy()
+      pageCounterRef.current = null
     }
   }, [])
 
@@ -685,6 +689,13 @@ export default function ScriptEditorTiptap({
       // При смене серии — очищаем редактор и загружаем нужный черновик (или пустой)
       editor.commands.setContent(saved || '<p></p>')
       processedHeadersRef.current.clear()
+      // Пересчитываем page breaks после загрузки контента (RAF ждём рендер ProseMirror)
+      requestAnimationFrame(() => {
+        const html = editor.getHTML()
+        const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
+        pageBreaksRef.current = result.breaks
+        applyPageBreaks()
+      })
     }
   }, [editor, draftKey])
 

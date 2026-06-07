@@ -123,8 +123,11 @@ export class PageCounter {
 
     children.forEach((child, index) => {
       const heightPx = child.offsetHeight
+      const style = window.getComputedStyle(child)
+      const marginTopPx = parseFloat(style.marginTop) || 0
+      const marginBottomPx = parseFloat(style.marginBottom) || 0
       // Применяем калибровку к каждому элементу (браузерный шрифт крупнее Word)
-      const heightMm = (heightPx / this.mmToPx) * this.wordCalibration
+      const heightMm = ((heightPx + marginTopPx + marginBottomPx) / this.mmToPx) * this.wordCalibration
       accumulatedMm += heightMm
 
       if (accumulatedMm > usablePageHeightMm && pageStartIndex < index) {
@@ -178,19 +181,5 @@ export class PageCounter {
   }
 }
 
-// Синглтон для всего приложения
-let _instance: PageCounter | null = null
-
-export function getPageCounter(): PageCounter {
-  if (!_instance) {
-    _instance = new PageCounter()
-  }
-  return _instance
-}
-
-export function destroyPageCounter() {
-  if (_instance) {
-    _instance.destroy()
-    _instance = null
-  }
-}
+// УБРАН singleton — каждый компонент создаёт свой instance.
+// Это предотвращает race conditions при unmount/remount.

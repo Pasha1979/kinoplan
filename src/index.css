@@ -221,16 +221,21 @@ body {
 }
 
 /* ========== ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ СТРАНИЦ A4 ========== */
-.page-start {
-  position: relative;
-  margin-top: 32px !important;
-  padding-top: 24px !important;
+/* Повышенная специфичность, чтобы перебить .tiptap-editor div[data-type] */
+.tiptap-editor .page-start,
+.tiptap-editor.ProseMirror .page-start {
+  margin-top: 40px !important;
+  padding-top: 16px !important;
+  border-top: 2px dashed #6366f1 !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+  position: relative !important;
 }
 
-.page-start::before {
+.tiptap-editor .page-start::before,
+.tiptap-editor.ProseMirror .page-start::before {
   content: attr(data-page);
   position: absolute;
-  top: -11px;
+  top: -26px;
   left: 50%;
   transform: translateX(-50%);
   padding: 2px 10px;
@@ -240,21 +245,11 @@ body {
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 2;
+  z-index: 10;
   border-radius: 4px;
-  background: rgba(99, 102, 241, 0.15);
-  color: rgba(129, 140, 248, 0.9);
-}
-
-.page-start::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 2px dashed rgba(99, 102, 241, 0.35);
-  pointer-events: none;
+  background: #1e1b4b;
+  color: #818cf8;
+  border: 1px solid #4f46e5;
 }
 
 /* Прогресс-бар */
