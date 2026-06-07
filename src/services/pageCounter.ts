@@ -36,7 +36,9 @@ const SCRIPT_STYLES: Record<string, { russian: string; hollywood: string }> = {
 
 /**
  * Применяет inline-стили к HTML для точного рендеринга.
- * Преобразует <div data-type="..."> в <p> для соответствия Word.
+ * НЕ заменяет теги — просто добавляет inline-стили к существующим div.
+ * Это важно: иначе <p> внутри <p> (вложенные параграфы из Tiptap)
+ * ломают структуру и браузер добавляет лишние margin'ы.
  */
 function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russian'): string {
   const parser = new DOMParser()
@@ -45,20 +47,16 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
   const convert = (element: HTMLElement) => {
     const dataType = element.getAttribute('data-type')
     if (dataType && SCRIPT_STYLES[dataType]) {
-      const p = document.createElement('p')
-      p.innerHTML = element.innerHTML
+      // НЕ заменяем тег — просто добавляем inline-стили к существующему div
       const current = element.getAttribute('style') || ''
       const newStyles = SCRIPT_STYLES[dataType][format]
-      p.setAttribute('style', current + (current ? '; ' : '') + newStyles)
-      element.parentNode?.replaceChild(p, element)
-      Array.from(p.children).forEach(child => {
-        if (child instanceof HTMLElement) convert(child)
-      })
-    } else {
-      Array.from(element.children).forEach(child => {
-        if (child instanceof HTMLElement) convert(child)
-      })
+      element.setAttribute('style', current + (current ? '; ' : '') + newStyles)
     }
+    // Рекурсивно обрабатываем детей (даже если это data-type элемент —
+    // внутри могут быть другие data-type элементы)
+    Array.from(element.children).forEach(child => {
+      if (child instanceof HTMLElement) convert(child)
+    })
   }
 
   Array.from(doc.body.children).forEach(child => {
@@ -79,6 +77,10 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
 export class PageCounter {
   private container: HTMLDivElement | null = null
   private mmToPx = 3.7795 // 1 mm ≈ 3.7795 px при 96 dpi
+  // Калибровочный коэффициент: браузер рендерит шрифт крупнее, чем Word.
+  // Эмпирически подобран: если Киноплан 2.6, Word 2.0 → 2.0/2.6 ≈ 0.77
+  // Без калибровки показывает на ~30% больше страниц, чем Word.
+  private wordCalibration = 0.77
 
   constructor() {
     this.createContainer()
@@ -88,7 +90,6 @@ export class PageCounter {
     this.container = document.createElement('div')
     // Важно: браузер должен отрендерить контент для корректного scrollHeight.
     // opacity:0 рендерит (в отличие от visibility:hidden или display:none).
-    // position:fixed в viewport — браузер не оптимизирует рендеринг.
     this.container.style.cssText = `
       position: fixed;
       top: 0;
@@ -102,7 +103,6 @@ export class PageCounter {
       opacity: 0;
       pointer-events: none;
       word-wrap: break-word;
-      white-space: pre-wrap;
       z-index: -1;
     `
     document.body.appendChild(this.container)
@@ -127,11 +127,13 @@ export class PageCounter {
     // Поля: top 2cm + bottom 2cm = 4cm = 40mm
     const usablePageHeightMm = 297 - 40
 
-    const pages = contentHeightMm / usablePageHeightMm
+    const rawPages = contentHeightMm / usablePageHeightMm
+    // Калибровка: браузер рендерит шрифт крупнее, чем Word
+    const pages = rawPages * this.wordCalibration
 
     // Debug: можно увидеть в консоли F12
     // eslint-disable-next-line no-console
-    console.log('[PageCounter] html.len:', html.length, 'styled.len:', styledHtml.length, 'scrollHeight:', contentHeightPx, 'px →', contentHeightMm.toFixed(1), 'mm →', pages.toFixed(2), 'pages')
+    console.log('[PageCounter] html.len:', html.length, 'styled.len:', styledHtml.length, 'scrollHeight:', contentHeightPx, 'px →', contentHeightMm.toFixed(1), 'mm → raw:', rawPages.toFixed(2), 'calibrated:', pages.toFixed(2), 'pages')
     // eslint-disable-next-line no-console
     console.log('[PageCounter] styledHtml preview:', styledHtml.substring(0, 200))
 
