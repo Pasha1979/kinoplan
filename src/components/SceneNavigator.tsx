@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   DndContext,
@@ -76,6 +76,7 @@ interface SceneNavigatorProps {
   isSerial?: boolean
   episodesCount?: number
   onSeriesChange?: (series: number) => void
+  onSeriesDurationChange?: (durationSeconds: number) => void
 }
 
 export default function SceneNavigator({
@@ -91,6 +92,7 @@ export default function SceneNavigator({
   isSerial,
   episodesCount = 8,
   onSeriesChange,
+  onSeriesDurationChange,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
@@ -105,6 +107,11 @@ export default function SceneNavigator({
       return total
     }, 0)
   }, [scenes, timingSystem, genreCoefficient])
+
+  // Уведомляем родителя о хронометраже выбранной серии (единый источник истины)
+  useEffect(() => {
+    onSeriesDurationChange?.(currentSeriesDuration)
+  }, [currentSeriesDuration, onSeriesDurationChange])
 
   // Расчёт прогресса серии
   const seriesProgress = useMemo(() => {
@@ -482,7 +489,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
         <div className="px-3 py-2 border-b" style={{ borderColor: border }}>
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px]" style={{ color: textSecondary }}>
-              Серия {currentSeries}
+              {currentSeries === 0 ? 'Все серии' : `Серия ${currentSeries}`}
             </span>
             <span className="text-[10px]" style={{ color: seriesProgress.isOver ? '#ef4444' : textPrimary }}>
               {Math.floor(seriesProgress.current / 60)}:{(seriesProgress.current % 60).toFixed(0).padStart(2, '0')} / {episodeDuration} мин

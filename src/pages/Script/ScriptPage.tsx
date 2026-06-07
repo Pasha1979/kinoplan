@@ -37,6 +37,7 @@ export default function ScriptPage() {
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
+  const [seriesDuration, setSeriesDuration] = useState(0)
   const [enableAutoFix, setEnableAutoFix] = useState(false)
 
   // Целевой хронометраж из настроек проекта
@@ -526,7 +527,7 @@ export default function ScriptPage() {
                 type: s.type,
                 location: s.location,
                 time: s.time,
-                pages: s.charCount ? (s.charCount / 1800) : (s.pages || 0),
+                pages: s.pages || 0,
                 charCount: s.charCount,
                 cast: s.cast,
               }))}
@@ -534,10 +535,11 @@ export default function ScriptPage() {
               timingSystem={currentScript?.timingSystem || 'page'}
               genreCoefficient={currentScript?.genreCoefficient || 1.0}
               currentSeries={currentSeries}
-              episodeDuration={project?.episodeDuration}
+              episodeDuration={targetDuration}
               isSerial={project?.type === 'serial'}
               episodesCount={project?.episodesCount || 8}
               onSeriesChange={setCurrentSeries}
+              onSeriesDurationChange={setSeriesDuration}
               onSceneClick={(sceneId) => {
                 const selected = scenes.find(s => s.id === sceneId) || scenes[0]
                 setSelectedScene(selected)
@@ -628,49 +630,46 @@ export default function ScriptPage() {
             </span>
             <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
               <Clock size={11} />
-              {Math.floor(scriptStats.duration / 60)}:{(scriptStats.duration % 60).toString().padStart(2, '0')}
+              {Math.floor(seriesDuration / 60)}:{(seriesDuration % 60).toString().padStart(2, '0')}
             </span>
-            
-            {/* Прогресс-бар хронометража серии */}
+
+            {/* Прогресс-бар хронометража серии (из навигатора — единый источник) */}
             {targetDuration && (
               <div className="flex-1 flex items-center gap-3 min-w-0">
-                {/* Прогресс-бар с градиентом и процентами */}
                 <div className="flex-1 flex flex-col gap-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium" style={{ color: textSecondary }}>
                       Хронометраж
                     </span>
-                    <span className="text-[10px] font-semibold" style={{ 
-                      color: scriptStats.duration / 60 > targetDuration ? '#ef4444' : textPrimary 
+                    <span className="text-[10px] font-semibold" style={{
+                      color: seriesDuration / 60 > targetDuration ? '#ef4444' : textPrimary
                     }}>
-                      {Math.min(100, Math.round((scriptStats.duration / 60 / targetDuration) * 100))}%
+                      {Math.min(100, Math.round((seriesDuration / 60 / targetDuration) * 100))}%
                     </span>
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
                     <div
                       className="h-full rounded-full transition-all duration-500 ease-out"
                       style={{
-                        width: `${Math.min(100, (scriptStats.duration / 60 / targetDuration) * 100)}%`,
-                        background: scriptStats.duration / 60 > targetDuration 
-                          ? 'linear-gradient(90deg, #ef4444, #f87171)' 
+                        width: `${Math.min(100, (seriesDuration / 60 / targetDuration) * 100)}%`,
+                        background: seriesDuration / 60 > targetDuration
+                          ? 'linear-gradient(90deg, #ef4444, #f87171)'
                           : 'linear-gradient(90deg, #10b981, #34d399)'
                       }}
                     />
                   </div>
                 </div>
-                
-                {/* Детальная информация */}
                 <div className="flex items-center gap-2 text-[10px] shrink-0">
                   <span style={{ color: textSecondary }}>
-                    {Math.floor(scriptStats.duration / 60)}:{(scriptStats.duration % 60).toString().padStart(2, '0')} / {targetDuration}:00
+                    {Math.floor(seriesDuration / 60)}:{(seriesDuration % 60).toString().padStart(2, '0')} / {targetDuration}:00
                   </span>
-                  {Math.abs(Math.round(scriptStats.duration / 60) - targetDuration) > 0 && (
-                    <span style={{ 
-                      color: scriptStats.duration / 60 > targetDuration ? '#ef4444' : '#10b981',
+                  {Math.abs(Math.round(seriesDuration / 60) - targetDuration) > 0 && (
+                    <span style={{
+                      color: seriesDuration / 60 > targetDuration ? '#ef4444' : '#10b981',
                       fontWeight: 500
                     }}>
-                      {scriptStats.duration / 60 > targetDuration && <AlertTriangle size={10} className="inline mr-0.5" />}
-                      ({scriptStats.duration / 60 > targetDuration ? '+' : ''}{Math.round(scriptStats.duration / 60) - targetDuration})
+                      {seriesDuration / 60 > targetDuration && <AlertTriangle size={10} className="inline mr-0.5" />}
+                      ({seriesDuration / 60 > targetDuration ? '+' : ''}{Math.round(seriesDuration / 60) - targetDuration})
                     </span>
                   )}
                 </div>
