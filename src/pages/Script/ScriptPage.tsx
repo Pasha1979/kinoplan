@@ -38,6 +38,7 @@ export default function ScriptPage() {
   const [, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })
   const [seriesDuration, setSeriesDuration] = useState(0)
+  const [seriesPages, setSeriesPages] = useState(0)
   const [enableAutoFix, setEnableAutoFix] = useState(false)
 
   // Целевой хронометраж из настроек проекта
@@ -540,6 +541,7 @@ export default function ScriptPage() {
               episodesCount={project?.episodesCount || 8}
               onSeriesChange={setCurrentSeries}
               onSeriesDurationChange={setSeriesDuration}
+              onSeriesPagesChange={setSeriesPages}
               onSceneClick={(sceneId) => {
                 const selected = scenes.find(s => s.id === sceneId) || scenes[0]
                 setSelectedScene(selected)
@@ -626,7 +628,7 @@ export default function ScriptPage() {
             </span>
             <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
               <AlignLeft size={11} />
-              {scriptStats.pages.toFixed(1)} стр.
+              {seriesPages.toFixed(1)} стр.
             </span>
             <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
               <Clock size={11} />

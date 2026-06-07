@@ -77,6 +77,7 @@ interface SceneNavigatorProps {
   episodesCount?: number
   onSeriesChange?: (series: number) => void
   onSeriesDurationChange?: (durationSeconds: number) => void
+  onSeriesPagesChange?: (pages: number) => void
 }
 
 export default function SceneNavigator({
@@ -93,6 +94,7 @@ export default function SceneNavigator({
   episodesCount = 8,
   onSeriesChange,
   onSeriesDurationChange,
+  onSeriesPagesChange,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
@@ -108,10 +110,19 @@ export default function SceneNavigator({
     }, 0)
   }, [scenes, timingSystem, genreCoefficient])
 
-  // Уведомляем родителя о хронометраже выбранной серии (единый источник истины)
+  // Расчёт общего кол-ва страниц (единый источник для всех мест отображения)
+  const currentSeriesPages = useMemo(() => {
+    return scenes.reduce((total, scene) => total + (scene.pages || 0), 0)
+  }, [scenes])
+
+  // Уведомляем родителя о хронометраже и страницах выбранной серии
   useEffect(() => {
     onSeriesDurationChange?.(currentSeriesDuration)
   }, [currentSeriesDuration, onSeriesDurationChange])
+
+  useEffect(() => {
+    onSeriesPagesChange?.(currentSeriesPages)
+  }, [currentSeriesPages, onSeriesPagesChange])
 
   // Расчёт прогресса серии
   const seriesProgress = useMemo(() => {
