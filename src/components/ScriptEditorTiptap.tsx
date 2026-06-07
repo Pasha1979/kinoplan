@@ -655,10 +655,12 @@ export default function ScriptEditorTiptap({
         }
       }
       
-      // Если время закончилось точкой — переходим на новую строку (только один раз)
-      const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.$/
+      // Если время закончилось — переходим на новую строку (только один раз)
+      // Точка после времени НЕ требуется: "1. ИНТ. КВАРТИРА — ДЕНЬ" (без точки)
+      const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.?$/
       if (timePattern.test(upperText)) {
-        const headerKey = `${$from.pos}-${upperText}`
+        // Используем позицию начала ноды (фиксированная) вместо $from.pos (меняется при наборе)
+        const headerKey = `${$from.start()}-${upperText}`
         if (!processedHeadersRef.current.has(headerKey)) {
           processedHeadersRef.current.add(headerKey)
           editor.chain().splitBlock().setNode('sceneCast').run()

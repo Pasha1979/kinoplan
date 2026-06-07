@@ -76,9 +76,10 @@ export default function ScriptPage() {
       forceUpdateRef.current = false
     }
 
-    // Фильтруем сцены по выбранной серии (для сериалов)
+    // Фильтруем сцены по выбранной серии (для сериалов).
+    // Используем регулярку ^N- чтобы '1-' не совпадало с '10-1', '11-1' и т.д.
     const filteredScenes = project?.type === 'serial' && currentSeries > 0
-      ? newScenes.filter(scene => scene.number.startsWith(`${currentSeries}-`))
+      ? newScenes.filter(scene => new RegExp(`^${currentSeries}-`).test(scene.number))
       : newScenes
 
     setScenes(filteredScenes)

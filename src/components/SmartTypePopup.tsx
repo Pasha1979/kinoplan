@@ -54,8 +54,8 @@ export function SmartTypePopup({
     }
 
     const win = safeGetWindow()
-    win?.addEventListener('click', handleClickOutside)
-    return () => win?.removeEventListener('click', handleClickOutside)
+    win?.addEventListener('mousedown', handleClickOutside)
+    return () => win?.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen, onClose])
 
   if (!isOpen || suggestions.length === 0) return null
