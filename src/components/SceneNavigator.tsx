@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { TimingSystem } from '../store/scriptStore'
+import { calculateSceneTiming } from '../utils/sceneTiming'
 
 // Упрощенный тип для сцен из редактора
 interface SimpleScene {
@@ -95,59 +96,11 @@ export default function SceneNavigator({
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
 
-  // Функция расчёта хронометража сцены в зависимости от системы.
-  // Использует scene.pages напрямую, если оно передано из редактора (точный подсчёт PageCounter).
-  const calculateSceneTiming = (scene: SimpleScene): { pages: number; duration: number } => {
-    const coeff = genreCoefficient || 1.0
-    const charCount = scene.charCount || 0
-
-    // Страницы: используем точное значение от PageCounter, если есть.
-    // Иначе fallback на приблизительный расчёт по символам.
-    const pages = scene.pages !== undefined
-      ? Math.max(0.1, parseFloat(scene.pages.toFixed(1)))
-      : Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-
-    switch (timingSystem) {
-      case 'page':
-        // Постраничный: 1 страница = 55 секунд
-        const duration = Math.round(pages * 55 * coeff)
-        return { pages, duration }
-
-      case 'character':
-        // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
-        const charDuration = Math.round(charCount * 0.05 * coeff)
-        return { pages, duration: charDuration }
-
-      case 'flexible':
-        // Гибкий: базовый расчёт по страницам
-        const flexibleDuration = Math.round(pages * 55 * coeff)
-        return { pages, duration: flexibleDuration }
-
-      case 'manual':
-        // Ручной: пока fallback на постраничный
-        const manualDuration = Math.round(pages * 55 * coeff)
-        return { pages, duration: manualDuration }
-
-      default:
-        const defaultDuration = Math.round(pages * 55 * coeff)
-        return { pages, duration: defaultDuration }
-    }
-  }
-
-  // Вспомогательная функция для расчёта только страниц (для отображения)
-  const calculateScenePages = (scene: SimpleScene): number => {
-    if (scene.pages !== undefined) {
-      return Math.max(0.1, parseFloat(scene.pages.toFixed(1)))
-    }
-    const charCount = scene.charCount || 0
-    return Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
-  }
-
   // Расчёт текущего хронометража серии
   const currentSeriesDuration = useMemo(() => {
     return scenes.reduce((total, scene) => {
       if (scene.pages !== undefined) {
-        return total + calculateSceneTiming(scene).duration
+        return total + calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient).duration
       }
       return total
     }, 0)
@@ -557,7 +510,7 @@ function SortableSceneCard({
                 const isExpanded = expandedScenes.has(scene.id)
                 const stripColor = getColorTagColor(scene.colorTag, isDark)
                 const badge = getTypeBadge(scene.type || '')
-                const timing = calculateSceneTiming(scene)
+                const timing = calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient)
 
                 return (
                   <SortableSceneCard

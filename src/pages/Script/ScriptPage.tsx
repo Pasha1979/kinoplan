@@ -6,6 +6,7 @@ import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
 import type { ScriptFormat, TimingSystem } from '../../store/scriptStore'
+import { calculateSceneTiming } from '../../utils/sceneTiming'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
@@ -315,25 +316,11 @@ export default function ScriptPage() {
                         <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
                           <Clock size={10} />
                           {(() => {
-                            const timingSystem = currentScript?.timingSystem || 'page'
-                            const coeff = currentScript?.genreCoefficient || 1.0
-                            const pages = selectedScene.pages || 0
-                            const charCount = selectedScene.charCount || Math.round(pages * 1800)
-                            
-                            let duration = 0
-                            switch (timingSystem) {
-                              case 'page':
-                                duration = Math.round(pages * 55 * coeff)
-                                break
-                              case 'character':
-                                duration = Math.round(charCount * 0.05 * coeff)
-                                break
-                              case 'flexible':
-                              case 'manual':
-                              default:
-                                duration = Math.round(pages * 55 * coeff)
-                            }
-                            
+                            const { duration } = calculateSceneTiming(
+                              { pages: selectedScene.pages, charCount: selectedScene.charCount },
+                              currentScript?.timingSystem || 'page',
+                              currentScript?.genreCoefficient || 1.0
+                            )
                             return `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`
                           })()}
                         </span>

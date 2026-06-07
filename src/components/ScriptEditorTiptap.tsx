@@ -13,6 +13,7 @@ import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
 import { getPageCounter, destroyPageCounter } from '../services/pageCounter'
 import { SCRIPT_STYLES } from '../constants/scriptStyles'
+import { calculateSceneTiming } from '../utils/sceneTiming'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -111,47 +112,20 @@ export default function ScriptEditorTiptap({
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
-  // Функция расчёта хронометража сцены в зависимости от системы.
-  // Теперь принимает уже точное кол-во страниц (от PageCounter),
-  // charCount и dialogLines — только для посимвольной/гибкой системы.
-  const calculateSceneTiming = (pages: number, charCount: number, dialogLines: number = 0): { pages: number; duration: number } => {
-    const coeff = genreCoefficient || 1.0
-
-    switch (timingSystem) {
-      case 'page':
-        // Постраничный: 1 страница = 55 секунд
-        const duration = Math.round(pages * 55 * coeff)
-        return { pages, duration }
-
-      case 'character':
-        // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
-        const charDuration = Math.round(charCount * 0.05 * coeff)
-        return { pages, duration: charDuration }
-
-      case 'flexible':
-        // Гибкий: базовый расчёт по страницам + вес диалогов
-        const dialogWeight = dialogLines * 0.1 // каждая строка диалога добавляет 0.1 страницы
-        const flexibleDuration = Math.round((pages + dialogWeight) * 55 * coeff)
-        return { pages, duration: flexibleDuration }
-
-      case 'manual':
-        // Ручной: пока используем постраничный как fallback
-        const manualDuration = Math.round(pages * 55 * coeff)
-        return { pages, duration: manualDuration }
-
-      default:
-        // Fallback на постраничный
-        const defaultDuration = Math.round(pages * 55 * coeff)
-        return { pages, duration: defaultDuration }
-    }
-  }
-
   // SmartType — подсказки при наборе (с дефолтами если пропсы не переданы)
   const smartType = useSmartType({
     characters: smartTypeCharacters || ['ПЕТЯ', 'МАША', 'ВАСЯ', 'ОЛЯ', 'ДИМА'],
     locations: smartTypeLocations || ['КВАРТИРА', 'ПАРК', 'ОФИС', 'УЛИЦА', 'КАФЕ'],
     times: smartTypeTimes || ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
   })
+  // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
+  const smartTypeRef = useRef(smartType)
+  smartTypeRef.current = smartType
+
+  // Refs для динамических callback'ов useEditor (предотвращаем stale closures)
+  const onUpdateRef = useRef<(({ editor }: { editor: any }) => void) | null>(null)
+  const handleKeyDownRef = useRef<((view: any, event: KeyboardEvent) => boolean) | null>(null)
+  const handleCopyRef = useRef<((view: any, event: ClipboardEvent) => boolean) | null>(null)
 
   // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
   const processedHeadersRef = useRef<Set<string>>(new Set())
@@ -204,159 +178,9 @@ export default function ScriptEditorTiptap({
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
       },
       handleDOMEvents: {
-        copy: (view, event) => {
-          const { state } = view
-          const { selection } = state
-          if (selection.empty) return false
-          
-          // Генерируем Word-совместимый HTML с inline-стилями
-          const div = document.createElement('div')
-          const serializer = DOMSerializer.fromSchema(state.schema)
-          div.appendChild(serializer.serializeFragment(selection.content().content))
-          
-          // Конвертируем CSS-классы в inline-стили для Word
-          const html = convertToWordCompatibleHtml(div.innerHTML, view.dom, (_format as 'russian' | 'hollywood') || 'russian')
-          
-          event.clipboardData?.setData('text/html', html)
-          event.clipboardData?.setData('text/plain', div.textContent || '')
-          event.preventDefault()
-          return true
-        },
+        copy: (view, event) => handleCopyRef.current?.(view, event) ?? false,
       },
-      handleKeyDown: (view, event) => {
-        // Если SmartType открыт и нажат Enter — выбираем подсказку
-        if (smartType.isOpen && (event.key === 'Enter' || event.key === 'Tab')) {
-          event.preventDefault()
-          const suggestion = smartType.suggestions[smartType.activeIndex]
-          if (suggestion && editor) {
-            const { state } = editor
-            const { selection } = state
-            const { $from } = selection
-            
-            const currentNode = $from.node()
-            const nodeText = currentNode?.textContent || ''
-            const posInNode = selection.from - $from.start()
-            
-            const beforeCursor = nodeText.substring(0, posInNode)
-            const match = beforeCursor.match(/[^\s]*$/)
-            const currentWord = match ? match[0] : ''
-            
-            if (currentWord) {
-              const wordStartPos = selection.from - currentWord.length
-              const wordEndPos = selection.from
-              
-              // Для времени автоматически добавляем точку
-              const textToInsert = suggestion.type === 'time' 
-                ? suggestion.text + '.' 
-                : suggestion.text
-              
-              editor
-                .chain()
-                .focus()
-                .deleteRange({ from: wordStartPos, to: wordEndPos })
-                .insertContent(textToInsert)
-                .run()
-              
-              smartType.closeSuggestions()
-            }
-          }
-          return true // Предотвращаем стандартное поведение
-        }
-        
-        // Если SmartType открыт и нажаты стрелки — навигация
-        if (smartType.isOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-          event.preventDefault()
-          smartType.navigateSuggestions(event.key === 'ArrowDown' ? 'down' : 'up')
-          return true
-        }
-        
-        // Если SmartType открыт и нажат Escape — закрываем
-        if (smartType.isOpen && event.key === 'Escape') {
-          event.preventDefault()
-          smartType.closeSuggestions()
-          return true
-        }
-        
-        // Автоматические переходы между типами блоков при Enter
-        if (event.key === 'Enter' && !event.shiftKey) {
-          const { state } = view
-          const { selection } = state
-          const { $from } = selection
-          const currentNode = $from.node()
-          const currentType = currentNode?.type.name
-          
-          // 1. После SceneHeader → создаём SceneCast для персонажей
-          if (currentType === 'sceneHeader') {
-            event.preventDefault()
-            editor?.chain().splitBlock().setNode('sceneCast').run()
-            return true
-          }
-          
-          // 2. После SceneCast → создаём SceneAction (описание)
-          if (currentType === 'sceneCast') {
-            event.preventDefault()
-            editor?.chain().splitBlock().setNode('sceneAction').run()
-            return true
-          }
-          
-          // 3. После SceneCharacter → создаём SceneDialog
-          if (currentType === 'sceneCharacter') {
-            event.preventDefault()
-            editor?.chain().splitBlock().setNode('sceneDialog').run()
-            return true
-          }
-          
-          // 4. После SceneDialog → создаём SceneAction (или проверяем капслок)
-          if (currentType === 'sceneDialog') {
-            event.preventDefault()
-            editor?.chain().splitBlock().setNode('sceneAction').run()
-            return true
-          }
-        }
-        
-        return false // Пропускаем остальные клавиши
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
-
-      // 1.1 Сохраняем в localStorage с ключом по projectId
-      safeSetLocalStorage(draftKey, html)
-
-      // Точный подсчёт страниц через виртуальный A4-рендеринг
-      // (с дебаунсом 400мс чтобы не тормозить при наборе)
-      if (pageCountTimeoutRef.current) {
-        clearTimeout(pageCountTimeoutRef.current)
-      }
-      pageCountTimeoutRef.current = setTimeout(() => {
-        const pages = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
-        setPrecisePages(pages)
-        // eslint-disable-next-line no-console
-        console.log('[onUpdate] precisePages:', pages, '| html.length:', html.length, '| html:', html.substring(0, 100))
-        // Передаём свежепосчитанные pages напрямую, чтобы избежать stale closure
-        extractScenesFromDocument(pages)
-        pageCountTimeoutRef.current = null
-      }, 400)
-
-      // Автоопределение типа блока
-      autoDetectBlockType(editor)
-      
-      // SmartType — обновляем подсказки (для шапки сцены и paragraph где набирается шапка)
-      const { state } = editor
-      const { selection } = state
-      const { $from } = selection
-      const currentType = getCurrentBlockType(editor)
-      
-      // 3.1 SmartType работает в шапке, paragraph и блоке персонажа
-      if (currentType === 'sceneHeader' || currentType === 'paragraph' || currentType === 'sceneCharacter') {
-        const currentNode = $from.node()
-        const nodeText = currentNode?.textContent || ''
-        const nodeStartPos = $from.start()
-        const posInNode = selection.from - nodeStartPos
-        smartType.updateSuggestions(nodeText, posInNode, currentType === 'sceneCharacter' ? 'sceneCharacter' : 'sceneHeader')
-      } else {
-        smartType.closeSuggestions()
-      }
+      handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
     },
   })
 
@@ -464,7 +288,7 @@ export default function ScriptEditorTiptap({
         : Math.max(0.1, parseFloat((raw.charCount / 1800).toFixed(1)))
 
       // Расчитываем хронометраж от уже точного кол-ва страниц
-      const { duration } = calculateSceneTiming(pages, raw.charCount, raw.dialogLines)
+      const { duration } = calculateSceneTiming({ pages, charCount: raw.charCount, dialogLines: raw.dialogLines }, timingSystem, genreCoefficient)
 
       return {
         id: `scene-${raw.sceneNumber}`,
@@ -669,6 +493,144 @@ export default function ScriptEditorTiptap({
     }
   }
 
+  // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
+  handleCopyRef.current = (view, event) => {
+    const { state } = view
+    const { selection } = state
+    if (selection.empty) return false
+    
+    const div = document.createElement('div')
+    const serializer = DOMSerializer.fromSchema(state.schema)
+    div.appendChild(serializer.serializeFragment(selection.content().content))
+    
+    const html = convertToWordCompatibleHtml(div.innerHTML, view.dom, (_format as 'russian' | 'hollywood') || 'russian')
+    
+    event.clipboardData?.setData('text/html', html)
+    event.clipboardData?.setData('text/plain', div.textContent || '')
+    event.preventDefault()
+    return true
+  }
+
+  handleKeyDownRef.current = (view, event) => {
+    const st = smartTypeRef.current
+    if (st.isOpen && (event.key === 'Enter' || event.key === 'Tab')) {
+      event.preventDefault()
+      const suggestion = st.suggestions[st.activeIndex]
+      if (suggestion && editor) {
+        const { state } = editor
+        const { selection } = state
+        const { $from } = selection
+        
+        const currentNode = $from.node()
+        const nodeText = currentNode?.textContent || ''
+        const posInNode = selection.from - $from.start()
+        
+        const beforeCursor = nodeText.substring(0, posInNode)
+        const match = beforeCursor.match(/[^\s]*$/)
+        const currentWord = match ? match[0] : ''
+        
+        if (currentWord) {
+          const wordStartPos = selection.from - currentWord.length
+          const wordEndPos = selection.from
+          
+          const textToInsert = suggestion.type === 'time' 
+            ? suggestion.text + '.' 
+            : suggestion.text
+          
+          editor
+            .chain()
+            .focus()
+            .deleteRange({ from: wordStartPos, to: wordEndPos })
+            .insertContent(textToInsert)
+            .run()
+          
+          st.closeSuggestions()
+        }
+      }
+      return true
+    }
+    
+    if (st.isOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      st.navigateSuggestions(event.key === 'ArrowDown' ? 'down' : 'up')
+      return true
+    }
+    
+    if (st.isOpen && event.key === 'Escape') {
+      event.preventDefault()
+      st.closeSuggestions()
+      return true
+    }
+    
+    if (event.key === 'Enter' && !event.shiftKey) {
+      const { state } = view
+      const { selection } = state
+      const { $from } = selection
+      const currentNode = $from.node()
+      const currentType = currentNode?.type.name
+      
+      if (currentType === 'sceneHeader') {
+        event.preventDefault()
+        editor?.chain().splitBlock().setNode('sceneCast').run()
+        return true
+      }
+      
+      if (currentType === 'sceneCast') {
+        event.preventDefault()
+        editor?.chain().splitBlock().setNode('sceneAction').run()
+        return true
+      }
+      
+      if (currentType === 'sceneCharacter') {
+        event.preventDefault()
+        editor?.chain().splitBlock().setNode('sceneDialog').run()
+        return true
+      }
+      
+      if (currentType === 'sceneDialog') {
+        event.preventDefault()
+        editor?.chain().splitBlock().setNode('sceneAction').run()
+        return true
+      }
+    }
+    
+    return false
+  }
+
+  onUpdateRef.current = ({ editor }) => {
+    const html = editor.getHTML()
+
+    safeSetLocalStorage(draftKey, html)
+
+    if (pageCountTimeoutRef.current) {
+      clearTimeout(pageCountTimeoutRef.current)
+    }
+    pageCountTimeoutRef.current = setTimeout(() => {
+      const pages = getPageCounter().calculatePages(html, (_format as 'russian' | 'hollywood') || 'russian')
+      setPrecisePages(pages)
+      extractScenesFromDocument(pages)
+      pageCountTimeoutRef.current = null
+    }, 400)
+
+    autoDetectBlockType(editor)
+    
+    const { state } = editor
+    const { selection } = state
+    const { $from } = selection
+    const currentType = getCurrentBlockType(editor)
+    
+    const st = smartTypeRef.current
+    if (currentType === 'sceneHeader' || currentType === 'paragraph' || currentType === 'sceneCharacter') {
+      const currentNode = $from.node()
+      const nodeText = currentNode?.textContent || ''
+      const nodeStartPos = $from.start()
+      const posInNode = selection.from - nodeStartPos
+      st.updateSuggestions(nodeText, posInNode, currentType === 'sceneCharacter' ? 'sceneCharacter' : 'sceneHeader')
+    } else {
+      st.closeSuggestions()
+    }
+  }
+
   // Обновляем CSS-класс формата при переключении RU/EN
   useEffect(() => {
     if (!editor) return
@@ -676,6 +638,14 @@ export default function ScriptEditorTiptap({
     el.classList.remove('format-russian', 'format-hollywood', 'format-custom')
     el.classList.add(`format-${_format || 'russian'}`)
   }, [editor, _format])
+
+  // Подписываемся на 'update' динамически (useEditor не обновляет callback'и)
+  useEffect(() => {
+    if (!editor) return
+    const handler = ({ editor: ed }: { editor: any }) => onUpdateRef.current?.({ editor: ed })
+    editor.on('update', handler)
+    return () => { editor.off('update', handler) }
+  }, [editor])
 
   // Cleanup: очищаем все timeout и DOM при unmount
   useEffect(() => {
@@ -852,14 +822,9 @@ export default function ScriptEditorTiptap({
       editor.commands.setContent({ type: 'doc', content: newContent })
 
       // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
-      const timeoutId = setTimeout(() => {
+      setTimeout(() => {
         extractScenesFromDocument()
       }, 100)
-
-      // Возвращаем cleanup функцию
-      return () => {
-        clearTimeout(timeoutId)
-      }
     }
 
     // Передаем функцию родителю
