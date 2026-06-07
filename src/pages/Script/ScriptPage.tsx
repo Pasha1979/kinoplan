@@ -98,6 +98,7 @@ export default function ScriptPage() {
   }, [selectedScene, project?.type, currentSeries])
 
   // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (project) {
       const projectScripts = scripts.filter(s => s.projectId === project.id)
@@ -116,6 +117,7 @@ export default function ScriptPage() {
       }
     }
   }, [project, scripts, currentScriptId, setCurrentScript])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 4.1 Конвертация формата — вызываем функцию из редактора при переключении RU/EN
   const handleFormatSwitch = (newFormat: ScriptFormat) => {

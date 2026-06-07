@@ -1,9 +1,9 @@
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { DOMSerializer } from 'prosemirror-model'
+import { DOMSerializer, Node as PMNode } from 'prosemirror-model'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode } from './tiptap'
@@ -105,12 +105,13 @@ export default function ScriptEditorTiptap({
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
+  // eslint-disable-next-line react-hooks/refs
   smartTypeRef.current = smartType
 
   // Refs для динамических callback'ов useEditor (предотвращаем stale closures)
-  const onUpdateRef = useRef<(({ editor }: { editor: any }) => void) | null>(null)
-  const handleKeyDownRef = useRef<((view: any, event: KeyboardEvent) => boolean) | null>(null)
-  const handleCopyRef = useRef<((view: any, event: ClipboardEvent) => boolean) | null>(null)
+  const onUpdateRef = useRef<(({ editor }: { editor: Editor }) => void) | null>(null)
+  const handleKeyDownRef = useRef<((view: Editor['view'], event: KeyboardEvent) => boolean) | null>(null)
+  const handleCopyRef = useRef<((view: Editor['view'], event: ClipboardEvent) => boolean) | null>(null)
 
   // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
   const processedHeadersRef = useRef<Set<string>>(new Set())
@@ -126,9 +127,13 @@ export default function ScriptEditorTiptap({
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
-  if (!pageCounterRef.current) {
+  if (pageCounterRef.current == null) {
     pageCounterRef.current = new PageCounter()
   }
+  // Ref для _format чтобы не добавлять его в deps useEffect (избегаем перезагрузки draft при смене формата)
+  const _formatRef = useRef(_format)
+  // eslint-disable-next-line react-hooks/refs
+  _formatRef.current = _format
 
   // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
   // При "Все серии" (currentSeries === 0) загружаем первую серию, чтобы не было пустого экрана
@@ -184,8 +189,8 @@ export default function ScriptEditorTiptap({
     type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number; charCount: number }
 
     // Собираем только блоки верхнего уровня документа (не inline-узлы)
-    const blockNodes: any[] = []
-    editor.state.doc.forEach((node: any) => {
+    const blockNodes: PMNode[] = []
+    editor.state.doc.forEach((node: PMNode) => {
       blockNodes.push(node)
     })
 
@@ -220,8 +225,8 @@ export default function ScriptEditorTiptap({
 
       // Вариант 1: разделитель — тире/—
       // Вариант 2: время в конце строки через точку (КВАРТИРА ПЕТИ. ДЕНЬ.)
-      let location = ''
-      let time = ''
+      let location
+      let time
 
       const dashParts = locationAndTime.split(/\s*[—–]\s*/)
       if (dashParts.length >= 2) {
@@ -308,6 +313,11 @@ export default function ScriptEditorTiptap({
     }
   }
 
+  // Ref для extractScenesFromDocument чтобы избежать stale closure в useEffect'ах
+  const extractScenesFromDocumentRef = useRef(extractScenesFromDocument)
+  // eslint-disable-next-line react-hooks/refs
+  extractScenesFromDocumentRef.current = extractScenesFromDocument
+
   // Применяем page-start классы к DOM редактора (RAF — чтобы ProseMirror уже отрисовал)
   const applyPageBreaks = useCallback(() => {
     if (!editor || pageBreaksRef.current.length <= 1) return
@@ -329,7 +339,7 @@ export default function ScriptEditorTiptap({
   }, [editor])
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
-  const autoDetectBlockType = (editor: any) => {
+  const autoDetectBlockType = (editor: Editor) => {
     const { state } = editor
     const { selection } = state
     const { $from } = selection
@@ -444,7 +454,7 @@ export default function ScriptEditorTiptap({
         if (noNumberPattern.test(upperText) && !alreadyNumbered.test(upperText)) {
           // Считаем только уже пронумерованные заголовки (не текущий, который ещё без номера)
           let sceneCount = 0
-          editor.state.doc.descendants((n: any) => {
+          editor.state.doc.descendants((n: PMNode) => {
             if (n.type.name === 'sceneHeader') {
               const t = n.textContent.trim()
               if (/^\d+\./.test(t)) sceneCount++
@@ -507,6 +517,7 @@ export default function ScriptEditorTiptap({
   }
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
+  // eslint-disable-next-line react-hooks/refs
   handleCopyRef.current = (view, event) => {
     const { state } = view
     const { selection } = state
@@ -524,6 +535,7 @@ export default function ScriptEditorTiptap({
     return true
   }
 
+  // eslint-disable-next-line react-hooks/refs
   handleKeyDownRef.current = (view, event) => {
     const st = smartTypeRef.current
     if (st.isOpen && (event.key === 'Enter' || event.key === 'Tab')) {
@@ -610,6 +622,7 @@ export default function ScriptEditorTiptap({
     return false
   }
 
+  // eslint-disable-next-line react-hooks/refs
   onUpdateRef.current = ({ editor }) => {
     const html = editor.getHTML()
 
@@ -660,7 +673,7 @@ export default function ScriptEditorTiptap({
   // Подписываемся на 'update' динамически (useEditor не обновляет callback'и)
   useEffect(() => {
     if (!editor) return
-    const handler = ({ editor: ed }: { editor: any }) => onUpdateRef.current?.({ editor: ed })
+    const handler = ({ editor: ed }: { editor: Editor }) => onUpdateRef.current?.({ editor: ed })
     editor.on('update', handler)
     return () => { editor.off('update', handler) }
   }, [editor])
@@ -691,12 +704,12 @@ export default function ScriptEditorTiptap({
       // Пересчитываем page breaks после загрузки контента (RAF ждём рендер ProseMirror)
       requestAnimationFrame(() => {
         const html = editor.getHTML()
-        const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
+        const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
         pageBreaksRef.current = result.breaks
         applyPageBreaks()
       })
     }
-  }, [editor, draftKey])
+  }, [editor, draftKey, applyPageBreaks])
 
   // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
   useEffect(() => {
@@ -802,7 +815,7 @@ export default function ScriptEditorTiptap({
 
       // Находим все sceneHeader в JSON
       const sceneIndices: number[] = []
-      content.forEach((node: any, index: number) => {
+      content.forEach((node: { type?: string }, index: number) => {
         if (node.type === 'sceneHeader') {
           sceneIndices.push(index)
         }
@@ -849,19 +862,13 @@ export default function ScriptEditorTiptap({
 
       // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
       setTimeout(() => {
-        extractScenesFromDocument()
+        extractScenesFromDocumentRef.current()
       }, 100)
     }
 
     // Передаем функцию родителю
     onReorderReady(handleReorder)
   }, [editor, onReorderReady])
-
-  // Экспортируем функцию обновления номеров
-  useEffect(() => {
-    if (!editor || !onUpdateNumbersReady) return
-    onUpdateNumbersReady(updateSceneNumbers)
-  }, [editor, onUpdateNumbersReady])
 
   // Функция для обновления номеров в редакторе на основе массива сцен из навигатора
   const updateSceneNumbers = (scenes: Array<{ id: string; number: string }>) => {
@@ -876,7 +883,8 @@ export default function ScriptEditorTiptap({
     let sceneIndex = 0
 
     // Создаем новый контент с обновлёнными номерами (без мутации)
-    const newContent = content.map((node: any) => {
+    type JSONNode = { type?: string; content?: Array<{ type?: string; text?: string; [key: string]: unknown }>; [key: string]: unknown }
+    const newContent = content.map((node: JSONNode) => {
       if (node.type === 'sceneHeader' && node.content && node.content[0] && sceneIndex < scenes.length) {
         const text = node.content[0].text || ''
         const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
@@ -911,14 +919,21 @@ export default function ScriptEditorTiptap({
     editor.commands.setContent({ type: 'doc', content: newContent })
   }
 
-  if (!editor) {
-    return null
-  }
+  // Ref для updateSceneNumbers чтобы избежать stale closure в useEffect'ах
+  const updateSceneNumbersRef = useRef(updateSceneNumbers)
+  // eslint-disable-next-line react-hooks/refs
+  updateSceneNumbersRef.current = updateSceneNumbers
 
-  // Функция для установки типа блока
+  // Экспортируем функцию обновления номеров
+  useEffect(() => {
+    if (!editor || !onUpdateNumbersReady) return
+    onUpdateNumbersReady((scenes) => updateSceneNumbersRef.current(scenes))
+  }, [editor, onUpdateNumbersReady])
+
+  // Функция для установки типа блока (вызов ДО conditional return чтобы соблюсти Rules of Hooks)
   const setBlockType = useCallback((type: string) => {
     if (!editor) return
-    
+
     // Преобразуем текущий блок в нужный тип
     editor.chain()
       .focus()
@@ -926,8 +941,12 @@ export default function ScriptEditorTiptap({
       .run()
   }, [editor])
 
+  if (!editor) {
+    return null
+  }
+
   // Получаем текущий тип блока
-  const getCurrentBlockType = (ed: any) => {
+  const getCurrentBlockType = (ed: Editor) => {
     if (!ed) return 'paragraph'
     const { $from } = ed.state.selection
     const node = $from.node()

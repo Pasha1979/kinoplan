@@ -201,7 +201,9 @@ interface SceneCardProps {
   duration: number
   dragStyle?: React.CSSProperties
   dragRef?: React.Ref<HTMLDivElement>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dragAttrs?: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dragListeners?: Record<string, any>
 }
 
