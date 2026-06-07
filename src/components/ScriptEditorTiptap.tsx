@@ -11,7 +11,7 @@ import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-
 import { useSmartType } from '../hooks/useSmartType'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
-import { getPageCounter } from '../services/pageCounter'
+import { getPageCounter, destroyPageCounter } from '../services/pageCounter'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -184,8 +184,8 @@ export default function ScriptEditorTiptap({
   const processedHeadersRef = useRef<Set<string>>(new Set())
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
-  // Храним timeout IDs для очистки при unmount
-  const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  // Таймаут сброса isReplacingRef (единый, чтобы не было утечки памяти)
+  const isReplacingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Точное количество страниц (через виртуальный A4-рендеринг)
   const [precisePages, setPrecisePages] = useState<number>(0.1)
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
@@ -346,10 +346,10 @@ export default function ScriptEditorTiptap({
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
-      
+
       // 1.1 Сохраняем в localStorage с ключом по projectId
       safeSetLocalStorage(draftKey, html)
-      
+
       // Точный подсчёт страниц через виртуальный A4-рендеринг
       // (с дебаунсом 400мс чтобы не тормозить при наборе)
       if (pageCountTimeoutRef.current) {
@@ -360,14 +360,11 @@ export default function ScriptEditorTiptap({
         setPrecisePages(pages)
         // eslint-disable-next-line no-console
         console.log('[onUpdate] precisePages:', pages, '| html.length:', html.length, '| html:', html.substring(0, 100))
-        // Форсируем обновление UI (теперь precisePages — state, поэтому React перерисует)
-        extractScenesFromDocument()
+        // Передаём свежепосчитанные pages напрямую, чтобы избежать stale closure
+        extractScenesFromDocument(pages)
         pageCountTimeoutRef.current = null
       }, 400)
-      
-      // Извлекаем сцены мгновенно (страницы обновятся через setPrecisePages → перерисовку)
-      extractScenesFromDocument()
-      
+
       // Автоопределение типа блока
       autoDetectBlockType(editor)
       
@@ -392,7 +389,7 @@ export default function ScriptEditorTiptap({
 
   // 2.2 Извлечение сцен напрямую из sceneHeader (без SceneNode)
   // 2.1 Исправлен баг: locationPart = headerMatch[3] (не [2])
-  const extractScenesFromDocument = () => {
+  const extractScenesFromDocument = (forcedPages?: number) => {
     if (!editor) return
 
     type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number; charCount: number }
@@ -481,14 +478,16 @@ export default function ScriptEditorTiptap({
 
     // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
     const totalCharCount = rawScenes.reduce((sum, s) => sum + s.charCount, 0)
-    // precisePages — точное кол-во от PageCounter (state, обновляется с debounce 400мс)
-    const hasPrecisePages = precisePages > 0.1
+    // forcedPages — свежепосчитанное значение от PageCounter (передаётся из setTimeout).
+    // precisePages — state (может быть stale в замыкании setTimeout).
+    const effectivePages = forcedPages ?? precisePages
+    const hasPrecisePages = effectivePages > 0.1
 
     const scenes: SceneEntry[] = rawScenes.map((raw) => {
       // Распределяем precisePages пропорционально charCount каждой сцены.
       // Если precisePages ещё не рассчитан (первый рендер) — fallback на charCount/1800.
       const pages = hasPrecisePages && totalCharCount > 0
-        ? Math.max(0.1, parseFloat(((raw.charCount / totalCharCount) * precisePages).toFixed(1)))
+        ? Math.max(0.1, parseFloat(((raw.charCount / totalCharCount) * effectivePages).toFixed(1)))
         : Math.max(0.1, parseFloat((raw.charCount / 1800).toFixed(1)))
 
       // Расчитываем хронометраж от уже точного кол-ва страниц
@@ -515,7 +514,7 @@ export default function ScriptEditorTiptap({
       const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
       onStatsChange({
         scenes: scenes.length,
-        pages: precisePages,
+        pages: effectivePages,
         duration: totalDuration,
       })
     }
@@ -618,12 +617,12 @@ export default function ScriptEditorTiptap({
           .insertContent(upperText)
           .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
           .run()
-        const timeoutId = setTimeout(() => { isReplacingRef.current = false }, 100)
-        timeoutIdsRef.current.push(timeoutId)
+        if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
+        isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
         return
       }
     }
-    
+
     // Авто-нумерация (только когда блок sceneHeader)
     if (isHeader && !isReplacingRef.current) {
       const upperText = textContent.toUpperCase()
@@ -651,19 +650,19 @@ export default function ScriptEditorTiptap({
             .insertContent(newText)
             .setTextSelection(nodeStart + newText.length)
             .run()
-          const timeoutId = setTimeout(() => { isReplacingRef.current = false }, 100)
-          timeoutIdsRef.current.push(timeoutId)
+          if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
+          isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
           return
         }
       }
-      
+
       // Авто-нумерация для СЕРИАЛА: "1. ИНТ." → "1-1. ИНТ."
       if (projectType === 'serial' && currentSeries > 0) {
         const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
         const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
         const match = upperText.match(needsSeriesPattern)
         const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
-        
+
         if (match && !alreadyHasSeries) {
           const sceneNumber = match[1]
           const extType = match[2]
@@ -677,8 +676,8 @@ export default function ScriptEditorTiptap({
             .insertContent(newText)
             .setTextSelection(nodeStart + newText.length)
             .run()
-          const timeoutId = setTimeout(() => { isReplacingRef.current = false }, 100)
-          timeoutIdsRef.current.push(timeoutId)
+          if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
+          isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
           return
         }
       }
@@ -703,15 +702,18 @@ export default function ScriptEditorTiptap({
     el.classList.add(`format-${_format || 'russian'}`)
   }, [editor, _format])
 
-  // Cleanup: очищаем все timeout при unmount
+  // Cleanup: очищаем все timeout и DOM при unmount
   useEffect(() => {
     return () => {
-      timeoutIdsRef.current.forEach((id) => clearTimeout(id))
-      timeoutIdsRef.current = []
+      if (isReplacingTimeoutRef.current) {
+        clearTimeout(isReplacingTimeoutRef.current)
+        isReplacingTimeoutRef.current = null
+      }
       if (pageCountTimeoutRef.current) {
         clearTimeout(pageCountTimeoutRef.current)
         pageCountTimeoutRef.current = null
       }
+      destroyPageCounter()
     }
   }, [])
 

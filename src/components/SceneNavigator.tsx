@@ -33,6 +33,35 @@ interface SimpleScene {
   cast?: string[]
 }
 
+function getTimeIcon(time: string) {
+  const t = (time || '').toUpperCase()
+  if (t === 'ДЕНЬ') return <span className="text-yellow-500">☀</span>
+  if (t === 'НОЧЬ') return <span className="text-blue-400">🌙</span>
+  if (t === 'УТРО') return <span className="text-orange-400">🌅</span>
+  if (t === 'ВЕЧЕР') return <span className="text-purple-400">🌆</span>
+  if (t === 'РАССВЕТ') return <span className="text-orange-400">🌅</span>
+  if (t === 'ЗАКАТ') return <span className="text-purple-400">🌆</span>
+  return <Clock size={12} />
+}
+
+function getTypeBadge(type: string) {
+  if (type.includes('ИНТ-ЭКСТ')) return { bg: 'rgba(251,146,60,0.2)', color: '#fb923c', label: 'ИНТ-ЭКСТ' }
+  if (type.includes('ЭКСТ')) return { bg: 'rgba(34,197,94,0.2)', color: '#22c55e', label: 'ЭКСТ' }
+  return { bg: 'rgba(139,92,246,0.2)', color: '#8b5cf6', label: 'ИНТ' }
+}
+
+function getColorTagColor(colorTag: string | undefined, isDark: boolean): string {
+  const colors: Record<string, string> = {
+    white: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db',
+    blue: '#60a5fa',
+    pink: '#f472b6',
+    yellow: '#facc15',
+    green: '#4ade80',
+    orange: '#fb923c',
+  }
+  return colors[colorTag || 'white'] || (isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb')
+}
+
 interface SceneNavigatorProps {
   scenes: SimpleScene[]
   isDark: boolean
@@ -159,11 +188,16 @@ export default function SceneNavigator({
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      const oldIndex = filteredScenes.findIndex((scene) => scene.id === active.id)
-      const newIndex = filteredScenes.findIndex((scene) => scene.id === over.id)
+      const filteredOldIndex = filteredScenes.findIndex((scene) => scene.id === active.id)
+      const filteredNewIndex = filteredScenes.findIndex((scene) => scene.id === over.id)
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        onSceneReorder?.(oldIndex, newIndex)
+      if (filteredOldIndex !== -1 && filteredNewIndex !== -1) {
+        // Конвертируем индексы из filtered в полный массив scenes
+        const fullOldIndex = scenes.findIndex((scene) => scene.id === active.id)
+        const fullNewIndex = scenes.findIndex((scene) => scene.id === over.id)
+        if (fullOldIndex !== -1 && fullNewIndex !== -1) {
+          onSceneReorder?.(fullOldIndex, fullNewIndex)
+        }
       }
     }
   }
@@ -180,172 +214,165 @@ export default function SceneNavigator({
     })
   }
 
-  const getColorTagColor = (colorTag?: string): string => {
-    const colors: Record<string, string> = {
-      white: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db',
-      blue: '#60a5fa',
-      pink: '#f472b6',
-      yellow: '#facc15',
-      green: '#4ade80',
-      orange: '#fb923c',
-    }
-    return colors[colorTag || 'white'] || (isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb')
+// Отдельный компонент (вынесен за пределы SceneNavigator чтобы React не делал unmount/remount на каждый рендер)
+interface SortableSceneCardProps {
+  scene: SimpleScene
+  isActive: boolean
+  isExpanded: boolean
+  stripColor: string
+  badge: { bg: string; color: string; label: string }
+  isDark: boolean
+  textPrimary: string
+  textSecondary: string
+  onSceneClick?: (id: string) => void
+  onToggleExpand?: (id: string) => void
+  pages: number
+  duration: number
+}
+
+function SortableSceneCard({
+  scene,
+  isActive,
+  isExpanded,
+  stripColor,
+  badge,
+  isDark,
+  textPrimary,
+  textSecondary,
+  onSceneClick,
+  onToggleExpand,
+  pages,
+  duration,
+}: SortableSceneCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: scene.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   }
 
-  const getTimeIcon = (time: string) => {
-    const t = (time || '').toUpperCase()
-    if (t === 'ДЕНЬ') return <span className="text-yellow-500">☀</span>
-    if (t === 'НОЧЬ') return <span className="text-blue-400">🌙</span>
-    if (t === 'УТРО') return <span className="text-orange-400">🌅</span>
-    if (t === 'ВЕЧЕР') return <span className="text-purple-400">🌆</span>
-    if (t === 'РАССВЕТ') return <span className="text-orange-400">🌅</span>
-    if (t === 'ЗАКАТ') return <span className="text-purple-400">🌆</span>
-    return <Clock size={12} />
-  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={`group rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 ring-offset-1' : ''} ${isDark ? 'hover:bg-white/5' : 'hover:bg-white'}`}
+      style={{
+        background: isActive
+          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)')
+          : (isDark ? 'rgba(255,255,255,0.04)' : '#ffffff'),
+        borderColor: isActive ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+        boxShadow: isActive
+          ? (isDark ? '0 4px 20px rgba(99,102,241,0.25)' : '0 4px 20px rgba(99,102,241,0.2)')
+          : (isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)'),
+        transform: isActive ? 'translateX(4px)' : undefined,
+        ...style,
+      }}
+      onClick={() => onSceneClick?.(scene.id)}
+    >
+      {/* Основная строка сцены */}
+      <div className="p-3 flex items-start gap-2">
+        {/* Цветная метка */}
+        <div className="w-1 shrink-0 self-stretch rounded-full" style={{ background: stripColor, minHeight: 40 }} />
 
-  const getTypeBadge = (type: string) => {
-    if (type.includes('ИНТ-ЭКСТ')) return { bg: 'rgba(251,146,60,0.2)', color: '#fb923c', label: 'ИНТ-ЭКСТ' }
-    if (type.includes('ЭКСТ')) return { bg: 'rgba(34,197,94,0.2)', color: '#22c55e', label: 'ЭКСТ' }
-    return { bg: 'rgba(139,92,246,0.2)', color: '#8b5cf6', label: 'ИНТ' }
-  }
-
-  // Компонент для сортируемой карточки сцены
-  function SortableSceneCard({ scene, isActive, isExpanded, stripColor, badge }: {
-    scene: SimpleScene
-    isActive: boolean
-    isExpanded: boolean
-    stripColor: string
-    badge: { bg: string; color: string; label: string }
-  }) {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: scene.id })
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-    }
-
-    return (
-      <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        className={`group rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 ring-offset-1' : ''} ${isDark ? 'hover:bg-white/5' : 'hover:bg-white'}`}
-        style={{
-          background: isActive 
-            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)') 
-            : (isDark ? 'rgba(255,255,255,0.04)' : '#ffffff'),
-          borderColor: isActive ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
-          boxShadow: isActive 
-            ? (isDark ? '0 4px 20px rgba(99,102,241,0.25)' : '0 4px 20px rgba(99,102,241,0.2)') 
-            : (isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)'),
-          transform: isActive ? 'translateX(4px)' : undefined,
-          ...style,
-        }}
-        onClick={() => onSceneClick?.(scene.id)}
-      >
-        {/* Основная строка сцены */}
-        <div className="p-3 flex items-start gap-2">
-          {/* Цветная метка */}
-          <div className="w-1 shrink-0 self-stretch rounded-full" style={{ background: stripColor, minHeight: 40 }} />
-
-          <div className="flex-1 min-w-0">
-            {/* Номер и тип */}
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold" style={{ color: textPrimary }}>
-                {scene.number}.
+        <div className="flex-1 min-w-0">
+          {/* Номер и тип */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-bold" style={{ color: textPrimary }}>
+              {scene.number}.
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded"
+              style={{ background: badge.bg, color: badge.color }}>
+              {badge.label}
+            </span>
+            {scene.isOmitted && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+                ВЫЧ
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded"
-                style={{ background: badge.bg, color: badge.color }}>
-                {badge.label}
-              </span>
-              {scene.isOmitted && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-                  ВЫЧ
+            )}
+          </div>
+
+          {/* Локация */}
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: textPrimary }}>
+            <MapPin size={12} style={{ color: textSecondary }} />
+            <span className="truncate">{scene.location}</span>
+          </div>
+
+          {/* Персонажи (cast) */}
+          {scene.cast && scene.cast.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {scene.cast.slice(0, 3).map((c, i) => (
+                <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                  {c}
+                </span>
+              ))}
+              {scene.cast.length > 3 && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
+                  +{scene.cast.length - 3}
                 </span>
               )}
             </div>
-
-            {/* Локация */}
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: textPrimary }}>
-              <MapPin size={12} style={{ color: textSecondary }} />
-              <span className="truncate">{scene.location}</span>
-            </div>
-
-            {/* Персонажи (cast) */}
-            {scene.cast && scene.cast.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {scene.cast.slice(0, 3).map((c, i) => (
-                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full"
-                    style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', color: isDark ? '#a5b4fc' : '#6366f1' }}>
-                    {c}
-                  </span>
-                ))}
-                {scene.cast.length > 3 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
-                    +{scene.cast.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Время и страницы */}
-            <div className="flex items-center gap-3 mt-1.5">
-              <span className="flex items-center gap-1 text-[10px]" style={{ color: textSecondary }}>
-                {getTimeIcon(scene.time)}
-                {scene.time}
-              </span>
-              {scene.pages !== undefined && (
-                <>
-                  <span className="text-[10px]" style={{ color: textSecondary }}>
-                    {calculateScenePages(scene)} стр
-                  </span>
-                  <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
-                    <Clock size={11} />
-                    {Math.floor(calculateSceneTiming(scene).duration / 60)}:{(calculateSceneTiming(scene).duration % 60).toFixed(0).padStart(2, '0')}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Кнопка развернуть (если есть синопсис) */}
-          {scene.synopsis && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleExpanded(scene.id)
-              }}
-              className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
-            >
-              {isExpanded ? (
-                <ChevronDown size={14} style={{ color: textSecondary }} />
-              ) : (
-                <ChevronRight size={14} style={{ color: textSecondary }} />
-              )}
-            </button>
           )}
+
+          {/* Время и страницы */}
+          <div className="flex items-center gap-3 mt-1.5">
+            <span className="flex items-center gap-1 text-[10px]" style={{ color: textSecondary }}>
+              {getTimeIcon(scene.time)}
+              {scene.time}
+            </span>
+            {scene.pages !== undefined && (
+              <>
+                <span className="text-[10px]" style={{ color: textSecondary }}>
+                  {pages.toFixed(1)} стр
+                </span>
+                <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
+                  <Clock size={11} />
+                  {Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Синопсис (раскрывается) */}
-        {isExpanded && scene.synopsis && (
-          <div className="px-3 pb-3 pt-0">
-            <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-              {scene.synopsis}
-            </p>
-          </div>
+        {/* Кнопка развернуть (если есть синопсис) */}
+        {scene.synopsis && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleExpand?.(scene.id)
+            }}
+            className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
+          >
+            {isExpanded ? (
+              <ChevronDown size={14} style={{ color: textSecondary }} />
+            ) : (
+              <ChevronRight size={14} style={{ color: textSecondary }} />
+            )}
+          </button>
         )}
       </div>
-    )
-  }
+
+      {/* Синопсис (раскрывается) */}
+      {isExpanded && scene.synopsis && (
+        <div className="px-3 pb-3 pt-0">
+          <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+            {scene.synopsis}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
   const cardBg = isDark ? '#0f0f1a' : '#f8fafc'
   const border = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
@@ -525,20 +552,28 @@ export default function SceneNavigator({
               items={filteredScenes.map(s => s.id)}
               strategy={verticalListSortingStrategy}
             >
-              {filteredScenes.map((scene, index) => {
+              {filteredScenes.map((scene) => {
                 const isActive = activeSceneId === scene.id
                 const isExpanded = expandedScenes.has(scene.id)
-                const stripColor = getColorTagColor(scene.colorTag)
+                const stripColor = getColorTagColor(scene.colorTag, isDark)
                 const badge = getTypeBadge(scene.type || '')
+                const timing = calculateSceneTiming(scene)
 
                 return (
                   <SortableSceneCard
-                    key={`${scene.id}-${index}`}
+                    key={scene.id}
                     scene={scene}
                     isActive={isActive}
                     isExpanded={isExpanded}
                     stripColor={stripColor}
                     badge={badge}
+                    isDark={isDark}
+                    textPrimary={textPrimary}
+                    textSecondary={textSecondary}
+                    onSceneClick={onSceneClick}
+                    onToggleExpand={toggleExpanded}
+                    pages={timing.pages}
+                    duration={timing.duration}
                   />
                 )
               })}
