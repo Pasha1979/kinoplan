@@ -167,8 +167,8 @@ export default function SceneNavigator({
     })
   }
 
-// Отдельный компонент (вынесен за пределы SceneNavigator чтобы React не делал unmount/remount на каждый рендер)
-interface SortableSceneCardProps {
+// Общий интерфейс для plain и sortable карточки
+interface SceneCardProps {
   scene: SimpleScene
   isActive: boolean
   isExpanded: boolean
@@ -181,9 +181,14 @@ interface SortableSceneCardProps {
   onToggleExpand?: (id: string) => void
   pages: number
   duration: number
+  dragStyle?: React.CSSProperties
+  dragRef?: React.Ref<HTMLDivElement>
+  dragAttrs?: Record<string, any>
+  dragListeners?: Record<string, any>
 }
 
-function SortableSceneCard({
+// Plain карточка сцены (без drag-and-drop)
+function SceneCard({
   scene,
   isActive,
   isExpanded,
@@ -196,27 +201,16 @@ function SortableSceneCard({
   onToggleExpand,
   pages,
   duration,
-}: SortableSceneCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: scene.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
+  dragStyle,
+  dragRef,
+  dragAttrs,
+  dragListeners,
+}: SceneCardProps) {
   return (
     <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
+      ref={dragRef}
+      {...dragAttrs}
+      {...dragListeners}
       className={`group rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 ring-offset-1' : ''} ${isDark ? 'hover:bg-white/5' : 'hover:bg-white'}`}
       style={{
         background: isActive
@@ -227,7 +221,7 @@ function SortableSceneCard({
           ? (isDark ? '0 4px 20px rgba(99,102,241,0.25)' : '0 4px 20px rgba(99,102,241,0.2)')
           : (isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)'),
         transform: isActive ? 'translateX(4px)' : undefined,
-        ...style,
+        ...dragStyle,
       }}
       onClick={() => onSceneClick?.(scene.id)}
     >
@@ -325,6 +319,26 @@ function SortableSceneCard({
       )}
     </div>
   )
+}
+
+// Обёртка с drag-and-drop (только когда filter === 'all')
+function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' | 'dragAttrs' | 'dragListeners'>) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.scene.id })
+
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return <SceneCard {...props} dragStyle={dragStyle} dragRef={setNodeRef} dragAttrs={attributes} dragListeners={listeners} />
 }
 
   const cardBg = isDark ? '#0f0f1a' : '#f8fafc'
@@ -495,7 +509,35 @@ function SortableSceneCard({
               Нет сцен
             </p>
           </div>
+        ) : filter !== 'all' ? (
+          // При активном фильтре — plain список без drag-and-drop
+          filteredScenes.map((scene) => {
+            const isActive = activeSceneId === scene.id
+            const isExpanded = expandedScenes.has(scene.id)
+            const stripColor = getColorTagColor(scene.colorTag, isDark)
+            const badge = getTypeBadge(scene.type || '')
+            const timing = calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient)
+
+            return (
+              <SceneCard
+                key={scene.id}
+                scene={scene}
+                isActive={isActive}
+                isExpanded={isExpanded}
+                stripColor={stripColor}
+                badge={badge}
+                isDark={isDark}
+                textPrimary={textPrimary}
+                textSecondary={textSecondary}
+                onSceneClick={onSceneClick}
+                onToggleExpand={toggleExpanded}
+                pages={timing.pages}
+                duration={timing.duration}
+              />
+            )
+          })
         ) : (
+          // Без фильтра — drag-and-drop reorder
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}

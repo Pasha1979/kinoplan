@@ -39,53 +39,38 @@ interface ScriptEditorTiptapProps {
   smartTypeTimes?: string[]
 }
 
-// Преобразуем div[data-type] в p для Word-совместимости
+// Добавляем inline-стили к div[data-type] для Word-совместимости.
+// НЕ заменяем div на p — pageCounter тоже оставляет div, унификация рендеринга.
 function convertToWordCompatibleHtml(html: string, _editorDom: HTMLElement, format: 'russian' | 'hollywood' = 'russian'): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
-  
-  // Преобразуем все div[data-type] в p с inline-стилями
-  const convertElements = (element: HTMLElement) => {
+
+  const convert = (element: HTMLElement) => {
     const dataType = element.getAttribute('data-type')
     if (dataType && SCRIPT_STYLES[dataType]) {
-      // Создаём <p> вместо <div> — Word лучше понимает <p>
-      const p = document.createElement('p')
-      p.innerHTML = element.innerHTML
-      
       const current = element.getAttribute('style') || ''
       const newStyles = SCRIPT_STYLES[dataType][format]
-      p.setAttribute('style', current + (current ? '; ' : '') + newStyles)
-      
-      // Заменяем элемент
-      element.parentNode?.replaceChild(p, element)
-      
-      // Рекурсивно обрабатываем детей нового <p>
-      Array.from(p.children).forEach(child => {
-        if (child instanceof HTMLElement) convertElements(child)
-      })
-    } else {
-      Array.from(element.children).forEach(child => {
-        if (child instanceof HTMLElement) convertElements(child)
-      })
+      element.setAttribute('style', current + (current ? '; ' : '') + newStyles)
     }
+    Array.from(element.children).forEach(child => {
+      if (child instanceof HTMLElement) convert(child)
+    })
   }
-  
-  // Обрабатываем body
+
   Array.from(doc.body.children).forEach(child => {
-    if (child instanceof HTMLElement) convertElements(child)
+    if (child instanceof HTMLElement) convert(child)
   })
-  
-  // Word wrapper
+
   const wrapper = document.createElement('div')
   wrapper.innerHTML = doc.body.innerHTML
-  wrapper.setAttribute('style', 
+  wrapper.setAttribute('style',
     'font-family: "Courier New", Courier, monospace; ' +
     'font-size: 12pt; ' +
     'line-height: 1.5; ' +
     'max-width: 21cm; ' +
     'margin: 0 auto;'
   )
-  
+
   return wrapper.outerHTML
 }
 
