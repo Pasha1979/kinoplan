@@ -597,10 +597,12 @@ export default function ScriptEditorTiptap({
 
       // Визуальное разделение страниц в редакторе
       // eslint-disable-next-line no-console
-      console.log('[ScriptEditor] page breaks:', result.breaks)
-      if (editor && result.breaks.length > 1) {
+      console.log('[ScriptEditor] totalPages:', result.totalPages, 'breaks:', result.breaks)
+      if (editor) {
         const editorDom = editor.view.dom as HTMLElement
         const children = Array.from(editorDom.children) as HTMLElement[]
+        // eslint-disable-next-line no-console
+        console.log('[ScriptEditor] editor children count:', children.length)
         // Сбрасываем старые разделители
         children.forEach(child => {
           child.classList.remove('page-start')
@@ -608,10 +610,17 @@ export default function ScriptEditorTiptap({
         })
         // Применяем новые (пропускаем первую страницу)
         result.breaks.slice(1).forEach(breakInfo => {
+          // eslint-disable-next-line no-console
+          console.log('[ScriptEditor] applying page-start to index', breakInfo.startIndex, 'of', children.length)
           const child = children[breakInfo.startIndex]
           if (child) {
             child.classList.add('page-start')
             child.setAttribute('data-page', `Страница ${breakInfo.page}`)
+            // eslint-disable-next-line no-console
+            console.log('[ScriptEditor] applied to:', child.tagName, child.getAttribute('data-type'))
+          } else {
+            // eslint-disable-next-line no-console
+            console.warn('[ScriptEditor] no child at index', breakInfo.startIndex)
           }
         })
       }

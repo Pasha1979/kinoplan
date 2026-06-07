@@ -123,7 +123,8 @@ export class PageCounter {
 
     children.forEach((child, index) => {
       const heightPx = child.offsetHeight
-      const heightMm = heightPx / this.mmToPx
+      // Применяем калибровку к каждому элементу (браузерный шрифт крупнее Word)
+      const heightMm = (heightPx / this.mmToPx) * this.wordCalibration
       accumulatedMm += heightMm
 
       if (accumulatedMm > usablePageHeightMm && pageStartIndex < index) {
@@ -140,7 +141,7 @@ export class PageCounter {
     }
 
     // eslint-disable-next-line no-console
-    console.log('[PageCounter] breaks:', breaks, 'totalPages:', totalPages)
+    console.log('[PageCounter] children:', children.length, 'usableMm:', usablePageHeightMm, 'breaks:', breaks, 'totalPages:', totalPages)
 
     return { totalPages, breaks }
   }
