@@ -112,7 +112,10 @@ export class PageCounter {
     const totalPages = Math.max(0.1, parseFloat(pages.toFixed(1)))
 
     // --- page breaks (via per-element offsetHeight) ---
-    const children = Array.from(this.container!.children) as HTMLElement[]
+    // styledHtml is wrapped in <div>, so container.children returns only 1 element.
+    // We need the wrapper's children to iterate actual content blocks.
+    const wrapper = this.container!.children[0] as HTMLElement
+    const children = wrapper ? Array.from(wrapper.children) as HTMLElement[] : []
     let accumulatedMm = 0
     const breaks: PageBreak[] = []
     let page = 1

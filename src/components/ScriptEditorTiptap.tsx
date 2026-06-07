@@ -596,6 +596,8 @@ export default function ScriptEditorTiptap({
       extractScenesFromDocument(result.totalPages)
 
       // Визуальное разделение страниц в редакторе
+      // eslint-disable-next-line no-console
+      console.log('[ScriptEditor] page breaks:', result.breaks)
       if (editor && result.breaks.length > 1) {
         const editorDom = editor.view.dom as HTMLElement
         const children = Array.from(editorDom.children) as HTMLElement[]
