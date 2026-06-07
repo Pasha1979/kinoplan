@@ -138,12 +138,11 @@ export default function ScriptEditorTiptap({
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
-  // Функция расчёта хронометража сцены в зависимости от системы
-  const calculateSceneTiming = (charCount: number, dialogLines: number = 0): { pages: number; duration: number } => {
+  // Функция расчёта хронометража сцены в зависимости от системы.
+  // Теперь принимает уже точное кол-во страниц (от PageCounter),
+  // charCount и dialogLines — только для посимвольной/гибкой системы.
+  const calculateSceneTiming = (pages: number, charCount: number, dialogLines: number = 0): { pages: number; duration: number } => {
     const coeff = genreCoefficient || 1.0
-    
-    // Страницы всегда считаются одинаково - это физический размер текста
-    const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
 
     switch (timingSystem) {
       case 'page':
@@ -164,7 +163,6 @@ export default function ScriptEditorTiptap({
 
       case 'manual':
         // Ручной: пока используем постраничный как fallback
-        // В будущем будет храниться в стор для каждой сцены
         const manualDuration = Math.round(pages * 55 * coeff)
         return { pages, duration: manualDuration }
 
@@ -398,13 +396,23 @@ export default function ScriptEditorTiptap({
     if (!editor) return
 
     type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number; charCount: number }
-    const scenes: SceneEntry[] = []
 
     // Собираем только блоки верхнего уровня документа (не inline-узлы)
     const blockNodes: any[] = []
     editor.state.doc.forEach((node: any) => {
       blockNodes.push(node)
     })
+
+    // === ПРОХОД 1: собираем raw-сцены с charCount и dialogLines ===
+    const rawScenes: Array<{
+      sceneNumber: string
+      sceneType: string
+      location: string
+      time: string
+      cast: string[]
+      charCount: number
+      dialogLines: number
+    }> = []
 
     blockNodes.forEach((node, index) => {
       if (node.type.name !== 'sceneHeader') return
@@ -456,7 +464,7 @@ export default function ScriptEditorTiptap({
         }
       }
 
-      // Считаем символы до следующей sceneHeader для приблизительного кол-ва страниц
+      // Считаем символы до следующей sceneHeader
       let charCount = headerText.length
       let dialogLines = 0
       for (let i = index + 1; i < blockNodes.length; i++) {
@@ -468,10 +476,35 @@ export default function ScriptEditorTiptap({
         }
       }
 
-      // Расчитываем хронометраж сцены в зависимости от выбранной системы
-      const { pages, duration } = calculateSceneTiming(charCount, dialogLines)
+      rawScenes.push({ sceneNumber, sceneType, location, time, cast, charCount, dialogLines })
+    })
 
-      scenes.push({ id: `scene-${sceneNumber}`, number: sceneNumber, type: sceneType, location, time, cast, pages, duration, charCount })
+    // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
+    const totalCharCount = rawScenes.reduce((sum, s) => sum + s.charCount, 0)
+    // precisePages — точное кол-во от PageCounter (state, обновляется с debounce 400мс)
+    const hasPrecisePages = precisePages > 0.1
+
+    const scenes: SceneEntry[] = rawScenes.map((raw) => {
+      // Распределяем precisePages пропорционально charCount каждой сцены.
+      // Если precisePages ещё не рассчитан (первый рендер) — fallback на charCount/1800.
+      const pages = hasPrecisePages && totalCharCount > 0
+        ? Math.max(0.1, parseFloat(((raw.charCount / totalCharCount) * precisePages).toFixed(1)))
+        : Math.max(0.1, parseFloat((raw.charCount / 1800).toFixed(1)))
+
+      // Расчитываем хронометраж от уже точного кол-ва страниц
+      const { duration } = calculateSceneTiming(pages, raw.charCount, raw.dialogLines)
+
+      return {
+        id: `scene-${raw.sceneNumber}`,
+        number: raw.sceneNumber,
+        type: raw.sceneType,
+        location: raw.location,
+        time: raw.time,
+        cast: raw.cast,
+        pages,
+        duration,
+        charCount: raw.charCount,
+      }
     })
 
     if (onScenesChange) {

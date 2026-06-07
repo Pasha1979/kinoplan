@@ -66,35 +66,39 @@ export default function SceneNavigator({
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
 
-  // Функция расчёта хронометража сцены в зависимости от системы
+  // Функция расчёта хронометража сцены в зависимости от системы.
+  // Использует scene.pages напрямую, если оно передано из редактора (точный подсчёт PageCounter).
   const calculateSceneTiming = (scene: SimpleScene): { pages: number; duration: number } => {
     const coeff = genreCoefficient || 1.0
-    const charCount = scene.charCount || (scene.pages ? scene.pages * 1800 : 0)
-    
-    // Страницы всегда считаются одинаково - это физический размер текста
-    const pages = Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
+    const charCount = scene.charCount || 0
+
+    // Страницы: используем точное значение от PageCounter, если есть.
+    // Иначе fallback на приблизительный расчёт по символам.
+    const pages = scene.pages !== undefined
+      ? Math.max(0.1, parseFloat(scene.pages.toFixed(1)))
+      : Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
 
     switch (timingSystem) {
       case 'page':
         // Постраничный: 1 страница = 55 секунд
         const duration = Math.round(pages * 55 * coeff)
         return { pages, duration }
-      
+
       case 'character':
         // Посимвольный: 1 символ = 0.05 секунды (20 символов = 1 секунда)
         const charDuration = Math.round(charCount * 0.05 * coeff)
         return { pages, duration: charDuration }
-      
+
       case 'flexible':
         // Гибкий: базовый расчёт по страницам
         const flexibleDuration = Math.round(pages * 55 * coeff)
         return { pages, duration: flexibleDuration }
-      
+
       case 'manual':
         // Ручной: пока fallback на постраничный
         const manualDuration = Math.round(pages * 55 * coeff)
         return { pages, duration: manualDuration }
-      
+
       default:
         const defaultDuration = Math.round(pages * 55 * coeff)
         return { pages, duration: defaultDuration }
@@ -103,7 +107,10 @@ export default function SceneNavigator({
 
   // Вспомогательная функция для расчёта только страниц (для отображения)
   const calculateScenePages = (scene: SimpleScene): number => {
-    const charCount = scene.charCount || (scene.pages ? scene.pages * 1800 : 0)
+    if (scene.pages !== undefined) {
+      return Math.max(0.1, parseFloat(scene.pages.toFixed(1)))
+    }
+    const charCount = scene.charCount || 0
     return Math.max(0.1, parseFloat((charCount / 1800).toFixed(1)))
   }
 
