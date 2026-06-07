@@ -221,13 +221,9 @@ body {
 }
 
 /* ========== ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ СТРАНИЦ A4 ========== */
-/* Повышенная специфичность, чтобы перебить .tiptap-editor div[data-type] */
+/* НЕ изменяем margin/padding элемента — чтобы не смещать расчёт pageCounter */
 .tiptap-editor .page-start,
 .tiptap-editor.ProseMirror .page-start {
-  margin-top: 40px !important;
-  padding-top: 16px !important;
-  border-top: 2px dashed #6366f1 !important;
-  background: rgba(99, 102, 241, 0.05) !important;
   position: relative !important;
 }
 
@@ -250,6 +246,19 @@ body {
   background: #1e1b4b;
   color: #818cf8;
   border: 1px solid #4f46e5;
+}
+
+.tiptap-editor .page-start::after,
+.tiptap-editor.ProseMirror .page-start::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed rgba(129, 140, 248, 0.6);
+  pointer-events: none;
+  z-index: 9;
 }
 
 /* Прогресс-бар */

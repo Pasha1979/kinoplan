@@ -299,12 +299,11 @@ export default function ScriptEditorTiptap({
       onScenesChange(scenes)
     }
     if (onStatsChange) {
-      // Используем точный подсчёт страниц через виртуальный A4-рендеринг
-      const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
+      // Передаём только кол-во сцен; хронометраж и страницы — из навигатора (единый источник)
       onStatsChange({
         scenes: scenes.length,
-        pages: effectivePages,
-        duration: totalDuration,
+        pages: 0,
+        duration: 0,
       })
     }
   }
