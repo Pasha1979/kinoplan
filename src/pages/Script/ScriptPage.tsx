@@ -86,6 +86,17 @@ export default function ScriptPage() {
       : newScenes
 
     setScenes(filteredScenes)
+    // Синхронизируем сцены с нормализованным store (единый источник истины)
+    const pid = currentProjectId ?? project?.id
+    if (pid) {
+      useNormalizedProjectStore.getState().setScenesBatch(
+        newScenes.map(s => ({
+          ...s,
+          projectId: pid,
+          type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
+        }))
+      )
+    }
     // Если selectedScene больше нет в списке — выбираем первую
     if (filteredScenes.length > 0) {
       const stillExists = selectedScene && filteredScenes.find(s => s.id === selectedScene.id)
@@ -95,7 +106,7 @@ export default function ScriptPage() {
     } else {
       setSelectedScene(null)
     }
-  }, [selectedScene, project?.type, currentSeries])
+  }, [selectedScene, project?.type, currentSeries, currentProjectId, project?.id])
 
   // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
   /* eslint-disable react-hooks/set-state-in-effect */
