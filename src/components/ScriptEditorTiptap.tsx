@@ -121,6 +121,8 @@ export default function ScriptEditorTiptap({
   const isReplacingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Точное количество страниц (через виртуальный A4-рендеринг)
   const [precisePages, setPrecisePages] = useState<number>(0.1)
+  // Ref для актуального значения — избегаем stale closure в setTimeout/setCallbacks
+  const precisePagesRef = useRef<number>(0.1)
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
   const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Сохраняем page breaks для повторного применения после ProseMirror рендера
@@ -276,7 +278,7 @@ export default function ScriptEditorTiptap({
     const totalCharCount = rawScenes.reduce((sum, s) => sum + s.charCount, 0)
     // forcedPages — свежепосчитанное значение от PageCounter (передаётся из setTimeout).
     // precisePages — state (может быть stale в замыкании setTimeout).
-    const effectivePages = forcedPages ?? precisePages
+    const effectivePages = forcedPages ?? precisePagesRef.current
     const hasPrecisePages = effectivePages > 0.1
 
     const scenes: SceneEntry[] = rawScenes.map((raw) => {
@@ -636,6 +638,7 @@ export default function ScriptEditorTiptap({
     pageCountTimeoutRef.current = setTimeout(() => {
       const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
       setPrecisePages(result.totalPages)
+      precisePagesRef.current = result.totalPages
       extractScenesFromDocument(result.totalPages)
 
       // Сохраняем breaks (применение отключено)
@@ -868,7 +871,7 @@ export default function ScriptEditorTiptap({
 
       // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
       setTimeout(() => {
-        extractScenesFromDocumentRef.current()
+        extractScenesFromDocumentRef.current(precisePagesRef.current)
       }, 100)
     }
 
