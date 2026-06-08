@@ -2,15 +2,14 @@ import { useNormalizedProjectStore } from '../store/useProjectStore'
 import { useToastStore } from '../store/toastStore'
 import type { Project } from '../store/projectStore'
 import type { Scene } from '../store/useProjectStore'
-
-const MOCK_DELAY = 100
+import { API_MOCK_DELAY_MS } from '../constants/scriptConstants'
 
 export const projectService = {
   async getProjects(signal?: AbortSignal): Promise<Project[]> {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        const timeoutId = setTimeout(resolve, API_MOCK_DELAY_MS)
         const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
@@ -35,7 +34,7 @@ export const projectService = {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        const timeoutId = setTimeout(resolve, API_MOCK_DELAY_MS)
         const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
@@ -89,7 +88,7 @@ export const projectService = {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        const timeoutId = setTimeout(resolve, API_MOCK_DELAY_MS)
         const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
@@ -111,7 +110,7 @@ export const projectService = {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        const timeoutId = setTimeout(resolve, API_MOCK_DELAY_MS)
         const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
@@ -132,7 +131,7 @@ export const projectService = {
     try {
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)
       await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        const timeoutId = setTimeout(resolve, API_MOCK_DELAY_MS)
         const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
@@ -172,7 +171,7 @@ export const projectService = {
     try {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(resolve, MOCK_DELAY)
+        const timeoutId = setTimeout(resolve, API_MOCK_DELAY_MS)
         const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))

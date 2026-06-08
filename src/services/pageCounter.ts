@@ -7,6 +7,7 @@
  */
 
 import { SCRIPT_STYLES } from '../constants/scriptStyles'
+import { A4_WIDTH_MM, A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM, WORD_RENDER_CALIBRATION, MIN_SCENE_PAGES } from '../constants/scriptConstants'
 
 /**
  * Применяет inline-стили к HTML для точного рендеринга.
@@ -62,9 +63,9 @@ export class PageCounter {
   private container: HTMLDivElement | null = null
   private mmToPx = 3.7795 // 1 mm ≈ 3.7795 px при 96 dpi
   // Калибровочный коэффициент: браузер рендерит шрифт крупнее, чем Word.
-  // Эмпирически подобран: если Киноплан 2.6, Word 2.0 → 2.0/2.6 ≈ 0.77
+  // Калибровка совпадает с константой WORD_RENDER_CALIBRATION.
   // Без калибровки показывает на ~30% больше страниц, чем Word.
-  private wordCalibration = 0.77
+  private wordCalibration = WORD_RENDER_CALIBRATION
 
   constructor() {
     this.createContainer()
@@ -78,7 +79,7 @@ export class PageCounter {
       position: fixed;
       top: 0;
       left: 0;
-      width: 210mm;
+      width: ${A4_WIDTH_MM}mm;
       padding: 2cm 2cm 2cm 3cm;
       box-sizing: border-box;
       font-family: "Courier New", Courier, monospace;
@@ -106,10 +107,10 @@ export class PageCounter {
     // --- total pages (via scrollHeight, same as before) ---
     const contentHeightPx = this.container!.scrollHeight
     const contentHeightMm = contentHeightPx / this.mmToPx
-    const usablePageHeightMm = 297 - 40
+    const usablePageHeightMm = A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2
     const rawPages = contentHeightMm / usablePageHeightMm
     const pages = rawPages * this.wordCalibration
-    const totalPages = Math.max(0.1, parseFloat(pages.toFixed(1)))
+    const totalPages = Math.max(MIN_SCENE_PAGES, parseFloat(pages.toFixed(1)))
 
     // --- page breaks (via per-element offsetHeight) ---
     // styledHtml is wrapped in <div>, so container.children returns only 1 element.

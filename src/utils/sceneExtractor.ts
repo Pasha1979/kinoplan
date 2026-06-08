@@ -1,5 +1,6 @@
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { calculateSceneTiming } from './sceneTiming'
+import { CHARS_PER_PAGE, MIN_SCENE_PAGES } from '../constants/scriptConstants'
 import type { TimingSystem } from '../store/scriptStore'
 
 export interface ExtractedScene {
@@ -120,14 +121,14 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
   // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
   const totalCharCount = rawScenes.reduce((sum, s) => sum + s.charCount, 0)
   const effectivePages = forcedPages ?? precisePagesFallback
-  const hasPrecisePages = effectivePages > 0.1
+  const hasPrecisePages = effectivePages > MIN_SCENE_PAGES
 
   const scenes: ExtractedScene[] = rawScenes.map((raw) => {
     // Распределяем precisePages пропорционально charCount каждой сцены.
-    // Если precisePages ещё не рассчитан (первый рендер) — fallback на charCount/1800.
+    // Если precisePages ещё не рассчитан (первый рендер) — fallback на charCount/CHARS_PER_PAGE.
     const pages = hasPrecisePages && totalCharCount > 0
-      ? Math.max(0.1, parseFloat(((raw.charCount / totalCharCount) * effectivePages).toFixed(1)))
-      : Math.max(0.1, parseFloat((raw.charCount / 1800).toFixed(1)))
+      ? Math.max(MIN_SCENE_PAGES, parseFloat(((raw.charCount / totalCharCount) * effectivePages).toFixed(1)))
+      : Math.max(MIN_SCENE_PAGES, parseFloat((raw.charCount / CHARS_PER_PAGE).toFixed(1)))
 
     // Расчитываем хронометраж от уже точного кол-ва страниц
     const { duration } = calculateSceneTiming({ pages, charCount: raw.charCount, dialogLines: raw.dialogLines }, timingSystem, genreCoefficient)
