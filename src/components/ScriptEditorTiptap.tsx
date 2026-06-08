@@ -129,6 +129,8 @@ export default function ScriptEditorTiptap({
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Таймаут для extractScenesFromDocument после reorder
+  const reorderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -698,6 +700,10 @@ export default function ScriptEditorTiptap({
         clearTimeout(pageBreakApplyTimeoutRef.current)
         pageBreakApplyTimeoutRef.current = null
       }
+      if (reorderTimeoutRef.current) {
+        clearTimeout(reorderTimeoutRef.current)
+        reorderTimeoutRef.current = null
+      }
       pageCounterRef.current?.destroy()
       pageCounterRef.current = null
     }
@@ -870,7 +876,8 @@ export default function ScriptEditorTiptap({
       editor.commands.setContent({ type: 'doc', content: newContent })
 
       // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
-      setTimeout(() => {
+      if (reorderTimeoutRef.current) clearTimeout(reorderTimeoutRef.current)
+      reorderTimeoutRef.current = setTimeout(() => {
         extractScenesFromDocumentRef.current(precisePagesRef.current)
       }, 100)
     }
