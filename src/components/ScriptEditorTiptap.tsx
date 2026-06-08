@@ -14,6 +14,7 @@ import { SmartTypePopup } from './SmartTypePopup'
 import { PageCounter } from '../services/pageCounter'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
+import { useSceneEditorActions } from '../hooks/useSceneEditorActions'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -94,8 +95,6 @@ export default function ScriptEditorTiptap({
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Таймаут для extractScenesFromDocument после reorder
-  const reorderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -150,6 +149,19 @@ export default function ScriptEditorTiptap({
       },
       handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
     },
+  })
+
+  // Хук для drag-and-drop, scroll к сцене, обновления номеров
+  useSceneEditorActions({
+    editor,
+    focusSceneId,
+    onReorderReady,
+    onUpdateNumbersReady,
+    precisePagesRef,
+    timingSystem,
+    genreCoefficient,
+    onScenesChange,
+    onStatsChange,
   })
 
   // Применяем page-start классы к DOM редактора (setTimeout — дать ProseMirror завершить рендер)
@@ -538,10 +550,6 @@ export default function ScriptEditorTiptap({
         clearTimeout(pageBreakApplyTimeoutRef.current)
         pageBreakApplyTimeoutRef.current = null
       }
-      if (reorderTimeoutRef.current) {
-        clearTimeout(reorderTimeoutRef.current)
-        reorderTimeoutRef.current = null
-      }
       pageCounterRef.current?.destroy()
       pageCounterRef.current = null
     }
@@ -602,197 +610,6 @@ export default function ScriptEditorTiptap({
 
     onConvertReady(convertFormat)
   }, [editor, onConvertReady])
-
-  // 3.2 Прокрутка редактора к сцене по focusSceneId
-  useEffect(() => {
-    if (!editor || !focusSceneId) return
-    let found = false
-    let scrollPos: number | null = null
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-
-    editor.state.doc.descendants((node, pos) => {
-      if (found) return false
-      if (node.type.name === 'sceneHeader') {
-        const headerText = node.textContent
-        const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\./)
-        if (headerMatch) {
-          const sceneNum = headerMatch[1]
-          // Точное совпадение номера сцены
-          if (focusSceneId === sceneNum) {
-            found = true
-            scrollPos = pos
-            const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
-            if (domNode) {
-              domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-          }
-        }
-      }
-    })
-
-    // Повторяем скролл с задержкой чтобы гарантировать позицию
-    if (scrollPos !== null) {
-      timeoutId = setTimeout(() => {
-        const domNode = editor.view.nodeDOM(scrollPos) as HTMLElement | null
-        if (domNode) {
-          domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-      }, 500)
-    }
-
-    // Cleanup
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-    }
-  }, [focusSceneId, editor])
-
-  // 3.3 Перестановка сцен в редакторе при изменении порядка в навигаторе
-  useEffect(() => {
-    if (!editor || !onReorderReady) return
-
-    // Функция перестановки сцен
-    const handleReorder = (fromIndex: number, toIndex: number) => {
-      if (!editor) return
-
-      // Валидация индексов
-      if (fromIndex < 0 || toIndex < 0) return
-      if (fromIndex === toIndex) return
-
-      // Получаем текущий документ как JSON
-      const doc = editor.getJSON()
-      const content = doc.content || []
-
-      if (content.length === 0) return
-
-      // Находим все sceneHeader в JSON
-      const sceneIndices: number[] = []
-      content.forEach((node: { type?: string }, index: number) => {
-        if (node.type === 'sceneHeader') {
-          sceneIndices.push(index)
-        }
-      })
-
-      if (sceneIndices.length === 0) return
-      if (fromIndex >= sceneIndices.length || toIndex >= sceneIndices.length) return
-
-      // Определяем границы сцен для перестановки
-      const fromStart = sceneIndices[fromIndex]
-      const toStart = sceneIndices[toIndex]
-
-      const findSceneEnd = (startIndex: number) => {
-        for (let i = startIndex + 1; i < content.length; i++) {
-          if (content[i].type === 'sceneHeader') {
-            return i
-          }
-        }
-        return content.length
-      }
-
-      const fromEnd = findSceneEnd(fromStart)
-      const toEnd = findSceneEnd(toStart)
-
-      // Вырезаем сцену из старой позиции
-      const sceneNodes = content.slice(fromStart, fromEnd)
-
-      // Создаем новый массив с переставленной сценой
-      const newContent = [...content]
-
-      // Удаляем сцену из старой позиции
-      newContent.splice(fromStart, fromEnd - fromStart)
-
-      // Вычисляем новую позицию для вставки
-      const newInsertPos = fromIndex < toIndex
-        ? toEnd - (fromEnd - fromStart)
-        : toStart
-
-      // Вставляем сцену в новую позицию
-      newContent.splice(newInsertPos, 0, ...sceneNodes)
-
-      // Устанавливаем новый документ
-      editor.commands.setContent({ type: 'doc', content: newContent })
-
-      // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
-      if (reorderTimeoutRef.current) clearTimeout(reorderTimeoutRef.current)
-      reorderTimeoutRef.current = setTimeout(() => {
-        if (editor) {
-          const { scenes: extractedScenes, stats } = extractScenesFromDocument({
-            doc: editor.state.doc,
-            forcedPages: precisePagesRef.current,
-            precisePagesFallback: precisePagesRef.current,
-            timingSystem,
-            genreCoefficient,
-          })
-          onScenesChange?.(extractedScenes)
-          onStatsChange?.(stats)
-        }
-      }, 100)
-    }
-
-    // Передаем функцию родителю
-    onReorderReady(handleReorder)
-  }, [editor, onReorderReady])
-
-  // Функция для обновления номеров в редакторе на основе массива сцен из навигатора
-  const updateSceneNumbers = (scenes: Array<{ id: string; number: string }>) => {
-    if (!editor) return
-    if (!scenes || scenes.length === 0) return
-
-    const doc = editor.getJSON()
-    const content = doc.content || []
-
-    if (content.length === 0) return
-
-    let sceneIndex = 0
-
-    // Создаем новый контент с обновлёнными номерами (без мутации)
-    type JSONNode = { type?: string; content?: Array<{ type?: string; text?: string; [key: string]: unknown }>; [key: string]: unknown }
-    const newContent = content.map((node: JSONNode) => {
-      if (node.type === 'sceneHeader' && node.content && node.content[0] && sceneIndex < scenes.length) {
-        const text = node.content[0].text || ''
-        const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
-
-        if (headerMatch) {
-          const oldNumber = headerMatch[1]
-          const newNumber = scenes[sceneIndex].number
-
-          // Важно: увеличиваем индекс для КАЖДОЙ сцены, независимо от изменения номера
-          sceneIndex++
-
-          if (oldNumber !== newNumber) {
-            // Создаем новый узел с обновлённым текстом
-            return {
-              ...node,
-              content: [
-                {
-                  ...node.content[0],
-                  text: text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`)
-                },
-                ...node.content.slice(1)
-              ]
-            }
-          }
-        }
-      }
-
-      return node
-    })
-
-    // Устанавливаем обновленный документ
-    editor.commands.setContent({ type: 'doc', content: newContent })
-  }
-
-  // Ref для updateSceneNumbers чтобы избежать stale closure в useEffect'ах
-  const updateSceneNumbersRef = useRef(updateSceneNumbers)
-  // eslint-disable-next-line react-hooks/refs
-  updateSceneNumbersRef.current = updateSceneNumbers
-
-  // Экспортируем функцию обновления номеров
-  useEffect(() => {
-    if (!editor || !onUpdateNumbersReady) return
-    onUpdateNumbersReady((scenes) => updateSceneNumbersRef.current(scenes))
-  }, [editor, onUpdateNumbersReady])
 
   // Функция для установки типа блока (вызов ДО conditional return чтобы соблюсти Rules of Hooks)
   const setBlockType = useCallback((type: string) => {
