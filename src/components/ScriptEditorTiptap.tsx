@@ -12,8 +12,8 @@ import { useSmartType } from '../hooks/useSmartType'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { SmartTypePopup } from './SmartTypePopup'
 import { PageCounter } from '../services/pageCounter'
-import { SCRIPT_STYLES } from '../constants/scriptStyles'
-import { calculateSceneTiming } from '../utils/sceneTiming'
+import { extractScenesFromDocument } from '../utils/sceneExtractor'
+import { convertToWordCompatibleHtml } from '../utils/wordExport'
 
 interface ScriptEditorTiptapProps {
   // format is optional - currently not used but kept for future compatibility
@@ -37,41 +37,6 @@ interface ScriptEditorTiptapProps {
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
-}
-
-// Добавляем inline-стили к div[data-type] для Word-совместимости.
-// НЕ заменяем div на p — pageCounter тоже оставляет div, унификация рендеринга.
-function convertToWordCompatibleHtml(html: string, _editorDom: HTMLElement, format: 'russian' | 'hollywood' = 'russian'): string {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
-
-  const convert = (element: HTMLElement) => {
-    const dataType = element.getAttribute('data-type')
-    if (dataType && SCRIPT_STYLES[dataType]) {
-      const current = element.getAttribute('style') || ''
-      const newStyles = SCRIPT_STYLES[dataType][format]
-      element.setAttribute('style', current + (current ? '; ' : '') + newStyles)
-    }
-    Array.from(element.children).forEach(child => {
-      if (child instanceof HTMLElement) convert(child)
-    })
-  }
-
-  Array.from(doc.body.children).forEach(child => {
-    if (child instanceof HTMLElement) convert(child)
-  })
-
-  const wrapper = document.createElement('div')
-  wrapper.innerHTML = doc.body.innerHTML
-  wrapper.setAttribute('style',
-    'font-family: "Courier New", Courier, monospace; ' +
-    'font-size: 12pt; ' +
-    'line-height: 1.5; ' +
-    'max-width: 21cm; ' +
-    'margin: 0 auto;'
-  )
-
-  return wrapper.outerHTML
 }
 
 export default function ScriptEditorTiptap({
@@ -186,143 +151,6 @@ export default function ScriptEditorTiptap({
       handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
     },
   })
-
-  // 2.2 Извлечение сцен напрямую из sceneHeader (без SceneNode)
-  // 2.1 Исправлен баг: locationPart = headerMatch[3] (не [2])
-  const extractScenesFromDocument = (forcedPages?: number) => {
-    if (!editor) return
-
-    type SceneEntry = { id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; duration: number; charCount: number }
-
-    // Собираем только блоки верхнего уровня документа (не inline-узлы)
-    const blockNodes: PMNode[] = []
-    editor.state.doc.forEach((node: PMNode) => {
-      blockNodes.push(node)
-    })
-
-    // === ПРОХОД 1: собираем raw-сцены с charCount и dialogLines ===
-    const rawScenes: Array<{
-      sceneNumber: string
-      sceneType: string
-      location: string
-      time: string
-      cast: string[]
-      charCount: number
-      dialogLines: number
-    }> = []
-
-    blockNodes.forEach((node, index) => {
-      if (node.type.name !== 'sceneHeader') return
-
-      const headerText = node.textContent.trim()
-
-      // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ."
-      const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?)\s+(.+)$/i)
-      if (!headerMatch) return
-
-      const sceneNumber = headerMatch[1]
-      const rawType = headerMatch[2].toUpperCase()
-      const locationAndTime = headerMatch[3]
-
-      const sceneType = rawType.startsWith('ИНТ-') ? 'ИНТ-ЭКСТ' : rawType.startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
-
-      // Варианты времени суток
-      const timeWords = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ']
-
-      // Вариант 1: разделитель — тире/—
-      // Вариант 2: время в конце строки через точку (КВАРТИРА ПЕТИ. ДЕНЬ.)
-      let location
-      let time
-
-      const dashParts = locationAndTime.split(/\s*[—–]\s*/)
-      if (dashParts.length >= 2) {
-        location = dashParts[0].trim().replace(/\.$/, '')
-        time = dashParts[dashParts.length - 1].trim().replace(/\.$/, '')
-      } else {
-        // Ищем время суток в конце строки
-        const timePattern = new RegExp(`[.\\s](${timeWords.join('|')})\\.?$`, 'i')
-        const timeMatch = locationAndTime.match(timePattern)
-        if (timeMatch) {
-          time = timeMatch[1].toUpperCase()
-          location = locationAndTime.slice(0, locationAndTime.lastIndexOf(timeMatch[0])).trim().replace(/\.$/, '')
-        } else {
-          location = locationAndTime.trim().replace(/\.$/, '')
-          time = ''
-        }
-      }
-
-      // Ищем cast: следующий БЛОК после sceneHeader должен быть sceneCast
-      let cast: string[] = []
-      const nextBlock = blockNodes[index + 1]
-      if (nextBlock?.type.name === 'sceneCast') {
-        const castText = nextBlock.textContent.trim()
-        if (castText) {
-          cast = castText.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
-        }
-      }
-
-      // Считаем символы до следующей sceneHeader
-      let charCount = headerText.length
-      let dialogLines = 0
-      for (let i = index + 1; i < blockNodes.length; i++) {
-        const n = blockNodes[i]
-        if (n.type.name === 'sceneHeader') break
-        charCount += n.textContent.length
-        if (n.type.name === 'sceneDialog') {
-          dialogLines++
-        }
-      }
-
-      rawScenes.push({ sceneNumber, sceneType, location, time, cast, charCount, dialogLines })
-    })
-
-    // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
-    const totalCharCount = rawScenes.reduce((sum, s) => sum + s.charCount, 0)
-    // forcedPages — свежепосчитанное значение от PageCounter (передаётся из setTimeout).
-    // precisePages — state (может быть stale в замыкании setTimeout).
-    const effectivePages = forcedPages ?? precisePagesRef.current
-    const hasPrecisePages = effectivePages > 0.1
-
-    const scenes: SceneEntry[] = rawScenes.map((raw) => {
-      // Распределяем precisePages пропорционально charCount каждой сцены.
-      // Если precisePages ещё не рассчитан (первый рендер) — fallback на charCount/1800.
-      const pages = hasPrecisePages && totalCharCount > 0
-        ? Math.max(0.1, parseFloat(((raw.charCount / totalCharCount) * effectivePages).toFixed(1)))
-        : Math.max(0.1, parseFloat((raw.charCount / 1800).toFixed(1)))
-
-      // Расчитываем хронометраж от уже точного кол-ва страниц
-      const { duration } = calculateSceneTiming({ pages, charCount: raw.charCount, dialogLines: raw.dialogLines }, timingSystem, genreCoefficient)
-
-      return {
-        id: `scene-${raw.sceneNumber}`,
-        number: raw.sceneNumber,
-        type: raw.sceneType,
-        location: raw.location,
-        time: raw.time,
-        cast: raw.cast,
-        pages,
-        duration,
-        charCount: raw.charCount,
-      }
-    })
-
-    if (onScenesChange) {
-      onScenesChange(scenes)
-    }
-    if (onStatsChange) {
-      // Передаём только кол-во сцен; хронометраж и страницы — из навигатора (единый источник)
-      onStatsChange({
-        scenes: scenes.length,
-        pages: 0,
-        duration: 0,
-      })
-    }
-  }
-
-  // Ref для extractScenesFromDocument чтобы избежать stale closure в useEffect'ах
-  const extractScenesFromDocumentRef = useRef(extractScenesFromDocument)
-  // eslint-disable-next-line react-hooks/refs
-  extractScenesFromDocumentRef.current = extractScenesFromDocument
 
   // Применяем page-start классы к DOM редактора (setTimeout — дать ProseMirror завершить рендер)
   const applyPageBreaks = useCallback(() => {
@@ -533,7 +361,7 @@ export default function ScriptEditorTiptap({
     const serializer = DOMSerializer.fromSchema(state.schema)
     div.appendChild(serializer.serializeFragment(selection.content().content))
 
-    const html = convertToWordCompatibleHtml(div.innerHTML, view.dom, (_format as 'russian' | 'hollywood') || 'russian')
+    const html = convertToWordCompatibleHtml(div.innerHTML, (_format as 'russian' | 'hollywood') || 'russian')
 
     event.clipboardData?.setData('text/html', html)
     event.clipboardData?.setData('text/plain', div.textContent || '')
@@ -641,7 +469,17 @@ export default function ScriptEditorTiptap({
       const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
       setPrecisePages(result.totalPages)
       precisePagesRef.current = result.totalPages
-      extractScenesFromDocument(result.totalPages)
+      if (editor) {
+        const { scenes: extractedScenes, stats } = extractScenesFromDocument({
+          doc: editor.state.doc,
+          forcedPages: result.totalPages,
+          precisePagesFallback: precisePagesRef.current,
+          timingSystem,
+          genreCoefficient,
+        })
+        onScenesChange?.(extractedScenes)
+        onStatsChange?.(stats)
+      }
 
       // Сохраняем breaks (применение отключено)
       pageBreaksRef.current = result.breaks
@@ -878,7 +716,17 @@ export default function ScriptEditorTiptap({
       // Принудительно извлекаем сцены для обновления навигатора с новыми номерами
       if (reorderTimeoutRef.current) clearTimeout(reorderTimeoutRef.current)
       reorderTimeoutRef.current = setTimeout(() => {
-        extractScenesFromDocumentRef.current(precisePagesRef.current)
+        if (editor) {
+          const { scenes: extractedScenes, stats } = extractScenesFromDocument({
+            doc: editor.state.doc,
+            forcedPages: precisePagesRef.current,
+            precisePagesFallback: precisePagesRef.current,
+            timingSystem,
+            genreCoefficient,
+          })
+          onScenesChange?.(extractedScenes)
+          onStatsChange?.(stats)
+        }
       }, 100)
     }
 
