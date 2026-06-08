@@ -11,10 +11,11 @@ export const projectService = {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(resolve, MOCK_DELAY)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
-        })
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
       const { projects } = useNormalizedProjectStore.getState()
       return Object.values(projects)
@@ -35,10 +36,11 @@ export const projectService = {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(resolve, MOCK_DELAY)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
-        })
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
 
       const newProject: Project = {
@@ -88,10 +90,11 @@ export const projectService = {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(resolve, MOCK_DELAY)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
-        })
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
       const scopedScenes = scenes.map((s) => ({ ...s, projectId }))
       useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
@@ -109,10 +112,11 @@ export const projectService = {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(resolve, MOCK_DELAY)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
-        })
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
       useNormalizedProjectStore.getState().deleteProject(projectId)
     } catch (error) {
@@ -129,10 +133,11 @@ export const projectService = {
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(resolve, MOCK_DELAY)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
-        })
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
     } catch (error) {
       useNormalizedProjectStore.getState().revertScene(sceneId)
@@ -168,10 +173,11 @@ export const projectService = {
       useNormalizedProjectStore.getState().setLoading(true)
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(resolve, MOCK_DELAY)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timeoutId)
           reject(new DOMException('Aborted', 'AbortError'))
-        })
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
 
       const parsed = JSON.parse(jsonString)
