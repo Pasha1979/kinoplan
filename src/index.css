@@ -223,12 +223,12 @@ body {
 /* ========== ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ СТРАНИЦ A4 ========== */
 /* НЕ изменяем margin/padding элемента — чтобы не смещать расчёт pageCounter */
 .tiptap-editor .page-start,
-.tiptap-editor.ProseMirror .page-start {
+.ProseMirror .page-start {
   position: relative !important;
 }
 
 .tiptap-editor .page-start::before,
-.tiptap-editor.ProseMirror .page-start::before {
+.ProseMirror .page-start::before {
   content: attr(data-page);
   position: absolute;
   top: -26px;
@@ -249,7 +249,7 @@ body {
 }
 
 .tiptap-editor .page-start::after,
-.tiptap-editor.ProseMirror .page-start::after {
+.ProseMirror .page-start::after {
   content: '';
   position: absolute;
   top: -8px;

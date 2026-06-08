@@ -125,6 +125,8 @@ export default function ScriptEditorTiptap({
   const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Сохраняем page breaks для повторного применения после ProseMirror рендера
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
+  // Таймаут для гарантийного повторного применения page breaks
+  const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -318,10 +320,10 @@ export default function ScriptEditorTiptap({
   // eslint-disable-next-line react-hooks/refs
   extractScenesFromDocumentRef.current = extractScenesFromDocument
 
-  // Применяем page-start классы к DOM редактора (RAF — чтобы ProseMirror уже отрисовал)
+  // Применяем page-start классы к DOM редактора (setTimeout — дать ProseMirror завершить рендер)
   const applyPageBreaks = useCallback(() => {
     if (!editor || pageBreaksRef.current.length <= 1) return
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       const editorDom = editor.view.dom as HTMLElement
       const children = Array.from(editorDom.children) as HTMLElement[]
       children.forEach(child => {
@@ -335,7 +337,7 @@ export default function ScriptEditorTiptap({
           child.setAttribute('data-page', `Страница ${breakInfo.page}`)
         }
       })
-    })
+    }, 0)
   }, [editor])
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
@@ -640,6 +642,12 @@ export default function ScriptEditorTiptap({
       pageBreaksRef.current = result.breaks
       applyPageBreaks()
 
+      // Гарантийное повторное применение page breaks после полного рендера ProseMirror
+      pageBreakApplyTimeoutRef.current = setTimeout(() => {
+        applyPageBreaks()
+        pageBreakApplyTimeoutRef.current = null
+      }, 200)
+
       pageCountTimeoutRef.current = null
     }, 400)
 
@@ -689,6 +697,10 @@ export default function ScriptEditorTiptap({
         clearTimeout(pageCountTimeoutRef.current)
         pageCountTimeoutRef.current = null
       }
+      if (pageBreakApplyTimeoutRef.current) {
+        clearTimeout(pageBreakApplyTimeoutRef.current)
+        pageBreakApplyTimeoutRef.current = null
+      }
       pageCounterRef.current?.destroy()
       pageCounterRef.current = null
     }
@@ -701,13 +713,13 @@ export default function ScriptEditorTiptap({
       // При смене серии — очищаем редактор и загружаем нужный черновик (или пустой)
       editor.commands.setContent(saved || '<p></p>')
       processedHeadersRef.current.clear()
-      // Пересчитываем page breaks после загрузки контента (RAF ждём рендер ProseMirror)
-      requestAnimationFrame(() => {
+      // Пересчитываем page breaks после загрузки контента (setTimeout ждём рендер ProseMirror)
+      setTimeout(() => {
         const html = editor.getHTML()
         const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
         pageBreaksRef.current = result.breaks
         applyPageBreaks()
-      })
+      }, 0)
     }
   }, [editor, draftKey, applyPageBreaks])
 
