@@ -1011,7 +1011,7 @@ export default function ScriptEditorTiptap({
 
       {/* Область редактора — фон "стола" */}
       <div
-        className="flex-1 overflow-y-auto py-8 px-4"
+        className="flex-1 overflow-y-auto py-2 px-2"
         style={{
           background: isDark ? '#0d0d1a' : '#d1d5db',
           color: textPrimary,
