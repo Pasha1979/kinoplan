@@ -144,6 +144,18 @@ export default function SceneNavigator({
     return scenes
   }, [scenes, filter])
 
+  // Единый расчёт timing для всех отфильтрованных сцен (без дублирования)
+  const filteredScenesWithTiming = useMemo(() => {
+    return filteredScenes.map(scene => ({
+      scene,
+      timing: calculateSceneTiming(
+        { pages: scene.pages, charCount: scene.charCount },
+        timingSystem,
+        genreCoefficient
+      ),
+    }))
+  }, [filteredScenes, timingSystem, genreCoefficient])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -531,12 +543,11 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
           </div>
         ) : filter !== 'all' ? (
           // При активном фильтре — plain список без drag-and-drop
-          filteredScenes.map((scene) => {
+          filteredScenesWithTiming.map(({ scene, timing }) => {
             const isActive = activeSceneId === scene.id
             const isExpanded = expandedScenes.has(scene.id)
             const stripColor = getColorTagColor(scene.colorTag, isDark)
             const badge = getTypeBadge(scene.type || '')
-            const timing = calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient)
 
             return (
               <SceneCard
@@ -567,12 +578,11 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
               items={filteredScenes.map(s => s.id)}
               strategy={verticalListSortingStrategy}
             >
-              {filteredScenes.map((scene) => {
+              {filteredScenesWithTiming.map(({ scene, timing }) => {
                 const isActive = activeSceneId === scene.id
                 const isExpanded = expandedScenes.has(scene.id)
                 const stripColor = getColorTagColor(scene.colorTag, isDark)
                 const badge = getTypeBadge(scene.type || '')
-                const timing = calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient)
 
                 return (
                   <SortableSceneCard
