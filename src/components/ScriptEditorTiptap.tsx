@@ -95,6 +95,7 @@ export default function ScriptEditorTiptap({
   smartTypeTimes,
 }: ScriptEditorTiptapProps) {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
+  const editorBg = isDark ? '#111126' : '#fefefe'
 
   // SmartType — подсказки при наборе (с дефолтами если пропсы не переданы)
   const smartType = useSmartType({
@@ -637,15 +638,9 @@ export default function ScriptEditorTiptap({
       setPrecisePages(result.totalPages)
       extractScenesFromDocument(result.totalPages)
 
-      // Сохраняем breaks для повторного применения после ProseMirror рендера
+      // Сохраняем breaks (применение отключено)
       pageBreaksRef.current = result.breaks
-      applyPageBreaks()
-
-      // Гарантийное повторное применение page breaks после полного рендера ProseMirror
-      pageBreakApplyTimeoutRef.current = setTimeout(() => {
-        applyPageBreaks()
-        pageBreakApplyTimeoutRef.current = null
-      }, 200)
+      // applyPageBreaks() // DISABLED — визуальные разрывы страниц убраны
 
       pageCountTimeoutRef.current = null
     }, 400)
@@ -712,13 +707,13 @@ export default function ScriptEditorTiptap({
       // При смене серии — очищаем редактор и загружаем нужный черновик (или пустой)
       editor.commands.setContent(saved || '<p></p>')
       processedHeadersRef.current.clear()
-      // Пересчитываем page breaks после загрузки контента (setTimeout ждём рендер ProseMirror)
-      setTimeout(() => {
-        const html = editor.getHTML()
-        const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
-        pageBreaksRef.current = result.breaks
-        applyPageBreaks()
-      }, 0)
+      // Page breaks применение отключено
+      // setTimeout(() => {
+      //   const html = editor.getHTML()
+      //   const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
+      //   pageBreaksRef.current = result.breaks
+      //   applyPageBreaks()
+      // }, 0)
     }
   }, [editor, draftKey, applyPageBreaks])
 
@@ -1009,20 +1004,25 @@ export default function ScriptEditorTiptap({
         })}
       </div>
 
-      {/* Область редактора — фон "стола" */}
+      {/* Область редактора */}
       <div
-        className="flex-1 overflow-y-auto py-2 px-2"
+        className="flex-1 overflow-y-auto py-8 px-4"
         style={{
-          background: isDark ? '#0d0d1a' : '#d1d5db',
+          background: editorBg,
           color: textPrimary,
         }}
       >
-        {/* Контейнер A4 — ширина + поля, без фона (фон через EditorContent) */}
+        {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
         <div
           className="mx-auto"
           style={{
             width: '210mm', // Стандарт A4
-            padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm
+            minHeight: '297mm',
+            background: isDark ? '#1a1a2e' : '#ffffff',
+            boxShadow: isDark
+              ? '0 4px 20px rgba(0,0,0,0.5)'
+              : '0 4px 20px rgba(0,0,0,0.1)',
+            padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm (стандарт для сценариев)
           }}
         >
           <EditorContent
@@ -1032,10 +1032,6 @@ export default function ScriptEditorTiptap({
               fontFamily,
               fontSize: `${fontSize}pt`,
               lineHeight: '1.5',
-              background: isDark ? '#1a1a2e' : '#ffffff',
-              boxShadow: isDark
-                ? '0 4px 20px rgba(0,0,0,0.5)'
-                : '0 4px 20px rgba(0,0,0,0.15)',
             }}
           />
         </div>

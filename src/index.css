@@ -221,14 +221,14 @@ body {
 }
 
 /* ========== ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ СТРАНИЦ A4 ========== */
-/* margin-top у .page-start НЕ влияет на pageCounter — класс добавляется только в реальный DOM */
+/* ВИЗУАЛЬНЫЕ РАЗРЫВЫ СТРАНИЦ ОТКЛЮЧЕНЫ — пользователь попросил убрать */
+/*
 .tiptap-editor .page-start,
 .ProseMirror .page-start {
   margin-top: 60px !important;
   position: relative !important;
 }
 
-/* Номер страницы в зазоре между листами */
 .tiptap-editor .page-start::before,
 .ProseMirror .page-start::before {
   content: attr(data-page);
@@ -250,6 +250,7 @@ body {
   border: 1px solid #6366f1;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
+*/
 
 /* Прогресс-бар */
 @keyframes progressFill {
