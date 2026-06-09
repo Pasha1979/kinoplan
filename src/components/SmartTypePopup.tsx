@@ -24,6 +24,11 @@ export function SmartTypePopup({
   isDark = true,
 }: SmartTypePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   // Позиционируем popup напрямую через ref (без setState → нет лишнего рендера и ESLint-ошибки)
   useLayoutEffect(() => {
@@ -44,14 +49,14 @@ export function SmartTypePopup({
 
     const handleClickOutside = (e: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        onClose()
+        onCloseRef.current()
       }
     }
 
     const win = safeGetWindow()
     win?.addEventListener('mousedown', handleClickOutside)
     return () => win?.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!isOpen || suggestions.length === 0) return null
 
