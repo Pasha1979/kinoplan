@@ -116,3 +116,75 @@ describe('projectService.updateScene', () => {
     expect(setErrorSpy).toHaveBeenCalledWith('Не удалось сохранить сцену')
   })
 })
+
+describe('projectService.importProjectFromJSON', () => {
+  it('должен успешно импортировать корректный проект со сценами', async () => {
+    const validJson = JSON.stringify({
+      project: {
+        id: 'some-old-id',
+        name: 'Новый фильм для импорта',
+        type: 'film',
+        status: 'production',
+      },
+      scenes: [
+        {
+          id: 'scene-id-1',
+          number: '1',
+          type: 'INT',
+          location: 'ДОМ',
+          time: 'УТРО',
+          cast: ['АЛИСА'],
+          pages: 1.5,
+        },
+      ],
+    })
+
+    const imported = await projectService.importProjectFromJSON(validJson)
+
+    expect(imported.id).toBeTruthy()
+    expect(imported.name).toBe('Новый фильм для импорта')
+    expect(imported.type).toBe('film')
+
+    const storeState = useNormalizedProjectStore.getState()
+    expect(storeState.projects[imported.id]).toBeDefined()
+
+    // Сцена должна быть импортирована, а её тип нормализован к 'ИНТ'
+    const importedScene = Object.values(storeState.scenes).find(s => s.number === '1')
+    expect(importedScene).toBeDefined()
+    expect(importedScene?.location).toBe('ДОМ')
+    expect(importedScene?.type).toBe('ИНТ') // Нормализовано из INT
+    expect(importedScene?.projectId).toBe(imported.id)
+  })
+
+  it('должен выбросить ошибку если отсутствует имя проекта', async () => {
+    const invalidJson = JSON.stringify({
+      project: {
+        type: 'film',
+      },
+    })
+
+    await expect(
+      projectService.importProjectFromJSON(invalidJson)
+    ).rejects.toThrow('Поле project.name обязательно')
+  })
+
+  it('должен выбросить ошибку если сцена невалидна', async () => {
+    const invalidJson = JSON.stringify({
+      project: {
+        name: 'Фильм',
+        type: 'film',
+      },
+      scenes: [
+        {
+          id: 'sc-1',
+          number: '1',
+          type: 'INVALID_TYPE', // Ошибка!
+        },
+      ],
+    })
+
+    await expect(
+      projectService.importProjectFromJSON(invalidJson)
+    ).rejects.toThrow('некорректный тип')
+  })
+})

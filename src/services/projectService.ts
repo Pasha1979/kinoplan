@@ -25,6 +25,118 @@ async function delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> 
   })
 }
 
+interface ImportProjectPayload {
+  project?: {
+    id?: unknown
+    name?: unknown
+    type?: unknown
+    [key: string]: unknown
+  }
+  scenes?: Array<{
+    id?: unknown
+    number?: unknown
+    type?: unknown
+    location?: unknown
+    time?: unknown
+    cast?: unknown
+    pages?: unknown
+  }>
+}
+
+function validateImportedData(raw: unknown): { project: Partial<Project>; scenes?: Scene[] } {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Некорректный формат JSON: ожидался объект')
+  }
+
+  const parsed = raw as ImportProjectPayload
+
+  // 1. Валидация проекта
+  if (!parsed.project || typeof parsed.project !== 'object') {
+    throw new Error('Неверный формат: отсутствует объект project')
+  }
+
+  const proj = parsed.project
+  if (typeof proj.name !== 'string' || proj.name.trim() === '') {
+    throw new Error('Поле project.name обязательно и должно быть непустой строкой')
+  }
+
+  if (proj.type !== 'film' && proj.type !== 'serial') {
+    throw new Error('Поле project.type должно иметь значение "film" или "serial"')
+  }
+
+  const restOfProj = { ...proj }
+  delete restOfProj.id
+  const validatedProject: Partial<Project> = {
+    ...(restOfProj as Partial<Project>),
+    name: proj.name.trim(),
+    type: proj.type as 'film' | 'serial',
+  }
+
+  // 2. Валидация сцен (если есть)
+  let validatedScenes: Scene[] | undefined
+  if ('scenes' in parsed && parsed.scenes !== undefined) {
+    if (!Array.isArray(parsed.scenes)) {
+      throw new Error('Поле scenes должно быть массивом')
+    }
+
+    validatedScenes = parsed.scenes.map((scene, idx: number) => {
+      if (!scene || typeof scene !== 'object') {
+        throw new Error(`Сцена под индексом ${idx} не является объектом`)
+      }
+
+      if (typeof scene.id !== 'string' || scene.id.trim() === '') {
+        throw new Error(`У сцены под индексом ${idx} отсутствует или некорректен id`)
+      }
+
+      if (typeof scene.number !== 'string' || scene.number.trim() === '') {
+        throw new Error(`У сцены ${scene.id} отсутствует или некорректен номер`)
+      }
+
+      // Валидируем и нормализуем тип сцены (ИНТ | ЭКСТ | ИНТ-ЭКСТ)
+      let sceneType = scene.type
+      if (typeof sceneType === 'string') {
+        sceneType = sceneType.toUpperCase().trim()
+        if (sceneType === 'INT') sceneType = 'ИНТ'
+        if (sceneType === 'EXT') sceneType = 'ЭКСТ'
+        if (sceneType === 'INT-EXT' || sceneType === 'INT/EXT' || sceneType === 'ИНТ/ЭКСТ') sceneType = 'ИНТ-ЭКСТ'
+      }
+
+      if (sceneType !== 'ИНТ' && sceneType !== 'ЭКСТ' && sceneType !== 'ИНТ-ЭКСТ') {
+        throw new Error(`У сцены ${scene.id} некорректный тип: ${scene.type}. Ожидалось ИНТ, ЭКСТ или ИНТ-ЭКСТ`)
+      }
+
+      if (typeof scene.location !== 'string') {
+        throw new Error(`У сцены ${scene.id} поле location должно быть строкой`)
+      }
+
+      if (typeof scene.time !== 'string') {
+        throw new Error(`У сцены ${scene.id} поле time должно быть строкой`)
+      }
+
+      if (!Array.isArray(scene.cast) || !scene.cast.every((item: unknown) => typeof item === 'string')) {
+        throw new Error(`У сцены ${scene.id} поле cast должно быть массивом строк`)
+      }
+
+      if (typeof scene.pages !== 'number' || isNaN(scene.pages) || scene.pages < 0) {
+        throw new Error(`У сцены ${scene.id} поле pages должно быть положительным числом`)
+      }
+
+      return {
+        id: scene.id.trim(),
+        projectId: '', // будет заменено на id импортированного проекта
+        number: scene.number.trim(),
+        type: sceneType as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
+        location: scene.location.trim(),
+        time: scene.time.trim(),
+        cast: (scene.cast as string[]).map((c: string) => c.trim()).filter(Boolean),
+        pages: scene.pages,
+      }
+    })
+  }
+
+  return { project: validatedProject, scenes: validatedScenes }
+}
+
 export const projectService = {
   async getProjects(signal?: AbortSignal): Promise<Project[]> {
     try {
@@ -159,22 +271,20 @@ export const projectService = {
       await delayWithSignal(API_MOCK_DELAY_MS, signal)
 
       const parsed = JSON.parse(jsonString)
-      if (!parsed.project || !parsed.project.id || !parsed.project.name) {
-        throw new Error('Неверный формат JSON: отсутствуют обязательные поля')
-      }
+      const { project: validatedProj, scenes: validatedScenes } = validateImportedData(parsed)
 
       const importedProject: Project = {
-        ...parsed.project,
+        ...validatedProj,
         id: `proj-${Date.now()}`,
-        createdAt: parsed.project.createdAt || new Date().toISOString(),
+        createdAt: validatedProj.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }
+      } as Project
 
       const existing = Object.values(useNormalizedProjectStore.getState().projects)
       useNormalizedProjectStore.getState().setProjects([...existing, importedProject])
 
-      if (parsed.scenes && Array.isArray(parsed.scenes)) {
-        const importedScenes = parsed.scenes.map((s: Scene) => ({
+      if (validatedScenes && validatedScenes.length > 0) {
+        const importedScenes = validatedScenes.map((s) => ({
           ...s,
           projectId: importedProject.id,
         }))
