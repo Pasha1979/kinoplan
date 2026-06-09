@@ -72,17 +72,6 @@ export default function ScriptPage() {
   // AbortController для отмены устаревших запросов сохранения
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // scenes берутся из scriptStore (единый источник истины), фильтруем по серии
-  const allScenes = currentScript?.scenes || []
-  const scenes = useMemo(() => {
-    if (project?.type === 'serial' && currentSeries > 0) {
-      return allScenes.filter(s => new RegExp(`^${currentSeries}-`).test(s.number))
-    }
-    return allScenes
-  }, [allScenes, project?.type, currentSeries])
-
-  const [selectedScene, setSelectedScene] = useState<Scene | null>(null)
-
   // При получении новых сцен из редактора — синхронизируем со всеми stores
   const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number; duration?: number }>) => {
     if (!currentScriptId) return
@@ -150,11 +139,14 @@ export default function ScriptPage() {
     if (project) {
       const projectScripts = scripts.filter(s => s.projectId === project.id)
       if (projectScripts.length > 0) {
-        setView('editor')
-        // Загружаем формат из первого сценария проекта
         const currentScript = projectScripts[0]
+        Promise.resolve().then(() => {
+          setView('editor')
+          if (currentScript.format) {
+            setScriptFormat(currentScript.format)
+          }
+        })
         if (currentScript.format) {
-          setScriptFormat(currentScript.format)
           prevFormatRef.current = currentScript.format
         }
         // Устанавливаем currentScriptId если не установлен
