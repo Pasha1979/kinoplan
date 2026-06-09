@@ -28,6 +28,26 @@ export interface BreakdownElement {
   sceneIds: string[]  // в каких сценах используется
 }
 
+function useDeepCompareMemoize(value: Block[] | undefined): Block[] | undefined {
+  const [prevValue, setPrevValue] = useState<Block[] | undefined>(value)
+  const [memoizedValue, setMemoizedValue] = useState<Block[] | undefined>(value)
+
+  const isDifferent = prevValue !== value && (
+    !prevValue || !value || prevValue.length !== value.length ||
+    prevValue.some((val, i) => {
+      const other = value[i]
+      return val.id !== other?.id || val.type !== other?.type || val.content !== other?.content
+    })
+  )
+
+  if (isDifferent) {
+    setPrevValue(value)
+    setMemoizedValue(value)
+  }
+
+  return memoizedValue
+}
+
 export interface SceneBreakdown {
   sceneId: string
   sceneNumber: string
@@ -68,11 +88,13 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
 
+  const memoizedBlocks = useDeepCompareMemoize(blocks)
+
   // Парсинг блоков из редактора
   const parsedElements = useMemo(() => {
-    if (!blocks || blocks.length === 0) return []
+    if (!memoizedBlocks || memoizedBlocks.length === 0) return []
     
-    const parsedScenes = parseScript(blocks)
+    const parsedScenes = parseScript(memoizedBlocks)
     const uniqueElements = getUniqueElements(parsedScenes)
     
     // Конвертируем ParsedElement в BreakdownElement
@@ -83,7 +105,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
       notes: el.notes,
       sceneIds: el.sceneIds,
     }))
-  }, [blocks])
+  }, [memoizedBlocks])
 
   // Объединяем распарсенные и ручные элементы — оборачиваем в useMemo для избежания лишних рендеров
   const allElements = useMemo(() => [...parsedElements, ...manualElements], [parsedElements, manualElements])
@@ -191,7 +213,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
             </button>
             <button
               onClick={() => setActiveView('stats')}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${(activeView as 'elements' | 'stats') === 'stats' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'stats' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
             >
               <BarChart3 size={12} className="inline mr-1" />
               Статистика
