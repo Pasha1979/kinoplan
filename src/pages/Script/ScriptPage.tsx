@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Upload, Plus, BookOpen, Clock, Hash, AlignLeft, ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, Globe, HelpCircle } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
-import type { ScriptFormat, TimingSystem } from '../../store/scriptStore'
+import type { ScriptFormat, TimingSystem, Scene } from '../../store/scriptStore'
 import { calculateSceneTiming } from '../../utils/sceneTiming'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import TitlePageEditor from '../../components/TitlePageEditor'
@@ -28,9 +28,18 @@ export default function ScriptPage() {
   const project = currentProjectId ? projects[currentProjectId] : null
   const isDark = theme === 'dark'
 
+  const [currentSeries, setCurrentSeries] = useState(1)
   const [view, setView] = useState<ScriptView>('empty')
-  const [scenes, setScenes] = useState<Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number }>>([])
-  const [selectedScene, setSelectedScene] = useState<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number } | null>(null)
+  // scenes берутся из scriptStore (единый источник истины), фильтруем по серии
+  const allScenes = currentScript?.scenes || []
+  const scenes = useMemo(() => {
+    if (project?.type === 'serial' && currentSeries > 0) {
+      return allScenes.filter(s => new RegExp(`^${currentSeries}-`).test(s.number))
+    }
+    return allScenes
+  }, [allScenes, project?.type, currentSeries])
+
+  const [selectedScene, setSelectedScene] = useState<Scene | null>(null)
   const [importHover, setImportHover] = useState(false)
   const [createHover, setCreateHover] = useState(false)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
@@ -52,7 +61,6 @@ export default function ScriptPage() {
   const [tempTimingSystem, setTempTimingSystem] = useState<TimingSystem>('page')
   const [tempGenreCoefficient, setTempGenreCoefficient] = useState('auto')
   const [tempFormat, setTempFormat] = useState<ScriptFormat>('russian')
-  const [currentSeries, setCurrentSeries] = useState(1)
   const [isSaving, setIsSaving] = useState(false)
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
@@ -61,52 +69,81 @@ export default function ScriptPage() {
   const reorderEditorRef = useRef<((fromIndex: number, toIndex: number) => void) | null>(null)
   // Ссылка на функцию обновления номеров в редакторе
   const updateNumbersRef = useRef<((scenes: Array<{ id: string; number: string }>) => void) | null>(null)
-  // Флаг для предотвращения обновления scenes во время перестановки
-  const isReorderingRef = useRef(false)
-  // Флаг для принудительного обновления навигатора после перестановки
-  const forceUpdateRef = useRef(false)
   // AbortController для отмены устаревших запросов сохранения
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // При получении новых сцен из редактора — обновляем список
-  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number }>) => {
-    // Если идёт перестановка — не обновляем scenes (чтобы не перезаписать)
-    // Но если forceUpdate = true — разрешаем обновление
-    if (isReorderingRef.current && !forceUpdateRef.current) return
-
-    // Сбрасываем флаг forceUpdate после использования
-    if (forceUpdateRef.current) {
-      forceUpdateRef.current = false
+  // scenes берутся из scriptStore (единый источник истины), фильтруем по серии
+  const allScenes = currentScript?.scenes || []
+  const scenes = useMemo(() => {
+    if (project?.type === 'serial' && currentSeries > 0) {
+      return allScenes.filter(s => new RegExp(`^${currentSeries}-`).test(s.number))
     }
+    return allScenes
+  }, [allScenes, project?.type, currentSeries])
 
-    // Фильтруем сцены по выбранной серии (для сериалов).
-    // Используем регулярку ^N- чтобы '1-' не совпадало с '10-1', '11-1' и т.д.
-    const filteredScenes = project?.type === 'serial' && currentSeries > 0
-      ? newScenes.filter(scene => new RegExp(`^${currentSeries}-`).test(scene.number))
-      : newScenes
+  const [selectedScene, setSelectedScene] = useState<Scene | null>(null)
 
-    setScenes(filteredScenes)
-    // Синхронизируем сцены с нормализованным store (единый источник истины)
+  // При получении новых сцен из редактора — синхронизируем со всеми stores
+  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number; duration?: number }>) => {
+    if (!currentScriptId) return
+
+    // Merge с существующими сценами из scriptStore: сохраняем metadata (synopsis, breakdownElements и т.д.)
+    const existingMap = new Map(currentScript?.scenes.map(s => [s.id, s]) || [])
+    const mergedScenes: Scene[] = newScenes.map(s => {
+      const existing = existingMap.get(s.id)
+      return {
+        id: s.id,
+        projectId: existing?.projectId || project?.id || '',
+        number: s.number,
+        type: s.type,
+        location: s.location,
+        timeOfDay: existing?.timeOfDay || 'DAY',
+        time: s.time,
+        charCount: s.charCount,
+        duration: s.duration,
+        synopsis: existing?.synopsis || '',
+        pages: s.pages,
+        cast: s.cast,
+        breakdownElements: existing?.breakdownElements || [],
+        scriptText: existing?.scriptText,
+        colorTag: existing?.colorTag,
+        isOmitted: existing?.isOmitted || false,
+        order: existing?.order ?? 0,
+        isBookmarked: existing?.isBookmarked,
+        bookmarkColor: existing?.bookmarkColor,
+      } as Scene
+    })
+
+    // 1. Синхронизируем scriptStore (единый источник истины)
+    useScriptStore.getState().updateScript(currentScriptId, { scenes: mergedScenes })
+
+    // 2. Синхронизируем нормализованный store
     const pid = currentProjectId ?? project?.id
     if (pid) {
       useNormalizedProjectStore.getState().setScenesBatch(
-        newScenes.map(s => ({
-          ...s,
+        mergedScenes.map(s => ({
+          id: s.id,
           projectId: pid,
+          number: s.number,
           type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
+          location: s.location,
+          time: s.time || '',
+          cast: s.cast,
+          pages: s.pages,
         }))
       )
     }
-    // Если selectedScene больше нет в списке — выбираем первую
-    if (filteredScenes.length > 0) {
-      const stillExists = selectedScene && filteredScenes.find(s => s.id === selectedScene.id)
+
+    // Если selectedScene больше нет — выбираем первую
+    if (scenes.length > 0) {
+      const stillExists = selectedScene && scenes.find(s => s.id === selectedScene.id)
       if (!stillExists) {
-        setSelectedScene(filteredScenes[0])
+        setSelectedScene(scenes[0])
       }
     } else {
       setSelectedScene(null)
     }
-  }, [selectedScene, project?.type, currentSeries, currentProjectId, project?.id])
+  }, [currentScriptId, currentScript?.scenes, project, currentProjectId, scenes, selectedScene])
 
   // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -368,9 +405,14 @@ export default function ScriptPage() {
                 setIsSaving(true)
                 try {
                   await projectService.saveScenesBatch(pid, scenes.map(s => ({
-                    ...s,
+                    id: s.id,
                     projectId: pid,
+                    number: s.number,
                     type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
+                    location: s.location,
+                    time: s.time,
+                    cast: s.cast,
+                    pages: s.pages,
                   })), controller.signal)
                 } catch (error) {
                   // Игнорируем ошибки отмены запроса
@@ -566,42 +608,36 @@ export default function ScriptPage() {
                 if (fromIndex < 0 || fromIndex >= scenes.length) return
                 if (toIndex < 0 || toIndex >= scenes.length) return
                 if (fromIndex === toIndex) return
+                if (!currentScriptId) return
 
-                // Устанавливаем флаг перестановки
-                isReorderingRef.current = true
+                // Переставляем сцены в scriptStore (единый источник истины)
+                const allScenes = [...(currentScript?.scenes || [])]
+                const [movedScene] = allScenes.splice(fromIndex, 1)
+                allScenes.splice(toIndex, 0, movedScene)
 
-                // Переставляем сцены в навигаторе
-                const newScenes = [...scenes]
-                const [movedScene] = newScenes.splice(fromIndex, 1)
-                newScenes.splice(toIndex, 0, movedScene)
-
-                // Перенумеровываем сцены по новому порядку (без мутации)
+                // Перенумеровываем
                 const isSerial = project?.type === 'serial' && currentSeries > 0
                 const seriesNumber = currentSeries
-
-                const renumberedScenes = newScenes.map((scene, index) => ({
+                const renumberedScenes = allScenes.map((scene, index) => ({
                   ...scene,
-                  number: isSerial ? `${seriesNumber}-${index + 1}` : (index + 1).toString()
+                  number: isSerial ? `${seriesNumber}-${index + 1}` : (index + 1).toString(),
+                  order: index,
                 }))
 
-                setScenes(renumberedScenes)
+                // 1. Обновляем scriptStore
+                useScriptStore.getState().updateScript(currentScriptId, { scenes: renumberedScenes })
 
-                // Переставляем сцены в редакторе на основе порядка из навигатора
+                // 2. Переставляем блоки в редакторе
                 if (reorderEditorRef.current) {
                   reorderEditorRef.current(fromIndex, toIndex)
                 }
 
-                // Обновляем номера в редакторе на основе перенумерованного массива scenes
+                // 3. Обновляем номера в редакторе
                 setTimeout(() => {
                   if (updateNumbersRef.current) {
                     updateNumbersRef.current(renumberedScenes)
                   }
                 }, 200)
-
-                // После перестановки сбрасываем флаг
-                setTimeout(() => {
-                  isReorderingRef.current = false
-                }, 1000)
               }}
               activeSceneId={selectedScene?.id || ''}
             />

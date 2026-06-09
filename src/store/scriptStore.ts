@@ -7,6 +7,7 @@ export type ScriptFormat = 'russian' | 'hollywood' | 'custom'
 export type TimingSystem = 'page' | 'character' | 'flexible' | 'manual'
 export type SceneType = 'INT' | 'EXT' | 'INT/EXT'
 export type TimeOfDay = 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS'
+// Обратная совместимость: type хранится как строка (русский вариант: 'ИНТ', 'ЭКСТ')
 export type BookmarkColor = 'red' | 'yellow' | 'blue'
 export type ScenePriority = 'high' | 'medium' | 'low'
 export type SceneStatus = 'not_planned' | 'planned' | 'shot'
@@ -34,9 +35,12 @@ export interface Scene {
   id: string
   projectId: string
   number: string // «1», «2А», «3» — может быть буквенным
-  type: SceneType // ИНТ / ЭКСТ
+  type: string // 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ' (единый формат с editor)
   location: string // «КВАРТИРА ИВАНА»
   timeOfDay: TimeOfDay
+  time: string // русское время суток ('ДЕНЬ', 'НОЧЬ'...) — для отображения
+  charCount?: number // символов в сцене
+  duration?: number // секунд хронометража
   synopsis: string // краткое описание действия
   pages: number // хронометраж в страницах (0.125 = 1/8 стр.)
   cast: string[] // имена персонажей в сцене
