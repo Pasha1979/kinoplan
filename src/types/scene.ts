@@ -27,7 +27,7 @@ export interface BreakdownElement {
 
 export interface Scene {
   id: string
-  projectId: string
+  projectId?: string
   number: string // «1», «2А», «3» — может быть буквенным
   type: string // 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ' (единый формат с editor)
   location: string // «КВАРТИРА ИВАНА»
