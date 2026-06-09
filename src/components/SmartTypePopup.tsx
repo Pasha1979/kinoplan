@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import type { Editor } from '@tiptap/react'
 import type { SmartTypeSuggestion } from '../hooks/useSmartType'
 import { safeGetWindow } from '../utils/env'
 
 interface SmartTypePopupProps {
-  editor: any
+  editor: Editor | null
   suggestions: SmartTypeSuggestion[]
   activeIndex: number
   isOpen: boolean
@@ -23,24 +24,18 @@ export function SmartTypePopup({
   isDark = true,
 }: SmartTypePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0 })
 
-  // Получаем позицию курсора
-  useEffect(() => {
-    if (!isOpen || !editor) return
+  // Позиционируем popup напрямую через ref (без setState → нет лишнего рендера и ESLint-ошибки)
+  useLayoutEffect(() => {
+    if (!isOpen || !editor || !popupRef.current) return
 
-    const { state } = editor
-    const { selection } = state
-    const { from } = selection
-
-    // Получаем координаты курсора
+    const { from } = editor.state.selection
     const coords = editor.view.coordsAtPos(from)
     const win = safeGetWindow()
-    
-    setPosition({
-      top: coords.bottom + (win?.scrollY || 0) + 5,
-      left: coords.left + (win?.scrollX || 0),
-    })
+    const el = popupRef.current
+
+    el.style.top = `${coords.bottom + (win?.scrollY || 0) + 5}px`
+    el.style.left = `${coords.left + (win?.scrollX || 0)}px`
   }, [isOpen, editor, suggestions])
 
   // Закрытие при клике вне
@@ -87,8 +82,6 @@ export function SmartTypePopup({
       ref={popupRef}
       className="fixed z-50 rounded-lg shadow-xl border overflow-hidden"
       style={{
-        top: position.top,
-        left: position.left,
         minWidth: '200px',
         maxWidth: '300px',
         background: isDark ? '#1a1a2e' : '#ffffff',

@@ -41,11 +41,14 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
 
   const reorderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Ref'ы для callback'ов — избегаем stale closures
+  // Ref'ы для callback'ов — избегаем stale closures (обновляем в useEffect)
   const onScenesChangeRef = useRef(onScenesChange)
   const onStatsChangeRef = useRef(onStatsChange)
-  onScenesChangeRef.current = onScenesChange
-  onStatsChangeRef.current = onStatsChange
+
+  useEffect(() => {
+    onScenesChangeRef.current = onScenesChange
+    onStatsChangeRef.current = onStatsChange
+  }, [onScenesChange, onStatsChange])
 
   // Очистка таймаута при unmount
   useEffect(() => {

@@ -109,7 +109,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     }
 
     // Фильтруем подсказки по типу блока
-    let relevantSuggestions = allSuggestions
+    let relevantSuggestions: SmartTypeSuggestion[]
     
     if (blockType === 'character' || blockType === 'sceneCharacter') {
       // Для блока персонажа — только персонажи

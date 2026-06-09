@@ -1,18 +1,11 @@
 import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 
-export default function SettingsPage() {
-  const { theme, toggleTheme } = useUiStore()
-  const isDark = theme === 'dark'
-
-  const bg = isDark ? '#0f0f20' : '#f5f7fa'
-  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+function ComingSoonRow({ icon, label, isDark }: { icon: React.ReactNode; label: string; isDark: boolean }) {
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
-  const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
   const sectionLabel = isDark ? '#4b5563' : '#d1d5db'
-
-  const ComingSoonRow = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+  return (
     <div className="flex items-center justify-between px-5 py-4"
       style={{ borderBottom: `1px solid ${border}` }}
     >
@@ -28,6 +21,18 @@ export default function SettingsPage() {
       <ChevronRight size={16} style={{ color: sectionLabel }} />
     </div>
   )
+}
+
+export default function SettingsPage() {
+  const { theme, toggleTheme } = useUiStore()
+  const isDark = theme === 'dark'
+
+  const bg = isDark ? '#0f0f20' : '#f5f7fa'
+  const cardBg = isDark ? '#1a1a35' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const textPrimary = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#6b7280' : '#9ca3af'
+  const sectionLabel = isDark ? '#4b5563' : '#d1d5db'
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: bg }}>
@@ -69,7 +74,7 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <ComingSoonRow icon={<Globe size={18} />} label="Язык интерфейса" />
+          <ComingSoonRow icon={<Globe size={18} />} label="Язык интерфейса" isDark={isDark} />
 
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
@@ -91,8 +96,8 @@ export default function SettingsPage() {
         <div className="rounded-2xl overflow-hidden mb-6"
           style={{ background: cardBg, border: `1px solid ${border}` }}
         >
-          <ComingSoonRow icon={<Bell size={18} />} label="Push-уведомления" />
-          <ComingSoonRow icon={<Bell size={18} />} label="Email-уведомления" />
+          <ComingSoonRow icon={<Bell size={18} />} label="Push-уведомления" isDark={isDark} />
+          <ComingSoonRow icon={<Bell size={18} />} label="Email-уведомления" isDark={isDark} />
         </div>
 
         {/* ─── Данные ─── */}
@@ -102,8 +107,8 @@ export default function SettingsPage() {
         <div className="rounded-2xl overflow-hidden mb-6"
           style={{ background: cardBg, border: `1px solid ${border}` }}
         >
-          <ComingSoonRow icon={<Database size={18} />} label="Резервное копирование" />
-          <ComingSoonRow icon={<Lock size={18} />} label="Конфиденциальность" />
+          <ComingSoonRow icon={<Database size={18} />} label="Резервное копирование" isDark={isDark} />
+          <ComingSoonRow icon={<Lock size={18} />} label="Конфиденциальность" isDark={isDark} />
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
               <Trash2 size={18} style={{ color: '#f87171' }} />

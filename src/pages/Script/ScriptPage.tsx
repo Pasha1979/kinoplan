@@ -31,7 +31,7 @@ export default function ScriptPage() {
   const [currentSeries, setCurrentSeries] = useState(1)
   const [view, setView] = useState<ScriptView>('empty')
   // scenes берутся из scriptStore (единый источник истины), фильтруем по серии
-  const allScenes = currentScript?.scenes || []
+  const allScenes = useMemo(() => currentScript?.scenes || [], [currentScript?.scenes])
   const scenes = useMemo(() => {
     if (project?.type === 'serial' && currentSeries > 0) {
       return allScenes.filter(s => new RegExp(`^${currentSeries}-`).test(s.number))
@@ -143,10 +143,9 @@ export default function ScriptPage() {
     } else {
       setSelectedScene(null)
     }
-  }, [currentScriptId, currentScript?.scenes, project, currentProjectId, scenes, selectedScene])
+  }, [currentScriptId, currentScript?.scenes, project, currentProjectId, scenes, selectedScene, setSelectedScene])
 
   // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (project) {
       const projectScripts = scripts.filter(s => s.projectId === project.id)
@@ -165,7 +164,6 @@ export default function ScriptPage() {
       }
     }
   }, [project, scripts, currentScriptId, setCurrentScript])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 4.1 Конвертация формата — вызываем функцию из редактора при переключении RU/EN
   const handleFormatSwitch = (newFormat: ScriptFormat) => {

@@ -52,7 +52,7 @@ export default function HomePage() {
       const filename = `${projectName.replace(/[^a-zа-яё0-9]/gi, '_')}.json`
       await browserFS.downloadFile(filename, json, 'application/json')
       showToast('Проект экспортирован', 'success')
-    } catch (err) {
+    } catch {
       showToast('Не удалось экспортировать проект', 'error')
     } finally {
       setIsExporting(false)
@@ -67,7 +67,7 @@ export default function HomePage() {
       const imported = await projectService.importProjectFromJSON(text)
       navigate(`/project/${imported.id}`)
       showToast('Проект импортирован', 'success')
-    } catch (err) {
+    } catch {
       showToast('Не удалось импортировать проект', 'error')
     } finally {
       setIsImporting(false)

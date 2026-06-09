@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, Info, ChevronDown, ChevronUp, Wand2 } from 'lucide-react'
 
-export type ErrorSeverity = 'error' | 'warning' | 'info'
-export type ErrorRule = 
+type ErrorSeverity = 'error' | 'warning' | 'info'
+type ErrorRule = 
   | 'scene_number_missing'
   | 'scene_format_invalid'
   | 'character_not_uppercase'
@@ -14,7 +14,7 @@ export type ErrorRule =
   | 'dialog_after_action'
   | 'orphan_parenthetical'
 
-export interface FormatError {
+interface FormatError {
   id: string
   blockId: string
   lineNumber: number
@@ -34,11 +34,10 @@ interface FormatAssistantProps {
   onApplyFix?: (blockId: string, suggestion: string) => void
 }
 
-export function useFormatChecker({
+function useFormatChecker({
   blocks,
   format,
-  enableAutoFix: _enableAutoFix,
-}: Omit<FormatAssistantProps, 'isDark' | 'onErrorClick' | 'onApplyFix'>) {
+}: Omit<FormatAssistantProps, 'isDark' | 'onErrorClick' | 'onApplyFix' | 'enableAutoFix'>) {
   const errors = useMemo<FormatError[]>(() => {
     const foundErrors: FormatError[] = []
     let lineNumber = 1
@@ -62,7 +61,7 @@ export function useFormatChecker({
         }
         
         const scenePattern = format === 'russian' 
-          ? /^\d+\.\s*(ИНТ|ЭКСТ|ИНТ\.\/ЭКСТ|ИНТ\.\-ЭКСТ)\.?\s*.+$/i
+          ? /^\d+\.\s*(ИНТ|ЭКСТ|ИНТ\.\/ЭКСТ|ИНТ\.-ЭКСТ)\.?\s*.+$/i
           : /^\d+\.\s*(INT|EXT|INT\.\/EXT|I\/E)\.?\s*.+$/i
           
         if (!scenePattern.test(content)) {
@@ -196,7 +195,6 @@ export default function FormatAssistant({
   const { errors, errorCount, warningCount, infoCount, autoFixableCount } = useFormatChecker({
     blocks,
     format,
-    enableAutoFix,
   })
 
   const filteredErrors = errors.filter(e => filter === 'all' || e.severity === filter)

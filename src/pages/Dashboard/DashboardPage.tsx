@@ -652,6 +652,7 @@ const ACTIVITY_TYPE_CONFIG = {
 function ActivityFeed({ projectId, isDark }: { projectId: string; isDark: boolean }) {
   const { getProjectActivity } = useTaskStore()
   const events = getProjectActivity(projectId).slice(0, 6)
+  const [now] = useState(() => Date.now())
 
   const textPrimary   = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
@@ -659,7 +660,7 @@ function ActivityFeed({ projectId, isDark }: { projectId: string; isDark: boolea
   const border        = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
 
   const timeAgo = (iso: string) => {
-    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    const diff = Math.floor((now - new Date(iso).getTime()) / 1000)
     if (diff < 60) return 'только что'
     if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`
     if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`

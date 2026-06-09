@@ -5,6 +5,7 @@ import {
   Search, Filter, Download, BarChart3
 } from 'lucide-react'
 import { parseScript, getUniqueElements } from '../utils/scriptParser'
+import type { Block } from '../utils/scriptParser'
 import CharacterStats from './CharacterStats'
 
 export type BreakdownCategory = 
@@ -36,7 +37,7 @@ export interface SceneBreakdown {
 interface ScriptBreakdownProps {
   scenes: Array<{ id: string; number: string; location: string; type: string }>
   isDark: boolean
-  blocks?: Array<{ id: string; type: string; content: string }>
+  blocks?: Block[]
 }
 
 const CATEGORIES: { id: BreakdownCategory; label: string; icon: typeof Users; color: string }[] = [
@@ -71,7 +72,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
   const parsedElements = useMemo(() => {
     if (!blocks || blocks.length === 0) return []
     
-    const parsedScenes = parseScript(blocks as any)
+    const parsedScenes = parseScript(blocks)
     const uniqueElements = getUniqueElements(parsedScenes)
     
     // Конвертируем ParsedElement в BreakdownElement
@@ -84,8 +85,8 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
     }))
   }, [blocks])
 
-  // Объединяем распарсенные и ручные элементы
-  const allElements = [...parsedElements, ...manualElements]
+  // Объединяем распарсенные и ручные элементы — оборачиваем в useMemo для избежания лишних рендеров
+  const allElements = useMemo(() => [...parsedElements, ...manualElements], [parsedElements, manualElements])
 
   // Подготовка данных для CharacterStats
   const characterData = useMemo(() => {

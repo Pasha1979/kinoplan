@@ -22,7 +22,7 @@ export interface ParsedScene {
   elements: ParsedElement[]
 }
 
-interface Block {
+export interface Block {
   id: string
   type: 'scene_header' | 'action' | 'character' | 'dialog' | 'parenthetical' | 'transition'
   content: string

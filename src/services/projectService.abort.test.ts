@@ -38,7 +38,7 @@ describe('projectService AbortController', () => {
     try {
       await projectService.saveScenesBatch('test-proj', [], controller.signal)
       controller.abort()
-    } catch (error) {
+    } catch {
       // Ошибка AbortError ожидается
     }
     

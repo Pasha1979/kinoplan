@@ -81,7 +81,7 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
           }
         }),
 
-      revertScene: (_sceneId) => {
+      revertScene: () => {
         // TODO: реализовать откат при ошибке сохранения (Этап 2)
       },
 

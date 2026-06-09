@@ -14,7 +14,7 @@ class BrowserFS implements FileSystemAdapter {
       localStorage.setItem(key, data)
     } catch (error) {
       console.error('Failed to write to localStorage:', error)
-      throw new Error('Не удалось сохранить данные в localStorage')
+      throw new Error('Не удалось сохранить данные в localStorage', { cause: error })
     }
   }
 
