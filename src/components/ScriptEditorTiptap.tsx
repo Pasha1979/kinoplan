@@ -79,6 +79,20 @@ export default function ScriptEditorTiptap({
   const handleKeyDownRef = useRef<((view: Editor['view'], event: KeyboardEvent) => boolean) | null>(null)
   const handleCopyRef = useRef<((view: Editor['view'], event: ClipboardEvent) => boolean) | null>(null)
 
+  // Refs для параметров, используемых внутри асинхронных таймаутов (защита от stale closures)
+  const timingSystemRef = useRef(timingSystem)
+  const genreCoefficientRef = useRef(genreCoefficient)
+  const onScenesChangeRef = useRef(onScenesChange)
+  const onStatsChangeRef = useRef(onStatsChange)
+
+  // Обновляем refs в useEffect во избежание мутаций во время рендера
+  useEffect(() => {
+    timingSystemRef.current = timingSystem
+    genreCoefficientRef.current = genreCoefficient
+    onScenesChangeRef.current = onScenesChange
+    onStatsChangeRef.current = onStatsChange
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange])
+
   // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
   const processedHeadersRef = useRef<Set<string>>(new Set())
   // Флаг защиты от двойной авто-замены
@@ -478,7 +492,7 @@ export default function ScriptEditorTiptap({
       clearTimeout(pageCountTimeoutRef.current)
     }
     pageCountTimeoutRef.current = setTimeout(() => {
-      const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_format as 'russian' | 'hollywood') || 'russian')
+      const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
       setPrecisePages(result.totalPages)
       precisePagesRef.current = result.totalPages
       if (editor) {
@@ -486,11 +500,11 @@ export default function ScriptEditorTiptap({
           doc: editor.state.doc,
           forcedPages: result.totalPages,
           precisePagesFallback: precisePagesRef.current,
-          timingSystem,
-          genreCoefficient,
+          timingSystem: timingSystemRef.current,
+          genreCoefficient: genreCoefficientRef.current,
         })
-        onScenesChange?.(extractedScenes)
-        onStatsChange?.(stats)
+        onScenesChangeRef.current?.(extractedScenes)
+        onStatsChangeRef.current?.(stats)
       }
 
       // Сохраняем breaks (применение отключено)

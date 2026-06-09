@@ -44,11 +44,15 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
   // Ref'ы для callback'ов — избегаем stale closures (обновляем в useEffect)
   const onScenesChangeRef = useRef(onScenesChange)
   const onStatsChangeRef = useRef(onStatsChange)
+  const timingSystemRef = useRef(timingSystem)
+  const genreCoefficientRef = useRef(genreCoefficient)
 
   useEffect(() => {
     onScenesChangeRef.current = onScenesChange
     onStatsChangeRef.current = onStatsChange
-  }, [onScenesChange, onStatsChange])
+    timingSystemRef.current = timingSystem
+    genreCoefficientRef.current = genreCoefficient
+  }, [onScenesChange, onStatsChange, timingSystem, genreCoefficient])
 
   // Очистка таймаута при unmount
   useEffect(() => {
@@ -153,8 +157,8 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
             doc: editor.state.doc,
             forcedPages: precisePagesRef.current,
             precisePagesFallback: precisePagesRef.current,
-            timingSystem,
-            genreCoefficient,
+            timingSystem: timingSystemRef.current,
+            genreCoefficient: genreCoefficientRef.current,
           })
           onScenesChangeRef.current?.(extractedScenes)
           onStatsChangeRef.current?.(stats)
