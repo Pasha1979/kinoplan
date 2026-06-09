@@ -2,17 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { Project } from './projectStore'
-
-export interface Scene {
-  id: string
-  projectId: string
-  number: string
-  type: 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ'
-  location: string
-  time: string
-  cast: string[]
-  pages: number
-}
+import type { Scene } from '../types/scene'
 
 interface NormalizedProjectState {
   projects: Record<string, Project>

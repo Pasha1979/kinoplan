@@ -16,23 +16,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { TimingSystem } from '../store/scriptStore'
+import type { TimingSystem, Scene } from '../types/scene'
 import { calculateSceneTiming } from '../utils/sceneTiming'
-
-// Упрощенный тип для сцен из редактора
-interface SimpleScene {
-  id: string
-  number: string
-  type: string
-  location: string
-  time: string
-  synopsis?: string
-  colorTag?: string
-  isOmitted?: boolean
-  pages?: number
-  charCount?: number
-  cast?: string[]
-}
 
 function getTimeIcon(time: string) {
   const t = (time || '').toUpperCase()
@@ -64,7 +49,7 @@ function getColorTagColor(colorTag: string | undefined, isDark: boolean): string
 }
 
 interface SceneNavigatorProps {
-  scenes: SimpleScene[]
+  scenes: Scene[]
   isDark: boolean
   onSceneClick?: (sceneId: string) => void
   activeSceneId?: string
@@ -199,7 +184,7 @@ export default function SceneNavigator({
 
 // Общий интерфейс для plain и sortable карточки
 interface SceneCardProps {
-  scene: SimpleScene
+  scene: Scene
   isActive: boolean
   isExpanded: boolean
   stripColor: string
