@@ -19,8 +19,8 @@ export interface ExtractedScene {
 
 export interface ExtractedStats {
   scenes: number
-  pages: 0
-  duration: 0
+  pages: number
+  duration: number
 }
 
 export interface ExtractScenesOptions {
@@ -187,8 +187,8 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
 
   const stats: ExtractedStats = {
     scenes: scenes.length,
-    pages: 0,
-    duration: 0,
+    pages: parseFloat(scenes.reduce((sum, s) => sum + s.pages, 0).toFixed(1)),
+    duration: scenes.reduce((sum, s) => sum + s.duration, 0),
   }
 
   return { scenes, stats }

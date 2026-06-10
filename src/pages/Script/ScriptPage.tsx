@@ -42,7 +42,6 @@ export default function ScriptPage() {
     setScriptStats,
     seriesDuration,
     setSeriesDuration,
-    seriesPages,
     setSeriesPages,
     setSceneCount,
     focusSceneId,
@@ -154,6 +153,7 @@ export default function ScriptPage() {
               onSeriesChange={setCurrentSeries}
               onSeriesDurationChange={setSeriesDuration}
               onSeriesPagesChange={setSeriesPages}
+              totalPages={scriptStats.pages}
               onSceneClick={handleSceneClick}
               onSceneReorder={handleSceneReorder}
               activeSceneId={selectedScene?.id || ''}
@@ -188,7 +188,7 @@ export default function ScriptPage() {
             isDark={isDark}
             colors={{ sidebarBg, border, textPrimary, textSecondary }}
             scenesCount={scriptStats.scenes}
-            seriesPages={seriesPages}
+            seriesPages={scriptStats.pages}
             seriesDuration={seriesDuration}
             targetDuration={targetDuration}
           />
