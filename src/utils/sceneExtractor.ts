@@ -105,17 +105,17 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
 
     const dashParts = locationAndTime.split(/\s*[—–]\s*/)
     if (dashParts.length >= 2) {
-      location = dashParts[0].trim().replace(/\.$/, '')
-      time = dashParts[dashParts.length - 1].trim().replace(/\.$/, '')
+      location = dashParts[0].trim().replace(/\.$/, '').toUpperCase()
+      time = dashParts[dashParts.length - 1].trim().replace(/\.$/, '').toUpperCase()
     } else {
       // Ищем время суток в конце строки
       const timePattern = new RegExp(`[.\\s](${timeWords.join('|')})\\.?$`, 'i')
       const timeMatch = locationAndTime.match(timePattern)
       if (timeMatch) {
         time = timeMatch[1].toUpperCase()
-        location = locationAndTime.slice(0, locationAndTime.lastIndexOf(timeMatch[0])).trim().replace(/\.$/, '')
+        location = locationAndTime.slice(0, locationAndTime.lastIndexOf(timeMatch[0])).trim().replace(/\.$/, '').toUpperCase()
       } else {
-        location = locationAndTime.trim().replace(/\.$/, '')
+        location = locationAndTime.trim().replace(/\.$/, '').toUpperCase()
         time = ''
       }
     }
@@ -124,8 +124,8 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     let sublocation: string | undefined
     const dotIndex = location.indexOf('.')
     if (dotIndex > 0) {
-      sublocation = location.slice(dotIndex + 1).trim()
-      location = location.slice(0, dotIndex).trim()
+      sublocation = location.slice(dotIndex + 1).trim().toUpperCase()
+      location = location.slice(0, dotIndex).trim().toUpperCase()
     }
 
     // Ищем cast: следующий БЛОК после sceneHeader должен быть sceneCast

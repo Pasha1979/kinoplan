@@ -32,7 +32,7 @@ describe('scriptParser', () => {
       const header = parseSceneHeader('3. ПАВ. Студия A — УТРО')
       expect(header).not.toBeNull()
       expect(header?.type).toBe('PAV')
-      expect(header?.location).toBe('Студия A')
+      expect(header?.location).toBe('СТУДИЯ A')
       expect(header?.timeOfDay).toBe('УТРО')
     })
 
@@ -40,14 +40,14 @@ describe('scriptParser', () => {
       const header = parseSceneHeader('4. НАТ. Улица Ленина — НОЧЬ')
       expect(header).not.toBeNull()
       expect(header?.type).toBe('EXT')
-      expect(header?.location).toBe('Улица Ленина')
+      expect(header?.location).toBe('УЛИЦА ЛЕНИНА')
     })
 
     it('should split dot-notation location into location and sublocation', () => {
       const header = parseSceneHeader('5. ИНТ. Школа.Кабинет директора — ДЕНЬ')
       expect(header).not.toBeNull()
-      expect(header?.location).toBe('Школа')
-      expect(header?.sublocation).toBe('Кабинет директора')
+      expect(header?.location).toBe('ШКОЛА')
+      expect(header?.sublocation).toBe('КАБИНЕТ ДИРЕКТОРА')
     })
 
     it('should parse manual timing (мм:сс) from header', () => {

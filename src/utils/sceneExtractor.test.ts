@@ -83,7 +83,7 @@ describe('extractScenesFromDocument', () => {
     expect(result.scenes.length).toBe(1)
     const scene = result.scenes[0]
     expect(scene.type).toBe('ПАВ')
-    expect(scene.location).toBe('Студия A')
+    expect(scene.location).toBe('СТУДИЯ A')
     expect(scene.time).toBe('УТРО')
   })
 
@@ -107,7 +107,7 @@ describe('extractScenesFromDocument', () => {
     })
 
     expect(result.scenes[0].type).toBe('ЭКСТ')
-    expect(result.scenes[0].location).toBe('Улица Ленина')
+    expect(result.scenes[0].location).toBe('УЛИЦА ЛЕНИНА')
   })
 
   it('should split dot-notation location into location and sublocation', () => {
@@ -130,13 +130,13 @@ describe('extractScenesFromDocument', () => {
     })
 
     const scene = result.scenes[0]
-    expect(scene.location).toBe('Школа')
-    expect(scene.sublocation).toBe('Кабинет директора')
+    expect(scene.location).toBe('ШКОЛА')
+    expect(scene.sublocation).toBe('КАБИНЕТ ДИРЕКТОРА')
   })
 
   it('should parse manual timing (мм:сс) from header', () => {
     const nodes = [
-      { type: { name: 'sceneHeader' }, textContent: '6. ИНТ. Квартира — ДЕНЬ (01:30)' },
+      { type: { name: 'sceneHeader' }, textContent: '6. ИНТ. КВАРТИРА — ДЕНЬ (01:30)' },
       { type: { name: 'sceneAction' }, textContent: 'Действие.' },
     ]
 

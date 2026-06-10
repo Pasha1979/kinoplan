@@ -65,12 +65,12 @@ export function parseSceneHeader(content: string): {
     else type = 'INT/EXT'
 
     // Разбиваем локацию на location + sublocation через точку
-    let location = locationRaw.trim()
+    let location = locationRaw.trim().toUpperCase()
     let sublocation: string | undefined
     const dotIndex = location.indexOf('.')
     if (dotIndex > 0) {
-      sublocation = location.slice(dotIndex + 1).trim()
-      location = location.slice(0, dotIndex).trim()
+      sublocation = location.slice(dotIndex + 1).trim().toUpperCase()
+      location = location.slice(0, dotIndex).trim().toUpperCase()
     }
 
     return {
@@ -78,7 +78,7 @@ export function parseSceneHeader(content: string): {
       type,
       location,
       sublocation,
-      timeOfDay: timeOfDay.trim(),
+      timeOfDay: timeOfDay.trim().toUpperCase(),
       manualDuration
     }
   }
@@ -89,12 +89,12 @@ export function parseSceneHeader(content: string): {
     const [, numberPart, typeRaw, locationRaw, timeOfDay] = englishMatch
     const type = typeRaw.toUpperCase() as 'INT' | 'EXT' | 'INT/EXT' | 'PAV'
 
-    let location = locationRaw.trim()
+    let location = locationRaw.trim().toUpperCase()
     let sublocation: string | undefined
     const dotIndex = location.indexOf('.')
     if (dotIndex > 0) {
-      sublocation = location.slice(dotIndex + 1).trim()
-      location = location.slice(0, dotIndex).trim()
+      sublocation = location.slice(dotIndex + 1).trim().toUpperCase()
+      location = location.slice(0, dotIndex).trim().toUpperCase()
     }
 
     return {
@@ -102,7 +102,7 @@ export function parseSceneHeader(content: string): {
       type,
       location,
       sublocation,
-      timeOfDay: timeOfDay.trim(),
+      timeOfDay: timeOfDay.trim().toUpperCase(),
       manualDuration
     }
   }
