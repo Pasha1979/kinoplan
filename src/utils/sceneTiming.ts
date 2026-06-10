@@ -42,3 +42,13 @@ export function calculateSceneTiming(
       return { pages, duration: Math.round(pages * SECONDS_PER_PAGE * coeff) }
   }
 }
+
+/**
+ * Форматирует длительность в секундах в строку MM:SS.
+ * Используется единообразно во всём приложении.
+ */
+export function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.round(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}

@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { TimingSystem, Scene } from '../types/scene'
-import { calculateSceneTiming } from '../utils/sceneTiming'
+import { calculateSceneTiming, formatDuration } from '../utils/sceneTiming'
 
 function getTimeIcon(time: string) {
   const t = (time || '').toUpperCase()
@@ -301,7 +301,7 @@ function SceneCard({
                 </span>
                 <span className="flex items-center gap-1 text-xs font-medium" style={{ color: isDark ? '#10b981' : '#059669' }}>
                   <Clock size={11} />
-                  {Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}
+                  {formatDuration(duration)}
                 </span>
               </>
             )}
@@ -502,7 +502,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
               {currentSeries === 0 ? 'Все серии' : `Серия ${currentSeries}`}
             </span>
             <span className="text-[10px]" style={{ color: seriesProgress.isOver ? '#ef4444' : textPrimary }}>
-              {Math.floor(seriesProgress.current / 60)}:{(seriesProgress.current % 60).toFixed(0).padStart(2, '0')} / {episodeDuration} мин
+              {formatDuration(seriesProgress.current)} / {episodeDuration} мин
             </span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>

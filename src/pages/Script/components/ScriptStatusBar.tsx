@@ -1,4 +1,5 @@
 import { Hash, AlignLeft, Clock, AlertTriangle } from 'lucide-react'
+import { formatDuration } from '../../../utils/sceneTiming'
 
 interface ScriptStatusBarProps {
   isDark: boolean
@@ -37,7 +38,7 @@ export default function ScriptStatusBar({
       </span>
       <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
         <Clock size={11} />
-        {Math.floor(seriesDuration / 60)}:{(seriesDuration % 60).toString().padStart(2, '0')}
+        {formatDuration(seriesDuration)}
       </span>
 
       {/* Прогресс-бар хронометража серии (из навигатора — единый источник) */}
@@ -68,7 +69,7 @@ export default function ScriptStatusBar({
           </div>
           <div className="flex items-center gap-2 text-[10px] shrink-0">
             <span style={{ color: textSecondary }}>
-              {Math.floor(seriesDuration / 60)}:{(seriesDuration % 60).toString().padStart(2, '0')} / {targetDuration}:00
+              {formatDuration(seriesDuration)} / {targetDuration}:00
             </span>
             {Math.abs(Math.round(seriesDuration / 60) - targetDuration) > 0 && (
               <span style={{

@@ -1,6 +1,6 @@
 import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
-import { calculateSceneTiming } from '../../../utils/sceneTiming'
+import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 
 interface ScriptHeaderProps {
   isDark: boolean
@@ -88,7 +88,7 @@ export default function ScriptHeader({
                           currentScript?.timingSystem || 'page',
                           currentScript?.genreCoefficient || 1.0
                         )
-                        return `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`
+                        return formatDuration(duration)
                       })()}
                     </span>
                   </>
