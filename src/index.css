@@ -50,7 +50,11 @@ body {
   --russian-dialog-right-indent: 3.75cm;  /* симметрично */
   --russian-transition-margin-top: 16px;
   --russian-transition-margin-bottom: 16px;
-  
+  --russian-parenthetical-margin-top: 0;
+  --russian-parenthetical-margin-bottom: 0;
+  --russian-parenthetical-left-indent: 5.5cm;
+  --russian-parenthetical-right-indent: 4.5cm;
+
   /* Hollywood format - based on US industry standard */
   --hollywood-header-margin-top: 16px;
   --hollywood-header-margin-bottom: 0;
@@ -67,6 +71,10 @@ body {
   --hollywood-dialog-right-indent: 2.5cm;
   --hollywood-transition-margin-top: 16px;
   --hollywood-transition-margin-bottom: 16px;
+  --hollywood-parenthetical-margin-top: 0;
+  --hollywood-parenthetical-margin-bottom: 0;
+  --hollywood-parenthetical-left-indent: 7.8cm; /* 3.1" from left page edge */
+  --hollywood-parenthetical-right-indent: 2.5cm;
 }
 
 /* Russian format mode */
@@ -86,6 +94,10 @@ body {
   --dialog-right-indent: var(--russian-dialog-right-indent);
   --transition-margin-top: var(--russian-transition-margin-top);
   --transition-margin-bottom: var(--russian-transition-margin-bottom);
+  --parenthetical-margin-top: var(--russian-parenthetical-margin-top);
+  --parenthetical-margin-bottom: var(--russian-parenthetical-margin-bottom);
+  --parenthetical-left-indent: var(--russian-parenthetical-left-indent);
+  --parenthetical-right-indent: var(--russian-parenthetical-right-indent);
 }
 
 /* Hollywood format mode */
@@ -105,6 +117,10 @@ body {
   --dialog-right-indent: var(--hollywood-dialog-right-indent);
   --transition-margin-top: var(--hollywood-transition-margin-top);
   --transition-margin-bottom: var(--hollywood-transition-margin-bottom);
+  --parenthetical-margin-top: var(--hollywood-parenthetical-margin-top);
+  --parenthetical-margin-bottom: var(--hollywood-parenthetical-margin-bottom);
+  --parenthetical-left-indent: var(--hollywood-parenthetical-left-indent);
+  --parenthetical-right-indent: var(--hollywood-parenthetical-right-indent);
 }
 
 /* Default to Russian */
@@ -124,6 +140,10 @@ body {
   --dialog-right-indent: var(--russian-dialog-right-indent);
   --transition-margin-top: var(--russian-transition-margin-top);
   --transition-margin-bottom: var(--russian-transition-margin-bottom);
+  --parenthetical-margin-top: var(--russian-parenthetical-margin-top);
+  --parenthetical-margin-bottom: var(--russian-parenthetical-margin-bottom);
+  --parenthetical-left-indent: var(--russian-parenthetical-left-indent);
+  --parenthetical-right-indent: var(--russian-parenthetical-right-indent);
 }
 
 /* Scene Node: Container for entire scene (header + content) */
@@ -194,6 +214,24 @@ body {
   padding-left: var(--dialog-left-indent) !important;
   padding-right: var(--dialog-right-indent) !important;
   margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0 !important;
+}
+
+/* Scene Parenthetical: "(нервно)" — Russian */
+.tiptap-editor.format-russian div[data-type="scene-parenthetical"],
+.tiptap-editor.format-russian.ProseMirror div[data-type="scene-parenthetical"] {
+  position: relative;
+  padding-left: var(--parenthetical-left-indent) !important;
+  padding-right: var(--parenthetical-right-indent) !important;
+  margin: var(--parenthetical-margin-top) 0 var(--parenthetical-margin-bottom) 0 !important;
+}
+
+/* Scene Parenthetical — Hollywood */
+.tiptap-editor.format-hollywood div[data-type="scene-parenthetical"],
+.tiptap-editor.format-hollywood.ProseMirror div[data-type="scene-parenthetical"] {
+  position: relative;
+  padding-left: var(--parenthetical-left-indent) !important;
+  padding-right: var(--parenthetical-right-indent) !important;
+  margin: var(--parenthetical-margin-top) 0 var(--parenthetical-margin-bottom) 0 !important;
 }
 
 /* Scene Transition: "НАЧАЛО ДНЯ" or "FADE IN:" */

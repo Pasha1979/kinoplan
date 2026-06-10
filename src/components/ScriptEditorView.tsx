@@ -48,6 +48,7 @@ export function ScriptEditorView({
     { name: 'sceneCast', label: 'Действующие', icon: Users, color: '#8b5cf6' },
     { name: 'sceneAction', label: 'Действие', icon: AlignLeft, color: '#9ca3af' },
     { name: 'sceneCharacter', label: 'Персонаж', icon: User, color: '#f97316' },
+    { name: 'sceneParenthetical', label: 'Ремарка', icon: MessageSquare, color: '#eab308' },
     { name: 'sceneDialog', label: 'Диалог', icon: MessageSquare, color: '#22c55e' },
     { name: 'sceneTransition', label: 'Переход', icon: ArrowRight, color: '#ec4899' },
   ]

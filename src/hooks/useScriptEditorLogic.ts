@@ -6,7 +6,7 @@ import { useEffect, useCallback, useRef, useState } from 'react'
 import { DOMSerializer, Node as PMNode } from 'prosemirror-model'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
-import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode } from '../components/tiptap'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
 import { useSmartType } from './useSmartType'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
 import { PageCounter } from '../services/pageCounter'
@@ -139,11 +139,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const { $from } = selection
     
     let currentNode = $from.node()
-    
-    if (currentNode && !['paragraph', 'sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneTransition'].includes(currentNode.type.name)) {
+
+    const allowedTypes = ['paragraph', 'sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
+    if (currentNode && !allowedTypes.includes(currentNode.type.name)) {
       for (let i = $from.depth; i > 0; i--) {
         const node = $from.node(i)
-        if (node && ['paragraph', 'sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneTransition'].includes(node.type.name)) {
+        if (node && allowedTypes.includes(node.type.name)) {
           currentNode = node
           break
         }
@@ -164,8 +165,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       newType = 'sceneHeader'
     }
     else if (
-      (currentType === 'sceneHeader' || currentType === 'sceneCast') && 
-      /^[А-ЯЁA-Z\s,]+$/.test(textContent) && 
+      (currentType === 'sceneHeader' || currentType === 'sceneCast') &&
+      /^[А-ЯЁA-Z\s,]+$/.test(textContent) &&
       textContent.includes(',')
     ) {
       newType = 'sceneCast'
@@ -173,22 +174,53 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     else if (/^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT)$/i.test(textContent)) {
       newType = 'sceneTransition'
     }
+    // Ремарка: в скобках, сразу после персонажа (или другой ремарки)
     else if (
-      currentType !== 'sceneCast' && 
-      textContent.length >= 2 && 
-      textContent.length <= 25 &&
-      !textContent.includes('.') && 
-      !textContent.includes(',') && 
-      textContent === textContent.toUpperCase() && 
-      /^[А-ЯЁA-Z\s\-']+$/.test(textContent) && 
-      /[А-ЯЁA-Z]/.test(textContent)
+      currentType !== 'sceneCast' &&
+      /^\([^)]*\)$/.test(textContent)
     ) {
-      newType = 'sceneCharacter'
+      const resolvedPos = state.doc.resolve($from.before())
+      const prevNode = resolvedPos.nodeBefore
+      if (prevNode?.type.name === 'sceneCharacter' || prevNode?.type.name === 'sceneParenthetical') {
+        newType = 'sceneParenthetical'
+      }
     }
+    // Персонаж: 2-25 символов, только буквы/пробелы/дефисы/апострофы
+    // Распознаёт даже строчные — с автоматическим переводом в КАПСЛОК ниже
+    else if (
+      currentType !== 'sceneCast' &&
+      textContent.length >= 2 &&
+      textContent.length <= 25 &&
+      !textContent.includes('.') &&
+      !textContent.includes(',') &&
+      /^[a-zA-ZА-ЯЁа-яё\s\-']+$/.test(textContent) &&
+      /[А-ЯЁа-яA-Za-z]/.test(textContent)
+    ) {
+      // Проверяем контекст: персонаж должен идти после action/paragraph/header
+      // (не после другого персонажа или диалога — иначе это ошибка форматирования)
+      const resolvedPos = state.doc.resolve($from.before())
+      const prevNode = resolvedPos.nodeBefore
+      const prevType = prevNode?.type.name
+      if (
+        prevType === 'sceneAction' ||
+        prevType === 'paragraph' ||
+        prevType === 'sceneHeader' ||
+        prevType === 'sceneTransition' ||
+        prevType === undefined // первый блок документа
+      ) {
+        newType = 'sceneCharacter'
+      }
+    }
+    // Диалог: сразу после персонажа, ремарки, или другого диалога (Enter внутри реплики)
     else if (currentType === 'paragraph' || currentType === 'sceneAction') {
       const resolvedPos = state.doc.resolve($from.before())
       const prevNode = resolvedPos.nodeBefore
-      if (prevNode?.type.name === 'sceneCharacter') {
+      const prevType = prevNode?.type.name
+      if (
+        prevType === 'sceneCharacter' ||
+        prevType === 'sceneParenthetical' ||
+        prevType === 'sceneDialog'
+      ) {
         newType = 'sceneDialog'
       }
     }
@@ -200,8 +232,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     const isHeader = currentType === 'sceneHeader'
     const isCharacter = currentType === 'sceneCharacter'
-    
-    if ((isHeader || isCharacter) && !isReplacingRef.current) {
+    const isParenthetical = currentType === 'sceneParenthetical'
+
+    // Автокапс для шапки, персонажа и ремарки
+    if ((isHeader || isCharacter || isParenthetical) && !isReplacingRef.current) {
       const upperText = textContent.toUpperCase()
       if (upperText !== textContent) {
         const cursorOffset = selection.from - $from.start()
@@ -224,8 +258,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const upperText = textContent.toUpperCase()
 
       if (projectType === 'film') {
-        const noNumberPattern = /^(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
-        const alreadyNumbered = /^\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+        const noNumberPattern = /^(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
+        const alreadyNumbered = /^\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
         if (noNumberPattern.test(upperText) && !alreadyNumbered.test(upperText)) {
           let sceneCount = 0
           editorInstance.state.doc.descendants((n: PMNode) => {
@@ -251,8 +285,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
 
       if (projectType === 'serial' && currentSeries > 0) {
-        const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
-        const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+        const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
+        const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
         const match = upperText.match(needsSeriesPattern)
         const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
 
@@ -305,6 +339,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       SceneAction,
       SceneCharacter,
       SceneDialog,
+      SceneParenthetical,
       SceneTransition,
       DragHandle,
       Placeholder.configure({
