@@ -476,6 +476,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
       setPrecisePages(result.totalPages)
       precisePagesRef.current = result.totalPages
+      // extractScenesFromDocument вызывается внутри того же debounce, потому что
+      // требует forcedPages из pageCounter. Разделение на отдельный debounce
+      // приведёт к рассинхронизации: сцены будут парситься со старым forcedPages.
       if (editorInstance) {
         const { scenes: extractedScenes, stats } = extractScenesFromDocument({
           doc: editorInstance.state.doc,
