@@ -8,10 +8,12 @@ export interface ExtractedScene {
   number: string
   type: string
   location: string
+  sublocation?: string
   time: string
   cast: string[]
   pages: number
   duration: number
+  manualDuration?: number
   charCount: number
 }
 
@@ -47,10 +49,12 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     sceneNumber: string
     sceneType: string
     location: string
+    sublocation?: string
     time: string
     cast: string[]
     charCount: number
     dialogLines: number
+    manualDuration?: number
   }> = []
 
   blockNodes.forEach((node, index) => {
@@ -58,15 +62,28 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
 
     const headerText = node.textContent.trim()
 
-    // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ."
-    const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?)\s+(.+)$/i)
+    // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ." или "2. ПАВ. Студия A утро."
+    // Также поддерживаем FilmToolz: НАТ. (натура = экстерьер), НАТ/ИНТ. (смешанный)
+    const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?|ПАВ\.?|НАТ\/ИНТ\.?|НАТ\.?)\s+(.+)$/i)
     if (!headerMatch) return
 
     const sceneNumber = headerMatch[1]
     const rawType = headerMatch[2].toUpperCase()
-    const locationAndTime = headerMatch[3]
+    let locationAndTime = headerMatch[3]
 
-    const sceneType = rawType.startsWith('ИНТ-') ? 'ИНТ-ЭКСТ' : rawType.startsWith('Э') ? 'ЭКСТ' : 'ИНТ'
+    // Нормализация типов: НАТ → ЭКСТ, НАТ/ИНТ → ИНТ-ЭКСТ, ПАВ → ПАВ
+    let sceneType: string
+    if (rawType.startsWith('ИНТ-') || rawType.startsWith('НАТ/') || rawType.startsWith('ИНТ/')) {
+      sceneType = 'ИНТ-ЭКСТ'
+    } else if (rawType.startsWith('НАТ')) {
+      sceneType = 'ЭКСТ'
+    } else if (rawType.startsWith('ПАВ')) {
+      sceneType = 'ПАВ'
+    } else if (rawType.startsWith('Э')) {
+      sceneType = 'ЭКСТ'
+    } else {
+      sceneType = 'ИНТ'
+    }
 
     // Варианты времени суток
     const timeWords = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ']
@@ -75,6 +92,16 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     // Вариант 2: время в конце строки через точку (КВАРТИРА ПЕТИ. ДЕНЬ.)
     let location: string
     let time: string
+
+    // Парсим ручной хронометраж (мм:сс) из шапки, например: "МАША, ПЕТЯ (01:30)"
+    let manualDuration: number | undefined
+    const timingMatch = locationAndTime.match(/\((\d{1,2}):(\d{2})\)\s*$/)
+    if (timingMatch) {
+      const mins = parseInt(timingMatch[1], 10)
+      const secs = parseInt(timingMatch[2], 10)
+      manualDuration = mins * 60 + secs
+      locationAndTime = locationAndTime.slice(0, locationAndTime.lastIndexOf(timingMatch[0])).trim()
+    }
 
     const dashParts = locationAndTime.split(/\s*[—–]\s*/)
     if (dashParts.length >= 2) {
@@ -91,6 +118,14 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
         location = locationAndTime.trim().replace(/\.$/, '')
         time = ''
       }
+    }
+
+    // Разбиваем локацию на location + sublocation через точку: "Школа.Кабинет директора"
+    let sublocation: string | undefined
+    const dotIndex = location.indexOf('.')
+    if (dotIndex > 0) {
+      sublocation = location.slice(dotIndex + 1).trim()
+      location = location.slice(0, dotIndex).trim()
     }
 
     // Ищем cast: следующий БЛОК после sceneHeader должен быть sceneCast
@@ -115,7 +150,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       }
     }
 
-    rawScenes.push({ sceneNumber, sceneType, location, time, cast, charCount, dialogLines })
+    rawScenes.push({ sceneNumber, sceneType, location, sublocation, time, cast, charCount, dialogLines, manualDuration })
   })
 
   // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
@@ -131,17 +166,21 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       : Math.max(MIN_SCENE_PAGES, parseFloat((raw.charCount / CHARS_PER_PAGE).toFixed(1)))
 
     // Расчитываем хронометраж от уже точного кол-ва страниц
-    const { duration } = calculateSceneTiming({ pages, charCount: raw.charCount, dialogLines: raw.dialogLines }, timingSystem, genreCoefficient)
+    // Если задан ручной хронометраж — используем его, иначе рассчитываем
+    const calculated = calculateSceneTiming({ pages, charCount: raw.charCount, dialogLines: raw.dialogLines }, timingSystem, genreCoefficient)
+    const duration = raw.manualDuration ?? calculated.duration
 
     return {
       id: `scene-${raw.sceneNumber}`,
       number: raw.sceneNumber,
       type: raw.sceneType,
       location: raw.location,
+      sublocation: raw.sublocation,
       time: raw.time,
       cast: raw.cast,
       pages,
       duration,
+      manualDuration: raw.manualDuration,
       charCount: raw.charCount,
     }
   })

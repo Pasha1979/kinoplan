@@ -16,9 +16,11 @@ export interface ParsedElement {
 export interface ParsedScene {
   id: string
   number: string
-  type: 'INT' | 'EXT' | 'INT/EXT'
+  type: 'INT' | 'EXT' | 'INT/EXT' | 'PAV'
   location: string
+  sublocation?: string
   timeOfDay: string
+  manualDuration?: number
   elements: ParsedElement[]
 }
 
@@ -33,34 +35,75 @@ export interface Block {
  */
 export function parseSceneHeader(content: string): {
   number: string
-  type: 'INT' | 'EXT' | 'INT/EXT'
+  type: 'INT' | 'EXT' | 'INT/EXT' | 'PAV'
   location: string
+  sublocation?: string
   timeOfDay: string
+  manualDuration?: number
 } | null {
+  // Парсим ручной хронометраж (мм:сс) из шапки
+  let manualDuration: number | undefined
+  let text = content
+  const timingMatch = content.match(/\((\d{1,2}):(\d{2})\)\s*$/)
+  if (timingMatch) {
+    const mins = parseInt(timingMatch[1], 10)
+    const secs = parseInt(timingMatch[2], 10)
+    manualDuration = mins * 60 + secs
+    text = content.slice(0, content.lastIndexOf(timingMatch[0])).trim()
+  }
+
   // Регулярка для русского формата: "1. ИНТ. КВАРТИРА ИВАНА — ДЕНЬ"
-  const russianMatch = content.match(/(\d+)\.\s*(ИНТ|ЭКСТ|ИНТ\/ЭКСТ)\.?\s*([^—]+)\s*—\s*(.+)/i)
+  // Также поддерживаем ПАВ., НАТ. (FilmToolz)
+  const russianMatch = text.match(/(\d+)\.\s*(ИНТ|ЭКСТ|ИНТ\/ЭКСТ|ПАВ|НАТ|НАТ\/ИНТ)\.?\s*([^—]+)\s*—\s*(.+)/i)
   if (russianMatch) {
-    const [, number, typeRaw, location, timeOfDay] = russianMatch
-    const type = typeRaw.toUpperCase() === 'ИНТ' ? 'INT' : 
-                 typeRaw.toUpperCase() === 'ЭКСТ' ? 'EXT' : 'INT/EXT'
+    const [, number, typeRaw, locationRaw, timeOfDay] = russianMatch
+    let type: 'INT' | 'EXT' | 'INT/EXT' | 'PAV'
+    const upper = typeRaw.toUpperCase()
+    if (upper === 'ИНТ') type = 'INT'
+    else if (upper === 'ЭКСТ' || upper === 'НАТ') type = 'EXT'
+    else if (upper === 'ПАВ') type = 'PAV'
+    else type = 'INT/EXT'
+
+    // Разбиваем локацию на location + sublocation через точку
+    let location = locationRaw.trim()
+    let sublocation: string | undefined
+    const dotIndex = location.indexOf('.')
+    if (dotIndex > 0) {
+      sublocation = location.slice(dotIndex + 1).trim()
+      location = location.slice(0, dotIndex).trim()
+    }
+
     return {
       number,
       type,
-      location: location.trim(),
-      timeOfDay: timeOfDay.trim()
+      location,
+      sublocation,
+      timeOfDay: timeOfDay.trim(),
+      manualDuration
     }
   }
 
   // Регулярка для английского формата: "INT. APARTMENT — DAY" или "1. INT. APARTMENT — DAY"
-  const englishMatch = content.match(/(\d+\.)?\s*(INT|EXT|INT\/EXT)\.?\s*([^—-]+)\s*[-—]\s*(.+)/i)
+  const englishMatch = text.match(/(\d+\.)?\s*(INT|EXT|INT\/EXT|PAV|EXT\/INT)\.?\s*([^—-]+)\s*[-—]\s*(.+)/i)
   if (englishMatch) {
-    const [, numberPart, typeRaw, location, timeOfDay] = englishMatch
-    const type = typeRaw.toUpperCase() as 'INT' | 'EXT' | 'INT/EXT'
+    const [, numberPart, typeRaw, locationRaw, timeOfDay] = englishMatch
+    const type = typeRaw.toUpperCase() as 'INT' | 'EXT' | 'INT/EXT' | 'PAV'
+
+    let location = locationRaw.trim()
+    let sublocation: string | undefined
+    const dotIndex = location.indexOf('.')
+    if (dotIndex > 0) {
+      sublocation = location.slice(dotIndex + 1).trim()
+      location = location.slice(0, dotIndex).trim()
+    }
+
     return {
       number: numberPart ? numberPart.replace('.', '') : '1',
       type,
-      location: location.trim(),
-      timeOfDay: timeOfDay.trim()
+      location,
+      sublocation,
+      timeOfDay: timeOfDay.trim(),
+      manualDuration
     }
   }
 
@@ -171,7 +214,9 @@ export function parseScript(blocks: Block[]): ParsedScene[] {
           number: header.number,
           type: header.type,
           location: header.location,
+          sublocation: header.sublocation,
           timeOfDay: header.timeOfDay,
+          manualDuration: header.manualDuration,
           elements: []
         }
         

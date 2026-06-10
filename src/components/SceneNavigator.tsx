@@ -81,7 +81,7 @@ export default function SceneNavigator({
   onSeriesDurationChange,
   onSeriesPagesChange,
 }: SceneNavigatorProps) {
-  const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ'>('all')
+  const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
 
@@ -124,8 +124,9 @@ export default function SceneNavigator({
 
   const filteredScenes = useMemo(() => {
     if (filter === 'all') return scenes
-    if (filter === 'ИНТ') return scenes.filter(s => s.type.includes('ИНТ'))
-    if (filter === 'ЭКСТ') return scenes.filter(s => s.type.includes('ЭКСТ'))
+    if (filter === 'ИНТ') return scenes.filter(s => s.type === 'ИНТ' || s.type === 'ИНТ-ЭКСТ')
+    if (filter === 'ЭКСТ') return scenes.filter(s => s.type === 'ЭКСТ')
+    if (filter === 'ПАВ') return scenes.filter(s => s.type === 'ПАВ')
     return scenes
   }, [scenes, filter])
 
@@ -466,8 +467,8 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
 
         {/* Фильтры - стильные кнопки */}
         <div className="flex items-center gap-1 pl-2">
-          {(['Все', 'ИНТ', 'ЭКСТ'] as const).map((label) => {
-            const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ'
+          {(['Все', 'ИНТ', 'ЭКСТ', 'ПАВ'] as const).map((label) => {
+            const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ' | 'ПАВ'
             const isActive = filter === f
             return (
               <button

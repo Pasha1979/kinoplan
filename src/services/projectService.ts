@@ -85,52 +85,61 @@ function validateImportedData(raw: unknown): { project: Partial<Project>; scenes
         throw new Error(`Сцена под индексом ${idx} не является объектом`)
       }
 
-      if (typeof scene.id !== 'string' || scene.id.trim() === '') {
+      const importedScene = scene as Record<string, unknown>
+
+      if (typeof importedScene.id !== 'string' || importedScene.id.trim() === '') {
         throw new Error(`У сцены под индексом ${idx} отсутствует или некорректен id`)
       }
 
-      if (typeof scene.number !== 'string' || scene.number.trim() === '') {
-        throw new Error(`У сцены ${scene.id} отсутствует или некорректен номер`)
+      if (typeof importedScene.number !== 'string' || (importedScene.number as string).trim() === '') {
+        throw new Error(`У сцены ${importedScene.id} отсутствует или некорректен номер`)
       }
 
-      // Валидируем и нормализуем тип сцены (ИНТ | ЭКСТ | ИНТ-ЭКСТ)
-      let sceneType = scene.type
+      // Валидируем и нормализуем тип сцены (ИНТ | ЭКСТ | ИНТ-ЭКСТ | ПАВ)
+      let sceneType = importedScene.type
       if (typeof sceneType === 'string') {
         sceneType = sceneType.toUpperCase().trim()
         if (sceneType === 'INT') sceneType = 'ИНТ'
         if (sceneType === 'EXT') sceneType = 'ЭКСТ'
         if (sceneType === 'INT-EXT' || sceneType === 'INT/EXT' || sceneType === 'ИНТ/ЭКСТ') sceneType = 'ИНТ-ЭКСТ'
+        if (sceneType === 'PAV' || sceneType === 'ПАВ') sceneType = 'ПАВ'
       }
 
-      if (sceneType !== 'ИНТ' && sceneType !== 'ЭКСТ' && sceneType !== 'ИНТ-ЭКСТ') {
-        throw new Error(`У сцены ${scene.id} некорректный тип: ${scene.type}. Ожидалось ИНТ, ЭКСТ или ИНТ-ЭКСТ`)
+      if (sceneType !== 'ИНТ' && sceneType !== 'ЭКСТ' && sceneType !== 'ИНТ-ЭКСТ' && sceneType !== 'ПАВ') {
+        throw new Error(`У сцены ${importedScene.id} некорректный тип: ${importedScene.type}. Ожидалось ИНТ, ЭКСТ, ИНТ-ЭКСТ или ПАВ`)
       }
 
-      if (typeof scene.location !== 'string') {
-        throw new Error(`У сцены ${scene.id} поле location должно быть строкой`)
+      if (typeof importedScene.location !== 'string') {
+        throw new Error(`У сцены ${importedScene.id} поле location должно быть строкой`)
       }
 
-      if (typeof scene.time !== 'string') {
-        throw new Error(`У сцены ${scene.id} поле time должно быть строкой`)
+      if (typeof importedScene.time !== 'string') {
+        throw new Error(`У сцены ${importedScene.id} поле time должно быть строкой`)
       }
 
-      if (!Array.isArray(scene.cast) || !scene.cast.every((item: unknown) => typeof item === 'string')) {
-        throw new Error(`У сцены ${scene.id} поле cast должно быть массивом строк`)
+      if (!Array.isArray(importedScene.cast) || !(importedScene.cast as unknown[]).every((item: unknown) => typeof item === 'string')) {
+        throw new Error(`У сцены ${importedScene.id} поле cast должно быть массивом строк`)
       }
 
-      if (typeof scene.pages !== 'number' || isNaN(scene.pages) || scene.pages < 0) {
-        throw new Error(`У сцены ${scene.id} поле pages должно быть положительным числом`)
+      if (typeof importedScene.pages !== 'number' || isNaN(importedScene.pages as number) || (importedScene.pages as number) < 0) {
+        throw new Error(`У сцены ${importedScene.id} поле pages должно быть положительным числом`)
       }
 
       return {
-        id: scene.id.trim(),
+        id: importedScene.id as string,
         projectId: '', // будет заменено на id импортированного проекта
-        number: scene.number.trim(),
-        type: sceneType as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
-        location: scene.location.trim(),
-        time: scene.time.trim(),
-        cast: (scene.cast as string[]).map((c: string) => c.trim()).filter(Boolean),
-        pages: scene.pages,
+        number: (importedScene.number as string).trim(),
+        type: sceneType as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ' | 'ПАВ',
+        location: (importedScene.location as string).trim(),
+        sublocation: typeof importedScene.sublocation === 'string'
+          ? importedScene.sublocation.trim()
+          : undefined,
+        time: (importedScene.time as string).trim(),
+        cast: (importedScene.cast as string[]).map((c: string) => c.trim()).filter(Boolean),
+        pages: importedScene.pages as number,
+        manualDuration: typeof importedScene.manualDuration === 'number' && !isNaN(importedScene.manualDuration)
+          ? importedScene.manualDuration
+          : undefined,
       }
     })
   }

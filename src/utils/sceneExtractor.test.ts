@@ -60,4 +60,102 @@ describe('extractScenesFromDocument', () => {
     expect(scene.location).toBe('ОФИС')
     expect(scene.time).toBe('НОЧЬ')
   })
+
+  it('should parse PAV (pavilion) type', () => {
+    const nodes = [
+      { type: { name: 'sceneHeader' }, textContent: '3. ПАВ. Студия A — УТРО' },
+    ]
+
+    const mockDoc = {
+      forEach: (callback: (node: PMNode, index: number) => void) => {
+        nodes.forEach((n, i) => callback(n as unknown as PMNode, i))
+      }
+    } as unknown as PMNode
+
+    const result = extractScenesFromDocument({
+      doc: mockDoc,
+      forcedPages: 0.5,
+      precisePagesFallback: 0.5,
+      timingSystem: 'page',
+      genreCoefficient: 1.0,
+    })
+
+    expect(result.scenes.length).toBe(1)
+    const scene = result.scenes[0]
+    expect(scene.type).toBe('ПАВ')
+    expect(scene.location).toBe('Студия A')
+    expect(scene.time).toBe('УТРО')
+  })
+
+  it('should parse FilmToolz НАТ. as ЭКСТ', () => {
+    const nodes = [
+      { type: { name: 'sceneHeader' }, textContent: '4. НАТ. Улица Ленина — НОЧЬ' },
+    ]
+
+    const mockDoc = {
+      forEach: (callback: (node: PMNode, index: number) => void) => {
+        nodes.forEach((n, i) => callback(n as unknown as PMNode, i))
+      }
+    } as unknown as PMNode
+
+    const result = extractScenesFromDocument({
+      doc: mockDoc,
+      forcedPages: 0.5,
+      precisePagesFallback: 0.5,
+      timingSystem: 'page',
+      genreCoefficient: 1.0,
+    })
+
+    expect(result.scenes[0].type).toBe('ЭКСТ')
+    expect(result.scenes[0].location).toBe('Улица Ленина')
+  })
+
+  it('should split dot-notation location into location and sublocation', () => {
+    const nodes = [
+      { type: { name: 'sceneHeader' }, textContent: '5. ИНТ. Школа.Кабинет директора — ДЕНЬ' },
+    ]
+
+    const mockDoc = {
+      forEach: (callback: (node: PMNode, index: number) => void) => {
+        nodes.forEach((n, i) => callback(n as unknown as PMNode, i))
+      }
+    } as unknown as PMNode
+
+    const result = extractScenesFromDocument({
+      doc: mockDoc,
+      forcedPages: 0.5,
+      precisePagesFallback: 0.5,
+      timingSystem: 'page',
+      genreCoefficient: 1.0,
+    })
+
+    const scene = result.scenes[0]
+    expect(scene.location).toBe('Школа')
+    expect(scene.sublocation).toBe('Кабинет директора')
+  })
+
+  it('should parse manual timing (мм:сс) from header', () => {
+    const nodes = [
+      { type: { name: 'sceneHeader' }, textContent: '6. ИНТ. Квартира — ДЕНЬ (01:30)' },
+      { type: { name: 'sceneAction' }, textContent: 'Действие.' },
+    ]
+
+    const mockDoc = {
+      forEach: (callback: (node: PMNode, index: number) => void) => {
+        nodes.forEach((n, i) => callback(n as unknown as PMNode, i))
+      }
+    } as unknown as PMNode
+
+    const result = extractScenesFromDocument({
+      doc: mockDoc,
+      forcedPages: 0.5,
+      precisePagesFallback: 0.5,
+      timingSystem: 'page',
+      genreCoefficient: 1.0,
+    })
+
+    const scene = result.scenes[0]
+    expect(scene.manualDuration).toBe(90) // 1 min 30 sec = 90 seconds
+    expect(scene.duration).toBe(90) // should use manualDuration
+  })
 })

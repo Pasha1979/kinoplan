@@ -103,7 +103,7 @@ export function useScriptPageLogic() {
           id: s.id,
           projectId: pid,
           number: s.number,
-          type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
+          type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ' | 'ПАВ',
           location: s.location,
           time: s.time || '',
           cast: s.cast,

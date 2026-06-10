@@ -54,7 +54,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     const result: SmartTypeSuggestion[] = []
 
     // Подсказки для шапки сцены
-    const scenePrefixes = ['ИНТ.', 'ЭКСТ.', 'И.', 'Э.', 'ИНТ-ЭКСТ.', 'ИНТ/ЭКСТ.']
+    const scenePrefixes = ['ИНТ.', 'ЭКСТ.', 'И.', 'Э.', 'ИНТ-ЭКСТ.', 'ИНТ/ЭКСТ.', 'ПАВ.', 'НАТ.', 'НАТ/ИНТ.']
     scenePrefixes.forEach((prefix, index) => {
       result.push({
         id: `prefix_${index}`,

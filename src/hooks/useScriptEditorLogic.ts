@@ -159,7 +159,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     
     let newType: string | null = null
     
-    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.)/i
+    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.|НАТ\.)/i
     if (headerPattern.test(textContent)) {
       newType = 'sceneHeader'
     }
