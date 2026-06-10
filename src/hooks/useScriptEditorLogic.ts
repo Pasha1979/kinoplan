@@ -211,8 +211,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         newType = 'sceneCharacter'
       }
     }
-    // Диалог: сразу после персонажа, ремарки, или другого диалога (Enter внутри реплики)
-    else if (currentType === 'paragraph' || currentType === 'sceneAction') {
+    // Диалог: только если блок ещё paragraph (sceneAction не трогаем — пользователь явно задал)
+    else if (currentType === 'paragraph') {
       const resolvedPos = state.doc.resolve($from.before())
       const prevNode = resolvedPos.nodeBefore
       const prevType = prevNode?.type.name
@@ -486,10 +486,23 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         editor?.chain().splitBlock().setNode('sceneDialog').run()
         return true
       }
-      
+
+      if (currentType === 'sceneParenthetical') {
+        event.preventDefault()
+        editor?.chain().splitBlock().setNode('sceneDialog').run()
+        return true
+      }
+
       if (currentType === 'sceneDialog') {
         event.preventDefault()
-        editor?.chain().splitBlock().setNode('sceneAction').run()
+        const textContent = currentNode?.textContent?.trim() || ''
+        if (textContent === '') {
+          // Два Enter подряд (пустая строка) → действие
+          editor?.chain().setNode('sceneAction').run()
+        } else {
+          // Продолжение многострочного диалога
+          editor?.chain().splitBlock().setNode('sceneDialog').run()
+        }
         return true
       }
     }
