@@ -49,6 +49,12 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
       deleteProject: (projectId) =>
         set((state) => {
           delete state.projects[projectId]
+          // Удаляем сцены, принадлежащие этому проекту
+          Object.keys(state.scenes).forEach((sceneId) => {
+            if (state.scenes[sceneId].projectId === projectId) {
+              delete state.scenes[sceneId]
+            }
+          })
         }),
 
       setCurrentProjectId: (id) =>

@@ -1,8 +1,9 @@
 import { useNormalizedProjectStore } from '../store/useProjectStore'
 import { useToastStore } from '../store/toastStore'
 import type { Project } from '../store/projectStore'
-import type { Scene } from '../store/useProjectStore'
+import type { Scene } from '../types/scene'
 import { API_MOCK_DELAY_MS } from '../constants/scriptConstants'
+import { safeRemoveLocalStorage } from '../utils/env'
 
 async function delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -223,6 +224,18 @@ export const projectService = {
       useNormalizedProjectStore.getState().setLoading(true)
       await delayWithSignal(API_MOCK_DELAY_MS, signal)
       useNormalizedProjectStore.getState().deleteProject(projectId)
+
+      // Удаляем черновики редактора из localStorage
+      safeRemoveLocalStorage(`kinoplan_draft_${projectId}`)
+      if (typeof window !== 'undefined') {
+        const prefix = `kinoplan_draft_${projectId}_s`
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith(prefix)) {
+            safeRemoveLocalStorage(key)
+          }
+        }
+      }
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось удалить проект')
       useToastStore.getState().showToast('Не удалось удалить проект', 'error')
