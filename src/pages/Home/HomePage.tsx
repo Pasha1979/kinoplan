@@ -114,7 +114,7 @@ export default function HomePage() {
             {theme === 'dark' ? '☀️ Светлая' : '🌙 Тёмная'}
           </button>
           <button
-            onClick={() => alert('Настройки приложения будут реализованы позже')}
+            onClick={() => showToast('Настройки приложения будут реализованы позже', 'info')}
             className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
               theme === 'dark'
                 ? 'text-gray-400 hover:text-white hover:bg-white/8'

@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { 
-  Users, Box, MapPin, Shirt, Car, Sparkles, Flame, 
+import {
+  Users, Box, MapPin, Shirt, Car, Sparkles, Flame,
   Monitor, StickyNote, Plus, X,
   Search, Filter, Download, BarChart3
 } from 'lucide-react'
+import { useToastStore } from '../store/toastStore'
 import { parseScript, getUniqueElements } from '../utils/scriptParser'
 import type { Block } from '../utils/scriptParser'
 import CharacterStats from './CharacterStats'
@@ -74,6 +75,7 @@ const CATEGORIES: { id: BreakdownCategory; label: string; icon: typeof Users; co
 ]
 
 export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakdownProps) {
+  const { showToast } = useToastStore()
   const [selectedCategory, setSelectedCategory] = useState<BreakdownCategory | 'all'>('all')
   const [selectedScene, setSelectedScene] = useState<string | 'all'>('all')
   const [manualElements, setManualElements] = useState<BreakdownElement[]>([])
@@ -300,7 +302,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
         {/* Кнопка экспорт */}
         <div className="p-3 border-t" style={{ borderColor: border }}>
           <button
-            onClick={() => alert('Экспорт в PDF будет реализован в следующих версиях')}
+            onClick={() => showToast('Экспорт в PDF будет реализован в следующих версиях', 'info')}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all border hover:border-indigo-400 cursor-pointer"
             style={{ borderColor: border, color: textSecondary }}
           >

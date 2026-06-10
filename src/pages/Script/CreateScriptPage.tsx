@@ -4,6 +4,7 @@ import { ChevronLeft, Save, X } from 'lucide-react'
 import { useScriptStore, type ScriptFormat, type TimingSystem } from '../../store/scriptStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useUiStore } from '../../store/uiStore'
+import { useToastStore } from '../../store/toastStore'
 import { safeGetDocument } from '../../utils/env'
 
 export default function CreateScriptPage() {
@@ -11,6 +12,7 @@ export default function CreateScriptPage() {
   const { addScript } = useScriptStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
   const { theme } = useUiStore()
+  const { showToast } = useToastStore()
   const project = currentProjectId ? projects[currentProjectId] : null
   const isDark = theme === 'dark'
 
@@ -72,12 +74,12 @@ export default function CreateScriptPage() {
 
   const handleCreate = () => {
     if (!title.trim()) {
-      alert('Введите название сценария')
+      showToast('Введите название сценария', 'error')
       return
     }
 
     if (!project) {
-      alert('Проект не выбран')
+      showToast('Проект не выбран', 'error')
       return
     }
 

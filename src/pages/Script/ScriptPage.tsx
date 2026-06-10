@@ -5,6 +5,7 @@ import { useUiStore } from '../../store/uiStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
+import { useToastStore } from '../../store/toastStore'
 import type { ScriptFormat, TimingSystem, Scene } from '../../store/scriptStore'
 import { calculateSceneTiming } from '../../utils/sceneTiming'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
@@ -22,9 +23,10 @@ export default function ScriptPage() {
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
   const { scripts, currentScriptId, updateScript, setCurrentScript } = useScriptStore()
-  const currentScript = useScriptStore(state => 
+  const currentScript = useScriptStore(state =>
     state.scripts.find(s => s.id === state.currentScriptId) || null
   )
+  const { showToast } = useToastStore()
   const project = currentProjectId ? projects[currentProjectId] : null
   const isDark = theme === 'dark'
 
@@ -211,7 +213,7 @@ export default function ScriptPage() {
 
             {/* Загрузить файл */}
             <button
-              onClick={() => alert('Функция импорта файлов будет реализована в ближайшем обновлении')}
+              onClick={() => showToast('Функция импорта файлов будет реализована в ближайшем обновлении', 'info')}
               onMouseEnter={() => setImportHover(true)}
               onMouseLeave={() => setImportHover(false)}
               className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden opacity-60"
@@ -445,7 +447,7 @@ export default function ScriptPage() {
             </button>
             {/* Кнопка Помощь — заглушка, потом мини-обучение */}
             <button
-              onClick={() => alert('Мини-обучение: горячие клавиши и справка по модулю сценария будет реализовано позже')}
+              onClick={() => showToast('Мини-обучение: горячие клавиши и справка по модулю сценария будет реализовано позже', 'info')}
               className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
               style={{ color: textSecondary }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
