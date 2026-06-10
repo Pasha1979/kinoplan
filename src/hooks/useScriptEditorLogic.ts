@@ -232,10 +232,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     const isHeader = currentType === 'sceneHeader'
     const isCharacter = currentType === 'sceneCharacter'
-    const isParenthetical = currentType === 'sceneParenthetical'
 
-    // Автокапс для шапки, персонажа и ремарки
-    if ((isHeader || isCharacter || isParenthetical) && !isReplacingRef.current) {
+    // Автокапс для шапки и персонажа (ремарка остаётся как есть)
+    if ((isHeader || isCharacter) && !isReplacingRef.current) {
       const upperText = textContent.toUpperCase()
       if (upperText !== textContent) {
         const cursorOffset = selection.from - $from.start()
