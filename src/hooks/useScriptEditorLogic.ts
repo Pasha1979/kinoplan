@@ -61,11 +61,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
-  // SmartType — подсказки при наборе (с дефолтами если пропсы не переданы)
+  // SmartType — подсказки при наборе (дефолты пустые, учимся из текста сценария)
   const smartType = useSmartType({
-    characters: smartTypeCharacters || ['ПЕТЯ', 'МАША', 'ВАСЯ', 'ОЛЯ', 'ДИМА'],
-    locations: smartTypeLocations || ['КВАРТИРА', 'ПАРК', 'ОФИС', 'УЛИЦА', 'КАФЕ'],
-    times: smartTypeTimes || ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
+    characters: smartTypeCharacters || [],
+    locations: smartTypeLocations || [],
+    times: smartTypeTimes || [],
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
@@ -486,6 +486,21 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         })
         onScenesChangeRef.current?.(extractedScenes)
         onStatsChangeRef.current?.(stats)
+
+        // Обучаем SmartType из текста сценария
+        const allCast = new Set<string>()
+        const allLocations = new Set<string>()
+        const allTimes = new Set<string>()
+        extractedScenes.forEach((s) => {
+          s.cast.forEach((c) => allCast.add(c))
+          if (s.location) allLocations.add(s.location)
+          if (s.time) allTimes.add(s.time)
+        })
+        smartTypeRef.current.updateLists({
+          characters: [...allCast],
+          locations: [...allLocations],
+          times: [...allTimes],
+        })
       }
 
       pageBreaksRef.current = result.breaks

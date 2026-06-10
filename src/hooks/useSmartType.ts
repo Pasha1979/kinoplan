@@ -18,11 +18,11 @@ export interface UseSmartTypeOptions {
 
 export function useSmartType(options: UseSmartTypeOptions) {
   const {
-    characters,
-    locations,
-    props = [],
-    times = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
-    minMatchLength = 1,
+    characters: initialCharacters,
+    locations: initialLocations,
+    props: initialProps = [],
+    times: initialTimes = [],
+    minMatchLength = 2,
     maxSuggestions = 5,
   } = options
 
@@ -31,10 +31,28 @@ export function useSmartType(options: UseSmartTypeOptions) {
   const [isOpen, setIsOpen] = useState(false)
   const [cursorPosition, setCursorPosition] = useState(0)
 
+  // Внутренний state для динамического обновления списков
+  const [characters, setCharacters] = useState(initialCharacters)
+  const [locations, setLocations] = useState(initialLocations)
+  const [props, setProps] = useState(initialProps)
+  const [times, setTimes] = useState(initialTimes)
+
+  const updateLists = useCallback((lists: {
+    characters?: string[]
+    locations?: string[]
+    props?: string[]
+    times?: string[]
+  }) => {
+    if (lists.characters !== undefined) setCharacters(lists.characters)
+    if (lists.locations !== undefined) setLocations(lists.locations)
+    if (lists.props !== undefined) setProps(lists.props)
+    if (lists.times !== undefined) setTimes(lists.times)
+  }, [])
+
   // Все доступные варианты
   const allSuggestions = useMemo(() => {
     const result: SmartTypeSuggestion[] = []
-    
+
     // Подсказки для шапки сцены
     const scenePrefixes = ['ИНТ.', 'ЭКСТ.', 'И.', 'Э.', 'ИНТ-ЭКСТ.', 'ИНТ/ЭКСТ.']
     scenePrefixes.forEach((prefix, index) => {
@@ -45,7 +63,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         frequency: 10, // Высокая частота чтобы были первыми
       })
     })
-    
+
     characters.forEach((char, index) => {
       result.push({
         id: `char_${index}`,
@@ -54,7 +72,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         frequency: 1,
       })
     })
-    
+
     locations.forEach((loc, index) => {
       result.push({
         id: `loc_${index}`,
@@ -63,7 +81,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         frequency: 1,
       })
     })
-    
+
     props.forEach((prop, index) => {
       result.push({
         id: `prop_${index}`,
@@ -72,7 +90,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         frequency: 1,
       })
     })
-    
+
     times.forEach((time, index) => {
       result.push({
         id: `time_${index}`,
@@ -81,7 +99,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         frequency: 1,
       })
     })
-    
+
     return result
   }, [characters, locations, props, times])
 
@@ -190,5 +208,6 @@ export function useSmartType(options: UseSmartTypeOptions) {
     selectSuggestion,
     navigateSuggestions,
     closeSuggestions,
+    updateLists,
   }
 }
