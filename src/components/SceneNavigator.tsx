@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -87,6 +88,7 @@ export default function SceneNavigator({
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   // Расчёт текущего хронометража серии
   const currentSeriesDuration = useMemo(() => {
@@ -151,7 +153,7 @@ export default function SceneNavigator({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Начинать drag после перемещения на 8px
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -159,7 +161,12 @@ export default function SceneNavigator({
     })
   )
 
+  const activeScene = useMemo(() => {
+    return filteredScenes.find(s => s.id === activeId) || null
+  }, [filteredScenes, activeId])
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null)
     const { active, over } = event
 
     if (over && active.id !== over.id) {
@@ -322,6 +329,7 @@ function SceneCard({
               e.stopPropagation()
               onToggleExpand?.(scene.id)
             }}
+            onPointerDown={(e) => e.stopPropagation()}
             className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
           >
             {isExpanded ? (
@@ -563,8 +571,10 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
           // Без фильтра — drag-and-drop reorder
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={closestCorners}
+            onDragStart={({ active }) => setActiveId(active.id as string)}
             onDragEnd={handleDragEnd}
+            autoScroll={{ threshold: { x: 0.2, y: 0.2 }, acceleration: 10 }}
           >
             <SortableContext
               items={filteredScenes.map(s => s.id)}
@@ -595,6 +605,24 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                 )
               })}
             </SortableContext>
+            <DragOverlay dropAnimation={null}>
+              {activeId && activeScene ? (
+                <SceneCard
+                  scene={activeScene}
+                  isActive={activeSceneId === activeScene.id}
+                  isExpanded={expandedScenes.has(activeScene.id)}
+                  stripColor={getColorTagColor(activeScene.colorTag, isDark)}
+                  badge={getTypeBadge(activeScene.type || '')}
+                  isDark={isDark}
+                  textPrimary={textPrimary}
+                  textSecondary={textSecondary}
+                  onSceneClick={onSceneClick}
+                  onToggleExpand={toggleExpanded}
+                  pages={filteredScenesWithTiming.find(t => t.scene.id === activeScene.id)?.timing.pages || 0}
+                  duration={filteredScenesWithTiming.find(t => t.scene.id === activeScene.id)?.timing.duration || 0}
+                />
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </div>

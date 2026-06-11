@@ -640,34 +640,72 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     const convertFormat = (from: ScriptFormat, to: ScriptFormat) => {
       if (from === to) return
-      let html = editor.getHTML()
 
-      if (from === 'russian' && to === 'hollywood') {
-        html = html.replace(/ИНТ-ЭКСТ\./gi, 'INT/EXT.')
-        html = html.replace(/ИНТ\./gi, 'INT.')
-        html = html.replace(/ЭКСТ\./gi, 'EXT.')
-        html = html.replace(/—/g, '-')
-        html = html.replace(/\bДЕНЬ\b/gi, 'DAY')
-        html = html.replace(/\bНОЧЬ\b/gi, 'NIGHT')
-        html = html.replace(/\bУТРО\b/gi, 'MORNING')
-        html = html.replace(/\bВЕЧЕР\b/gi, 'EVENING')
-        html = html.replace(/\bРАССВЕТ\b/gi, 'DAWN')
-        html = html.replace(/\bЗАКАТ\b/gi, 'DUSK')
-      } else if (from === 'hollywood' && to === 'russian') {
-        html = html.replace(/INT\/EXT\./gi, 'ИНТ-ЭКСТ.')
-        html = html.replace(/INT\./gi, 'ИНТ.')
-        html = html.replace(/EXT\./gi, 'ЭКСТ.')
-        html = html.replace(/ - /g, ' — ')
-        html = html.replace(/\bDAY\b/gi, 'ДЕНЬ')
-        html = html.replace(/\bNIGHT\b/gi, 'НОЧЬ')
-        html = html.replace(/\bMORNING\b/gi, 'УТРО')
-        html = html.replace(/\bEVENING\b/gi, 'ВЕЧЕР')
-        html = html.replace(/\bDAWN\b/gi, 'РАССВЕТ')
-        html = html.replace(/\bDUSK\b/gi, 'ЗАКАТ')
+      // Словари замен: применяются только внутри sceneHeader
+      const replacements: [RegExp, string][] =
+        from === 'russian' && to === 'hollywood'
+          ? [
+              [/ИНТ-ЭКСТ\./gi, 'INT/EXT.'],
+              [/ИНТ\./gi, 'INT.'],
+              [/ЭКСТ\./gi, 'EXT.'],
+              [/ПАВ\./gi, 'PAV.'],
+              [/—/g, '-'],
+              [/\bДЕНЬ\b/gi, 'DAY'],
+              [/\bНОЧЬ\b/gi, 'NIGHT'],
+              [/\bУТРО\b/gi, 'MORNING'],
+              [/\bВЕЧЕР\b/gi, 'EVENING'],
+              [/\bРАССВЕТ\b/gi, 'DAWN'],
+              [/\bЗАКАТ\b/gi, 'DUSK'],
+            ]
+          : [
+              [/INT\/EXT\./gi, 'ИНТ-ЭКСТ.'],
+              [/INT\./gi, 'ИНТ.'],
+              [/EXT\./gi, 'ЭКСТ.'],
+              [/PAV\./gi, 'ПАВ.'],
+              [/ - /g, ' — '],
+              [/\bDAY\b/gi, 'ДЕНЬ'],
+              [/\bNIGHT\b/gi, 'НОЧЬ'],
+              [/\bMORNING\b/gi, 'УТРО'],
+              [/\bEVENING\b/gi, 'ВЕЧЕР'],
+              [/\bDAWN\b/gi, 'РАССВЕТ'],
+              [/\bDUSK\b/gi, 'ЗАКАТ'],
+            ]
+
+      const tr = editor.state.tr
+      const changes: Array<{ from: number; to: number; text: string }> = []
+
+      // Собираем изменения внутри sceneHeader (descendants даёт pos перед узлом)
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'sceneHeader') {
+          let text = node.textContent
+          let changed = false
+
+          for (const [regex, replacement] of replacements) {
+            if (regex.test(text)) {
+              text = text.replace(regex, replacement)
+              changed = true
+            }
+          }
+
+          if (changed && text !== node.textContent) {
+            // Содержимое узла: от pos+1 (после открывающего) до pos+node.nodeSize-1 (перед закрывающим)
+            const contentFrom = pos + 1
+            const contentTo = pos + node.nodeSize - 1
+            changes.push({ from: contentFrom, to: contentTo, text })
+          }
+        }
+      })
+
+      // Применяем в обратном порядке (с конца к началу), чтобы позиции не смещались
+      changes.sort((a, b) => b.from - a.from).forEach(({ from, to, text }) => {
+        tr.delete(from, to)
+        tr.insertText(text, from)
+      })
+
+      if (tr.docChanged) {
+        editor.view.dispatch(tr)
+        processedHeadersRef.current.clear()
       }
-
-      editor.commands.setContent(html)
-      processedHeadersRef.current.clear()
     }
 
     onConvertReady(convertFormat)
