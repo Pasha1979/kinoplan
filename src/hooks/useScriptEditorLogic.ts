@@ -412,6 +412,19 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   // eslint-disable-next-line react-hooks/refs
   handleKeyDownRef.current = (view, event) => {
+    // Ctrl+Z / Cmd+Z — Undo
+    if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+      event.preventDefault()
+      editor?.chain().undo().run()
+      return true
+    }
+    // Ctrl+Y / Cmd+Shift+Z — Redo
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+      event.preventDefault()
+      editor?.chain().redo().run()
+      return true
+    }
+
     const st = smartTypeRef.current
     if (st.isOpen && (event.key === 'Enter' || event.key === 'Tab')) {
       event.preventDefault()

@@ -113,42 +113,62 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
       if (fromIndex < 0 || toIndex < 0) return
       if (fromIndex === toIndex) return
 
-      const doc = editor.getJSON()
-      const content = doc.content || []
-      if (content.length === 0) return
+      const doc = editor.state.doc
+      if (doc.childCount === 0) return
 
-      const sceneIndices: number[] = []
-      content.forEach((node: { type?: string }, index: number) => {
-        if (node.type === 'sceneHeader') sceneIndices.push(index)
-      })
-
-      if (sceneIndices.length === 0) return
-      if (fromIndex >= sceneIndices.length || toIndex >= sceneIndices.length) return
-
-      const fromStart = sceneIndices[fromIndex]
-      const toStart = sceneIndices[toIndex]
-
-      const findSceneEnd = (startIndex: number) => {
-        for (let i = startIndex + 1; i < content.length; i++) {
-          if (content[i].type === 'sceneHeader') return i
+      // Собираем позиции всех sceneHeader на верхнем уровне (ProseMirror content positions)
+      const sceneHeaders: { from: number; to: number }[] = []
+      let pos = 0
+      for (let i = 0; i < doc.childCount; i++) {
+        const node = doc.child(i)
+        const nodeFrom = pos
+        const nodeTo = pos + node.nodeSize
+        if (node.type.name === 'sceneHeader') {
+          sceneHeaders.push({ from: nodeFrom, to: nodeTo })
         }
-        return content.length
+        pos = nodeTo
       }
 
-      const fromEnd = findSceneEnd(fromStart)
-      const toEnd = findSceneEnd(toStart)
+      if (sceneHeaders.length === 0) return
+      if (fromIndex >= sceneHeaders.length || toIndex >= sceneHeaders.length) return
 
-      const sceneNodes = content.slice(fromStart, fromEnd)
-      const newContent = [...content]
+      // Границы сцен: от начала sceneHeader до начала следующей sceneHeader (или конец документа)
+      const fromStart = sceneHeaders[fromIndex].from
+      const fromEnd = fromIndex + 1 < sceneHeaders.length
+        ? sceneHeaders[fromIndex + 1].from
+        : doc.content.size
 
-      newContent.splice(fromStart, fromEnd - fromStart)
+      const toStart = sceneHeaders[toIndex].from
+      const toEnd = toIndex + 1 < sceneHeaders.length
+        ? sceneHeaders[toIndex + 1].from
+        : doc.content.size
 
-      const newInsertPos = fromIndex < toIndex
-        ? toEnd - (fromEnd - fromStart)
-        : toStart
+      const removedSize = fromEnd - fromStart
 
-      newContent.splice(newInsertPos, 0, ...sceneNodes)
-      editor.commands.setContent({ type: 'doc', content: newContent })
+      // Создаём ProseMirror транзакцию: delete + insert = одно undo-шаг
+      const tr = editor.state.tr
+
+      // 1. Запоминаем содержимое вырезаемой сцены
+      const slice = doc.slice(fromStart, fromEnd)
+
+      // 2. Вырезаем сцену
+      tr.delete(fromStart, fromEnd)
+
+      // 3. Считаем позицию вставки с учётом смещения после удаления
+      let insertPos: number
+      if (fromIndex < toIndex) {
+        // Двигаем вперёд: удаление было ДО toEnd → toEnd сдвинулся на removedSize назад
+        insertPos = toEnd - removedSize
+      } else {
+        // Двигаем назад: удаление было ПОСЛЕ toStart → toStart не изменился
+        insertPos = toStart
+      }
+
+      // 4. Вставляем сцену на новое место
+      tr.insert(insertPos, slice.content)
+
+      // 5. Применяем как единое действие (сохраняется в undo-истории)
+      editor.view.dispatch(tr)
 
       if (reorderTimeoutRef.current) clearTimeout(reorderTimeoutRef.current)
       reorderTimeoutRef.current = setTimeout(() => {

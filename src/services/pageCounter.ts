@@ -144,8 +144,6 @@ export class PageCounter {
       breaks.push({ page, startIndex: pageStartIndex })
     }
 
-    console.log('[PageCounter] children:', children.length, 'usableMm:', usablePageHeightMm, 'breaks:', breaks, 'totalPages:', totalPages)
-
     return { totalPages, breaks }
   }
 
