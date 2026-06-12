@@ -1,0 +1,7 @@
+---
+# 🧠 Правила памяти для Windsurf
+
+1. ПРИ СТАРТЕ: Всегда автоматически читай файлы из папки `_ai_workspace/`: `BRAIN.md`, `CURRENT_TASK.md`, `LESSONS.md`, `ARCHITECTURE.md`.
+2. ПРИ РАБОТЕ: Строго следуй правилам из `ARCHITECTURE.md` (Local-First, Electron+React+SQLite, общение через IPC).
+3. ПРИ ЗАВЕРШЕНИИ: Когда пользователь пишет "Обнови память", ты обязан проанализировать наш диалог и обновить файлы в `_ai_workspace/` (записать итоги в CURRENT_TASK.md, новые ошибки в LESSONS.md, важные факты в BRAIN.md).
+---
