@@ -34,6 +34,7 @@ export interface UseScriptEditorLogicOptions {
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
+  formatLocked?: boolean
 }
 
 export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
@@ -56,6 +57,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     smartTypeCharacters,
     smartTypeLocations,
     smartTypeTimes,
+    formatLocked,
   } = options
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
@@ -134,6 +136,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   // Автоопределение типа блока по тексту (Фаза 2.5)
   const autoDetectBlockType = useCallback((editorInstance: Editor) => {
+    // Если замок формата закрыт — автоопределение отключено
+    if (formatLocked) return
+
     const { state } = editorInstance
     const { selection } = state
     const { $from } = selection
@@ -317,7 +322,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
       }
     }
-  }, [projectType, currentSeries])
+  }, [projectType, currentSeries, formatLocked])
 
   const editor = useEditor({
     enableInputRules: false,

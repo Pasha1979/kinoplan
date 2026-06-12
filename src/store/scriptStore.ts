@@ -125,6 +125,11 @@ interface ScriptStore {
   addNote: (note: ScriptNote) => void
   updateNote: (noteId: string, updates: Partial<ScriptNote>) => void
   deleteNote: (noteId: string) => void
+
+  // Замок формата (отключает автоопределение типов и авто-апс)
+  formatLocked: boolean
+  toggleFormatLock: () => void
+  setFormatLocked: (locked: boolean) => void
 }
 
 export const useScriptStore = create<ScriptStore>()(
@@ -134,6 +139,7 @@ export const useScriptStore = create<ScriptStore>()(
       currentScriptId: null,
       drafts: [],
       notes: [],
+      formatLocked: false,
       
       // Script CRUD
       addScript: (script) =>
@@ -279,6 +285,12 @@ export const useScriptStore = create<ScriptStore>()(
       
       deleteNote: (noteId) =>
         set((state) => ({ notes: state.notes.filter((n) => n.id !== noteId) })),
+
+      toggleFormatLock: () =>
+        set((state) => ({ formatLocked: !state.formatLocked })),
+
+      setFormatLocked: (locked) =>
+        set({ formatLocked: locked }),
     }),
     { name: 'kinoplan-scripts' }
   )

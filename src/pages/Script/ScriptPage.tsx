@@ -1,4 +1,5 @@
 import { useScriptPageLogic } from './useScriptPageLogic'
+import { useScriptStore } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
 import ScriptHeader from './components/ScriptHeader'
 import ScriptTabs from './components/ScriptTabs'
@@ -13,6 +14,8 @@ import { Settings } from 'lucide-react'
 
 export default function ScriptPage() {
   const logic = useScriptPageLogic()
+  const formatLocked = useScriptStore((s) => s.formatLocked)
+  const toggleFormatLock = useScriptStore((s) => s.toggleFormatLock)
   const {
     navigate,
     project,
@@ -94,12 +97,14 @@ export default function ScriptPage() {
           isSaving={isSaving}
           enableAutoFix={enableAutoFix}
           rightPanelOpen={rightPanelOpen}
+          formatLocked={formatLocked}
           onBack={() => setView('empty')}
           onSave={handleSave}
           onOpenSettings={() => setShowTimingSettingsModal(true)}
           onHelp={() => showToast('Мини-обучение: горячие клавиши и справка по модулю сценария будет реализовано позже', 'info')}
           onToggleAutoFix={() => setEnableAutoFix(!enableAutoFix)}
           onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+          onToggleFormatLock={toggleFormatLock}
         />
 
         <ScriptTabs
@@ -177,6 +182,7 @@ export default function ScriptPage() {
                 onConvertReady={(fn) => { convertFormatRef.current = fn }}
                 onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
                 onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
+                formatLocked={formatLocked}
               />
             </div>
           </div>

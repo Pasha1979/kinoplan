@@ -1,4 +1,4 @@
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 
@@ -15,12 +15,14 @@ interface ScriptHeaderProps {
   isSaving: boolean
   enableAutoFix: boolean
   rightPanelOpen: boolean
+  formatLocked: boolean
   onBack: () => void
   onSave: () => void
   onOpenSettings: () => void
   onHelp: () => void
   onToggleAutoFix: () => void
   onToggleRightPanel: () => void
+  onToggleFormatLock: () => void
 }
 
 export default function ScriptHeader({
@@ -31,12 +33,14 @@ export default function ScriptHeader({
   isSaving,
   enableAutoFix,
   rightPanelOpen,
+  formatLocked,
   onBack,
   onSave,
   onOpenSettings,
   onHelp,
   onToggleAutoFix,
   onToggleRightPanel,
+  onToggleFormatLock,
 }: ScriptHeaderProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -141,6 +145,20 @@ export default function ScriptHeader({
           title="Помощь"
         >
           <HelpCircle size={15} />
+        </button>
+        {/* Кнопка Замок формата */}
+        <button
+          onClick={onToggleFormatLock}
+          className="w-8 h-8 rounded-lg flex items-center justify-center relative"
+          style={{
+            color: formatLocked ? '#f59e0b' : textSecondary,
+            background: formatLocked ? 'rgba(245,158,11,0.15)' : 'transparent',
+          }}
+          onMouseEnter={e => !formatLocked && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+          onMouseLeave={e => !formatLocked && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+          title={formatLocked ? 'Формат заблокирован — автоопределение отключено' : 'Формат открыт — автоопределение включено'}
+        >
+          {formatLocked ? <Lock size={15} /> : <Unlock size={15} />}
         </button>
         {/* Кнопка Format Assistant */}
         <button

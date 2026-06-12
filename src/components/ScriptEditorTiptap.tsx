@@ -23,6 +23,7 @@ interface ScriptEditorTiptapProps {
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
+  formatLocked?: boolean
 }
 
 export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
