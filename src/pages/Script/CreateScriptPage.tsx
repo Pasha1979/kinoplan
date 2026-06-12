@@ -85,23 +85,48 @@ export default function CreateScriptPage() {
 
     const coefficient = genreCoefficient === 'auto' ? 1.0 : parseFloat(genreCoefficient)
 
-    const newScript = {
-      id: crypto.randomUUID(),
-      projectId: project.id,
-      title: title.trim(),
-      version: 'Черновик v1',
-      format,
-      scenes: [],
-      characters: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      timingSystem,
-      genreCoefficient: coefficient,
-      fontFamily,
-      fontSize,
+    if (project.type === 'serial') {
+      // Сериал: создаём отдельный Script на каждую серию
+      const episodesCount = project.episodesCount || 8
+      for (let ep = 1; ep <= episodesCount; ep++) {
+        const episodeScript = {
+          id: crypto.randomUUID(),
+          projectId: project.id,
+          title: `${title.trim()} — Серия ${ep}`,
+          version: 'Черновик v1',
+          format,
+          scenes: [],
+          characters: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          timingSystem,
+          genreCoefficient: coefficient,
+          fontFamily,
+          fontSize,
+          episodeNumber: ep,
+        }
+        addScript(episodeScript)
+      }
+    } else {
+      // Фильм: один Script
+      const newScript = {
+        id: crypto.randomUUID(),
+        projectId: project.id,
+        title: title.trim(),
+        version: 'Черновик v1',
+        format,
+        scenes: [],
+        characters: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        timingSystem,
+        genreCoefficient: coefficient,
+        fontFamily,
+        fontSize,
+      }
+      addScript(newScript)
     }
 
-    addScript(newScript)
     navigate(`/project/${project.id}/script`)
   }
 

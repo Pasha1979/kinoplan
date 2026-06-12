@@ -22,16 +22,16 @@ export function useScriptPageLogic() {
   const project = currentProjectId ? projects[currentProjectId] : null
   const isDark = theme === 'dark'
 
-  const [currentSeries, setCurrentSeries] = useState(1)
   const [view, setView] = useState<ScriptView>('empty')
-  // scenes берутся из scriptStore (единый источник истины), фильтруем по серии
-  const allScenes = useMemo(() => currentScript?.scenes || [], [currentScript?.scenes])
-  const scenes = useMemo(() => {
-    if (project?.type === 'serial' && currentSeries > 0) {
-      return allScenes.filter(s => new RegExp(`^${currentSeries}-`).test(s.number))
-    }
-    return allScenes
-  }, [allScenes, project?.type, currentSeries])
+  // scenes — только текущего Script'а (серии/фильма)
+  const scenes = useMemo(() => currentScript?.scenes || [], [currentScript?.scenes])
+  // Номер текущей серии из Script.episodeNumber (для фильмов = 1)
+  const currentSeries = currentScript?.episodeNumber || 1
+  // Все Script'ы текущего проекта с episodeNumber (сериалы)
+  const episodeScripts = useMemo(() =>
+    project ? scripts.filter(s => s.projectId === project.id && s.episodeNumber !== undefined) : [],
+    [scripts, project]
+  )
 
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
@@ -139,8 +139,10 @@ export function useScriptPageLogic() {
           prevFormatRef.current = script.format
         }
         // Устанавливаем currentScriptId если не установлен
+        // Для сериалов — выбираем первую серию (episodeNumber=1)
         if (!currentScriptId) {
-          setCurrentScript(script.id)
+          const firstEpisode = projectScripts.find(s => s.episodeNumber === 1) || projectScripts[0]
+          setCurrentScript(firstEpisode.id)
         }
       }
     }
@@ -203,11 +205,11 @@ export function useScriptPageLogic() {
     const [movedScene] = reordered.splice(fromIndex, 1)
     reordered.splice(toIndex, 0, movedScene)
 
-    // Перенумеровываем
-    const isSerial = project?.type === 'serial' && currentSeries > 0
+    // Перенумеровываем (номер серии берём из текущего Script'а)
+    const seriesPrefix = currentScript?.episodeNumber
     const renumberedScenes = reordered.map((scene, index) => ({
       ...scene,
-      number: isSerial ? `${currentSeries}-${index + 1}` : (index + 1).toString(),
+      number: seriesPrefix ? `${seriesPrefix}-${index + 1}` : (index + 1).toString(),
       order: index,
     }))
 
@@ -225,7 +227,7 @@ export function useScriptPageLogic() {
         updateNumbersRef.current(renumberedScenes)
       }
     }, 200)
-  }, [scenes, currentScriptId, currentScript?.scenes, project?.type, currentSeries])
+  }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber])
 
   // Клик по сцене в навигаторе → выделение + скролл редактора
   const handleSceneClick = useCallback((sceneId: string) => {
@@ -279,7 +281,13 @@ export function useScriptPageLogic() {
     setEnableAutoFix,
     // series / stats
     currentSeries,
-    setCurrentSeries,
+    setCurrentSeries: (series: number) => {
+      const script = episodeScripts.find(s => s.episodeNumber === series)
+      if (script) {
+        setCurrentScript(script.id)
+      }
+    },
+    episodeScripts,
     targetDuration,
     scriptStats,
     setScriptStats,

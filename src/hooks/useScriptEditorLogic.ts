@@ -8,7 +8,7 @@ import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
 import { useSmartType } from './useSmartType'
-import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/env'
+// localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
@@ -35,14 +35,14 @@ export interface UseScriptEditorLogicOptions {
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
   formatLocked?: boolean
-  draftKey: string
+  initialContent?: string
+  onContentChange?: (html: string) => void
 }
 
 export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const {
     format: _format,
     projectType,
-    projectId,
     currentSeries,
     fontFamily,
     fontSize,
@@ -59,7 +59,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     smartTypeLocations,
     smartTypeTimes,
     formatLocked,
-    draftKey,
+    initialContent,
+    onContentChange,
   } = options
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
@@ -527,7 +528,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   onUpdateRef.current = ({ editor: editorInstance }) => {
     const html = editorInstance.getHTML()
 
-    safeSetLocalStorage(draftKey, html)
+    onContentChange?.(html)
 
     if (pageCountTimeoutRef.current) {
       clearTimeout(pageCountTimeoutRef.current)
@@ -625,14 +626,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
   }, [])
 
-  // Загружаем черновик при монтировании И при смене серии (draftKey меняется)
+  // Загружаем контент при монтировании (из scriptStore) и при смене initialContent
   useEffect(() => {
     if (editor) {
-      const saved = safeGetLocalStorage(draftKey)
-      editor.commands.setContent(saved || '<p></p>')
+      editor.commands.setContent(initialContent || '<p></p>')
       processedHeadersRef.current.clear()
     }
-  }, [editor, draftKey, applyPageBreaks])
+  }, [editor, initialContent, applyPageBreaks])
 
   // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
   useEffect(() => {

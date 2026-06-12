@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
 import { useScriptStore } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
@@ -72,13 +72,13 @@ export default function ScriptPage() {
     updateNumbersRef,
   } = logic
 
-  const draftKey = useMemo(() => {
-    return project?.id
-      ? (project?.type === 'serial'
-          ? `kinoplan_draft_${project.id}_s${currentSeries > 0 ? currentSeries : 1}`
-          : `kinoplan_draft_${project.id}`)
-      : 'kinoplan_tiptap_draft'
-  }, [project?.id, project?.type, currentSeries])
+  const updateScript = useScriptStore((s) => s.updateScript)
+
+  const handleContentChange = useCallback((html: string) => {
+    if (currentScript?.id) {
+      updateScript(currentScript.id, { content: html })
+    }
+  }, [currentScript?.id, updateScript])
 
   const { bg, sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -175,8 +175,7 @@ export default function ScriptPage() {
 
             <div className="flex-1 h-full">
               <ScriptEditorTiptap
-                key={draftKey}
-                draftKey={draftKey}
+                key={currentScript?.id || 'no-script'}
                 format={scriptFormat}
                 projectType={project?.type || 'film'}
                 projectId={project?.id}
@@ -194,6 +193,8 @@ export default function ScriptPage() {
                 onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
                 onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
                 formatLocked={formatLocked}
+                initialContent={currentScript?.content}
+                onContentChange={handleContentChange}
               />
             </div>
           </div>

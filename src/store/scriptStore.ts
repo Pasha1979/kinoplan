@@ -63,6 +63,12 @@ export interface Script {
   
   // Title Page (Фаза 1, шаг 1.7)
   titlePage?: TitlePage
+
+  // Полный HTML-контент сценария (из Tiptap редактора)
+  content?: string
+
+  // Для сериалов: номер серии (1, 2, 3...). Для фильмов — undefined.
+  episodeNumber?: number
 }
 
 export interface ScriptDraft {

@@ -24,7 +24,8 @@ interface ScriptEditorTiptapProps {
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
   formatLocked?: boolean
-  draftKey: string
+  initialContent?: string
+  onContentChange?: (html: string) => void
 }
 
 export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
