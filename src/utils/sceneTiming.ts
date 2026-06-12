@@ -1,5 +1,5 @@
 import type { TimingSystem } from '../store/scriptStore'
-import { CHARS_PER_PAGE, MIN_SCENE_PAGES, SECONDS_PER_PAGE, SECONDS_PER_CHAR } from '../constants/scriptConstants'
+import { CHARS_PER_PAGE, MIN_SCENE_PAGES, SECONDS_PER_PAGE, SECONDS_PER_CHAR, SECONDS_PER_DIALOG_LINE } from '../constants/scriptConstants'
 
 export interface TimingInput {
   pages?: number
@@ -30,9 +30,14 @@ export function calculateSceneTiming(
     case 'character':
       return { pages, duration: Math.round(charCount * SECONDS_PER_CHAR * coeff) }
 
-    case 'flexible':
-      // Гибкий: базовый расчёт по страницам (dialogLines игнорируется для простоты)
-      return { pages, duration: Math.round(pages * SECONDS_PER_PAGE * coeff) }
+    case 'flexible': {
+      // Гибкий: базовый расчёт по страницам + бонус за строки диалога
+      // Каждая строка диалога ≈ 3 секунды экранного времени
+      const dialogLines = input.dialogLines || 0
+      const baseDuration = pages * SECONDS_PER_PAGE * coeff
+      const dialogDuration = dialogLines * SECONDS_PER_DIALOG_LINE * coeff
+      return { pages, duration: Math.round(baseDuration + dialogDuration) }
+    }
 
     case 'manual':
       // Ручной: пользователь задаёт duration сам, здесь возвращаем 0

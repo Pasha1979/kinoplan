@@ -251,7 +251,7 @@ export default function CreateScriptPage() {
                 {[
                   { value: 'page' as TimingSystem, label: 'Постраничный (1 стр = 55 сек)', tooltip: '1 страница = 55 секунд × жанровый коэффициент. Стандартный метод.' },
                   { value: 'character' as TimingSystem, label: 'Посимвольный', tooltip: '1 символ = 0.05 секунды. Точный расчёт по количеству символов.' },
-                  { value: 'flexible' as TimingSystem, label: 'Гибкий', tooltip: 'Комбинированный метод: страницы + диалоги (пока не реализовано)' },
+                  { value: 'flexible' as TimingSystem, label: 'Гибкий', tooltip: 'Комбинированный метод: страницы × 55 сек + строки диалога × 3 сек. Учитывает темп реплик.' },
                   { value: 'manual' as TimingSystem, label: 'Ручной', tooltip: 'Установите время для каждой сцены вручную (пока не реализовано)' },
                 ].map((option) => (
                   <button
