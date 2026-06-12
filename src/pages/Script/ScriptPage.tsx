@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
 import { useScriptStore } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
@@ -70,6 +71,14 @@ export default function ScriptPage() {
     reorderEditorRef,
     updateNumbersRef,
   } = logic
+
+  const draftKey = useMemo(() => {
+    return project?.id
+      ? (project?.type === 'serial'
+          ? `kinoplan_draft_${project.id}_s${currentSeries > 0 ? currentSeries : 1}`
+          : `kinoplan_draft_${project.id}`)
+      : 'kinoplan_tiptap_draft'
+  }, [project?.id, project?.type, currentSeries])
 
   const { bg, sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -166,6 +175,8 @@ export default function ScriptPage() {
 
             <div className="flex-1 h-full">
               <ScriptEditorTiptap
+                key={draftKey}
+                draftKey={draftKey}
                 format={scriptFormat}
                 projectType={project?.type || 'film'}
                 projectId={project?.id}

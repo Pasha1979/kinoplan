@@ -35,6 +35,7 @@ export interface UseScriptEditorLogicOptions {
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
   formatLocked?: boolean
+  draftKey: string
 }
 
 export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
@@ -58,6 +59,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     smartTypeLocations,
     smartTypeTimes,
     formatLocked,
+    draftKey,
   } = options
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
@@ -118,13 +120,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const _formatRef = useRef(_format)
   // eslint-disable-next-line react-hooks/refs
   _formatRef.current = _format
-
-  // 1.1 Ключ localStorage: для сериала — отдельный черновик на каждую серию
-  const draftKey = projectId
-    ? (projectType === 'serial'
-        ? `kinoplan_draft_${projectId}_s${currentSeries > 0 ? currentSeries : 1}`
-        : `kinoplan_draft_${projectId}`)
-    : 'kinoplan_tiptap_draft'
 
   // Получаем текущий тип блока
   const getCurrentBlockType = useCallback((ed: Editor | null) => {
