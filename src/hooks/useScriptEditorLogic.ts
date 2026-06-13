@@ -13,6 +13,7 @@ import { PageCounter } from '../services/pageCounter'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
+import { parseScreenplayText, blocksToHtml } from '../utils/parseScreenplayText'
 
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
@@ -81,6 +82,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const onUpdateRef = useRef<(({ editor }: { editor: Editor }) => void) | null>(null)
   const handleKeyDownRef = useRef<((view: Editor['view'], event: KeyboardEvent) => boolean) | null>(null)
   const handleCopyRef = useRef<((view: Editor['view'], event: ClipboardEvent) => boolean) | null>(null)
+  const handlePasteRef = useRef<((view: Editor['view'], event: ClipboardEvent) => boolean) | null>(null)
 
   // Refs для параметров, используемых внутри асинхронных таймаутов (защита от stale closures)
   const timingSystemRef = useRef(timingSystem)
@@ -356,6 +358,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         copy: (view, event) => handleCopyRef.current?.(view, event) ?? false,
       },
       handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
+      handlePaste: (view, event) => handlePasteRef.current?.(view, event) ?? false,
     },
   })
 
@@ -521,6 +524,22 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
     }
     
+    return false
+  }
+
+  // eslint-disable-next-line react-hooks/refs
+  handlePasteRef.current = (_view, event) => {
+    const plainText = event.clipboardData?.getData('text/plain')
+    // Если вставляется plain text и он похож на сценарий (есть шапка)
+    if (plainText && (plainText.includes('ИНТ.') || plainText.includes('ЭКСТ.') || plainText.includes('ИНТ-ЭКСТ.'))) {
+      event.preventDefault()
+      const blocks = parseScreenplayText(plainText)
+      if (blocks.length > 0) {
+        const html = blocksToHtml(blocks)
+        editor?.chain().insertContent(html).run()
+        return true
+      }
+    }
     return false
   }
 

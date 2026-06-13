@@ -183,7 +183,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
 
         {/* Область предпросмотра */}
         {showPreview && (
-          <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center" style={{ background: isDark ? '#0a0a15' : '#e5e5e5' }}>
+          <div className="flex-1 overflow-y-auto p-8 flex justify-center" style={{ background: isDark ? '#0a0a15' : '#e5e5e5' }}>
             <div 
               className="w-full max-w-2xl min-h-[800px] p-12 rounded-xl shadow-2xl"
               style={{ 
@@ -196,7 +196,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
               }}
             >
               {/* Титульная страница - российский формат */}
-              <div className="h-full flex flex-col">
+              <div className="flex flex-col min-h-full">
                 {/* Верхняя часть - пустое пространство */}
                 <div className="flex-1" />
                 
