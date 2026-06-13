@@ -1,35 +1,16 @@
 import { useState } from 'react'
 import { Eye, EyeOff, Calendar, User, Mail, Phone, FileText, Tag } from 'lucide-react'
 
+import type { TitlePage } from '../store/scriptStore'
+
 interface TitlePageEditorProps {
   isDark: boolean
-  scriptTitle?: string
-  projectName?: string
+  data: TitlePage
+  onChange: (data: TitlePage) => void
 }
 
-interface TitlePageData {
-  title: string
-  writtenBy: string
-  basedOn: string
-  director: string
-  email: string
-  phone: string
-  draftNumber: string
-  date: string
-}
-
-export default function TitlePageEditor({ isDark, scriptTitle = '', projectName = '' }: TitlePageEditorProps) {
+export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEditorProps) {
   const [showPreview, setShowPreview] = useState(true)
-  const [data, setData] = useState<TitlePageData>({
-    title: scriptTitle || projectName || '',
-    writtenBy: '',
-    basedOn: '',
-    director: '',
-    email: '',
-    phone: '',
-    draftNumber: '1',
-    date: new Date().toLocaleDateString('ru-RU'),
-  })
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -37,8 +18,8 @@ export default function TitlePageEditor({ isDark, scriptTitle = '', projectName 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
 
-  const handleChange = (field: keyof TitlePageData, value: string) => {
-    setData(prev => ({ ...prev, [field]: value }))
+  const handleChange = (field: keyof TitlePage, value: string) => {
+    onChange({ ...data, [field]: value })
   }
 
   return (

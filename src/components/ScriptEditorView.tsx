@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
-import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight } from 'lucide-react'
+import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2 } from 'lucide-react'
 import { SmartTypePopup } from './SmartTypePopup'
 import type { ScriptFormat } from '../store/scriptStore'
 
@@ -63,6 +63,36 @@ export function ScriptEditorView({
           borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb',
         }}
       >
+        {/* Undo / Redo */}
+        <button
+          onClick={() => editor.chain().undo().run()}
+          disabled={!editor.can().undo()}
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          style={{
+            color: isDark ? '#9ca3af' : '#6b7280',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+          }}
+          title="Отменить (Ctrl+Z)"
+        >
+          <Undo2 size={12} />
+          Отменить
+        </button>
+        <button
+          onClick={() => editor.chain().redo().run()}
+          disabled={!editor.can().redo()}
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          style={{
+            color: isDark ? '#9ca3af' : '#6b7280',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+          }}
+          title="Вернуть (Ctrl+Shift+Z)"
+        >
+          <Redo2 size={12} />
+          Вернуть
+        </button>
+
+        <span style={{ color: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb' }}>|</span>
+
         <span className="text-xs mr-2" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
           Тип блока:
         </span>

@@ -55,6 +55,8 @@
 3. Синхронные операции >100мс
 4. Дублирование state между компонентами
 5. Прямые запросы к SQLite из UI
+6. **Локальный `useState` для данных, которые должны переживать перезагрузку** — только Zustand store
+7. **Компонент с `blocks={[]}` или `data={undefined}`** — мёртвая фича, данные не прокинуты
 
 ## ✅ ЭТАП 1: ИТОГИ (02.06.2026)
 
@@ -94,6 +96,8 @@
 | 02.06.2026 | FileSystemAdapter (паттерн Адаптера) | Абстракция файловых операций для Electron/Tauri | ✅ |
 | 02.06.2026 | Изоляция browser-API в утилиты env.ts | Безопасность при сборке под десктоп (window, document, localStorage) | ✅ |
 | 02.06.2026 | Vite config (base: './') | Подготовка для file:// протокола в Electron/Tauri | ✅ |
+| 13.06.2026 | `extractBlocksFromHtml()` | Парсинг HTML редактора для FormatAssistant — извлечение блоков по `data-type` | ✅ |
+| 13.06.2026 | TitlePage в scriptStore | TitlePage хранится в Zustand persist, а не в локальном useState | ✅ |
 
 ---
 

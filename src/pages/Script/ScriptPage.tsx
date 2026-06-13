@@ -1,6 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
-import { useScriptStore } from '../../store/scriptStore'
+import { useScriptStore, type TitlePage } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
 import ScriptHeader from './components/ScriptHeader'
 import ScriptTabs from './components/ScriptTabs'
@@ -11,6 +11,7 @@ import TitlePageEditor from '../../components/TitlePageEditor'
 import FormatAssistant from '../../components/FormatAssistant'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
+import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
 import { Settings } from 'lucide-react'
 
 export default function ScriptPage() {
@@ -80,6 +81,27 @@ export default function ScriptPage() {
     }
   }, [currentScript?.id, updateScript])
 
+  const blocks = useMemo(() => {
+    return extractBlocksFromHtml(currentScript?.content || '')
+  }, [currentScript?.content])
+
+  const defaultTitlePage = useMemo<TitlePage>(() => ({
+    title: project?.name || currentScript?.title || '',
+    writtenBy: '',
+    basedOn: '',
+    director: '',
+    email: '',
+    phone: '',
+    draftNumber: '1',
+    date: new Date().toLocaleDateString('ru-RU'),
+  }), [project?.name, currentScript?.title])
+
+  const handleTitlePageChange = useCallback((titlePage: TitlePage) => {
+    if (currentScript?.id) {
+      updateScript(currentScript.id, { titlePage })
+    }
+  }, [currentScript?.id, updateScript])
+
   const { bg, sidebarBg, border, textPrimary, textSecondary } = colors
 
   if (view === 'empty') {
@@ -127,7 +149,8 @@ export default function ScriptPage() {
         {activeTab === 'title' ? (
           <TitlePageEditor
             isDark={isDark}
-            scriptTitle={project?.name}
+            data={currentScript?.titlePage || defaultTitlePage}
+            onChange={handleTitlePageChange}
           />
         ) : ['breakdown', 'cards', 'development', 'plan', 'statistics'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
@@ -215,7 +238,7 @@ export default function ScriptPage() {
         {/* Format Assistant — панель проверки форматирования */}
         {activeTab === 'text' && (
           <FormatAssistant
-            blocks={[]}
+            blocks={blocks}
             format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
             isDark={isDark}
             enableAutoFix={enableAutoFix}

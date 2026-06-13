@@ -36,10 +36,13 @@ export interface Character {
 
 export interface TitlePage {
   title: string
-  authors: string[]
-  contacts: string[]
-  logline?: string
-  copyright?: string
+  writtenBy: string
+  basedOn: string
+  director: string
+  email: string
+  phone: string
+  draftNumber: string
+  date: string
 }
 
 export interface Script {
