@@ -67,11 +67,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
-  // SmartType — подсказки при наборе (дефолты пустые, учимся из текста сценария)
+  // SmartType — подсказки при наборе (базовые времена суток всегда есть)
   const smartType = useSmartType({
-    characters: smartTypeCharacters || [],
-    locations: smartTypeLocations || [],
-    times: smartTypeTimes || [],
+    characters: smartTypeCharacters,
+    locations: smartTypeLocations,
+    times: smartTypeTimes,
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
@@ -104,6 +104,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const isReplacingRef = useRef(false)
   // Таймаут сброса isReplacingRef (единый, чтобы не было утечки памяти)
   const isReplacingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Защита от цикла setContent — загружаем initialContent только при создании редактора
+  const initialContentLoadedRef = useRef(false)
   // Точное количество страниц (через виртуальный A4-рендеринг)
   const [precisePages, setPrecisePages] = useState<number>(0.1)
   // Ref для актуального значения — избегаем stale closure в setTimeout/setCallbacks
@@ -287,8 +289,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
 
       if (projectType === 'serial' && currentSeries > 0) {
-        const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
-        const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
+        const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)$/i
+        const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)$/i
         const match = upperText.match(needsSeriesPattern)
         const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
 
@@ -587,6 +589,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
 
       pageBreaksRef.current = result.breaks
+      applyPageBreaks()
       pageCountTimeoutRef.current = null
     }, 400)
 
@@ -645,13 +648,15 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
   }, [])
 
-  // Загружаем контент при монтировании (из scriptStore) и при смене initialContent
+  // Загружаем контент только при создании редактора / смене скрипта
   useEffect(() => {
-    if (editor) {
-      editor.commands.setContent(initialContent || '<p></p>')
+    if (!editor || initialContentLoadedRef.current) return
+    if (initialContent) {
+      editor.commands.setContent(initialContent)
       processedHeadersRef.current.clear()
+      initialContentLoadedRef.current = true
     }
-  }, [editor, initialContent, applyPageBreaks])
+  }, [editor, initialContent])
 
   // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
   useEffect(() => {

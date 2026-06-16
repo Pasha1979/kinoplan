@@ -18,10 +18,10 @@ export interface UseSmartTypeOptions {
 
 export function useSmartType(options: UseSmartTypeOptions) {
   const {
-    characters: initialCharacters,
-    locations: initialLocations,
+    characters: initialCharacters = [],
+    locations: initialLocations = [],
     props: initialProps = [],
-    times: initialTimes = [],
+    times: initialTimes = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
     minMatchLength = 2,
     maxSuggestions = 5,
   } = options
@@ -91,7 +91,10 @@ export function useSmartType(options: UseSmartTypeOptions) {
       })
     })
 
-    times.forEach((time, index) => {
+    // Базовые времена суток (всегда доступны) + изученные из сценария
+    const baseTimes = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ']
+    const mergedTimes = new Set([...baseTimes, ...times])
+    mergedTimes.forEach((time, index) => {
       result.push({
         id: `time_${index}`,
         text: time.toUpperCase(),
