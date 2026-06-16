@@ -14,7 +14,7 @@ export function useScriptPageLogic() {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
-  const { scripts, currentScriptId, updateScript, setCurrentScript } = useScriptStore()
+  const { scripts, currentScriptId, updateScript, setCurrentScript, addScript } = useScriptStore()
   const currentScript = useScriptStore(state =>
     state.scripts.find(s => s.id === state.currentScriptId) || null
   )
@@ -27,11 +27,13 @@ export function useScriptPageLogic() {
   const scenes = useMemo(() => currentScript?.scenes || [], [currentScript?.scenes])
   // Номер текущей серии из Script.episodeNumber (для фильмов = 1)
   const currentSeries = currentScript?.episodeNumber || 1
-  // Все Script'ы текущего проекта с episodeNumber (сериалы)
-  const episodeScripts = useMemo(() =>
-    project ? scripts.filter(s => s.projectId === project.id && s.episodeNumber !== undefined) : [],
-    [scripts, project]
-  )
+  // Все Script'ы текущего проекта (для сериалов — с episodeNumber, fallback=1 для старых данных)
+  const episodeScripts = useMemo(() => {
+    if (!project) return []
+    return scripts
+      .filter(s => s.projectId === project.id)
+      .map(s => ({ ...s, episodeNumber: s.episodeNumber ?? 1 }))
+  }, [scripts, project])
 
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null)
   const [activeTab, setActiveTab] = useState<ScriptTab>('text')
@@ -282,7 +284,29 @@ export function useScriptPageLogic() {
     // series / stats
     currentSeries,
     setCurrentSeries: (series: number) => {
-      const script = episodeScripts.find(s => s.episodeNumber === series)
+      let script = episodeScripts.find(s => s.episodeNumber === series)
+      if (!script && project) {
+        // Автосоздание скрипта для серии, если его ещё нет
+        const newScript = {
+          id: crypto.randomUUID(),
+          projectId: project.id,
+          title: `${project.name} — Серия ${series}`,
+          version: 'Черновик v1',
+          format: currentScript?.format || 'russian',
+          scenes: [],
+          characters: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          timingSystem: currentScript?.timingSystem || 'page',
+          genreCoefficient: currentScript?.genreCoefficient || 1.0,
+          fontFamily: currentScript?.fontFamily || 'Courier New',
+          fontSize: currentScript?.fontSize || 12,
+          episodeNumber: series,
+        }
+        addScript(newScript)
+        setCurrentScript(newScript.id)
+        return
+      }
       if (script) {
         setCurrentScript(script.id)
       }

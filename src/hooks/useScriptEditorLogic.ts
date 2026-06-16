@@ -653,9 +653,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (!editor || initialContentLoadedRef.current) return
     if (initialContent) {
       editor.commands.setContent(initialContent)
-      processedHeadersRef.current.clear()
-      initialContentLoadedRef.current = true
     }
+    processedHeadersRef.current.clear()
+    initialContentLoadedRef.current = true
   }, [editor, initialContent])
 
   // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
