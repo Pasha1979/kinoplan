@@ -1,5 +1,26 @@
 import { useState, useCallback, useMemo } from 'react'
 
+const FREQUENCY_KEY = 'smartType_frequency'
+
+function loadFrequencies(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(FREQUENCY_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveFrequencies(freq: Record<string, number>) {
+  try {
+    localStorage.setItem(FREQUENCY_KEY, JSON.stringify(freq))
+  } catch { /* ignore */ }
+}
+
+function getFreqKey(type: string, text: string): string {
+  return `${type}:${text.toUpperCase()}`
+}
+
 export interface SmartTypeSuggestion {
   id: string
   text: string
@@ -36,6 +57,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
   const [locations, setLocations] = useState(initialLocations)
   const [props, setProps] = useState(initialProps)
   const [times, setTimes] = useState(initialTimes)
+  const [frequencies, setFrequencies] = useState<Record<string, number>>(loadFrequencies)
 
   const updateLists = useCallback((lists: {
     characters?: string[]
@@ -52,6 +74,9 @@ export function useSmartType(options: UseSmartTypeOptions) {
   // Все доступные варианты
   const allSuggestions = useMemo(() => {
     const result: SmartTypeSuggestion[] = []
+    const freq = frequencies
+
+    const getFreq = (type: string, text: string) => freq[getFreqKey(type, text)] || 1
 
     // Подсказки для шапки сцены
     const scenePrefixes = ['ИНТ.', 'ЭКСТ.', 'И.', 'Э.', 'ИНТ-ЭКСТ.', 'ИНТ/ЭКСТ.', 'ПАВ.', 'НАТ.', 'НАТ/ИНТ.']
@@ -60,7 +85,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         id: `prefix_${index}`,
         text: prefix,
         type: 'scene_prefix',
-        frequency: 10, // Высокая частота чтобы были первыми
+        frequency: getFreq('scene_prefix', prefix),
       })
     })
 
@@ -69,7 +94,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         id: `char_${index}`,
         text: char.toUpperCase(),
         type: 'character',
-        frequency: 1,
+        frequency: getFreq('character', char),
       })
     })
 
@@ -78,7 +103,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         id: `loc_${index}`,
         text: loc.toUpperCase(),
         type: 'location',
-        frequency: 1,
+        frequency: getFreq('location', loc),
       })
     })
 
@@ -87,7 +112,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
         id: `prop_${index}`,
         text: prop.toUpperCase(),
         type: 'prop',
-        frequency: 1,
+        frequency: getFreq('prop', prop),
       })
     })
 
@@ -99,12 +124,12 @@ export function useSmartType(options: UseSmartTypeOptions) {
         id: `time_${index}`,
         text: time.toUpperCase(),
         type: 'time',
-        frequency: 1,
+        frequency: getFreq('time', time),
       })
     })
 
     return result
-  }, [characters, locations, props, times])
+  }, [characters, locations, props, times, frequencies])
 
   // Получить текущее слово перед курсором
   const getCurrentWord = useCallback((text: string, cursorPos: number): string => {
@@ -202,6 +227,14 @@ export function useSmartType(options: UseSmartTypeOptions) {
     setSuggestions([])
   }, [])
 
+  // Записать использование подсказки — увеличивает frequency в localStorage
+  const recordUsage = useCallback((suggestion: SmartTypeSuggestion) => {
+    const key = getFreqKey(suggestion.type, suggestion.text)
+    const next = { ...frequencies, [key]: (frequencies[key] || 0) + 1 }
+    setFrequencies(next)
+    saveFrequencies(next)
+  }, [frequencies])
+
   return {
     suggestions,
     activeIndex,
@@ -212,5 +245,6 @@ export function useSmartType(options: UseSmartTypeOptions) {
     navigateSuggestions,
     closeSuggestions,
     updateLists,
+    recordUsage,
   }
 }

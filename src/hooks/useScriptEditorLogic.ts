@@ -467,7 +467,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
             .deleteRange({ from: wordStartPos, to: wordEndPos })
             .insertContent(textToInsert)
             .run()
-          
+
+          st.recordUsage(suggestion)
           st.closeSuggestions()
         }
       }
