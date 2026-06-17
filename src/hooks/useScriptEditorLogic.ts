@@ -89,6 +89,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const genreCoefficientRef = useRef(genreCoefficient)
   const onScenesChangeRef = useRef(onScenesChange)
   const onStatsChangeRef = useRef(onStatsChange)
+  const currentSeriesRef = useRef(currentSeries)
+  const projectTypeRef = useRef(projectType)
 
   // Обновляем refs в useEffect во избежание мутаций во время рендера
   useEffect(() => {
@@ -96,7 +98,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     genreCoefficientRef.current = genreCoefficient
     onScenesChangeRef.current = onScenesChange
     onStatsChangeRef.current = onStatsChange
-  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange])
+    currentSeriesRef.current = currentSeries
+    projectTypeRef.current = projectType
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType])
 
   // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
   const processedHeadersRef = useRef<Set<string>>(new Set())
@@ -544,6 +548,43 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           editor?.chain().splitBlock().setNode('sceneDialog').run()
         }
         return true
+      }
+
+      // Двойной Enter на пустом sceneAction → новая сцена (sceneHeader)
+      if (currentType === 'sceneAction') {
+        const textContent = currentNode?.textContent?.trim() || ''
+        if (textContent === '') {
+          event.preventDefault()
+          // Находим максимальный номер сцены в документе
+          let maxNumber = 0
+          view.state.doc.descendants((node) => {
+            if (node.type.name === 'sceneHeader') {
+              const headerText = node.textContent.trim()
+              const match = headerText.match(/^(\d+(?:-\d+)?)\./)
+              if (match) {
+                const numPart = match[1]
+                const sceneNum = numPart.includes('-')
+                  ? parseInt(numPart.split('-')[1], 10)
+                  : parseInt(numPart, 10)
+                if (!isNaN(sceneNum) && sceneNum > maxNumber) {
+                  maxNumber = sceneNum
+                }
+              }
+            }
+          })
+          const nextNumber = maxNumber + 1
+          const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
+          const headerText = isSerial
+            ? `${currentSeriesRef.current}-${nextNumber}. `
+            : `${nextNumber}. `
+
+          editor?.chain()
+            .splitBlock()
+            .setNode('sceneHeader')
+            .insertContent(headerText)
+            .run()
+          return true
+        }
       }
     }
     
