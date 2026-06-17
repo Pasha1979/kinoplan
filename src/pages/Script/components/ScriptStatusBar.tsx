@@ -1,4 +1,4 @@
-import { Hash, AlignLeft, Clock, AlertTriangle } from 'lucide-react'
+import { Hash, AlignLeft, Clock, AlertTriangle, CheckCircle2, Loader2, CircleDot } from 'lucide-react'
 import { formatDuration } from '../../../utils/sceneTiming'
 
 interface ScriptStatusBarProps {
@@ -13,6 +13,7 @@ interface ScriptStatusBarProps {
   seriesPages: number
   seriesDuration: number
   targetDuration?: number
+  saveStatus?: 'saved' | 'saving' | 'unsaved'
 }
 
 export default function ScriptStatusBar({
@@ -22,12 +23,27 @@ export default function ScriptStatusBar({
   seriesPages,
   seriesDuration,
   targetDuration,
+  saveStatus = 'saved',
 }: ScriptStatusBarProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
+
+  const statusConfig = {
+    saved: { icon: CheckCircle2, color: '#10b981', text: 'Сохранено' },
+    saving: { icon: Loader2, color: '#f59e0b', text: 'Сохранение...' },
+    unsaved: { icon: CircleDot, color: '#ef4444', text: 'Изменения не сохранены' },
+  }
+  const currentStatus = statusConfig[saveStatus]
+  const StatusIcon = currentStatus.icon
 
   return (
     <div className="shrink-0 flex items-center gap-6 px-6 py-2 border-t"
       style={{ background: sidebarBg, borderColor: border }}>
+      {/* Индикатор сохранения */}
+      <span className="flex items-center gap-1.5 text-xs shrink-0" style={{ color: currentStatus.color }}>
+        <StatusIcon size={11} className={saveStatus === 'saving' ? 'animate-spin' : ''} />
+        {currentStatus.text}
+      </span>
+
       <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
         <Hash size={11} />
         {scenesCount} сцен

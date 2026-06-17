@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
 import { useScriptStore, type TitlePage } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
@@ -63,6 +63,8 @@ export default function ScriptPage() {
     // save
     isSaving,
     handleSave,
+    saveStatus,
+    triggerAutoSave,
     // scenes
     handleScenesChange,
     handleSceneReorder,
@@ -78,8 +80,21 @@ export default function ScriptPage() {
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
       updateScript(currentScript.id, { content: html })
+      triggerAutoSave()
     }
-  }, [currentScript?.id, updateScript])
+  }, [currentScript?.id, updateScript, triggerAutoSave])
+
+  // Ctrl+S — ручное сохранение
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleSave])
 
   const blocks = useMemo(() => {
     return extractBlocksFromHtml(currentScript?.content || '')
@@ -233,6 +248,7 @@ export default function ScriptPage() {
             seriesPages={scriptStats.pages}
             seriesDuration={seriesDuration}
             targetDuration={targetDuration}
+            saveStatus={saveStatus}
           />
         )}
 

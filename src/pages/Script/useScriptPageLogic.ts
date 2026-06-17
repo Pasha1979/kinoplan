@@ -53,6 +53,8 @@ export function useScriptPageLogic() {
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [showTimingSettingsModal, setShowTimingSettingsModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved')
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevFormatRef = useRef<ScriptFormat>('russian')
   // 4.1 Ссылка на функцию конвертации внутри редактора
   const convertFormatRef = useRef<((from: ScriptFormat, to: ScriptFormat) => void) | null>(null)
@@ -62,6 +64,17 @@ export function useScriptPageLogic() {
   const updateNumbersRef = useRef<((scenes: Array<{ id: string; number: string }>) => void) | null>(null)
   // AbortController для отмены устаревших запросов сохранения
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Автосохранение с debounce — ставит 'unsaved' и запускает таймер на 2.5с
+  const triggerAutoSave = useCallback(() => {
+    setSaveStatus('unsaved')
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      handleSave()
+    }, 2500)
+  }, [])
 
   // При получении новых сцен из редактора — синхронизируем со всеми stores
   const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; pages: number; charCount?: number; duration?: number }>) => {
@@ -124,7 +137,10 @@ export function useScriptPageLogic() {
     } else {
       setSelectedScene(null)
     }
-  }, [currentScriptId, currentScript?.scenes, project, currentProjectId, scenes, selectedScene])
+
+    // Триггерим автосохранение при изменении сцен
+    triggerAutoSave()
+  }, [currentScriptId, currentScript?.scenes, project, currentProjectId, scenes, selectedScene, triggerAutoSave])
 
   // Проверяем, есть ли сценарий для текущего проекта и загружаем его формат
   useEffect(() => {
@@ -172,6 +188,7 @@ export function useScriptPageLogic() {
     const controller = new AbortController()
     abortControllerRef.current = controller
     setIsSaving(true)
+    setSaveStatus('saving')
     try {
       await projectService.saveScenesBatch(pid, scenes.map(s => ({
         id: s.id,
@@ -183,11 +200,13 @@ export function useScriptPageLogic() {
         cast: s.cast,
         pages: s.pages,
       })), controller.signal)
+      setSaveStatus('saved')
     } catch (error) {
       // Игнорируем ошибки отмены запроса
       if (error instanceof DOMException && error.name === 'AbortError') {
         return
       }
+      setSaveStatus('unsaved')
     } finally {
       setIsSaving(false)
       abortControllerRef.current = null
@@ -250,6 +269,15 @@ export function useScriptPageLogic() {
     }
     setShowTimingSettingsModal(false)
   }, [currentScript, updateScript])
+
+  // Очистка таймаута автосохранения при размонтировании
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Цветовая палитра
   const colors = useMemo(() => ({
@@ -335,6 +363,8 @@ export function useScriptPageLogic() {
     // save
     isSaving,
     handleSave,
+    saveStatus,
+    triggerAutoSave,
     // scenes actions
     handleScenesChange,
     handleSceneReorder,
