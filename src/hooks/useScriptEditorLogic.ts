@@ -27,7 +27,7 @@ export interface UseScriptEditorLogicOptions {
   timingSystem: TimingSystem
   onSceneCountChange?: (count: number) => void
   onStatsChange?: (stats: { scenes: number; pages: number; duration: number }) => void
-  onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount: number }>) => void
+  onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; pages: number; charCount: number }>) => void
   focusSceneId?: string
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
   onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number) => void) => void
@@ -432,7 +432,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
 
     const st = smartTypeRef.current
-    if (st.isOpen && (event.key === 'Enter' || event.key === 'Tab')) {
+    // Только Enter выбирает подсказку — Tab переключает тип блока
+    if (st.isOpen && event.key === 'Enter') {
       event.preventDefault()
       const suggestion = st.suggestions[st.activeIndex]
       if (suggestion && editor) {
@@ -479,6 +480,26 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       event.preventDefault()
       st.closeSuggestions()
       return true
+    }
+    
+    // Tab — цикл переключения типов блока (сохраняет текст)
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const { state } = view
+      const { selection } = state
+      const { $from } = selection
+      const currentNode = $from.node()
+      const currentType = currentNode?.type.name
+      
+      const blockTypes = ['sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
+      const idx = blockTypes.indexOf(currentType)
+      if (idx !== -1) {
+        event.preventDefault()
+        const nextIndex = event.shiftKey
+          ? (idx - 1 + blockTypes.length) % blockTypes.length
+          : (idx + 1) % blockTypes.length
+        editor?.chain().setNode(blockTypes[nextIndex]).run()
+        return true
+      }
     }
     
     if (event.key === 'Enter' && !event.shiftKey) {

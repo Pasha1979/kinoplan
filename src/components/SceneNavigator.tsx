@@ -281,7 +281,7 @@ function SceneCard({
           {/* Локация */}
           <div className="flex items-center gap-1.5 text-xs" style={{ color: textPrimary }}>
             <MapPin size={12} style={{ color: textSecondary }} />
-            <span className="truncate">{scene.location}</span>
+            <span className="truncate">{scene.sublocation ? `${scene.location}.${scene.sublocation}.` : `${scene.location}.`}</span>
           </div>
 
           {/* Персонажи (cast) */}

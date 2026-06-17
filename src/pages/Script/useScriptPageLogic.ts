@@ -64,7 +64,7 @@ export function useScriptPageLogic() {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // При получении новых сцен из редактора — синхронизируем со всеми stores
-  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount?: number; duration?: number }>) => {
+  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; pages: number; charCount?: number; duration?: number }>) => {
     if (!currentScriptId) return
 
     // Merge с существующими сценами из scriptStore: сохраняем metadata (synopsis, breakdownElements и т.д.)
@@ -77,6 +77,7 @@ export function useScriptPageLogic() {
         number: s.number,
         type: s.type,
         location: s.location,
+        sublocation: s.sublocation,
         timeOfDay: existing?.timeOfDay || 'DAY',
         time: s.time,
         charCount: s.charCount,

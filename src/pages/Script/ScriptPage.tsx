@@ -175,6 +175,7 @@ export default function ScriptPage() {
                 number: s.number,
                 type: s.type,
                 location: s.location,
+                sublocation: s.sublocation,
                 time: s.time,
                 pages: s.pages || 0,
                 charCount: s.charCount,
