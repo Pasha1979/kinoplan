@@ -14,6 +14,7 @@ import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
 import { parseScreenplayText, blocksToHtml } from '../utils/parseScreenplayText'
+import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/pasteSanitizer'
 
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
@@ -594,9 +595,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   // eslint-disable-next-line react-hooks/refs
   handlePasteRef.current = (_view, event) => {
-    const plainText = event.clipboardData?.getData('text/plain')
-    // Если вставляется plain text и он похож на сценарий (есть шапка)
-    if (plainText && (plainText.includes('ИНТ.') || plainText.includes('ЭКСТ.') || plainText.includes('ИНТ-ЭКСТ.'))) {
+    const plainText = sanitizePlainText(event.clipboardData?.getData('text/plain') || '')
+    const htmlText = event.clipboardData?.getData('text/html') || ''
+
+    // 1. Если plain text похож на сценарий → парсим в блоки
+    if (plainText && isScreenplayContent(plainText)) {
       event.preventDefault()
       const blocks = parseScreenplayText(plainText)
       if (blocks.length > 0) {
@@ -605,6 +608,36 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         return true
       }
     }
+
+    // 2. Определяем текущий тип блока
+    const currentType = editor ? getCurrentBlockType(editor) : null
+
+    // 3. Для sceneHeader / sceneCharacter / sceneDialog → только plain text без форматирования
+    if (currentType === 'sceneHeader' || currentType === 'sceneCharacter' || currentType === 'sceneDialog' || currentType === 'sceneTransition') {
+      if (plainText) {
+        event.preventDefault()
+        editor?.chain().insertContent(plainText).run()
+        return true
+      }
+      return false
+    }
+
+    // 4. Для sceneAction / sceneParenthetical → sanitize HTML если есть, иначе plain text
+    if (htmlText && htmlText.length > 0 && !htmlText.includes('<html>')) {
+      // Вероятно, это HTML из Word — sanitize
+      event.preventDefault()
+      const cleanHtml = sanitizeHtml(htmlText)
+      editor?.chain().insertContent(cleanHtml).run()
+      return true
+    }
+
+    // 5. Fallback: если есть plain text → вставляем его (уже sanitized)
+    if (plainText && plainText.length > 0) {
+      event.preventDefault()
+      editor?.chain().insertContent(plainText).run()
+      return true
+    }
+
     return false
   }
 
