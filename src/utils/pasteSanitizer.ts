@@ -121,9 +121,8 @@ export function sanitizePlainText(text: string): string {
  * Check if content looks like a screenplay (has scene headers).
  */
 export function isScreenplayContent(text: string): boolean {
-  const lines = text.split('\n').map(l => l.trim())
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
   return lines.some(l =>
-    /^\d+[\.-]/.test(l) &&                // starts with number + dot/dash
-    /\b(ИНТ|ЭКСТ|ИНТ-ЭКСТ|И\.|Э\.|ПАВ|НАТ)\b/.test(l)
+    /^(\d+(?:-\d+)?[\.\s]+)?(ИНТ|ЭКСТ|ИНТ-ЭКСТ|И\.|Э\.|ПАВ|НАТ)\b/.test(l)
   )
 }

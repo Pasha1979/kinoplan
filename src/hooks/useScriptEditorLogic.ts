@@ -365,7 +365,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         copy: (view, event) => handleCopyRef.current?.(view, event) ?? false,
       },
       handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
-      handlePaste: (view, event) => handlePasteRef.current?.(view, event) ?? false,
+      handlePaste: (view, event) => {
+        console.log('[EDITOR handlePaste] called')
+        return handlePasteRef.current?.(view, event) ?? false
+      },
     },
   })
 
@@ -597,13 +600,19 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   handlePasteRef.current = (_view, event) => {
     const plainText = sanitizePlainText(event.clipboardData?.getData('text/plain') || '')
     const htmlText = event.clipboardData?.getData('text/html') || ''
+    console.log('[PASTE DEBUG] plainText length:', plainText.length)
+    console.log('[PASTE DEBUG] htmlText length:', htmlText.length)
+    console.log('[PASTE DEBUG] plainText first 200 chars:', plainText.slice(0, 200))
+    console.log('[PASTE DEBUG] isScreenplayContent:', isScreenplayContent(plainText))
 
     // 1. Если plain text похож на сценарий → парсим в блоки
     if (plainText && isScreenplayContent(plainText)) {
       event.preventDefault()
       const blocks = parseScreenplayText(plainText)
+      console.log('[PASTE DEBUG] blocks:', blocks)
       if (blocks.length > 0) {
         const html = blocksToHtml(blocks)
+        console.log('[PASTE DEBUG] html length:', html.length)
         editor?.chain().insertContent(html).run()
         return true
       }
