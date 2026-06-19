@@ -98,9 +98,23 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
     // Шапка сцены
     if (isSceneHeader(trimmed)) {
       flushAction()
-      blocks.push({ type: 'sceneHeader', content: trimmed })
+      blocks.push({ type: 'sceneHeader', content: trimmed.toUpperCase() })
       prevType = 'sceneHeader'
       continue
+    }
+
+    // Продолжение шапки сцены (если Word разбил на строки)
+    if (prevType === 'sceneHeader' && trimmed && !isSceneHeader(trimmed)) {
+      const looksLikeHeaderContinuation =
+        /[\.]/.test(trimmed) ||
+        /^(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|день|ночь|утро|вечер)/i.test(trimmed)
+      if (looksLikeHeaderContinuation && trimmed.length < 60) {
+        const lastBlock = blocks[blocks.length - 1]
+        if (lastBlock && lastBlock.type === 'sceneHeader') {
+          lastBlock.content += ' ' + trimmed.toUpperCase()
+          continue
+        }
+      }
     }
 
     // Действующие лица: заглавные через запятую ИЛИ одно имя сразу после шапки
@@ -109,9 +123,22 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
       isCastLine(trimmed)
     ) {
       flushAction()
-      blocks.push({ type: 'sceneCast', content: trimmed })
+      blocks.push({ type: 'sceneCast', content: trimmed.toUpperCase() })
       prevType = 'sceneCast'
       continue
+    }
+
+    // Продолжение cast line (если Word разбил на строки)
+    if (prevType === 'sceneCast' && trimmed && !isCastLine(trimmed)) {
+      const looksLikeCastContinuation =
+        /^[а-яёa-zА-ЯЁA-Z\-]+$/.test(trimmed) && trimmed.length < 30
+      if (looksLikeCastContinuation) {
+        const lastBlock = blocks[blocks.length - 1]
+        if (lastBlock && lastBlock.type === 'sceneCast') {
+          lastBlock.content += ' ' + trimmed.toUpperCase()
+          continue
+        }
+      }
     }
 
     // Переход
@@ -140,7 +167,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
     // Персонаж
     if (isCharacterName(trimmed)) {
       flushAction()
-      blocks.push({ type: 'sceneCharacter', content: trimmed })
+      blocks.push({ type: 'sceneCharacter', content: trimmed.toUpperCase() })
       prevType = 'sceneCharacter'
       continue
     }
@@ -201,5 +228,5 @@ export function blocksToHtml(blocks: ScreenplayBlock[]): string {
         .replace(/>/g, '&gt;')
       return `<div data-type="${attr}">${escaped}</div>`
     })
-    .join('')
+    .join('\n')
 }
