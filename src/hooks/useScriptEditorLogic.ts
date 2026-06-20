@@ -488,6 +488,22 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       return true
     }
     
+    // Alt+1..7 — быстрое переключение типа блока (сохраняет текст)
+    const altKeyMap: Record<string, string> = {
+      '1': 'sceneHeader',
+      '2': 'sceneAction',
+      '3': 'sceneCharacter',
+      '4': 'sceneDialog',
+      '5': 'sceneParenthetical',
+      '6': 'sceneTransition',
+      '7': 'sceneCast',
+    }
+    if (event.altKey && altKeyMap[event.key]) {
+      event.preventDefault()
+      editor?.chain().setNode(altKeyMap[event.key]).run()
+      return true
+    }
+
     // Tab — цикл переключения типов блока (сохраняет текст)
     if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       const { state } = view
@@ -495,7 +511,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const { $from } = selection
       const currentNode = $from.node()
       const currentType = currentNode?.type.name
-      
+
       const blockTypes = ['sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
       const idx = blockTypes.indexOf(currentType)
       if (idx !== -1) {
