@@ -109,6 +109,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const isReplacingRef = useRef(false)
   // Таймаут сброса isReplacingRef (единый, чтобы не было утечки памяти)
   const isReplacingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Флаг: последнее нажатие клавиши было Enter — для автоопределения типа блока
+  const lastKeyWasEnterRef = useRef(false)
   // Защита от цикла setContent — загружаем initialContent только при создании редактора
   const initialContentLoadedRef = useRef(false)
   // Точное количество страниц (через виртуальный A4-рендеринг)
@@ -139,17 +141,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     return node?.attrs?.['data-type'] || node?.type?.name || 'paragraph'
   }, [])
 
-  // Автоопределение типа блока по тексту (Фаза 2.5)
-  const autoDetectBlockType = useCallback((editorInstance: Editor) => {
-    // Если замок формата закрыт — автоопределение отключено
-    if (formatLocked) return
-
+  // Вспомогательная: получить текущий текстовый узел
+  const getCurrentTextNode = useCallback((editorInstance: Editor) => {
     const { state } = editorInstance
     const { selection } = state
     const { $from } = selection
-    
     let currentNode = $from.node()
-
     const allowedTypes = ['paragraph', 'sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
     if (currentNode && !allowedTypes.includes(currentNode.type.name)) {
       for (let i = $from.depth; i > 0; i--) {
@@ -160,91 +157,61 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
       }
     }
-    
+    return currentNode
+  }, [])
+
+  // Автоопределение типа блока — ШАПКИ + ПЕРСОНАЖИ (посимвольно, с автокапсом)
+  const autoDetectPerChar = useCallback((editorInstance: Editor) => {
+    // Замок формата отключает автоопределение типа (но автокапс шапок всегда работает)
+    const shouldDetectType = !formatLocked
+
+    const currentNode = getCurrentTextNode(editorInstance)
     if (!currentNode) return
-    
+
+    const { state } = editorInstance
+    const { selection } = state
+    const { $from } = selection
     const textContent = currentNode.textContent.trim()
     const currentType = currentNode.type.name
-    
+
     if (!textContent) return
-    
-    let newType: string | null = null
-    
-    const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.|НАТ\.)/i
-    if (headerPattern.test(textContent)) {
-      newType = 'sceneHeader'
-    }
-    else if (
-      (currentType === 'sceneHeader' || currentType === 'sceneCast') &&
-      /^[А-ЯЁA-Z\s,]+$/.test(textContent) &&
-      textContent.includes(',')
-    ) {
-      newType = 'sceneCast'
-    }
-    else if (/^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT)$/i.test(textContent)) {
-      newType = 'sceneTransition'
-    }
-    // Ремарка: в скобках, сразу после персонажа (или другой ремарки)
-    else if (
-      currentType !== 'sceneCast' &&
-      /^\([^)]*\)$/.test(textContent)
-    ) {
-      const resolvedPos = state.doc.resolve($from.before())
-      const prevNode = resolvedPos.nodeBefore
-      if (prevNode?.type.name === 'sceneCharacter' || prevNode?.type.name === 'sceneParenthetical') {
-        newType = 'sceneParenthetical'
+
+    // --- Определение типа: шапка ---
+    if (shouldDetectType) {
+      const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.|НАТ\.)/i
+      if (headerPattern.test(textContent) && currentType !== 'sceneHeader') {
+        editorInstance.chain().setNode('sceneHeader').run()
+        return
       }
     }
-    // Персонаж: 2-25 символов, только буквы/пробелы/дефисы/апострофы
-    // Распознаёт даже строчные — с автоматическим переводом в КАПСЛОК ниже
-    else if (
-      currentType !== 'sceneCast' &&
-      textContent.length >= 2 &&
-      textContent.length <= 25 &&
-      !textContent.includes('.') &&
-      !textContent.includes(',') &&
-      /^[a-zA-ZА-ЯЁа-яё\s\-']+$/.test(textContent) &&
-      /[А-ЯЁа-яA-Za-z]/.test(textContent)
-    ) {
-      // Проверяем контекст: персонаж должен идти после action/paragraph/header
-      // (не после другого персонажа или диалога — иначе это ошибка форматирования)
+
+    // --- Определение типа: персонаж (посимвольно) ---
+    // После action/header/transition, в новом блоке paragraph → если текст похож на имя
+    if (shouldDetectType && currentType === 'paragraph') {
       const resolvedPos = state.doc.resolve($from.before())
       const prevNode = resolvedPos.nodeBefore
       const prevType = prevNode?.type.name
       if (
         prevType === 'sceneAction' ||
-        prevType === 'paragraph' ||
         prevType === 'sceneHeader' ||
-        prevType === 'sceneTransition' ||
-        prevType === undefined // первый блок документа
+        prevType === 'sceneTransition'
       ) {
-        newType = 'sceneCharacter'
+        const isCharacterLike =
+          textContent.length >= 2 &&
+          textContent.length <= 25 &&
+          !textContent.includes('.') &&
+          !textContent.includes(',') &&
+          /^[a-zA-ZА-ЯЁа-яё\s\-']+$/.test(textContent) &&
+          /[А-ЯЁа-яA-Za-z]/.test(textContent)
+        if (isCharacterLike) {
+          editorInstance.chain().setNode('sceneCharacter').run()
+          return
+        }
       }
     }
-    // Диалог: только если блок ещё paragraph (sceneAction не трогаем — пользователь явно задал)
-    else if (currentType === 'paragraph') {
-      const resolvedPos = state.doc.resolve($from.before())
-      const prevNode = resolvedPos.nodeBefore
-      const prevType = prevNode?.type.name
-      if (
-        prevType === 'sceneCharacter' ||
-        prevType === 'sceneParenthetical' ||
-        prevType === 'sceneDialog'
-      ) {
-        newType = 'sceneDialog'
-      }
-    }
-    
-    if (newType && newType !== currentType) {
-      editorInstance.chain().setNode(newType).run()
-      return
-    }
 
-    const isHeader = currentType === 'sceneHeader'
-    const isCharacter = currentType === 'sceneCharacter'
-
-    // Автокапс для шапки и персонажа (ремарка остаётся как есть)
-    if ((isHeader || isCharacter) && !isReplacingRef.current) {
+    // --- Автокапс для шапки (всегда) ---
+    if (currentType === 'sceneHeader' && !isReplacingRef.current) {
       const upperText = textContent.toUpperCase()
       if (upperText !== textContent) {
         const cursorOffset = selection.from - $from.start()
@@ -263,7 +230,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
     }
 
-    if (isHeader && !isReplacingRef.current) {
+    // --- Автонумерация шапки (всегда) ---
+    if (currentType === 'sceneHeader' && !isReplacingRef.current) {
       const upperText = textContent.toUpperCase()
 
       if (projectType === 'film') {
@@ -317,7 +285,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           return
         }
       }
-      
+
+      // Автосоздание cast после времени суток
       const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.?$/
       if (timePattern.test(upperText)) {
         const headerKey = `${$from.start()}-${upperText}`
@@ -327,7 +296,75 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
       }
     }
-  }, [projectType, currentSeries, formatLocked])
+
+    // --- Автокапс для персонажа (всегда) ---
+    if (currentType === 'sceneCharacter' && !isReplacingRef.current) {
+      const upperText = textContent.toUpperCase()
+      if (upperText !== textContent) {
+        const cursorOffset = selection.from - $from.start()
+        isReplacingRef.current = true
+        const nodeStart = $from.start()
+        const nodeEnd = $from.end()
+        editorInstance
+          .chain()
+          .deleteRange({ from: nodeStart, to: nodeEnd })
+          .insertContent(upperText)
+          .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
+          .run()
+        if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
+        isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
+      }
+    }
+  }, [projectType, currentSeries, formatLocked, getCurrentTextNode])
+
+  // Автоопределение типа блока — ОСТАЛЬНЫЕ (только после Enter)
+  // Сейчас: только диалог (персонаж определяется посимвольно в autoDetectPerChar)
+  const autoDetectBlockTypeAfterEnter = useCallback((editorInstance: Editor) => {
+    // Замок формата отключает автоопределение
+    if (formatLocked) return
+
+    const { state } = editorInstance
+    const { selection } = state
+    const { $from } = selection
+    const currentNode = getCurrentTextNode(editorInstance)
+    if (!currentNode) return
+
+    const currentType = currentNode.type.name
+    const currentText = currentNode.textContent.trim()
+    if (!currentText) return
+
+    // Получаем предыдущий блок
+    const resolvedPos = state.doc.resolve($from.before())
+    const prevNode = resolvedPos.nodeBefore
+    const prevType = prevNode?.type.name
+
+    let newType: string | null = null
+
+    // Переход: полностью заглавные спец-слова
+    if (/^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT)$/i.test(currentText)) {
+      newType = 'sceneTransition'
+    }
+    // Ремарка: в скобках, сразу после персонажа или другой ремарки
+    else if (
+      /^\([^)]*\)$/.test(currentText) &&
+      currentType !== 'sceneCast' &&
+      (prevType === 'sceneCharacter' || prevType === 'sceneParenthetical')
+    ) {
+      newType = 'sceneParenthetical'
+    }
+    // Диалог: после персонажа, ремарки или другого диалога
+    else if (currentType === 'paragraph' && (
+      prevType === 'sceneCharacter' ||
+      prevType === 'sceneParenthetical' ||
+      prevType === 'sceneDialog'
+    )) {
+      newType = 'sceneDialog'
+    }
+
+    if (newType && newType !== currentType) {
+      editorInstance.chain().setNode(newType).run()
+    }
+  }, [formatLocked, getCurrentTextNode])
 
   const editor = useEditor({
     enableInputRules: false,
@@ -525,6 +562,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
     
     if (event.key === 'Enter' && !event.shiftKey) {
+      lastKeyWasEnterRef.current = true
+
       const { state } = view
       const { selection } = state
       const { $from } = selection
@@ -705,7 +744,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       pageCountTimeoutRef.current = null
     }, 400)
 
-    autoDetectBlockType(editorInstance)
+    autoDetectPerChar(editorInstance)
+
+    // Определение типа блока для персонажей/диалога/ремарки/перехода — только после Enter
+    if (lastKeyWasEnterRef.current) {
+      lastKeyWasEnterRef.current = false
+      autoDetectBlockTypeAfterEnter(editorInstance)
+    }
     
     const { state } = editorInstance
     const { selection } = state
