@@ -185,28 +185,42 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
     }
 
-    // --- Определение типа: персонаж (посимвольно) ---
-    // После action/header/transition, в новом блоке paragraph → если текст похож на имя
+    // --- Пустой paragraph → действие (для двойного Enter) ---
+    if (shouldDetectType && currentType === 'paragraph' && textContent === '') {
+      editorInstance.chain().setNode('sceneAction').run()
+      return
+    }
+
+    // --- Определение типа: персонаж (посимвольно, В ЛЮБОМ блоке) ---
+    // Если текст в КАПСЕ и похож на имя → персонаж
+    if (shouldDetectType && (currentType === 'paragraph' || currentType === 'sceneAction')) {
+      const isCharacterLike =
+        textContent.length >= 2 &&
+        textContent.length <= 25 &&
+        !textContent.includes('.') &&
+        !textContent.includes(',') &&
+        /^[А-ЯЁA-Z\s\-']+$/.test(textContent) && // только капс + пробел/дефис/апостроф
+        /[А-ЯЁA-Z]/.test(textContent) // хотя бы одна буква
+      if (isCharacterLike) {
+        editorInstance.chain().setNode('sceneCharacter').run()
+        return
+      }
+    }
+
+    // --- Определение типа: действие (посимвольно, после dialog/parenthetical) ---
+    // После sceneDialog/sceneParenthetical → Enter → paragraph
+    // Если текст НЕ в капсе (не имя) → это действие (sceneAction), не диалог
     if (shouldDetectType && currentType === 'paragraph') {
       const resolvedPos = state.doc.resolve($from.before())
       const prevNode = resolvedPos.nodeBefore
       const prevType = prevNode?.type.name
       if (
-        prevType === 'sceneAction' ||
-        prevType === 'sceneHeader' ||
-        prevType === 'sceneTransition' ||
         prevType === 'sceneDialog' ||
         prevType === 'sceneParenthetical'
       ) {
-        const isCharacterLike =
-          textContent.length >= 2 &&
-          textContent.length <= 25 &&
-          !textContent.includes('.') &&
-          !textContent.includes(',') &&
-          /^[a-zA-ZА-ЯЁа-яё\s\-']+$/.test(textContent) &&
-          /[А-ЯЁа-яA-Za-z]/.test(textContent)
-        if (isCharacterLike) {
-          editorInstance.chain().setNode('sceneCharacter').run()
+        const isAllCaps = /^[А-ЯЁA-Z\s\-']+$/.test(textContent)
+        if (!isAllCaps && textContent.length > 0) {
+          editorInstance.chain().setNode('sceneAction').run()
           return
         }
       }
@@ -603,16 +617,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           // Два Enter подряд (пустая строка) → действие
           editor?.chain().setNode('sceneAction').run()
         } else {
-          // Продолжение многострочного диалога
-          editor?.chain().splitBlock().setNode('sceneDialog').run()
+          // После диалога → сразу действие (для двойного Enter)
+          editor?.chain().splitBlock().setNode('sceneAction').run()
         }
         return true
       }
 
-      // Двойной Enter на пустом sceneAction → новая сцена (sceneHeader)
+      // Обработка Enter в sceneAction
       if (currentType === 'sceneAction') {
         const textContent = currentNode?.textContent?.trim() || ''
         if (textContent === '') {
+          // Двойной Enter на пустом → новая сцена (sceneHeader)
           event.preventDefault()
           // Находим максимальный номер сцены в документе
           let maxNumber = 0
@@ -642,6 +657,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
             .setNode('sceneHeader')
             .insertContent(headerText)
             .run()
+          return true
+        } else {
+          // Первый Enter в sceneAction (с текстом) → paragraph, autoDetect решит
+          event.preventDefault()
+          editor?.chain().splitBlock().setNode('paragraph').run()
           return true
         }
       }
