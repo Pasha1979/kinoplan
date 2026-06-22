@@ -194,7 +194,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       if (
         prevType === 'sceneAction' ||
         prevType === 'sceneHeader' ||
-        prevType === 'sceneTransition'
+        prevType === 'sceneTransition' ||
+        prevType === 'sceneDialog' ||
+        prevType === 'sceneParenthetical'
       ) {
         const isCharacterLike =
           textContent.length >= 2 &&
