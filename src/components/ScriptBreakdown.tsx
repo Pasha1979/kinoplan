@@ -215,7 +215,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
             </button>
             <button
               onClick={() => setActiveView('stats')}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'stats' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'elements' ? '' : 'bg-indigo-500/20 text-indigo-400'}`}
             >
               <BarChart3 size={12} className="inline mr-1" />
               Статистика

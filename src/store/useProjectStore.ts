@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { Project } from './projectStore'
 import type { Scene } from '../types/scene'
+export type { Scene }
 
 interface NormalizedProjectState {
   projects: Record<string, Project>

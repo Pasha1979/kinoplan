@@ -92,7 +92,7 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
 
     if (scrollPos !== null) {
       timeoutId = setTimeout(() => {
-        const domNode = editor.view.nodeDOM(scrollPos) as HTMLElement | null
+        const domNode = editor.view.nodeDOM(scrollPos!) as HTMLElement | null
         if (domNode) {
           domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }

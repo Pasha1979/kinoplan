@@ -70,9 +70,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   // SmartType — подсказки при наборе (базовые времена суток всегда есть)
   const smartType = useSmartType({
-    characters: smartTypeCharacters,
-    locations: smartTypeLocations,
-    times: smartTypeTimes,
+    characters: smartTypeCharacters || [],
+    locations: smartTypeLocations || [],
+    times: smartTypeTimes || [],
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
