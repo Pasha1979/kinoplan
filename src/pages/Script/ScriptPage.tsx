@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
 import { useScriptStore, type TitlePage } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
@@ -13,6 +13,9 @@ import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
 import { Settings } from 'lucide-react'
+import type { Editor } from '@tiptap/react'
+import SearchBar from '../../components/SearchBar'
+import { useScriptSearch } from '../../hooks/useScriptSearch'
 
 export default function ScriptPage() {
   const logic = useScriptPageLogic()
@@ -77,6 +80,10 @@ export default function ScriptPage() {
 
   const updateScript = useScriptStore((s) => s.updateScript)
 
+  // Поиск по сценарию
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
+  const search = useScriptSearch(editorInstance)
+
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
       updateScript(currentScript.id, { content: html })
@@ -84,17 +91,25 @@ export default function ScriptPage() {
     }
   }, [currentScript?.id, updateScript, triggerAutoSave])
 
-  // Ctrl+S — ручное сохранение
+  // Ctrl+S / Ctrl+F / Ctrl+H — глобальные горячие клавиши
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
         handleSave()
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        search.open(false)
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault()
+        search.open(true)
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave])
+  }, [handleSave, search.open])
 
   const blocks = useMemo(() => {
     return extractBlocksFromHtml(currentScript?.content || '')
@@ -151,7 +166,31 @@ export default function ScriptPage() {
           onToggleAutoFix={() => setEnableAutoFix(!enableAutoFix)}
           onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
           onToggleFormatLock={toggleFormatLock}
+          onOpenSearch={() => search.open(false)}
         />
+
+        {/* Панель поиска */}
+        {search.isOpen && (
+          <SearchBar
+            isDark={isDark}
+            query={search.query}
+            setQuery={search.setQuery}
+            filter={search.filter}
+            setFilter={search.setFilter}
+            matches={search.matches}
+            currentIndex={search.currentIndex}
+            isReplaceOpen={search.isReplaceOpen}
+            replaceText={search.replaceText}
+            setReplaceText={search.setReplaceText}
+            onSearch={search.search}
+            onNext={search.goNext}
+            onPrev={search.goPrev}
+            onClose={search.close}
+            onReplaceCurrent={search.replaceCurrent}
+            onReplaceAll={search.replaceAll}
+            onToggleReplace={() => search.open(!search.isReplaceOpen)}
+          />
+        )}
 
         <ScriptTabs
           isDark={isDark}
@@ -234,6 +273,7 @@ export default function ScriptPage() {
                 formatLocked={formatLocked}
                 initialContent={currentScript?.content}
                 onContentChange={handleContentChange}
+                onEditorReady={setEditorInstance}
               />
             </div>
           </div>

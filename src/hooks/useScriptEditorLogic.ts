@@ -1,4 +1,5 @@
 import { useEditor, type Editor } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
@@ -15,6 +16,7 @@ import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
 import { parseScreenplayText, blocksToHtml } from '../utils/parseScreenplayText'
 import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/pasteSanitizer'
+import { createSearchPlugin } from './useScriptSearch'
 
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
@@ -386,6 +388,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     enableInputRules: false,
     enablePasteRules: false,
     extensions: [
+      Extension.create({
+        name: 'scriptSearchPlugin',
+        addProseMirrorPlugins() {
+          return [createSearchPlugin()]
+        },
+      }),
       StarterKit.configure({
         orderedList: false,
         bulletList: false,

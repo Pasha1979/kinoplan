@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import type { Editor } from '@tiptap/react'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { useScriptEditorLogic } from '../hooks/useScriptEditorLogic'
@@ -26,10 +28,15 @@ interface ScriptEditorTiptapProps {
   formatLocked?: boolean
   initialContent?: string
   onContentChange?: (html: string) => void
+  onEditorReady?: (editor: Editor | null) => void
 }
 
 export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
   const logic = useScriptEditorLogic(props)
+
+  useEffect(() => {
+    props.onEditorReady?.(logic.editor)
+  }, [logic.editor])
 
   return (
     <ScriptEditorView

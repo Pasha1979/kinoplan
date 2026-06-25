@@ -1,4 +1,4 @@
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 
@@ -23,6 +23,7 @@ interface ScriptHeaderProps {
   onToggleAutoFix: () => void
   onToggleRightPanel: () => void
   onToggleFormatLock: () => void
+  onOpenSearch: () => void
 }
 
 export default function ScriptHeader({
@@ -41,6 +42,7 @@ export default function ScriptHeader({
   onToggleAutoFix,
   onToggleRightPanel,
   onToggleFormatLock,
+  onOpenSearch,
 }: ScriptHeaderProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -123,6 +125,17 @@ export default function ScriptHeader({
         >
           <Save size={13} />
           {isSaving ? 'Сохранение...' : 'Сохранить'}
+        </button>
+        {/* Кнопка Поиск */}
+        <button
+          onClick={onOpenSearch}
+          className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+          style={{ color: textSecondary }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+          title="Поиск (Ctrl+F)"
+        >
+          <Search size={15} />
         </button>
         {/* Кнопка Настройки — открывает модальное окно */}
         <button
