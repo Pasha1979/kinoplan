@@ -46,23 +46,25 @@ function useFormatChecker({
       const content = block.content.trim()
       
       // Проверка заголовка сцены
+      // Поддерживаем обычные (1., 2.) и серийные (1-1., 1-2.) номера
       if (block.type === 'scene_header') {
-        if (!/^\d+\./.test(content)) {
+        const numberPattern = /^\d+(?:-\d+)?\./
+        if (!numberPattern.test(content)) {
           foundErrors.push({
             id: `err-${block.id}-num`,
             blockId: block.id,
             lineNumber,
             severity: 'error',
             rule: 'scene_number_missing',
-            message: 'Заголовок сцены должен начинаться с номера (1., 2.)',
+            message: 'Заголовок сцены должен начинаться с номера (1., 2. или 1-1., 1-2.)',
             suggestion: `1. ${content}`,
             autoFixable: true,
           })
         }
         
-        const scenePattern = format === 'russian' 
-          ? /^\d+\.\s*(ИНТ|ЭКСТ|ИНТ\.\/ЭКСТ|ИНТ\.-ЭКСТ)\.?\s*.+$/i
-          : /^\d+\.\s*(INT|EXT|INT\.\/EXT|I\/E)\.?\s*.+$/i
+        const scenePattern = format === 'russian'
+          ? /^\d+(?:-\d+)?\.\s*(ИНТ|ЭКСТ|ИНТ\.\/ЭКСТ|ИНТ\.-ЭКСТ|ИНТ-ЭКСТ)\.?\s*.+$/i
+          : /^\d+(?:-\d+)?\.\s*(INT|EXT|INT\.\/EXT|I\/E)\.?\s*.+$/i
           
         if (!scenePattern.test(content)) {
           foundErrors.push({
@@ -71,7 +73,7 @@ function useFormatChecker({
             lineNumber,
             severity: 'warning',
             rule: 'scene_format_invalid',
-            message: format === 'russian' 
+            message: format === 'russian'
               ? 'Формат: НОМЕР. ИНТ/ЭКСТ. ЛОКАЦИЯ — ВРЕМЯ'
               : 'Format: NUMBER. INT/EXT. LOCATION — TIME',
             autoFixable: false,
