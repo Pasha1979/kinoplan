@@ -606,6 +606,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       return true
     }
 
+    // Ctrl+1..7 (Cmd+1..7 на Mac) — быстрое переключение типа блока (сохраняет текст)
+    if ((event.ctrlKey || event.metaKey) && altKeyMap[event.key]) {
+      event.preventDefault()
+      editor?.chain().setNode(altKeyMap[event.key]).run()
+      return true
+    }
+
     // Tab — цикл переключения типов блока (сохраняет текст)
     if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       const { state } = view
