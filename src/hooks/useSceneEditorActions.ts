@@ -189,49 +189,50 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
     onReorderReady(handleReorder)
   }, [editor, onReorderReady, precisePagesRef, timingSystem, genreCoefficient])
 
-  // 3. Обновление номеров сцен
+  // 3. Обновление номеров сцен — через ProseMirror транзакции (не setContent, чтобы undo работал)
   const updateSceneNumbers = useCallback((scenes: SceneUpdateEntry[]) => {
     if (!editor) return
     if (!scenes || scenes.length === 0) return
 
-    const doc = editor.getJSON()
-    const content = doc.content || []
-    if (content.length === 0) return
+    const { state } = editor
+    const { doc } = state
 
+    // Сначала собираем все изменения (позиции + новый текст)
+    type Change = { from: number; to: number; newText: string }
+    const changes: Change[] = []
     let sceneIndex = 0
 
-    type JSONNode = {
-      type?: string
-      content?: Array<{ type?: string; text?: string; [key: string]: unknown }>
-      [key: string]: unknown
-    }
+    doc.descendants((node, pos) => {
+      if (node.type.name !== 'sceneHeader') return
+      if (sceneIndex >= scenes.length) return false
 
-    const newContent = content.map((node: JSONNode) => {
-      if (node.type === 'sceneHeader' && node.content && node.content[0] && sceneIndex < scenes.length) {
-        const text = node.content[0].text || ''
-        const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
+      const text = node.textContent
+      const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
+      if (!headerMatch) { sceneIndex++; return }
 
-        if (headerMatch) {
-          const oldNumber = headerMatch[1]
-          const newNumber = scenes[sceneIndex].number
-          sceneIndex++
+      const oldNumber = headerMatch[1]
+      const newNumber = scenes[sceneIndex].number
+      sceneIndex++
 
-          if (oldNumber !== newNumber) {
-            return {
-              ...node,
-              content: [
-                { ...node.content[0], text: text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`) },
-                ...node.content.slice(1),
-              ],
-            }
-          }
-        }
-      }
+      if (oldNumber === newNumber) return
 
-      return node
+      const newText = text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`)
+      // pos = начало sceneHeader-узла, +1 = начало текстового содержимого
+      changes.push({ from: pos + 1, to: pos + 1 + text.length, newText })
     })
 
-    editor.commands.setContent({ type: 'doc', content: newContent })
+    if (changes.length === 0) return
+
+    // Применяем изменения в ОБРАТНОМ порядке чтобы позиции не сдвигались
+    const tr = state.tr
+    for (let i = changes.length - 1; i >= 0; i--) {
+      const { from, to, newText } = changes[i]
+      tr.insertText(newText, from, to)
+    }
+
+    // Помечаем как не-история (объединяем с предыдущей транзакцией перестановки)
+    tr.setMeta('addToHistory', false)
+    editor.view.dispatch(tr)
   }, [editor])
 
   const updateSceneNumbersRef = useRef(updateSceneNumbers)

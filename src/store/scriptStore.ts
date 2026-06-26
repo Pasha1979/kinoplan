@@ -139,6 +139,10 @@ interface ScriptStore {
   formatLocked: boolean
   toggleFormatLock: () => void
   setFormatLocked: (locked: boolean) => void
+
+  // Подсказки-placeholder в пустых блоках
+  showPlaceholders: boolean
+  toggleShowPlaceholders: () => void
 }
 
 export const useScriptStore = create<ScriptStore>()(
@@ -149,6 +153,7 @@ export const useScriptStore = create<ScriptStore>()(
       drafts: [],
       notes: [],
       formatLocked: false,
+      showPlaceholders: true,
       
       // Script CRUD
       addScript: (script) =>
@@ -300,6 +305,9 @@ export const useScriptStore = create<ScriptStore>()(
 
       setFormatLocked: (locked) =>
         set({ formatLocked: locked }),
+
+      toggleShowPlaceholders: () =>
+        set((state) => ({ showPlaceholders: !state.showPlaceholders })),
     }),
     { name: 'kinoplan-scripts' }
   )

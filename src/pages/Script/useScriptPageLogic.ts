@@ -81,11 +81,14 @@ export function useScriptPageLogic() {
     if (!currentScriptId) return
 
     // Merge с существующими сценами из scriptStore: сохраняем metadata (synopsis, breakdownElements и т.д.)
-    const existingMap = new Map(currentScript?.scenes.map(s => [s.id, s]) || [])
+    // Сцены из редактора могут иметь ID по номеру (scene-${number}), а в store — UUID.
+    // Ищем сначала по ID, затем по номеру, чтобы сохранить стабильный persistent ID.
+    const existingById = new Map(currentScript?.scenes.map(s => [s.id, s]) || [])
+    const existingByNumber = new Map(currentScript?.scenes.map(s => [s.number, s]) || [])
     const mergedScenes: Scene[] = newScenes.map(s => {
-      const existing = existingMap.get(s.id)
+      const existing = existingById.get(s.id) || existingByNumber.get(s.number)
       return {
-        id: s.id,
+        id: existing?.id ?? s.id,
         projectId: existing?.projectId || project?.id || '',
         number: s.number,
         type: s.type,
@@ -108,14 +111,17 @@ export function useScriptPageLogic() {
       } as Scene
     })
 
+    // Удаляем дубликаты по id (на всякий случай) — важно для drag-and-drop
+    const dedupedScenes = Array.from(new Map(mergedScenes.map(s => [s.id, s])).values())
+
     // 1. Синхронизируем scriptStore (единый источник истины)
-    useScriptStore.getState().updateScript(currentScriptId, { scenes: mergedScenes })
+    useScriptStore.getState().updateScript(currentScriptId, { scenes: dedupedScenes })
 
     // 2. Синхронизируем нормализованный store
     const pid = currentProjectId ?? project?.id
     if (pid) {
       useNormalizedProjectStore.getState().setScenesBatch(
-        mergedScenes.map(s => ({
+        dedupedScenes.map(s => ({
           id: s.id,
           projectId: pid,
           number: s.number,

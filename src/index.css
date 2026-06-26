@@ -245,13 +245,70 @@ body {
   text-transform: uppercase;
 }
 
-/* Tiptap placeholder */
-.tiptap-editor p.is-empty::before {
+/* ========== TIPTAP PLACEHOLDERS ========== */
+/* Базовый стиль — все пустые блоки */
+.tiptap-editor .is-empty::before {
   content: attr(data-placeholder);
   float: left;
-  color: #9ca3af;
   pointer-events: none;
   height: 0;
+  font-style: italic;
+  color: rgba(156, 163, 175, 0.6);  /* серый, полупрозрачный */
+}
+
+/* Шапка сцены — uppercase, чуть ярче */
+.tiptap-editor div[data-type="scene-header"].is-empty::before {
+  color: rgba(129, 140, 248, 0.45);  /* фиолетовый под стиль шапки */
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Действующие лица */
+.tiptap-editor div[data-type="scene-cast"].is-empty::before {
+  color: rgba(156, 163, 175, 0.5);
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Действие */
+.tiptap-editor div[data-type="scene-action"].is-empty::before {
+  color: rgba(156, 163, 175, 0.5);
+  font-style: italic;
+}
+
+/* Персонаж */
+.tiptap-editor div[data-type="scene-character"].is-empty::before {
+  color: rgba(156, 163, 175, 0.5);
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Диалог */
+.tiptap-editor div[data-type="scene-dialog"].is-empty::before {
+  color: rgba(156, 163, 175, 0.5);
+  font-style: italic;
+}
+
+/* Ремарка */
+.tiptap-editor div[data-type="scene-parenthetical"].is-empty::before {
+  color: rgba(156, 163, 175, 0.5);
+  font-style: italic;
+}
+
+/* Переход */
+.tiptap-editor div[data-type="scene-transition"].is-empty::before {
+  color: rgba(156, 163, 175, 0.5);
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Когда подсказки выключены — скрываем все */
+.tiptap-editor.placeholders-hidden .is-empty::before {
+  display: none;
 }
 
 ::-webkit-scrollbar-thumb:hover {

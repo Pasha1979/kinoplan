@@ -9,6 +9,7 @@ import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
 import { useSmartType } from './useSmartType'
+import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
@@ -67,6 +68,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onContentChange,
   } = options
 
+  const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
+
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
 
@@ -105,8 +108,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     projectTypeRef.current = projectType
   }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType])
 
-  // Отслеживаем шапки с уже созданным переходом (избегаем дублирования)
-  const processedHeadersRef = useRef<Set<string>>(new Set())
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
   // Таймаут сброса isReplacingRef (единый, чтобы не было утечки памяти)
@@ -304,15 +305,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
       }
 
-      // Автосоздание cast после времени суток
-      const timePattern = /\s(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ)\.?$/
-      if (timePattern.test(upperText)) {
-        const headerKey = `${$from.start()}-${upperText}`
-        if (!processedHeadersRef.current.has(headerKey)) {
-          processedHeadersRef.current.add(headerKey)
-          editorInstance.chain().splitBlock().setNode('sceneCast').run()
-        }
-      }
     }
 
     // --- Автокапс для персонажа (всегда) ---
@@ -413,7 +405,41 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       SceneTransition,
       DragHandle,
       Placeholder.configure({
-        placeholder: 'Начните писать сценарий...',
+        placeholder: ({ node, editor: ed }) => {
+          const type = node.type.name
+
+          // Подсказки по типу блока
+          const hints: Record<string, string> = {
+            sceneHeader:       'ИНТ. ЛОКАЦИЯ. ВРЕМЯ',
+            sceneCast:         'дед, бабка, внук...',
+            sceneAction:       'Опишите действие...',
+            sceneCharacter:    'ИМЯ ПЕРСОНАЖА',
+            sceneDialog:       'Реплика персонажа...',
+            sceneParenthetical:'(пауза)',
+            sceneTransition:   'МОНТАЖ:',
+            paragraph:         'Начните писать сценарий...',
+          }
+
+          if (!hints[type]) return ''
+
+          // Показываем только для первого пустого блока каждого типа
+          const { doc } = ed.state
+          let firstEmptyOfType: number | null = null
+          doc.descendants((n, pos) => {
+            if (n.type.name === type && n.nodeSize === 2 && firstEmptyOfType === null) {
+              firstEmptyOfType = pos
+            }
+          })
+
+          // Находим позицию текущего узла
+          let currentPos: number | null = null
+          doc.descendants((n, pos) => {
+            if (n === node) currentPos = pos
+          })
+
+          return currentPos === firstEmptyOfType ? hints[type] : ''
+        },
+        showOnlyCurrent: false,
       }),
     ],
     content: '<p></p>',
@@ -429,6 +455,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       handlePaste: (view, event) => handlePasteRef.current?.(view, event) ?? false,
     },
   })
+
+  // Применяем/убираем CSS-класс placeholders-hidden на DOM-элемент редактора
+  useEffect(() => {
+    if (!editor) return
+    const el = editor.view.dom as HTMLElement
+    if (showPlaceholders) {
+      el.classList.remove('placeholders-hidden')
+    } else {
+      el.classList.add('placeholders-hidden')
+    }
+  }, [editor, showPlaceholders])
 
   // Хук для drag-and-drop, scroll к сцене, обновления номеров
   useSceneEditorActions({
@@ -788,12 +825,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const currentType = getCurrentBlockType(editorInstance)
     
     const st = smartTypeRef.current
-    if (currentType === 'sceneHeader' || currentType === 'paragraph' || currentType === 'sceneCharacter') {
+    if (currentType === 'sceneHeader' || currentType === 'paragraph' || currentType === 'sceneCharacter' || currentType === 'sceneCast') {
       const currentNode = $from.node()
       const nodeText = currentNode?.textContent || ''
       const nodeStartPos = $from.start()
       const posInNode = selection.from - nodeStartPos
-      st.updateSuggestions(nodeText, posInNode, currentType === 'sceneCharacter' ? 'sceneCharacter' : 'sceneHeader')
+      const smartTypeBlockType = currentType === 'sceneCharacter' ? 'sceneCharacter' : currentType === 'sceneCast' ? 'sceneCast' : 'sceneHeader'
+      st.updateSuggestions(nodeText, posInNode, smartTypeBlockType)
     } else {
       st.closeSuggestions()
     }
@@ -841,7 +879,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (initialContent) {
       editor.commands.setContent(initialContent)
     }
-    processedHeadersRef.current.clear()
     initialContentLoadedRef.current = true
   }, [editor, initialContent])
 
@@ -915,7 +952,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
       if (tr.docChanged) {
         editor.view.dispatch(tr)
-        processedHeadersRef.current.clear()
       }
     }
 

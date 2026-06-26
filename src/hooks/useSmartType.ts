@@ -157,8 +157,8 @@ export function useSmartType(options: UseSmartTypeOptions) {
     // Фильтруем подсказки по типу блока
     let relevantSuggestions: SmartTypeSuggestion[]
     
-    if (blockType === 'character' || blockType === 'sceneCharacter') {
-      // Для блока персонажа — только персонажи
+    if (blockType === 'character' || blockType === 'sceneCharacter' || blockType === 'sceneCast') {
+      // Для блока персонажа / действующих лиц — только персонажи
       relevantSuggestions = allSuggestions.filter(s => s.type === 'character')
     } else if (blockType === 'scene_header' || blockType === 'sceneHeader') {
       // Для заголовка сцены — префиксы (ИНТ/ЭКСТ), локации и время
