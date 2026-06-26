@@ -8,7 +8,7 @@ import ScriptStatusBar from './components/ScriptStatusBar'
 import FormatSelectModal from './components/FormatSelectModal'
 import TimingSettingsModal from './components/TimingSettingsModal'
 import TitlePageEditor from '../../components/TitlePageEditor'
-import FormatAssistant from '../../components/FormatAssistant'
+import ScriptRightPanel from './components/ScriptRightPanel'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
@@ -271,6 +271,7 @@ export default function ScriptPage() {
                 onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
                 onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
                 formatLocked={formatLocked}
+                autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
                 initialContent={currentScript?.content}
                 onContentChange={handleContentChange}
                 onEditorReady={setEditorInstance}
@@ -291,37 +292,21 @@ export default function ScriptPage() {
             saveStatus={saveStatus}
           />
         )}
-
-        {/* Format Assistant — панель проверки форматирования */}
-        {activeTab === 'text' && (
-          <FormatAssistant
-            blocks={blocks}
-            format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
-            isDark={isDark}
-            enableAutoFix={enableAutoFix}
-          />
-        )}
       </div>
 
-      {/* Правая панель: заметки / версии — В РАЗРАБОТКЕ */}
+      {/* Правая панель: валидация, заметки, версии */}
       {rightPanelOpen && (
-        <div className="shrink-0 flex flex-col border-l overflow-hidden"
-          style={{ width: 300, background: sidebarBg, borderColor: border }}>
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center"
-                style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)' }}>
-                <Settings size={24} style={{ color: isDark ? '#818cf8' : '#6366f1' }} />
-              </div>
-              <p className="text-sm font-medium mb-1" style={{ color: textPrimary }}>
-                Заметки к сцене
-              </p>
-              <p className="text-xs" style={{ color: textSecondary }}>
-                В разработке
-              </p>
-            </div>
-          </div>
-        </div>
+        <ScriptRightPanel
+          isDark={isDark}
+          textPrimary={textPrimary}
+          textSecondary={textSecondary}
+          blocks={blocks}
+          format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
+          enableAutoFix={enableAutoFix}
+          scenes={scenes}
+          characters={currentScript?.characters || []}
+          timingSystem={currentScript?.timingSystem || 'page'}
+        />
       )}
 
       {/* Модальное окно выбора формата сценария */}

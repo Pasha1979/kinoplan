@@ -77,7 +77,7 @@ export function useScriptPageLogic() {
   }, [])
 
   // При получении новых сцен из редактора — синхронизируем со всеми stores
-  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; pages: number; charCount?: number; duration?: number }>) => {
+  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; dialogCharacters?: string[]; pages: number; charCount?: number; duration?: number }>) => {
     if (!currentScriptId) return
 
     // Merge с существующими сценами из scriptStore: сохраняем metadata (synopsis, breakdownElements и т.д.)
@@ -101,6 +101,7 @@ export function useScriptPageLogic() {
         synopsis: existing?.synopsis || '',
         pages: s.pages,
         cast: s.cast,
+        dialogCharacters: s.dialogCharacters || existing?.dialogCharacters || [],
         breakdownElements: existing?.breakdownElements || [],
         scriptText: existing?.scriptText,
         colorTag: existing?.colorTag,
@@ -336,6 +337,7 @@ export function useScriptPageLogic() {
           genreCoefficient: currentScript?.genreCoefficient || 1.0,
           fontFamily: currentScript?.fontFamily || 'Courier New',
           fontSize: currentScript?.fontSize || 12,
+          autoExtractCharacters: currentScript?.autoExtractCharacters ?? true,
           episodeNumber: series,
         }
         addScript(newScript)

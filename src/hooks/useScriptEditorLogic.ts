@@ -40,6 +40,7 @@ export interface UseScriptEditorLogicOptions {
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
   formatLocked?: boolean
+  autoExtractCharacters?: boolean
   initialContent?: string
   onContentChange?: (html: string) => void
 }
@@ -64,6 +65,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     smartTypeLocations,
     smartTypeTimes,
     formatLocked,
+    autoExtractCharacters,
     initialContent,
     onContentChange,
   } = options
@@ -97,6 +99,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const onStatsChangeRef = useRef(onStatsChange)
   const currentSeriesRef = useRef(currentSeries)
   const projectTypeRef = useRef(projectType)
+  const autoExtractCharactersRef = useRef(autoExtractCharacters)
 
   // Обновляем refs в useEffect во избежание мутаций во время рендера
   useEffect(() => {
@@ -106,7 +109,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChangeRef.current = onStatsChange
     currentSeriesRef.current = currentSeries
     projectTypeRef.current = projectType
-  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType])
+    autoExtractCharactersRef.current = autoExtractCharacters
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters])
 
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
@@ -773,41 +777,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       clearTimeout(pageCountTimeoutRef.current)
     }
     pageCountTimeoutRef.current = setTimeout(() => {
-      const result = pageCounterRef.current!.calculatePagesWithBreaks(html, (_formatRef.current as 'russian' | 'hollywood') || 'russian')
-      setPrecisePages(result.totalPages)
-      precisePagesRef.current = result.totalPages
-      // extractScenesFromDocument вызывается внутри того же debounce, потому что
-      // требует forcedPages из pageCounter. Разделение на отдельный debounce
-      // приведёт к рассинхронизации: сцены будут парситься со старым forcedPages.
-      if (editorInstance) {
-        const { scenes: extractedScenes, stats } = extractScenesFromDocument({
-          doc: editorInstance.state.doc,
-          forcedPages: result.totalPages,
-          precisePagesFallback: precisePagesRef.current,
-          timingSystem: timingSystemRef.current,
-          genreCoefficient: genreCoefficientRef.current,
-        })
-        onScenesChangeRef.current?.(extractedScenes)
-        onStatsChangeRef.current?.(stats)
-
-        // Обучаем SmartType из текста сценария
-        const allCast = new Set<string>()
-        const allLocations = new Set<string>()
-        const allTimes = new Set<string>()
-        extractedScenes.forEach((s) => {
-          s.cast.forEach((c) => allCast.add(c))
-          if (s.location) allLocations.add(s.location)
-          if (s.time) allTimes.add(s.time)
-        })
-        smartTypeRef.current.updateLists({
-          characters: [...allCast],
-          locations: [...allLocations],
-          times: [...allTimes],
-        })
-      }
-
-      pageBreaksRef.current = result.breaks
-      applyPageBreaks()
+      calculateAndReportStats(editorInstance)
       pageCountTimeoutRef.current = null
     }, 400)
 
@@ -817,6 +787,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (lastKeyWasEnterRef.current) {
       lastKeyWasEnterRef.current = false
       autoDetectBlockTypeAfterEnter(editorInstance)
+
+      // Авто-добавление персонажа в cast сцены после Enter в диалоге
+      if (autoExtractCharactersRef.current) {
+        addCharacterToSceneCast(editorInstance)
+      }
     }
     
     const { state } = editorInstance
@@ -873,14 +848,279 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
   }, [])
 
+  // Хелпер: обновить sceneCast блоки в редакторе из диалогов (при загрузке / вставке)
+  const updateSceneCastBlocks = useCallback((editorInstance: Editor) => {
+    const { doc, tr } = editorInstance.state
+    let modified = false
+
+    // Собираем ВСЕ блоки верхнего уровня документа
+    const blockNodes: Array<{ node: any; pos: number }> = []
+    doc.forEach((node: any, offset: number) => {
+      blockNodes.push({ node, pos: offset })
+    })
+
+    console.log('[cast] Всего блоков в документе:', blockNodes.length)
+
+    // Обрабатываем каждую сцену: ищем sceneHeader → sceneCast → sceneCharacter в пределах сцены
+    const scenesToUpdate: Array<{
+      castPos: number
+      castEndPos: number
+      currentCastText: string
+      dialogChars: string[]
+      sceneNumber: string
+    }> = []
+
+    for (let i = 0; i < blockNodes.length; i++) {
+      const { node } = blockNodes[i]
+      if (node.type.name !== 'sceneHeader') continue
+
+      const headerText = node.textContent.trim()
+      const numMatch = headerText.match(/^(\d+(?:-\d+)?)\./)
+      const sceneNumber = numMatch ? numMatch[1] : '?'
+
+      let castPos = -1
+      let castEndPos = -1
+      let currentCastText = ''
+      const dialogChars: string[] = []
+      const seenChars = new Set<string>()
+
+      // Сканируем блоки ПОСЛЕ текущего sceneHeader ДО следующего
+      for (let j = i + 1; j < blockNodes.length; j++) {
+        const { node: childNode, pos: childPos } = blockNodes[j]
+
+        // Достигли следующей сцены — стоп
+        if (childNode.type.name === 'sceneHeader') break
+
+        // Первый cast блок после шапки
+        if (childNode.type.name === 'sceneCast' && castPos === -1) {
+          castPos = childPos
+          castEndPos = childPos + childNode.nodeSize
+          currentCastText = childNode.textContent.trim()
+        }
+
+        // Персонажи из диалогов ТОЛЬКО внутри этой сцены
+        if (childNode.type.name === 'sceneCharacter') {
+          const charName = childNode.textContent.trim().toUpperCase()
+          if (charName && !seenChars.has(charName)) {
+            seenChars.add(charName)
+            dialogChars.push(childNode.textContent.trim())
+          }
+        }
+      }
+
+      if (castPos !== -1) {
+        scenesToUpdate.push({ castPos, castEndPos, currentCastText, dialogChars, sceneNumber })
+        console.log(`[cast] Сцена ${sceneNumber}: найдено персонажей в диалогах:`, dialogChars, '| текущий cast:', currentCastText || '(пусто)')
+      } else {
+        console.log(`[cast] Сцена ${sceneNumber}: sceneCast блок не найден`)
+      }
+    }
+
+    // Обрабатываем в обратном порядке (справа налево), чтобы позиции не съезжали
+    for (let i = scenesToUpdate.length - 1; i >= 0; i--) {
+      const { castPos, castEndPos, currentCastText, dialogChars, sceneNumber } = scenesToUpdate[i]
+
+      if (dialogChars.length === 0) {
+        console.log(`[cast] Сцена ${sceneNumber}: нет персонажей в диалогах, пропускаем`)
+        continue
+      }
+
+      // Разбираем текущий cast
+      const currentNames = currentCastText
+        ? currentCastText.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+        : []
+
+      const seen = new Set(currentNames.map((n: string) => n.toUpperCase()))
+      const newNames: string[] = []
+
+      // Добавляем новых из диалогов
+      dialogChars.forEach((name) => {
+        const upper = name.toUpperCase()
+        if (!seen.has(upper)) {
+          seen.add(upper)
+          newNames.push(name)
+        }
+      })
+
+      if (newNames.length === 0) {
+        console.log(`[cast] Сцена ${sceneNumber}: все персонажи уже в cast`)
+        continue
+      }
+
+      // Обновляем текст cast блока: текущий + новые
+      const mergedCast = currentNames.length > 0
+        ? `${currentNames.join(', ')}, ${newNames.join(', ')}`
+        : newNames.join(', ')
+
+      tr.insertText(mergedCast, castPos + 1, castEndPos - 1)
+      modified = true
+      console.log(`[cast] Сцена ${sceneNumber} обновлена:`, { old: currentCastText || '(пусто)', new: mergedCast })
+    }
+
+    if (modified) {
+      tr.setMeta('addToHistory', false)
+      editorInstance.view.dispatch(tr)
+      console.log('[cast] sceneCast блоки обновлены:', scenesToUpdate.length, 'сцен проверено')
+    } else {
+      console.log('[cast] Новых персонажей для добавления нет')
+    }
+  }, [])
+
+  // Хелпер: авто-добавление персонажа в cast текущей сцены при Enter после диалога
+  const addCharacterToSceneCast = useCallback((editorInstance: Editor) => {
+    const { state } = editorInstance
+    const { selection } = state
+
+    // Собираем все блоки верхнего уровня
+    const blocks: Array<{ node: PMNode; pos: number }> = []
+    state.doc.forEach((node: PMNode, pos: number) => {
+      blocks.push({ node, pos })
+    })
+
+    // Найти текущий блок по позиции курсора
+    let currentIndex = -1
+    for (let i = 0; i < blocks.length; i++) {
+      const { node, pos } = blocks[i]
+      const end = pos + node.nodeSize
+      if (pos <= selection.from && selection.from <= end) {
+        currentIndex = i
+        break
+      }
+    }
+    if (currentIndex === -1) return
+
+    const currentBlock = blocks[currentIndex].node
+    const currentType = currentBlock.type.name
+
+    // Работаем только после Enter в sceneCharacter или sceneDialog
+    let charName = ''
+    if (currentType === 'sceneCharacter') {
+      charName = currentBlock.textContent.trim()
+    } else if (currentType === 'sceneDialog') {
+      // Ищем ближайший sceneCharacter выше (внутри той же сцены)
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (blocks[i].node.type.name === 'sceneCharacter') {
+          charName = blocks[i].node.textContent.trim()
+          break
+        }
+        if (blocks[i].node.type.name === 'sceneHeader') break
+      }
+    }
+
+    if (!charName) return
+
+    // Идём вверх до ближайшего sceneHeader и берём его cast блок
+    let castBlock: { pos: number; end: number; text: string } | null = null
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      if (blocks[i].node.type.name === 'sceneHeader') {
+        const nextBlock = blocks[i + 1]
+        if (nextBlock && nextBlock.node.type.name === 'sceneCast') {
+          castBlock = {
+            pos: nextBlock.pos,
+            end: nextBlock.pos + nextBlock.node.nodeSize,
+            text: nextBlock.node.textContent.trim(),
+          }
+        }
+        break
+      }
+    }
+
+    if (!castBlock) return
+
+    // Проверяем, есть ли уже
+    const names = castBlock.text
+      ? castBlock.text.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+      : []
+    const upperName = charName.toUpperCase()
+    const exists = names.some((n: string) => n.toUpperCase() === upperName)
+
+    if (exists) return
+
+    // Добавляем
+    const newText = castBlock.text
+      ? `${castBlock.text}, ${charName}`
+      : charName
+
+    const tr = state.tr
+    tr.insertText(newText, castBlock.pos + 1, castBlock.end - 1)
+    tr.setMeta('addToHistory', false)
+    editorInstance.view.dispatch(tr)
+
+    console.log('[cast-live] Добавлен персонаж в cast:', charName)
+  }, [])
+
+  // Хелпер: расчёт статистики и отправка в коллбэки (используется в onUpdate и при загрузке)
+  const calculateAndReportStats = useCallback((editorInstance: Editor) => {
+    const html = editorInstance.getHTML()
+    const result = pageCounterRef.current!.calculatePagesWithBreaks(
+      html,
+      (_formatRef.current as 'russian' | 'hollywood') || 'russian'
+    )
+    setPrecisePages(result.totalPages)
+    precisePagesRef.current = result.totalPages
+
+    const { scenes: extractedScenes, stats } = extractScenesFromDocument({
+      doc: editorInstance.state.doc,
+      forcedPages: result.totalPages,
+      precisePagesFallback: precisePagesRef.current,
+      timingSystem: timingSystemRef.current,
+      genreCoefficient: genreCoefficientRef.current,
+    })
+    console.log('[stats] Расчёт:', {
+      scenes: stats.scenes,
+      pages: stats.pages,
+      duration: stats.duration,
+      extractedScenesCount: extractedScenes.length,
+      totalPages: result.totalPages,
+    })
+    onScenesChangeRef.current?.(extractedScenes)
+    onStatsChangeRef.current?.(stats)
+
+    // Обучаем SmartType
+    const allCast = new Set<string>()
+    const allLocations = new Set<string>()
+    const allTimes = new Set<string>()
+    extractedScenes.forEach((s) => {
+      s.cast.forEach((c) => allCast.add(c))
+      if (s.location) allLocations.add(s.location)
+      if (s.time) allTimes.add(s.time)
+    })
+    smartTypeRef.current.updateLists({
+      characters: [...allCast],
+      locations: [...allLocations],
+      times: [...allTimes],
+    })
+
+    pageBreaksRef.current = result.breaks
+    applyPageBreaks()
+  }, [])
+
   // Загружаем контент только при создании редактора / смене скрипта
   useEffect(() => {
     if (!editor || initialContentLoadedRef.current) return
+    console.log('[init] Загрузка initialContent, length:', initialContent?.length || 0)
     if (initialContent) {
       editor.commands.setContent(initialContent)
     }
     initialContentLoadedRef.current = true
-  }, [editor, initialContent])
+
+    // После setContent нужно принудительно пересчитать статистику,
+    // потому что onUpdate НЕ срабатывает при setContent
+    setTimeout(() => {
+      if (editor && editor.isDestroyed) {
+        console.log('[init] Редактор уничтожен, пропускаем расчёт')
+        return
+      }
+      console.log('[init] Принудительный пересчёт статистики после setContent')
+      calculateAndReportStats(editor)
+
+      // При загрузке: если авто-добавление включено — обновить sceneCast блоки
+      if (autoExtractCharacters) {
+        console.log('[init] Авто-добавление персонажей в sceneCast включено')
+        updateSceneCastBlocks(editor)
+      }
+    }, 100)
+  }, [editor, initialContent, calculateAndReportStats, autoExtractCharacters])
 
   // 4.1 Конвертация формата RU↔EN — передаём функцию в ScriptPage через onConvertReady
   useEffect(() => {

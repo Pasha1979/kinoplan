@@ -11,6 +11,7 @@ export interface ExtractedScene {
   sublocation?: string
   time: string
   cast: string[]
+  dialogCharacters: string[] // персонажи, которые реально говорят в сцене
   pages: number
   duration: number
   manualDuration?: number
@@ -52,6 +53,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     sublocation?: string
     time: string
     cast: string[]
+    dialogCharacters: string[]
     charCount: number
     dialogLines: number
     manualDuration?: number
@@ -128,15 +130,20 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       location = location.slice(0, dotIndex).trim().toUpperCase()
     }
 
-    // Ищем cast: следующий БЛОК после sceneHeader должен быть sceneCast
-    let cast: string[] = []
+    // === CAST: ручной + автоматический из диалогов ===
+    // 1. Ручной cast из sceneCast блока
+    let manualCast: string[] = []
     const nextBlock = blockNodes[index + 1]
     if (nextBlock?.type.name === 'sceneCast') {
       const castText = nextBlock.textContent.trim()
       if (castText) {
-        cast = castText.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+        manualCast = castText.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
       }
     }
+
+    // 2. Автоматический cast из sceneCharacter блоков внутри сцены
+    const dialogCharacters: string[] = []
+    const dialogCharacterSet = new Set<string>()
 
     // Считаем символы до следующей sceneHeader
     let charCount = headerText.length
@@ -148,9 +155,40 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       if (n.type.name === 'sceneDialog') {
         dialogLines++
       }
+      // Собираем персонажей из диалогов (case-insensitive, сохраняем порядок первого появления)
+      if (n.type.name === 'sceneCharacter') {
+        const charName = n.textContent.trim()
+        if (charName) {
+          const upper = charName.toUpperCase()
+          if (!dialogCharacterSet.has(upper)) {
+            dialogCharacterSet.add(upper)
+            dialogCharacters.push(charName)
+          }
+        }
+      }
     }
 
-    rawScenes.push({ sceneNumber, sceneType, location, sublocation, time, cast, charCount, dialogLines, manualDuration })
+    // 3. Объединяем: сначала ручной cast (сохраняем порядок), потом новые из диалогов
+    const seen = new Set<string>()
+    const cast: string[] = []
+
+    manualCast.forEach((name) => {
+      const upper = name.toUpperCase()
+      if (!seen.has(upper)) {
+        seen.add(upper)
+        cast.push(name)
+      }
+    })
+
+    dialogCharacters.forEach((name) => {
+      const upper = name.toUpperCase()
+      if (!seen.has(upper)) {
+        seen.add(upper)
+        cast.push(name)
+      }
+    })
+
+    rawScenes.push({ sceneNumber, sceneType, location, sublocation, time, cast, dialogCharacters, charCount, dialogLines, manualDuration })
   })
 
   // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
@@ -178,6 +216,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       sublocation: raw.sublocation,
       time: raw.time,
       cast: raw.cast,
+      dialogCharacters: raw.dialogCharacters,
       pages,
       duration,
       manualDuration: raw.manualDuration,

@@ -64,6 +64,9 @@ export interface Script {
   fontFamily: string // 'Courier New', 'Courier Prime', etc.
   fontSize: number // 12
   
+  // Автоматическое извлечение персонажей из диалогов в cast сцены
+  autoExtractCharacters: boolean
+  
   // Title Page (Фаза 1, шаг 1.7)
   titlePage?: TitlePage
 
@@ -143,6 +146,10 @@ interface ScriptStore {
   // Подсказки-placeholder в пустых блоках
   showPlaceholders: boolean
   toggleShowPlaceholders: () => void
+
+  // Автоматическое извлечение персонажей из диалогов в cast
+  autoExtractCharacters: boolean
+  toggleAutoExtractCharacters: () => void
 }
 
 export const useScriptStore = create<ScriptStore>()(
@@ -154,6 +161,7 @@ export const useScriptStore = create<ScriptStore>()(
       notes: [],
       formatLocked: false,
       showPlaceholders: true,
+      autoExtractCharacters: true,
       
       // Script CRUD
       addScript: (script) =>
@@ -308,6 +316,8 @@ export const useScriptStore = create<ScriptStore>()(
 
       toggleShowPlaceholders: () =>
         set((state) => ({ showPlaceholders: !state.showPlaceholders })),
+      toggleAutoExtractCharacters: () =>
+        set((state) => ({ autoExtractCharacters: !state.autoExtractCharacters })),
     }),
     { name: 'kinoplan-scripts' }
   )

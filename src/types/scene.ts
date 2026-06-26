@@ -40,6 +40,7 @@ export interface Scene {
   synopsis?: string // краткое описание действия
   pages: number // хронометраж в страницах (0.125 = 1/8 стр.)
   cast: string[] // имена персонажей в сцене
+  dialogCharacters?: string[] // персонажи, которые реально говорят в сцене
   breakdownElements?: BreakdownElement[]
   scriptText?: string // полный текст сцены (из редактора)
   colorTag?: string // цветная ревизия (белый/синий/розовый...)

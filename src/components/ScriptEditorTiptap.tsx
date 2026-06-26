@@ -26,6 +26,7 @@ interface ScriptEditorTiptapProps {
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
   formatLocked?: boolean
+  autoExtractCharacters?: boolean
   initialContent?: string
   onContentChange?: (html: string) => void
   onEditorReady?: (editor: Editor | null) => void
