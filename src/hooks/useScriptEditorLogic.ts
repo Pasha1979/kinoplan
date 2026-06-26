@@ -613,6 +613,41 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       return true
     }
 
+    // Ctrl+Shift+S (Cmd+Shift+S на Mac) — новая сцена
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'S') {
+      event.preventDefault()
+
+      // Находим максимальный номер сцены в документе
+      let maxNumber = 0
+      view.state.doc.descendants((node) => {
+        if (node.type.name === 'sceneHeader') {
+          const headerText = node.textContent.trim()
+          const match = headerText.match(/^(\d+(?:-\d+)?)\./)
+          if (match) {
+            const numPart = match[1]
+            const sceneNum = numPart.includes('-')
+              ? parseInt(numPart.split('-')[1], 10)
+              : parseInt(numPart, 10)
+            if (!isNaN(sceneNum) && sceneNum > maxNumber) {
+              maxNumber = sceneNum
+            }
+          }
+        }
+      })
+      const nextNumber = maxNumber + 1
+      const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
+      const headerText = isSerial
+        ? `${currentSeriesRef.current}-${nextNumber}. `
+        : `${nextNumber}. `
+
+      editor?.chain()
+        .splitBlock()
+        .setNode('sceneHeader')
+        .insertContent(headerText)
+        .run()
+      return true
+    }
+
     // Tab — цикл переключения типов блока (сохраняет текст)
     if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       const { state } = view
