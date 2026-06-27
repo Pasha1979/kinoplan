@@ -187,14 +187,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (shouldDetectType) {
       const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.|НАТ\.)/i
       if (headerPattern.test(textContent) && currentType !== 'sceneHeader') {
-        editorInstance.chain().setNode('sceneHeader').run()
+        editorInstance.chain().setNode('sceneHeader').command(({ tr }) => { tr.setMeta('addToHistory', false); return true }).run()
         return
       }
     }
 
     // --- Пустой paragraph → действие (для двойного Enter) ---
     if (shouldDetectType && currentType === 'paragraph' && textContent === '') {
-      editorInstance.chain().setNode('sceneAction').run()
+      editorInstance.chain().setNode('sceneAction').command(({ tr }) => { tr.setMeta('addToHistory', false); return true }).run()
       return
     }
 
@@ -209,7 +209,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         /^[А-ЯЁA-Z\s\-']+$/.test(textContent) && // только капс + пробел/дефис/апостроф
         /[А-ЯЁA-Z]/.test(textContent) // хотя бы одна буква
       if (isCharacterLike) {
-        editorInstance.chain().setNode('sceneCharacter').run()
+        editorInstance.chain().setNode('sceneCharacter').command(({ tr }) => { tr.setMeta('addToHistory', false); return true }).run()
         return
       }
     }
@@ -227,7 +227,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       ) {
         const isAllCaps = /^[А-ЯЁA-Z\s\-']+$/.test(textContent)
         if (!isAllCaps && textContent.length > 0) {
-          editorInstance.chain().setNode('sceneAction').run()
+          editorInstance.chain().setNode('sceneAction').command(({ tr }) => { tr.setMeta('addToHistory', false); return true }).run()
           return
         }
       }
@@ -246,6 +246,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           .deleteRange({ from: nodeStart, to: nodeEnd })
           .insertContent(upperText)
           .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
+          .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
           .run()
         if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
         isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
@@ -277,6 +278,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
             .deleteRange({ from: nodeStart, to: nodeEnd })
             .insertContent(newText)
             .setTextSelection(nodeStart + newText.length)
+            .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
             .run()
           if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
           isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
@@ -302,6 +304,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
             .deleteRange({ from: nodeStart, to: nodeEnd })
             .insertContent(newText)
             .setTextSelection(nodeStart + newText.length)
+            .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
             .run()
           if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
           isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
@@ -324,6 +327,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           .deleteRange({ from: nodeStart, to: nodeEnd })
           .insertContent(upperText)
           .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
+          .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
           .run()
         if (isReplacingTimeoutRef.current) clearTimeout(isReplacingTimeoutRef.current)
         isReplacingTimeoutRef.current = setTimeout(() => { isReplacingRef.current = false }, 100)
@@ -376,7 +380,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
 
     if (newType && newType !== currentType) {
-      editorInstance.chain().setNode(newType).run()
+      editorInstance.chain().setNode(newType).command(({ tr }) => { tr.setMeta('addToHistory', false); return true }).run()
     }
   }, [formatLocked, getCurrentTextNode])
 
