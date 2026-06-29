@@ -26,9 +26,12 @@ export function useScriptSearch(editor: Editor | null) {
 
   const matchesRef = useRef<SearchMatch[]>([])
   const currentIndexRef = useRef(0)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Запуск поиска
-  const search = useCallback((q: string, f: SearchBlockFilter = filter, ) => {
+  // Запуск поиска (с дебаунсом для больших документов)
+  const search = useCallback((q: string, f: SearchBlockFilter = filter) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+
     if (!editor || !q.trim()) {
       setMatches([])
       matchesRef.current = []
@@ -36,44 +39,46 @@ export function useScriptSearch(editor: Editor | null) {
       return
     }
 
-    const lowerQuery = q.toLowerCase()
-    const found: SearchMatch[] = []
-    const { doc } = editor.state
+    searchTimeoutRef.current = setTimeout(() => {
+      const lowerQuery = q.toLowerCase()
+      const found: SearchMatch[] = []
+      const { doc } = editor.state
 
-    doc.descendants((node, pos) => {
-      const blockType = node.type.name
-      const isTextBlock = ['sceneHeader', 'sceneCast', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition', 'paragraph'].includes(blockType)
-      if (!isTextBlock || !node.isBlock) return
+      doc.descendants((node, pos) => {
+        const blockType = node.type.name
+        const isTextBlock = ['sceneHeader', 'sceneCast', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition', 'paragraph'].includes(blockType)
+        if (!isTextBlock || !node.isBlock) return
 
-      if (f.length > 0 && !f.includes(blockType as SearchBlockType)) return
+        if (f.length > 0 && !f.includes(blockType as SearchBlockType)) return
 
-      const text = node.textContent
-      const lowerText = text.toLowerCase()
-      let idx = lowerText.indexOf(lowerQuery)
+        const text = node.textContent
+        const lowerText = text.toLowerCase()
+        let idx = lowerText.indexOf(lowerQuery)
 
-      while (idx !== -1) {
-        // pos + 1 — начало текстового содержимого блока
-        found.push({
-          from: pos + 1 + idx,
-          to: pos + 1 + idx + q.length,
-          text: text.slice(idx, idx + q.length),
-          blockType,
-        })
-        idx = lowerText.indexOf(lowerQuery, idx + 1)
+        while (idx !== -1) {
+          // pos + 1 — начало текстового содержимого блока
+          found.push({
+            from: pos + 1 + idx,
+            to: pos + 1 + idx + q.length,
+            text: text.slice(idx, idx + q.length),
+            blockType,
+          })
+          idx = lowerText.indexOf(lowerQuery, idx + 1)
+        }
+      })
+
+      setMatches(found)
+      matchesRef.current = found
+      setCurrentIndex(0)
+      currentIndexRef.current = 0
+
+      applyDecorations(editor, found, 0)
+
+      // Скролл к первому совпадению
+      if (found.length > 0) {
+        scrollToMatch(editor, found[0])
       }
-    })
-
-    setMatches(found)
-    matchesRef.current = found
-    setCurrentIndex(0)
-    currentIndexRef.current = 0
-
-    applyDecorations(editor, found, 0)
-
-    // Скролл к первому совпадению
-    if (found.length > 0) {
-      scrollToMatch(editor, found[0])
-    }
+    }, 150)
   }, [editor, filter])
 
   // Навигация вперёд
@@ -106,6 +111,7 @@ export function useScriptSearch(editor: Editor | null) {
 
   // Закрыть поиск
   const close = useCallback(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     setIsOpen(false)
     setIsReplaceOpen(false)
     setQuery('')
@@ -119,11 +125,19 @@ export function useScriptSearch(editor: Editor | null) {
   const replaceCurrent = useCallback(() => {
     const m = matchesRef.current
     if (!editor || !m.length) return
+    // Безопасность: сбрасываем индекс если он вышел за границы
+    if (currentIndexRef.current >= m.length) {
+      currentIndexRef.current = 0
+    }
     const match = m[currentIndexRef.current]
+    if (!match) return
     editor.chain()
       .deleteRange({ from: match.from, to: match.to })
       .insertContentAt(match.from, replaceText)
       .run()
+    // Сбрасываем индекс перед асинхронным перезапуском поиска
+    currentIndexRef.current = 0
+    setCurrentIndex(0)
     // Перезапускаем поиск после замены
     setTimeout(() => search(query, filter), 50)
   }, [editor, replaceText, query, filter, search])
@@ -140,6 +154,9 @@ export function useScriptSearch(editor: Editor | null) {
         .insertContentAt(match.from, replaceText)
     })
     chain.run()
+    // Сбрасываем индекс после массовой замены
+    currentIndexRef.current = 0
+    setCurrentIndex(0)
     setTimeout(() => search(query, filter), 50)
   }, [editor, replaceText, query, filter, search])
 

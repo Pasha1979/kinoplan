@@ -660,6 +660,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const currentNode = $from.node()
       const currentType = currentNode?.type.name
 
+      // Авто-добавление персонажа в cast при уходе с sceneCharacter
+      if (currentType === 'sceneCharacter' && autoExtractCharactersRef.current) {
+        addCharacterToSceneCast(editor!)
+      }
+
       const blockTypes = ['sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
       const idx = blockTypes.indexOf(currentType)
       if (idx !== -1) {
@@ -753,6 +758,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const plainText = sanitizePlainText(event.clipboardData?.getData('text/plain') || '')
     const htmlText = event.clipboardData?.getData('text/html') || ''
 
+    const maybeUpdateCast = () => {
+      if (autoExtractCharactersRef.current && editor) {
+        updateSceneCastBlocks(editor)
+      }
+    }
+
     // 1. Если plain text похож на сценарий → парсим в блоки
     if (plainText && isScreenplayContent(plainText)) {
       event.preventDefault()
@@ -760,6 +771,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       if (blocks.length > 0) {
         const html = blocksToHtml(blocks)
         editor?.chain().insertContent(html).run()
+        maybeUpdateCast()
         return true
       }
     }
@@ -772,6 +784,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       if (plainText) {
         event.preventDefault()
         editor?.chain().insertContent(plainText).run()
+        maybeUpdateCast()
         return true
       }
       return false
@@ -783,6 +796,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       event.preventDefault()
       const cleanHtml = sanitizeHtml(htmlText)
       editor?.chain().insertContent(cleanHtml).run()
+      maybeUpdateCast()
       return true
     }
 
@@ -790,6 +804,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (plainText && plainText.length > 0) {
       event.preventDefault()
       editor?.chain().insertContent(plainText).run()
+      maybeUpdateCast()
       return true
     }
 
@@ -1036,7 +1051,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
     }
 
-    if (!charName) return
+    if (!charName || charName.length < 2) return
 
     // Идём вверх до ближайшего sceneHeader и берём его cast блок
     let castBlock: { pos: number; end: number; text: string } | null = null

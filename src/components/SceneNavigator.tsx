@@ -90,23 +90,35 @@ export default function SceneNavigator({
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
 
-  // Расчёт текущего хронометража серии
+  // Расчёт текущего хронометража серии (только сцены текущей серии)
   const currentSeriesDuration = useMemo(() => {
-    return scenes.reduce((total, scene) => {
+    const seriesScenes = isSerial && currentSeries > 0
+      ? scenes.filter(scene => {
+          const match = scene.number.match(/^(\d+)-/)
+          return match && parseInt(match[1], 10) === currentSeries
+        })
+      : scenes
+    return seriesScenes.reduce((total, scene) => {
       if (scene.pages !== undefined) {
         return total + calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient).duration
       }
       return total
     }, 0)
-  }, [scenes, timingSystem, genreCoefficient])
+  }, [scenes, timingSystem, genreCoefficient, isSerial, currentSeries])
 
   // Расчёт общего кол-ва страниц.
   // Если передан totalPages из PageCounter — используем его как единый источник правды.
-  // Иначе fallback на сумму pages сцен (для обратной совместимости).
+  // Иначе fallback на сумму pages сцен текущей серии (для обратной совместимости).
   const currentSeriesPages = useMemo(() => {
     if (totalPages !== undefined) return totalPages
-    return scenes.reduce((total, scene) => total + (scene.pages || 0), 0)
-  }, [scenes, totalPages])
+    const seriesScenes = isSerial && currentSeries > 0
+      ? scenes.filter(scene => {
+          const match = scene.number.match(/^(\d+)-/)
+          return match && parseInt(match[1], 10) === currentSeries
+        })
+      : scenes
+    return seriesScenes.reduce((total, scene) => total + (scene.pages || 0), 0)
+  }, [scenes, totalPages, isSerial, currentSeries])
 
   // Уведомляем родителя о хронометраже и страницах выбранной серии
   useEffect(() => {
