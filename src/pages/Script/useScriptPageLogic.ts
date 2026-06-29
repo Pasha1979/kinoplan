@@ -250,12 +250,10 @@ export function useScriptPageLogic() {
       reorderEditorRef.current(fromIndex, toIndex)
     }
 
-    // 3. Обновляем номера в редакторе
-    setTimeout(() => {
-      if (updateNumbersRef.current) {
-        updateNumbersRef.current(renumberedScenes)
-      }
-    }, 200)
+    // 3. Сразу обновляем номера в редакторе (без setTimeout — reorder синхронный)
+    if (updateNumbersRef.current) {
+      updateNumbersRef.current(renumberedScenes)
+    }
   }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber])
 
   // Клик по сцене в навигаторе → выделение + скролл редактора

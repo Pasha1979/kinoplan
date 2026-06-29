@@ -45,6 +45,29 @@ export interface UseScriptEditorLogicOptions {
   onContentChange?: (html: string) => void
 }
 
+// Единая функция для определения следующего номера сцены
+// Всегда ищет МАКСИМАЛЬНЫЙ номер (не количество), чтобы избежать дубликатов
+// при удалении сцен из середины
+function getNextSceneNumber(doc: PMNode): number {
+  let maxNumber = 0
+  doc.descendants((node) => {
+    if (node.type.name === 'sceneHeader') {
+      const headerText = node.textContent.trim()
+      const match = headerText.match(/^(\d+(?:-\d+)?)\./)
+      if (match) {
+        const numPart = match[1]
+        const sceneNum = numPart.includes('-')
+          ? parseInt(numPart.split('-')[1], 10)
+          : parseInt(numPart, 10)
+        if (!isNaN(sceneNum) && sceneNum > maxNumber) {
+          maxNumber = sceneNum
+        }
+      }
+    }
+  })
+  return maxNumber + 1
+}
+
 export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const {
     format: _format,
@@ -262,14 +285,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         const noNumberPattern = /^(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
         const alreadyNumbered = /^\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i
         if (noNumberPattern.test(upperText) && !alreadyNumbered.test(upperText)) {
-          let sceneCount = 0
-          editorInstance.state.doc.descendants((n: PMNode) => {
-            if (n.type.name === 'sceneHeader') {
-              const t = n.textContent.trim()
-              if (/^\d+\./.test(t)) sceneCount++
-            }
-          })
-          const newText = `${sceneCount + 1}. ${upperText}`
+          const nextNumber = getNextSceneNumber(editorInstance.state.doc)
+          const newText = `${nextNumber}. ${upperText}`
           isReplacingRef.current = true
           const nodeStart = $from.start()
           const nodeEnd = $from.end()
@@ -621,24 +638,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'S') {
       event.preventDefault()
 
-      // Находим максимальный номер сцены в документе
-      let maxNumber = 0
-      view.state.doc.descendants((node) => {
-        if (node.type.name === 'sceneHeader') {
-          const headerText = node.textContent.trim()
-          const match = headerText.match(/^(\d+(?:-\d+)?)\./)
-          if (match) {
-            const numPart = match[1]
-            const sceneNum = numPart.includes('-')
-              ? parseInt(numPart.split('-')[1], 10)
-              : parseInt(numPart, 10)
-            if (!isNaN(sceneNum) && sceneNum > maxNumber) {
-              maxNumber = sceneNum
-            }
-          }
-        }
-      })
-      const nextNumber = maxNumber + 1
+      const nextNumber = getNextSceneNumber(view.state.doc)
       const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
       const headerText = isSerial
         ? `${currentSeriesRef.current}-${nextNumber}. `
@@ -724,24 +724,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         if (textContent === '') {
           // Двойной Enter на пустом → новая сцена (sceneHeader)
           event.preventDefault()
-          // Находим максимальный номер сцены в документе
-          let maxNumber = 0
-          view.state.doc.descendants((node) => {
-            if (node.type.name === 'sceneHeader') {
-              const headerText = node.textContent.trim()
-              const match = headerText.match(/^(\d+(?:-\d+)?)\./)
-              if (match) {
-                const numPart = match[1]
-                const sceneNum = numPart.includes('-')
-                  ? parseInt(numPart.split('-')[1], 10)
-                  : parseInt(numPart, 10)
-                if (!isNaN(sceneNum) && sceneNum > maxNumber) {
-                  maxNumber = sceneNum
-                }
-              }
-            }
-          })
-          const nextNumber = maxNumber + 1
+          const nextNumber = getNextSceneNumber(view.state.doc)
           const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
           const headerText = isSerial
             ? `${currentSeriesRef.current}-${nextNumber}. `
