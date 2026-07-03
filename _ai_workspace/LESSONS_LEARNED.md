@@ -310,6 +310,12 @@ git push
 **Решение:** Добавить `dialogCharacters?: string[]` в тип параметра `handleScenesChange` и скопировать его в `mergedScenes: dialogCharacters: s.dialogCharacters || existing?.dialogCharacters || []`.
 **Предотвращение:** При добавлении нового поля в интерфейс — искать ВСЕ места, где объект этого типа создаётся/копируется. Проверять: type definition → extractor → callback type → store merge → validation consumer.
 
+### Урок 28: Коммит и пуш — обязательная часть завершения сессии
+**Дата:** 04.07.2026
+**Проблема:** При завершении сессии обновлялась только память проекта (_ai_workspace), но не делался git commit + push. Изменения оставались незапушенными на GitHub.
+**Решение:** Добавить `git add -A && git commit && git push origin main` как финальный обязательный шаг каждой сессии — после обновления памяти.
+**Предотвращение:** Процедура завершения сессии = 1) обновить `📊_ТЕКУЩИЙ_СТАТУС.md` + `🧠_МОЗГ_ПРОЕКТА.md` → 2) `git add -A` → 3) `git commit -m "feat/fix: ..."` → 4) `git push origin main`.
+
 ---
 
 **Создан:** 30.05.2026
