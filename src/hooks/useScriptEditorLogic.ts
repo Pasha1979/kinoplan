@@ -18,6 +18,7 @@ import { useSceneEditorActions } from './useSceneEditorActions'
 import { parseScreenplayText, blocksToHtml } from '../utils/parseScreenplayText'
 import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/pasteSanitizer'
 import { createSearchPlugin } from './useScriptSearch'
+import { useMultiCursor } from './useMultiCursor'
 
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
@@ -109,6 +110,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   // eslint-disable-next-line react-hooks/refs
   smartTypeRef.current = smartType
 
+  // Multi-cursor — редактирование нескольких мест одновременно (Ctrl+D)
+  const multiCursor = useMultiCursor()
+  const isMultiSelectingRef = multiCursor.isActiveRef
+  const multiCursorRef = useRef(multiCursor)
+  // eslint-disable-next-line react-hooks/refs
+  multiCursorRef.current = multiCursor
+
   // Refs для динамических callback'ов useEditor (предотвращаем stale closures)
   const onUpdateRef = useRef<(({ editor }: { editor: Editor }) => void) | null>(null)
   const handleKeyDownRef = useRef<((view: Editor['view'], event: KeyboardEvent) => boolean) | null>(null)
@@ -192,6 +200,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   // Автоопределение типа блока — ШАПКИ + ПЕРСОНАЖИ (посимвольно, с автокапсом)
   const autoDetectPerChar = useCallback((editorInstance: Editor) => {
+    // Отключаем автоопределение при active multi-selection
+    if (isMultiSelectingRef.current) return
+
     // Замок формата отключает автоопределение типа (но автокапс шапок всегда работает)
     const shouldDetectType = !formatLocked
 
@@ -411,6 +422,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           return [createSearchPlugin()]
         },
       }),
+      Extension.create({
+        name: 'multiCursorPlugin',
+        addProseMirrorPlugins() {
+          return [multiCursor.plugin]
+        },
+      }),
       StarterKit.configure({
         orderedList: false,
         bulletList: false,
@@ -475,9 +492,22 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       },
       handleDOMEvents: {
         copy: (view, event) => handleCopyRef.current?.(view, event) ?? false,
+        mousedown: () => {
+          if (isMultiSelectingRef.current) {
+            multiCursorRef.current.exitMultiSelection(editor)
+          }
+          return false
+        },
       },
       handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
       handlePaste: (view, event) => handlePasteRef.current?.(view, event) ?? false,
+      handleTextInput: (_view, _from, _to, text) => {
+        if (isMultiSelectingRef.current && multiCursorRef.current.rangesRef.current.length > 1) {
+          multiCursorRef.current.applyTextToRanges(editor!, text)
+          return true
+        }
+        return false
+      },
     },
   })
 
@@ -557,6 +587,28 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       event.preventDefault()
       editor?.chain().redo().run()
       return true
+    }
+
+    // Ctrl+D — Multi-cursor: выделить слово / добавить следующее совпадение
+    if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+      event.preventDefault()
+      if (editor) {
+        multiCursorRef.current.addNextMatch(editor)
+      }
+      return true
+    }
+
+    // Escape — выйти из multi-selection
+    if (event.key === 'Escape' && isMultiSelectingRef.current) {
+      event.preventDefault()
+      multiCursorRef.current.exitMultiSelection(editor)
+      return true
+    }
+
+    // Стрелки — сбрасывают multi-selection
+    if (isMultiSelectingRef.current && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      multiCursorRef.current.exitMultiSelection(editor)
+      return false // позволяем стандартное перемещение курсора
     }
 
     const st = smartTypeRef.current
@@ -825,6 +877,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       pageCountTimeoutRef.current = null
     }, 400)
 
+    // Отключаем автоформатирование при active multi-selection
+    if (isMultiSelectingRef.current) {
+      smartTypeRef.current.closeSuggestions()
+      return
+    }
+
     autoDetectPerChar(editorInstance)
 
     // Определение типа блока для персонажей/диалога/ремарки/перехода — только после Enter
@@ -870,6 +928,20 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const handler = ({ editor: ed }: { editor: Editor }) => onUpdateRef.current?.({ editor: ed })
     editor.on('update', handler)
     return () => { editor.off('update', handler) }
+  }, [editor])
+
+  // Перехватываем Ctrl+D на уровне window, чтобы браузер не открывал диалог закладок
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault()
+        if (editor) {
+          multiCursorRef.current.addNextMatch(editor)
+        }
+      }
+    }
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
   }, [editor])
 
   // Cleanup: очищаем все timeout и DOM при unmount
@@ -1263,5 +1335,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     currentType,
     setBlockType,
     _format,
+    multiCursorCount: multiCursor.activeCount,
   }
 }

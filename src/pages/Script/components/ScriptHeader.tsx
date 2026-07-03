@@ -1,4 +1,4 @@
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2 } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 
@@ -24,6 +24,8 @@ interface ScriptHeaderProps {
   onToggleRightPanel: () => void
   onToggleFormatLock: () => void
   onOpenSearch: () => void
+  isFocusMode?: boolean
+  onToggleFocusMode?: () => void
 }
 
 export default function ScriptHeader({
@@ -43,6 +45,8 @@ export default function ScriptHeader({
   onToggleRightPanel,
   onToggleFormatLock,
   onOpenSearch,
+  isFocusMode = false,
+  onToggleFocusMode,
 }: ScriptHeaderProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -126,6 +130,22 @@ export default function ScriptHeader({
           <Save size={13} />
           {isSaving ? 'Сохранение...' : 'Сохранить'}
         </button>
+        {/* Кнопка Focus Mode */}
+        {onToggleFocusMode && (
+          <button
+            onClick={onToggleFocusMode}
+            className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+            style={{
+              color: isFocusMode ? '#818cf8' : textSecondary,
+              background: isFocusMode ? 'rgba(99,102,241,0.15)' : 'transparent',
+            }}
+            onMouseEnter={e => !isFocusMode && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+            onMouseLeave={e => !isFocusMode && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+            title="Focus Mode — полноэкранный режим"
+          >
+            <Maximize2 size={15} />
+          </button>
+        )}
         {/* Кнопка Поиск */}
         <button
           onClick={onOpenSearch}

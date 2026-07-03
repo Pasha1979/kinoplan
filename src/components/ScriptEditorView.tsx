@@ -24,6 +24,7 @@ export interface ScriptEditorViewProps {
   format?: ScriptFormat
   fontFamily: string
   fontSize: number
+  multiCursorCount?: number
 }
 
 export function ScriptEditorView({
@@ -38,6 +39,7 @@ export function ScriptEditorView({
   format,
   fontFamily,
   fontSize,
+  multiCursorCount = 0,
 }: ScriptEditorViewProps) {
   if (!editor) {
     return null
@@ -164,6 +166,23 @@ export function ScriptEditorView({
         <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
           {precisePages.toFixed(1)} стр.
         </span>
+        {multiCursorCount > 1 && (
+          <span
+            style={{
+              background: 'rgba(33,150,243,0.18)',
+              border: '1px solid rgba(33,150,243,0.6)',
+              color: '#2196F3',
+              borderRadius: '4px',
+              padding: '1px 7px',
+              fontSize: '11px',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+            }}
+            title="Multi-cursor активен (Escape — выйти)"
+          >
+            {multiCursorCount} selections
+          </span>
+        )}
       </div>
 
       {/* SmartType Popup */}

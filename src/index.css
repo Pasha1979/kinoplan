@@ -433,3 +433,10 @@ body {
 .film-jitter {
   animation: filmJitter 0.8s ease-out forwards;
 }
+
+/* Multi-cursor selection highlight */
+.multi-cursor-selection {
+  background-color: rgba(33, 150, 243, 0.25);
+  border: 1px solid rgba(33, 150, 243, 0.6);
+  border-radius: 2px;
+}

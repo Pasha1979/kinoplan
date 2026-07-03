@@ -52,6 +52,7 @@ export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
       format={logic._format}
       fontFamily={props.fontFamily}
       fontSize={props.fontSize}
+      multiCursorCount={logic.multiCursorCount}
     />
   )
 }

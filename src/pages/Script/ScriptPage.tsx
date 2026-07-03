@@ -16,6 +16,9 @@ import { Settings } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import SearchBar from '../../components/SearchBar'
 import { useScriptSearch } from '../../hooks/useScriptSearch'
+import HelpModal from '../../components/HelpModal'
+import FocusModeOverlay from '../../components/FocusModeOverlay'
+import { useFocusMode } from '../../hooks/useFocusMode'
 
 export default function ScriptPage() {
   const logic = useScriptPageLogic()
@@ -83,6 +86,8 @@ export default function ScriptPage() {
   // Поиск по сценарию
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
   const search = useScriptSearch(editorInstance)
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const focusMode = useFocusMode()
 
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
@@ -91,7 +96,7 @@ export default function ScriptPage() {
     }
   }, [currentScript?.id, updateScript, triggerAutoSave])
 
-  // Ctrl+S / Ctrl+F / Ctrl+H — глобальные горячие клавиши
+  // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -106,10 +111,14 @@ export default function ScriptPage() {
         e.preventDefault()
         search.open(true)
       }
+      // Escape — выход из Focus Mode (только если поиск закрыт)
+      if (e.key === 'Escape' && focusMode.isFocused && !search.isOpen) {
+        focusMode.exit()
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave, search.open])
+  }, [handleSave, search.open, search.isOpen, focusMode.isFocused, focusMode.exit])
 
   const blocks = useMemo(() => {
     return extractBlocksFromHtml(currentScript?.content || '')
@@ -148,9 +157,16 @@ export default function ScriptPage() {
 
   return (
     <div className="flex-1 flex overflow-hidden" style={{ background: bg }}>
+      {focusMode.isFocused && (
+        <FocusModeOverlay
+          scriptTitle={currentScript?.title}
+          isDark={isDark}
+          onExit={focusMode.exit}
+        />
+      )}
       {/* Центральная область: редактор */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <ScriptHeader
+        {!focusMode.isFocused && <ScriptHeader
           isDark={isDark}
           colors={{ sidebarBg, border, textPrimary, textSecondary }}
           selectedScene={selectedScene}
@@ -162,12 +178,14 @@ export default function ScriptPage() {
           onBack={() => setView('empty')}
           onSave={handleSave}
           onOpenSettings={() => setShowTimingSettingsModal(true)}
-          onHelp={() => showToast('Мини-обучение: горячие клавиши и справка по модулю сценария будет реализовано позже', 'info')}
+          onHelp={() => setShowHelpModal(true)}
           onToggleAutoFix={() => setEnableAutoFix(!enableAutoFix)}
           onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
           onToggleFormatLock={toggleFormatLock}
           onOpenSearch={() => search.open(false)}
-        />
+          isFocusMode={focusMode.isFocused}
+          onToggleFocusMode={focusMode.toggle}
+        />}
 
         {/* Панель поиска */}
         {search.isOpen && (
@@ -222,8 +240,8 @@ export default function ScriptPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex overflow-hidden">
-            <SceneNavigator
+          <div className={`flex-1 flex overflow-hidden${focusMode.isFocused ? ' justify-center' : ''}`}>
+            {!focusMode.isFocused && <SceneNavigator
               scenes={scenes.map(s => ({
                 id: s.id,
                 number: s.number,
@@ -249,9 +267,9 @@ export default function ScriptPage() {
               onSceneClick={handleSceneClick}
               onSceneReorder={handleSceneReorder}
               activeSceneId={selectedScene?.id || ''}
-            />
+            />}
 
-            <div className="flex-1 h-full">
+            <div className={focusMode.isFocused ? 'h-full' : 'flex-1 h-full'} style={focusMode.isFocused ? { width: '100%', maxWidth: 860, flexShrink: 0 } : undefined}>
               <ScriptEditorTiptap
                 key={currentScript?.id || 'no-script'}
                 format={scriptFormat}
@@ -295,7 +313,7 @@ export default function ScriptPage() {
       </div>
 
       {/* Правая панель: валидация, заметки, версии */}
-      {rightPanelOpen && (
+      {rightPanelOpen && !focusMode.isFocused && (
         <ScriptRightPanel
           isDark={isDark}
           textPrimary={textPrimary}
@@ -321,6 +339,14 @@ export default function ScriptPage() {
             navigate(`/project/${project?.id}/script/create`)
           }}
           onClose={() => setShowFormatModal(false)}
+        />
+      )}
+
+      {/* Модальное окно помощи */}
+      {showHelpModal && (
+        <HelpModal
+          isDark={isDark}
+          onClose={() => setShowHelpModal(false)}
         />
       )}
 
