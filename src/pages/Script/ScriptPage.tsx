@@ -19,6 +19,9 @@ import { useScriptSearch } from '../../hooks/useScriptSearch'
 import HelpModal from '../../components/HelpModal'
 import FocusModeOverlay from '../../components/FocusModeOverlay'
 import { useFocusMode } from '../../hooks/useFocusMode'
+import { useSplitScreen } from '../../hooks/useSplitScreen'
+import { useDialogueMode } from '../../hooks/useDialogueMode'
+import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
 
 export default function ScriptPage() {
   const logic = useScriptPageLogic()
@@ -71,6 +74,8 @@ export default function ScriptPage() {
     handleSave,
     saveStatus,
     triggerAutoSave,
+    // episode scripts (для сериалов)
+    episodeScripts,
     // scenes
     handleScenesChange,
     handleSceneReorder,
@@ -88,6 +93,23 @@ export default function ScriptPage() {
   const search = useScriptSearch(editorInstance)
   const [showHelpModal, setShowHelpModal] = useState(false)
   const focusMode = useFocusMode()
+  const splitScreen = useSplitScreen(currentSeries)
+  const dialogueMode = useDialogueMode(scenes)
+
+  // Контент и projectId для правой панели (по выбранной серии)
+  const rightScript = episodeScripts.find(s => s.episodeNumber === splitScreen.rightSeries)
+    ?? episodeScripts.find(s => s.episodeNumber === 1)
+    ?? currentScript
+
+  // Навигация по сцене: в режиме split — направляем в активную панель,
+  // иначе — стандартное поведение через оригинальный хендлер
+  const handleSceneClickRouted = useCallback((sceneId: string) => {
+    if (splitScreen.isActive) {
+      splitScreen.navigateToScene(sceneId)
+    } else {
+      handleSceneClick(sceneId)
+    }
+  }, [splitScreen.isActive, splitScreen.navigateToScene, handleSceneClick])
 
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
@@ -115,10 +137,14 @@ export default function ScriptPage() {
       if (e.key === 'Escape' && focusMode.isFocused && !search.isOpen) {
         focusMode.exit()
       }
+      // Escape — выход из Dialogue Mode (если поиск закрыт и нет фокус-режима)
+      if (e.key === 'Escape' && dialogueMode.isActive && !search.isOpen && !focusMode.isFocused) {
+        dialogueMode.exit()
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave, search.open, search.isOpen, focusMode.isFocused, focusMode.exit])
+  }, [handleSave, search.open, search.isOpen, focusMode.isFocused, focusMode.exit, dialogueMode.isActive, dialogueMode.exit])
 
   const blocks = useMemo(() => {
     return extractBlocksFromHtml(currentScript?.content || '')
@@ -185,7 +211,24 @@ export default function ScriptPage() {
           onOpenSearch={() => search.open(false)}
           isFocusMode={focusMode.isFocused}
           onToggleFocusMode={focusMode.toggle}
+          isSplitScreen={splitScreen.isActive}
+          onToggleSplitScreen={splitScreen.toggle}
+          dialogueActiveCharacter={dialogueMode.activeCharacter}
+          onToggleDialoguePicker={dialogueMode.togglePicker}
         />}
+
+        {/* Dialogue Character Picker — dropdown под шапкой */}
+        {dialogueMode.pickerOpen && (
+          <div style={{ position: 'relative', zIndex: 9000 }}>
+            <DialogueCharacterPicker
+              characters={dialogueMode.characters}
+              activeCharacter={dialogueMode.activeCharacter}
+              isDark={isDark}
+              onSelect={dialogueMode.selectCharacter}
+              onClose={() => dialogueMode.setPickerOpen(false)}
+            />
+          </div>
+        )}
 
         {/* Панель поиска */}
         {search.isOpen && (
@@ -264,36 +307,158 @@ export default function ScriptPage() {
               onSeriesDurationChange={setSeriesDuration}
               onSeriesPagesChange={setSeriesPages}
               totalPages={scriptStats.pages}
-              onSceneClick={handleSceneClick}
+              onSceneClick={handleSceneClickRouted}
               onSceneReorder={handleSceneReorder}
               activeSceneId={selectedScene?.id || ''}
             />}
 
-            <div className={focusMode.isFocused ? 'h-full' : 'flex-1 h-full'} style={focusMode.isFocused ? { width: '100%', maxWidth: 860, flexShrink: 0 } : undefined}>
-              <ScriptEditorTiptap
-                key={currentScript?.id || 'no-script'}
-                format={scriptFormat}
-                projectType={project?.type || 'film'}
-                projectId={project?.id}
-                currentSeries={currentSeries}
-                fontFamily="Courier New"
-                fontSize={12}
-                isDark={isDark}
-                genreCoefficient={currentScript?.genreCoefficient || 1.0}
-                timingSystem={currentScript?.timingSystem || 'page'}
-                onSceneCountChange={setSceneCount}
-                onStatsChange={setScriptStats}
-                onScenesChange={handleScenesChange}
-                focusSceneId={focusSceneId}
-                onConvertReady={(fn) => { convertFormatRef.current = fn }}
-                onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
-                onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
-                formatLocked={formatLocked}
-                autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
-                initialContent={currentScript?.content}
-                onContentChange={handleContentChange}
-                onEditorReady={setEditorInstance}
-              />
+            {/* ─── Split Screen container ─── */}
+            <div
+              ref={splitScreen.isActive ? splitScreen.containerRef : undefined}
+              className="flex-1 h-full flex overflow-hidden"
+              style={focusMode.isFocused ? { maxWidth: 860, margin: '0 auto', width: '100%' } : undefined}
+            >
+              {/* Левая / единственная панель */}
+              <div
+                className="h-full overflow-hidden"
+                style={splitScreen.isActive ? { width: `${splitScreen.leftWidthPct}%`, flexShrink: 0 } : { flex: 1 }}
+                onClick={() => splitScreen.isActive && splitScreen.setActivePanel('left')}
+              >
+                {splitScreen.isActive && (
+                  <div style={{
+                    height: 3,
+                    background: splitScreen.activePanel === 'left' ? '#818cf8' : 'transparent',
+                    transition: 'background 0.15s',
+                  }} />
+                )}
+                <ScriptEditorTiptap
+                  key={currentScript?.id || 'no-script'}
+                  format={scriptFormat}
+                  projectType={project?.type || 'film'}
+                  projectId={project?.id}
+                  currentSeries={currentSeries}
+                  fontFamily="Courier New"
+                  fontSize={12}
+                  isDark={isDark}
+                  genreCoefficient={currentScript?.genreCoefficient || 1.0}
+                  timingSystem={currentScript?.timingSystem || 'page'}
+                  onSceneCountChange={setSceneCount}
+                  onStatsChange={setScriptStats}
+                  onScenesChange={handleScenesChange}
+                  focusSceneId={splitScreen.isActive ? splitScreen.leftFocusSceneId : focusSceneId}
+                  onConvertReady={(fn) => { convertFormatRef.current = fn }}
+                  onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
+                  onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
+                  formatLocked={formatLocked}
+                  autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
+                  initialContent={currentScript?.content}
+                  onContentChange={handleContentChange}
+                  onEditorReady={setEditorInstance}
+                  dialogueCharacter={dialogueMode.activeCharacter}
+                />
+              </div>
+
+              {/* Divider */}
+              {splitScreen.isActive && (
+                <div
+                  onMouseDown={splitScreen.onDividerMouseDown}
+                  style={{
+                    width: 5,
+                    flexShrink: 0,
+                    cursor: 'col-resize',
+                    background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+                    borderLeft: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                    borderRight: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                    transition: 'background 0.15s',
+                    userSelect: 'none',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.35)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' }}
+                />
+              )}
+
+              {/* Правая панель — только в Split Mode */}
+              {splitScreen.isActive && (
+                <div
+                  className="h-full flex flex-col overflow-hidden"
+                  style={{ flex: 1 }}
+                  onClick={() => splitScreen.setActivePanel('right')}
+                >
+                  {/* Индикатор активной панели */}
+                  <div style={{
+                    height: 3,
+                    background: splitScreen.activePanel === 'right' ? '#818cf8' : 'transparent',
+                    transition: 'background 0.15s',
+                    flexShrink: 0,
+                  }} />
+
+                  {/* Мини-заголовок с выбором серии (только для сериала) */}
+                  {project?.type === 'serial' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '4px 12px',
+                        flexShrink: 0,
+                        borderBottom: `1px solid ${border}`,
+                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <span style={{ fontSize: 11, color: textSecondary, whiteSpace: 'nowrap' }}>Серия:</span>
+                      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                        {Array.from({ length: project?.episodesCount || 8 }, (_, i) => i + 1).map(n => (
+                          <button
+                            key={n}
+                            onClick={() => splitScreen.setRightSeries(n)}
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 5,
+                              fontSize: 11,
+                              fontWeight: splitScreen.rightSeries === n ? 700 : 400,
+                              background: splitScreen.rightSeries === n
+                                ? 'rgba(99,102,241,0.2)'
+                                : 'transparent',
+                              border: splitScreen.rightSeries === n
+                                ? '1px solid rgba(99,102,241,0.4)'
+                                : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                              color: splitScreen.rightSeries === n ? '#818cf8' : textSecondary,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <ScriptEditorTiptap
+                      key={`right-${rightScript?.id || 'none'}`}
+                      format={scriptFormat}
+                      projectType={project?.type || 'film'}
+                      projectId={project?.id}
+                      currentSeries={splitScreen.rightSeries}
+                      fontFamily="Courier New"
+                      fontSize={12}
+                      isDark={isDark}
+                      genreCoefficient={rightScript?.genreCoefficient || 1.0}
+                      timingSystem={rightScript?.timingSystem || 'page'}
+                      focusSceneId={splitScreen.rightFocusSceneId}
+                      formatLocked={formatLocked}
+                      autoExtractCharacters={rightScript?.autoExtractCharacters ?? true}
+                      initialContent={rightScript?.content}
+                      onContentChange={(html) => {
+                        if (rightScript?.id) {
+                          useScriptStore.getState().updateScript(rightScript.id, { content: html })
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

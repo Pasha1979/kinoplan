@@ -440,3 +440,9 @@ body {
   border: 1px solid rgba(33, 150, 243, 0.6);
   border-radius: 2px;
 }
+
+/* ─── Dialogue Isolation Mode ─────────────────────────────────────
+   Подсветка реализована через ProseMirror Decoration-плагин
+   в src/components/tiptap/DialogueHighlightExtension.ts.
+──────────────────────────────────────────────────────────────────── */
+

@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2 } from 'lucide-react'
@@ -41,6 +42,10 @@ export function ScriptEditorView({
   fontSize,
   multiCursorCount = 0,
 }: ScriptEditorViewProps) {
+  const editorContentRef = useRef<HTMLDivElement | null>(null)
+
+  // Подсветка диалогов выбранного персонажа теперь реализована через
+  // ProseMirror Decoration-плагин в DialogueHighlightExtension
   if (!editor) {
     return null
   }
@@ -121,6 +126,7 @@ export function ScriptEditorView({
 
       {/* Область редактора */}
       <div
+        ref={editorContentRef}
         className="flex-1 overflow-y-auto py-8 px-4"
         style={{
           background: editorBg,

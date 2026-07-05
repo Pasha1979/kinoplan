@@ -8,6 +8,7 @@ import { DOMSerializer, Node as PMNode } from 'prosemirror-model'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
+import { DialogueHighlightExtension, pluginKey as dialogueHighlightPluginKey } from '../components/tiptap/DialogueHighlightExtension'
 import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
@@ -44,6 +45,7 @@ export interface UseScriptEditorLogicOptions {
   autoExtractCharacters?: boolean
   initialContent?: string
   onContentChange?: (html: string) => void
+  dialogueCharacter?: string | null
 }
 
 // Единая функция для определения следующего номера сцены
@@ -92,6 +94,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     autoExtractCharacters,
     initialContent,
     onContentChange,
+    dialogueCharacter,
   } = options
 
   const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
@@ -446,6 +449,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       SceneParenthetical,
       SceneTransition,
       DragHandle,
+      DialogueHighlightExtension,
       Placeholder.configure({
         placeholder: ({ node, editor: ed }) => {
           const type = node.type.name
@@ -521,6 +525,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       el.classList.add('placeholders-hidden')
     }
   }, [editor, showPlaceholders])
+
+  // Обновляем выбранного персонажа в плагине подсветки диалогов
+  useEffect(() => {
+    if (!editor) return
+    const tr = editor.state.tr.setMeta(dialogueHighlightPluginKey, { character: dialogueCharacter || null })
+    editor.view.dispatch(tr)
+  }, [editor, dialogueCharacter])
 
   // Хук для drag-and-drop, scroll к сцене, обновления номеров
   useSceneEditorActions({

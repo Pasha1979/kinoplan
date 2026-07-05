@@ -1,4 +1,4 @@
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2 } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 
@@ -26,6 +26,10 @@ interface ScriptHeaderProps {
   onOpenSearch: () => void
   isFocusMode?: boolean
   onToggleFocusMode?: () => void
+  isSplitScreen?: boolean
+  onToggleSplitScreen?: () => void
+  dialogueActiveCharacter?: string | null
+  onToggleDialoguePicker?: () => void
 }
 
 export default function ScriptHeader({
@@ -47,6 +51,10 @@ export default function ScriptHeader({
   onOpenSearch,
   isFocusMode = false,
   onToggleFocusMode,
+  isSplitScreen = false,
+  onToggleSplitScreen,
+  dialogueActiveCharacter,
+  onToggleDialoguePicker,
 }: ScriptHeaderProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -130,6 +138,45 @@ export default function ScriptHeader({
           <Save size={13} />
           {isSaving ? 'Сохранение...' : 'Сохранить'}
         </button>
+        {/* Кнопка Dialogue Mode */}
+        {onToggleDialoguePicker && (
+          <button
+            onClick={onToggleDialoguePicker}
+            className="h-8 rounded-lg flex items-center justify-center gap-1 cursor-pointer px-2"
+            style={{
+              color: dialogueActiveCharacter ? '#f59e0b' : textSecondary,
+              background: dialogueActiveCharacter ? 'rgba(245,158,11,0.15)' : 'transparent',
+              border: dialogueActiveCharacter ? '1px solid rgba(245,158,11,0.3)' : '1px solid transparent',
+              minWidth: 32,
+            }}
+            onMouseEnter={e => !dialogueActiveCharacter && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+            onMouseLeave={e => !dialogueActiveCharacter && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+            title="Dialogue Mode — диалоги персонажа"
+          >
+            <MessageSquareText size={15} />
+            {dialogueActiveCharacter && (
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {dialogueActiveCharacter}
+              </span>
+            )}
+          </button>
+        )}
+        {/* Кнопка Split Screen */}
+        {onToggleSplitScreen && (
+          <button
+            onClick={onToggleSplitScreen}
+            className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+            style={{
+              color: isSplitScreen ? '#818cf8' : textSecondary,
+              background: isSplitScreen ? 'rgba(99,102,241,0.15)' : 'transparent',
+            }}
+            onMouseEnter={e => !isSplitScreen && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+            onMouseLeave={e => !isSplitScreen && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+            title="Split Screen — два окна редактора"
+          >
+            <Columns2 size={15} />
+          </button>
+        )}
         {/* Кнопка Focus Mode */}
         {onToggleFocusMode && (
           <button

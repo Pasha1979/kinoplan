@@ -30,6 +30,7 @@ interface ScriptEditorTiptapProps {
   initialContent?: string
   onContentChange?: (html: string) => void
   onEditorReady?: (editor: Editor | null) => void
+  dialogueCharacter?: string | null
 }
 
 export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
