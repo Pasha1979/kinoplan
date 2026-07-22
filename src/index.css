@@ -446,3 +446,10 @@ body {
    в src/components/tiptap/DialogueHighlightExtension.ts.
 ──────────────────────────────────────────────────────────────────── */
 
+/* ─── POV Filter Mode ─────────────────────────────────────────────
+   Скрытие сцен без выбранного персонажа через ProseMirror Decoration-плагин
+   в src/components/tiptap/PovFilterExtension.ts.
+──────────────────────────────────────────────────────────────────── */
+.scene-hidden {
+  display: none !important;
+}

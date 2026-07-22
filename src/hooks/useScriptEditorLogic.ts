@@ -9,6 +9,7 @@ import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
 import { DialogueHighlightExtension, pluginKey as dialogueHighlightPluginKey } from '../components/tiptap/DialogueHighlightExtension'
+import { PovFilterExtension, pluginKey as povFilterPluginKey } from '../components/tiptap/PovFilterExtension'
 import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
@@ -46,6 +47,7 @@ export interface UseScriptEditorLogicOptions {
   initialContent?: string
   onContentChange?: (html: string) => void
   dialogueCharacter?: string | null
+  povCharacter?: string | null
 }
 
 // Единая функция для определения следующего номера сцены
@@ -95,6 +97,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     initialContent,
     onContentChange,
     dialogueCharacter,
+    povCharacter,
   } = options
 
   const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
@@ -450,6 +453,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       SceneTransition,
       DragHandle,
       DialogueHighlightExtension,
+      PovFilterExtension,
       Placeholder.configure({
         placeholder: ({ node, editor: ed }) => {
           const type = node.type.name
@@ -532,6 +536,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const tr = editor.state.tr.setMeta(dialogueHighlightPluginKey, { character: dialogueCharacter || null })
     editor.view.dispatch(tr)
   }, [editor, dialogueCharacter])
+
+  // Обновляем выбранного персонажа в плагине POV Filter
+  useEffect(() => {
+    if (!editor) return
+    const tr = editor.state.tr.setMeta(povFilterPluginKey, { character: povCharacter || null })
+    editor.view.dispatch(tr)
+  }, [editor, povCharacter])
 
   // Хук для drag-and-drop, scroll к сцене, обновления номеров
   useSceneEditorActions({

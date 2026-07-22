@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { X, Eye } from 'lucide-react'
 
 interface DialogueCharacterPickerProps {
   characters: string[]
@@ -7,6 +7,8 @@ interface DialogueCharacterPickerProps {
   isDark: boolean
   onSelect: (name: string) => void
   onClose: () => void
+  povMode: boolean
+  onTogglePovMode: () => void
 }
 
 export default function DialogueCharacterPicker({
@@ -15,6 +17,8 @@ export default function DialogueCharacterPicker({
   isDark,
   onSelect,
   onClose,
+  povMode,
+  onTogglePovMode,
 }: DialogueCharacterPickerProps) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -68,12 +72,35 @@ export default function DialogueCharacterPicker({
         <span style={{ fontSize: 11, fontWeight: 600, color: textSecondary, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
           Диалоги персонажа
         </span>
-        <button
-          onClick={onClose}
-          style={{ color: textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' }}
-        >
-          <X size={13} />
-        </button>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <button
+            onClick={onTogglePovMode}
+            title={povMode ? 'Показать все сцены' : 'Только сцены персонажа'}
+            style={{
+              color: povMode ? '#f59e0b' : textSecondary,
+              background: povMode ? 'rgba(245,158,11,0.12)' : 'none',
+              border: 'none',
+              cursor: 'pointer',
+             padding: 4,
+              borderRadius: 4,
+              display: 'flex',
+            }}
+            onMouseEnter={e => {
+              if (!povMode) (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
+            }}
+            onMouseLeave={e => {
+              if (!povMode) (e.currentTarget as HTMLElement).style.background = 'none'
+            }}
+          >
+            <Eye size={13} />
+          </button>
+          <button
+            onClick={onClose}
+            style={{ color: textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' }}
+          >
+            <X size={13} />
+          </button>
+        </div>
       </div>
 
       {characters.length === 0 ? (

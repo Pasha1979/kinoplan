@@ -226,6 +226,8 @@ export default function ScriptPage() {
               isDark={isDark}
               onSelect={dialogueMode.selectCharacter}
               onClose={() => dialogueMode.setPickerOpen(false)}
+              povMode={dialogueMode.povMode}
+              onTogglePovMode={dialogueMode.togglePovMode}
             />
           </div>
         )}
@@ -355,6 +357,7 @@ export default function ScriptPage() {
                   onContentChange={handleContentChange}
                   onEditorReady={setEditorInstance}
                   dialogueCharacter={dialogueMode.activeCharacter}
+                  povCharacter={dialogueMode.povMode ? dialogueMode.activeCharacter : null}
                 />
               </div>
 
