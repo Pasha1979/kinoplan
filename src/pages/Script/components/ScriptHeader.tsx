@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
@@ -32,7 +33,7 @@ interface ScriptHeaderProps {
   onToggleDialoguePicker?: () => void
 }
 
-export default function ScriptHeader({
+function ScriptHeader({
   isDark,
   colors,
   selectedScene,
@@ -268,3 +269,5 @@ export default function ScriptHeader({
     </div>
   )
 }
+
+export default memo(ScriptHeader)

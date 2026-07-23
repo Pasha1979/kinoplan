@@ -3,7 +3,7 @@ import type { Editor } from '@tiptap/react'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { useScriptEditorLogic } from '../hooks/useScriptEditorLogic'
-import { ScriptEditorView } from './ScriptEditorView'
+import { MemoizedScriptEditorView } from './ScriptEditorView'
 
 interface ScriptEditorTiptapProps {
   format?: ScriptFormat
@@ -42,7 +42,7 @@ export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
   }, [logic.editor])
 
   return (
-    <ScriptEditorView
+    <MemoizedScriptEditorView
       editor={logic.editor}
       precisePages={logic.precisePages}
       isDark={logic.isDark}

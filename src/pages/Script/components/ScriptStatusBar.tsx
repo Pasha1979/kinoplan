@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Hash, AlignLeft, Clock, AlertTriangle, CheckCircle2, Loader2, CircleDot } from 'lucide-react'
 import { formatDuration } from '../../../utils/sceneTiming'
 
@@ -16,7 +17,7 @@ interface ScriptStatusBarProps {
   saveStatus?: 'saved' | 'saving' | 'unsaved'
 }
 
-export default function ScriptStatusBar({
+function ScriptStatusBar({
   isDark,
   colors,
   scenesCount,
@@ -102,3 +103,5 @@ export default function ScriptStatusBar({
     </div>
   )
 }
+
+export default memo(ScriptStatusBar)

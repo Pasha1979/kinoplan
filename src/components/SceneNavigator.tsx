@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, memo } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   DndContext,
@@ -365,6 +365,8 @@ function SceneCard({
   )
 }
 
+const MemoizedSceneCard = memo(SceneCard)
+
 // Обёртка с drag-and-drop (только когда filter === 'all')
 function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' | 'dragAttrs' | 'dragListeners'>) {
   const {
@@ -562,7 +564,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
             const badge = getTypeBadge(scene.type || '')
 
             return (
-              <SceneCard
+              <MemoizedSceneCard
                 key={scene.id}
                 scene={scene}
                 isActive={isActive}
@@ -619,7 +621,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
             </SortableContext>
             <DragOverlay dropAnimation={null}>
               {activeId && activeScene ? (
-                <SceneCard
+                <MemoizedSceneCard
                   scene={activeScene}
                   isActive={activeSceneId === activeScene.id}
                   isExpanded={expandedScenes.has(activeScene.id)}

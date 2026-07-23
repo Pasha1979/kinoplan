@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, memo } from 'react'
 import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2 } from 'lucide-react'
@@ -243,3 +243,5 @@ export function ScriptEditorView({
     </div>
   )
 }
+
+export const MemoizedScriptEditorView = memo(ScriptEditorView)
