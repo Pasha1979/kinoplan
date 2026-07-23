@@ -997,8 +997,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       blockNodes.push({ node, pos: offset })
     })
 
-    console.log('[cast] Всего блоков в документе:', blockNodes.length)
-
     // Обрабатываем каждую сцену: ищем sceneHeader → sceneCast → sceneCharacter в пределах сцены
     const scenesToUpdate: Array<{
       castPos: number
@@ -1048,9 +1046,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
       if (castPos !== -1) {
         scenesToUpdate.push({ castPos, castEndPos, currentCastText, dialogChars, sceneNumber })
-        console.log(`[cast] Сцена ${sceneNumber}: найдено персонажей в диалогах:`, dialogChars, '| текущий cast:', currentCastText || '(пусто)')
-      } else {
-        console.log(`[cast] Сцена ${sceneNumber}: sceneCast блок не найден`)
       }
     }
 
@@ -1059,7 +1054,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const { castPos, castEndPos, currentCastText, dialogChars, sceneNumber } = scenesToUpdate[i]
 
       if (dialogChars.length === 0) {
-        console.log(`[cast] Сцена ${sceneNumber}: нет персонажей в диалогах, пропускаем`)
         continue
       }
 
@@ -1081,7 +1075,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       })
 
       if (newNames.length === 0) {
-        console.log(`[cast] Сцена ${sceneNumber}: все персонажи уже в cast`)
         continue
       }
 
@@ -1092,15 +1085,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
       tr.insertText(mergedCast, castPos + 1, castEndPos - 1)
       modified = true
-      console.log(`[cast] Сцена ${sceneNumber} обновлена:`, { old: currentCastText || '(пусто)', new: mergedCast })
     }
 
     if (modified) {
       tr.setMeta('addToHistory', false)
       editorInstance.view.dispatch(tr)
-      console.log('[cast] sceneCast блоки обновлены:', scenesToUpdate.length, 'сцен проверено')
-    } else {
-      console.log('[cast] Новых персонажей для добавления нет')
     }
   }, [])
 
@@ -1183,8 +1172,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     tr.insertText(newText, castBlock.pos + 1, castBlock.end - 1)
     tr.setMeta('addToHistory', false)
     editorInstance.view.dispatch(tr)
-
-    console.log('[cast-live] Добавлен персонаж в cast:', charName)
   }, [])
 
   // Хелпер: расчёт статистики и отправка в коллбэки (используется в onUpdate и при загрузке)
@@ -1203,13 +1190,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       precisePagesFallback: precisePagesRef.current,
       timingSystem: timingSystemRef.current,
       genreCoefficient: genreCoefficientRef.current,
-    })
-    console.log('[stats] Расчёт:', {
-      scenes: stats.scenes,
-      pages: stats.pages,
-      duration: stats.duration,
-      extractedScenesCount: extractedScenes.length,
-      totalPages: result.totalPages,
     })
     onScenesChangeRef.current?.(extractedScenes)
     onStatsChangeRef.current?.(stats)
@@ -1236,7 +1216,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   // Загружаем контент только при создании редактора / смене скрипта
   useEffect(() => {
     if (!editor || initialContentLoadedRef.current) return
-    console.log('[init] Загрузка initialContent, length:', initialContent?.length || 0)
     if (initialContent) {
       editor.commands.setContent(initialContent)
     }
@@ -1246,15 +1225,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // потому что onUpdate НЕ срабатывает при setContent
     setTimeout(() => {
       if (editor && editor.isDestroyed) {
-        console.log('[init] Редактор уничтожен, пропускаем расчёт')
         return
       }
-      console.log('[init] Принудительный пересчёт статистики после setContent')
       calculateAndReportStats(editor)
 
       // При загрузке: если авто-добавление включено — обновить sceneCast блоки
       if (autoExtractCharacters) {
-        console.log('[init] Авто-добавление персонажей в sceneCast включено')
         updateSceneCastBlocks(editor)
       }
     }, 100)
