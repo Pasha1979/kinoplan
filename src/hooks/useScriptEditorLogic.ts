@@ -1051,7 +1051,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     // Обрабатываем в обратном порядке (справа налево), чтобы позиции не съезжали
     for (let i = scenesToUpdate.length - 1; i >= 0; i--) {
-      const { castPos, castEndPos, currentCastText, dialogChars, sceneNumber } = scenesToUpdate[i]
+      const { castPos, castEndPos, currentCastText, dialogChars } = scenesToUpdate[i]
 
       if (dialogChars.length === 0) {
         continue
