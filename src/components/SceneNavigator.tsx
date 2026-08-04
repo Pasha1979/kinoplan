@@ -68,7 +68,7 @@ interface SceneNavigatorProps {
   totalPages?: number
 }
 
-export default function SceneNavigator({
+function SceneNavigator({
   scenes,
   isDark,
   onSceneClick,
@@ -659,3 +659,5 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
     </div>
   )
 }
+
+export default memo(SceneNavigator)

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import {
   AlertTriangle,
   CheckCircle,
@@ -282,7 +282,7 @@ function useTimingValidation(
 /* ──────────────────────────────────────────────────────────────── */
 /*  Main component                                               */
 /* ──────────────────────────────────────────────────────────────── */
-export default function ScriptRightPanel({
+function ScriptRightPanel({
   isDark,
   textPrimary,
   textSecondary,
@@ -684,3 +684,5 @@ export default function ScriptRightPanel({
     </div>
   )
 }
+
+export default memo(ScriptRightPanel)

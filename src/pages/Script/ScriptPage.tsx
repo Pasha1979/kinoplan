@@ -194,6 +194,8 @@ export default function ScriptPage() {
     cast: s.cast,
   })), [scenes])
 
+  const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
+
   if (view === 'empty') {
     return (
       <ScriptEmptyState
@@ -505,7 +507,7 @@ export default function ScriptPage() {
           format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
           enableAutoFix={enableAutoFix}
           scenes={scenes}
-          characters={currentScript?.characters || []}
+          characters={scriptCharacters}
           timingSystem={currentScript?.timingSystem || 'page'}
         />
       )}

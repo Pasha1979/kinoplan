@@ -286,6 +286,36 @@ export function useScriptPageLogic() {
     }
   }, [currentScript, updateScript])
 
+  // Переключение серии: поиск или автосоздание скрипта
+  const setCurrentSeries = useCallback((series: number) => {
+    let script = episodeScripts.find(s => s.episodeNumber === series)
+    if (!script && project) {
+      const newScript = {
+        id: crypto.randomUUID(),
+        projectId: project.id,
+        title: `${project.name} — Серия ${series}`,
+        version: 'Черновик v1',
+        format: currentScript?.format || 'russian',
+        scenes: [],
+        characters: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        timingSystem: currentScript?.timingSystem || 'page',
+        genreCoefficient: currentScript?.genreCoefficient || 1.0,
+        fontFamily: currentScript?.fontFamily || 'Courier New',
+        fontSize: currentScript?.fontSize || 12,
+        autoExtractCharacters: currentScript?.autoExtractCharacters ?? true,
+        episodeNumber: series,
+      }
+      addScript(newScript)
+      setCurrentScript(newScript.id)
+      return
+    }
+    if (script) {
+      setCurrentScript(script.id)
+    }
+  }, [episodeScripts, project, currentScript, addScript, setCurrentScript])
+
   // Очистка таймаута автосохранения при размонтировании
   useEffect(() => {
     return () => {
@@ -328,35 +358,7 @@ export function useScriptPageLogic() {
     setEnableAutoFix,
     // series / stats
     currentSeries,
-    setCurrentSeries: (series: number) => {
-      let script = episodeScripts.find(s => s.episodeNumber === series)
-      if (!script && project) {
-        // Автосоздание скрипта для серии, если его ещё нет
-        const newScript = {
-          id: crypto.randomUUID(),
-          projectId: project.id,
-          title: `${project.name} — Серия ${series}`,
-          version: 'Черновик v1',
-          format: currentScript?.format || 'russian',
-          scenes: [],
-          characters: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          timingSystem: currentScript?.timingSystem || 'page',
-          genreCoefficient: currentScript?.genreCoefficient || 1.0,
-          fontFamily: currentScript?.fontFamily || 'Courier New',
-          fontSize: currentScript?.fontSize || 12,
-          autoExtractCharacters: currentScript?.autoExtractCharacters ?? true,
-          episodeNumber: series,
-        }
-        addScript(newScript)
-        setCurrentScript(newScript.id)
-        return
-      }
-      if (script) {
-        setCurrentScript(script.id)
-      }
-    },
+    setCurrentSeries,
     episodeScripts,
     targetDuration,
     scriptStats,
