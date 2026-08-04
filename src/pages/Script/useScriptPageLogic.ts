@@ -277,6 +277,15 @@ export function useScriptPageLogic() {
     setShowTimingSettingsModal(false)
   }, [currentScript, updateScript])
 
+  // Toggle autoExtractCharacters for current script (per-script, not global)
+  const handleToggleAutoExtract = useCallback(() => {
+    if (currentScript) {
+      updateScript(currentScript.id, {
+        autoExtractCharacters: !currentScript.autoExtractCharacters,
+      })
+    }
+  }, [currentScript, updateScript])
+
   // Очистка таймаута автосохранения при размонтировании
   useEffect(() => {
     return () => {
@@ -368,6 +377,7 @@ export function useScriptPageLogic() {
     showTimingSettingsModal,
     setShowTimingSettingsModal,
     handleApplyTimingSettings,
+    handleToggleAutoExtract,
     // save
     isSaving,
     handleSave,

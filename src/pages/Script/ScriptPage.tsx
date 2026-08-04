@@ -69,6 +69,7 @@ export default function ScriptPage() {
     showTimingSettingsModal,
     setShowTimingSettingsModal,
     handleApplyTimingSettings,
+    handleToggleAutoExtract,
     // save
     isSaving,
     handleSave,
@@ -544,6 +545,8 @@ export default function ScriptPage() {
           onFormatSwitch={handleFormatSwitch}
           onApply={handleApplyTimingSettings}
           onClose={() => setShowTimingSettingsModal(false)}
+          autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
+          onToggleAutoExtractCharacters={handleToggleAutoExtract}
         />
       )}
     </div>

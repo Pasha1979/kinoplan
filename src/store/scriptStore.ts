@@ -147,9 +147,6 @@ interface ScriptStore {
   showPlaceholders: boolean
   toggleShowPlaceholders: () => void
 
-  // Автоматическое извлечение персонажей из диалогов в cast
-  autoExtractCharacters: boolean
-  toggleAutoExtractCharacters: () => void
 }
 
 export const useScriptStore = create<ScriptStore>()(
@@ -161,7 +158,6 @@ export const useScriptStore = create<ScriptStore>()(
       notes: [],
       formatLocked: false,
       showPlaceholders: true,
-      autoExtractCharacters: true,
       
       // Script CRUD
       addScript: (script) =>
@@ -316,8 +312,6 @@ export const useScriptStore = create<ScriptStore>()(
 
       toggleShowPlaceholders: () =>
         set((state) => ({ showPlaceholders: !state.showPlaceholders })),
-      toggleAutoExtractCharacters: () =>
-        set((state) => ({ autoExtractCharacters: !state.autoExtractCharacters })),
     }),
     { name: 'kinoplan-scripts' }
   )

@@ -28,6 +28,8 @@ interface TimingSettingsModalProps {
   onFormatSwitch: (format: ScriptFormat) => void
   onApply: (timingSystem: TimingSystem, genreCoefficient: string) => void
   onClose: () => void
+  autoExtractCharacters: boolean
+  onToggleAutoExtractCharacters: () => void
 }
 
 const timingOptions: Array<{
@@ -98,14 +100,14 @@ export default function TimingSettingsModal({
   onFormatSwitch,
   onApply,
   onClose,
+  autoExtractCharacters,
+  onToggleAutoExtractCharacters,
 }: TimingSettingsModalProps) {
   const [tempTimingSystem, setTempTimingSystem] = useState<TimingSystem>(initialTimingSystem)
   const [tempGenreCoefficient, setTempGenreCoefficient] = useState(initialGenreCoefficient)
   const [tempFormat, setTempFormat] = useState<ScriptFormat>(initialFormat)
   const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
   const toggleShowPlaceholders = useScriptStore((s) => s.toggleShowPlaceholders)
-  const autoExtractCharacters = useScriptStore((s) => s.autoExtractCharacters)
-  const toggleAutoExtractCharacters = useScriptStore((s) => s.toggleAutoExtractCharacters)
 
   const surfaceBg = isDark ? '#1e1e3a' : '#ffffff'
   const sectionBg = isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc'
@@ -373,7 +375,7 @@ export default function TimingSettingsModal({
                 </div>
               </div>
               <button
-                onClick={toggleAutoExtractCharacters}
+                onClick={onToggleAutoExtractCharacters}
                 className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
                 style={{
                   background: autoExtractCharacters ? accent : isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db',
