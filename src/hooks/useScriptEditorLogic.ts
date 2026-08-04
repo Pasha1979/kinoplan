@@ -39,6 +39,7 @@ export interface UseScriptEditorLogicOptions {
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
   onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number) => void) => void
   onUpdateNumbersReady?: (updateFn: (scenes: Array<{ id: string; number: string }>) => void) => void
+  onFormatReady?: (formatFn: () => string) => void
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
@@ -87,6 +88,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onConvertReady,
     onReorderReady,
     onUpdateNumbersReady,
+    onFormatReady,
     genreCoefficient,
     timingSystem,
     smartTypeCharacters,
@@ -1311,6 +1313,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     onConvertReady(convertFormat)
   }, [editor, onConvertReady])
+
+  // Регистрация функции автоформатирования — возвращает текст редактора
+  useEffect(() => {
+    if (!editor || !onFormatReady) return
+    onFormatReady(() => {
+      return editor.getText({ blockSeparator: '\n' })
+    })
+  }, [editor, onFormatReady])
 
   // Функция для установки типа блока
   const setBlockType = useCallback((type: string) => {

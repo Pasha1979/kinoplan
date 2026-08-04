@@ -119,7 +119,11 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
 
     // Действующие лица: заглавные через запятую ИЛИ одно имя сразу после шапки
     if (
-      (prevType === 'sceneHeader' || prevType === 'sceneCast') &&
+      (
+        prevType === 'sceneHeader' ||
+        prevType === 'sceneCast' ||
+        (prevType === null && /[,/]/.test(trimmed))
+      ) &&
       isCastLine(trimmed)
     ) {
       flushAction()

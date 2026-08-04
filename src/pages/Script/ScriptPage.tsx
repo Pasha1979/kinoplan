@@ -22,6 +22,7 @@ import { useFocusMode } from '../../hooks/useFocusMode'
 import { useSplitScreen } from '../../hooks/useSplitScreen'
 import { useDialogueMode } from '../../hooks/useDialogueMode'
 import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
+import FormatModal from './components/FormatModal'
 
 export default function ScriptPage() {
   const logic = useScriptPageLogic()
@@ -85,6 +86,7 @@ export default function ScriptPage() {
     convertFormatRef,
     reorderEditorRef,
     updateNumbersRef,
+    formatEditorRef,
   } = logic
 
   const updateScript = useScriptStore((s) => s.updateScript)
@@ -93,6 +95,8 @@ export default function ScriptPage() {
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
   const search = useScriptSearch(editorInstance)
   const [showHelpModal, setShowHelpModal] = useState(false)
+  const [showAutoFormatModal, setShowAutoFormatModal] = useState(false)
+  const [formatRawText, setFormatRawText] = useState('')
   const focusMode = useFocusMode()
   const splitScreen = useSplitScreen(currentSeries)
   const dialogueMode = useDialogueMode(scenes)
@@ -177,6 +181,11 @@ export default function ScriptPage() {
   const handleBack = useCallback(() => setView('empty'), [])
   const handleOpenSettings = useCallback(() => setShowTimingSettingsModal(true), [])
   const handleHelp = useCallback(() => setShowHelpModal(true), [])
+  const handleOpenFormat = useCallback(() => {
+    const text = formatEditorRef.current?.() || ''
+    setFormatRawText(text)
+    setShowAutoFormatModal(true)
+  }, [formatEditorRef])
   const handleToggleAutoFix = useCallback(() => setEnableAutoFix(prev => !prev), [])
   const handleToggleRightPanel = useCallback(() => setRightPanelOpen(prev => !prev), [])
   const handleOpenSearch = useCallback(() => search.open(false), [search.open])
@@ -242,6 +251,7 @@ export default function ScriptPage() {
           onToggleSplitScreen={splitScreen.toggle}
           dialogueActiveCharacter={dialogueMode.activeCharacter}
           onToggleDialoguePicker={dialogueMode.togglePicker}
+          onFormat={handleOpenFormat}
         />}
 
         {/* Dialogue Character Picker — dropdown под шапкой */}
@@ -368,6 +378,7 @@ export default function ScriptPage() {
                   onConvertReady={(fn) => { convertFormatRef.current = fn }}
                   onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
                   onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
+                  onFormatReady={(formatFn) => { formatEditorRef.current = formatFn }}
                   formatLocked={formatLocked}
                   autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
                   initialContent={currentScript?.content}
@@ -532,6 +543,21 @@ export default function ScriptPage() {
         <HelpModal
           isDark={isDark}
           onClose={() => setShowHelpModal(false)}
+        />
+      )}
+
+      {/* Модальное окно автоформатирования */}
+      {showAutoFormatModal && (
+        <FormatModal
+          isDark={isDark}
+          rawText={formatRawText}
+          onApply={(html) => {
+            if (editorInstance) {
+              editorInstance.chain().focus().setContent(html).run()
+            }
+            setShowAutoFormatModal(false)
+          }}
+          onClose={() => setShowAutoFormatModal(false)}
         />
       )}
 

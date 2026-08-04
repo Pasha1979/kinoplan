@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2 } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 
@@ -31,6 +31,7 @@ interface ScriptHeaderProps {
   onToggleSplitScreen?: () => void
   dialogueActiveCharacter?: string | null
   onToggleDialoguePicker?: () => void
+  onFormat?: () => void
 }
 
 function ScriptHeader({
@@ -56,6 +57,7 @@ function ScriptHeader({
   onToggleSplitScreen,
   dialogueActiveCharacter,
   onToggleDialoguePicker,
+  onFormat,
 }: ScriptHeaderProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -123,6 +125,24 @@ function ScriptHeader({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Кнопка Автоформатирование */}
+        {onFormat && (
+          <button
+            onClick={onFormat}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all"
+            style={{
+              background: 'rgba(168,85,247,0.15)',
+              color: '#a855f7',
+              border: '1px solid rgba(168,85,247,0.3)',
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.25)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.15)'}
+            title="Автоформатирование — распознать блоки и отформатировать"
+          >
+            <Wand2 size={13} />
+            Формат
+          </button>
+        )}
         {/* Кнопка Сохранить — подтверждает автосохранение */}
         <button
           onClick={onSave}

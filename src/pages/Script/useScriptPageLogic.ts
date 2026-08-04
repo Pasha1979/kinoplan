@@ -62,6 +62,8 @@ export function useScriptPageLogic() {
   const reorderEditorRef = useRef<((fromIndex: number, toIndex: number) => void) | null>(null)
   // Ссылка на функцию обновления номеров в редакторе
   const updateNumbersRef = useRef<((scenes: Array<{ id: string; number: string }>) => void) | null>(null)
+  // Ссылка на функцию получения текста редактора для автоформатирования
+  const formatEditorRef = useRef<(() => string) | null>(null)
   // AbortController для отмены устаревших запросов сохранения
   const abortControllerRef = useRef<AbortController | null>(null)
   // Ref для актуальной handleSave — чтобы triggerAutoSave всегда вызывал свежую версию
@@ -393,5 +395,6 @@ export function useScriptPageLogic() {
     convertFormatRef,
     reorderEditorRef,
     updateNumbersRef,
+    formatEditorRef,
   }
 }
