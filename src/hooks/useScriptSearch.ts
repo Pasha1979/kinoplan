@@ -135,9 +135,11 @@ export function useScriptSearch(editor: Editor | null) {
       .deleteRange({ from: match.from, to: match.to })
       .insertContentAt(match.from, replaceText)
       .run()
-    // Сбрасываем индекс перед асинхронным перезапуском поиска
+    // Сбрасываем индекс и очищаем matches перед асинхронным перезапуском поиска
     currentIndexRef.current = 0
     setCurrentIndex(0)
+    matchesRef.current = []
+    setMatches([])
     // Перезапускаем поиск после замены
     setTimeout(() => search(query, filter), 50)
   }, [editor, replaceText, query, filter, search])
@@ -154,9 +156,11 @@ export function useScriptSearch(editor: Editor | null) {
         .insertContentAt(match.from, replaceText)
     })
     chain.run()
-    // Сбрасываем индекс после массовой замены
+    // Сбрасываем индекс и очищаем matches после массовой замены
     currentIndexRef.current = 0
     setCurrentIndex(0)
+    matchesRef.current = []
+    setMatches([])
     setTimeout(() => search(query, filter), 50)
   }, [editor, replaceText, query, filter, search])
 

@@ -19,6 +19,7 @@ export interface ScriptEditorViewProps {
     isOpen: boolean
     closeSuggestions: () => void
     navigateSuggestions: (direction: 'up' | 'down') => void
+    recordUsage: (suggestion: SmartTypeSuggestion) => void
   }
   currentType: string
   setBlockType: (type: string) => void
@@ -234,7 +235,8 @@ export function ScriptEditorView({
             .deleteRange({ from: wordStartPos, to: wordEndPos })
             .insertContent(textToInsert)
             .run()
-          
+
+          smartType.recordUsage(suggestion)
           smartType.closeSuggestions()
         }}
         onClose={smartType.closeSuggestions}

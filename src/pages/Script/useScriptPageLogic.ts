@@ -64,6 +64,8 @@ export function useScriptPageLogic() {
   const updateNumbersRef = useRef<((scenes: Array<{ id: string; number: string }>) => void) | null>(null)
   // AbortController для отмены устаревших запросов сохранения
   const abortControllerRef = useRef<AbortController | null>(null)
+  // Ref для актуальной handleSave — чтобы triggerAutoSave всегда вызывал свежую версию
+  const handleSaveRef = useRef<() => void>(() => {})
 
   // Автосохранение с debounce — ставит 'unsaved' и запускает таймер на 2.5с
   const triggerAutoSave = useCallback(() => {
@@ -72,7 +74,7 @@ export function useScriptPageLogic() {
       clearTimeout(autoSaveTimeoutRef.current)
     }
     autoSaveTimeoutRef.current = setTimeout(() => {
-      handleSave()
+      handleSaveRef.current()
     }, 2500)
   }, [])
 
@@ -219,6 +221,7 @@ export function useScriptPageLogic() {
       abortControllerRef.current = null
     }
   }, [isSaving, currentProjectId, project?.id, scenes])
+  handleSaveRef.current = handleSave
 
   // Перестановка сцен из навигатора → scriptStore + редактор
   const handleSceneReorder = useCallback((fromIndex: number, toIndex: number) => {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, memo } from 'react'
+import { useState, useMemo, useEffect, memo, useCallback } from 'react'
 import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   DndContext,
@@ -196,7 +196,7 @@ export default function SceneNavigator({
     }
   }
 
-  const toggleExpanded = (sceneId: string) => {
+  const toggleExpanded = useCallback((sceneId: string) => {
     setExpandedScenes(prev => {
       const next = new Set(prev)
       if (next.has(sceneId)) {
@@ -206,7 +206,7 @@ export default function SceneNavigator({
       }
       return next
     })
-  }
+  }, [])
 
 // Общий интерфейс для plain и sortable карточки
 interface SceneCardProps {

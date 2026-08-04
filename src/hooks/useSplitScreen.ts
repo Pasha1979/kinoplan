@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 export type SplitPanel = 'left' | 'right'
 
@@ -17,6 +17,7 @@ export function useSplitScreen(defaultSeries = 1) {
   const [leftWidthPct, setLeftWidthPct] = useState(50)
   const isDraggingRef = useRef(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const dragCleanupRef = useRef<(() => void) | null>(null)
 
   const enable = useCallback(() => {
     setIsActive(true)
@@ -29,7 +30,8 @@ export function useSplitScreen(defaultSeries = 1) {
     setLeftFocusSceneId(undefined)
     setRightFocusSceneId(undefined)
     setLeftWidthPct(50)
-  }, [])
+    setRightSeries(defaultSeries)
+  }, [defaultSeries])
 
   const toggle = useCallback(() => {
     setIsActive(prev => {
@@ -38,10 +40,11 @@ export function useSplitScreen(defaultSeries = 1) {
         setLeftFocusSceneId(undefined)
         setRightFocusSceneId(undefined)
         setLeftWidthPct(50)
+        setRightSeries(defaultSeries)
       }
       return !prev
     })
-  }, [])
+  }, [defaultSeries])
 
   // Навигация к сцене — идёт в активную панель
   const navigateToScene = useCallback((sceneId: string) => {
@@ -74,9 +77,21 @@ export function useSplitScreen(defaultSeries = 1) {
       isDraggingRef.current = false
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
+      dragCleanupRef.current = null
     }
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
+    dragCleanupRef.current = () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  // Очистка listener'ов при unmount во время drag
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.()
+    }
   }, [])
 
   return {

@@ -37,6 +37,7 @@ export function useDialogueMode(scenes: Scene[]) {
   const exit = useCallback(() => {
     setActiveCharacter(null)
     setPickerOpen(false)
+    setPovMode(false)
   }, [])
 
   return {

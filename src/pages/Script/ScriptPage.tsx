@@ -169,6 +169,30 @@ export default function ScriptPage() {
 
   const { bg, sidebarBg, border, textPrimary, textSecondary } = colors
 
+  // Стабильный объект colors для memo-компонентов (ScriptHeader, ScriptStatusBar)
+  const headerColors = useMemo(() => ({ sidebarBg, border, textPrimary, textSecondary }), [sidebarBg, border, textPrimary, textSecondary])
+
+  // Стабильные колбэки для ScriptHeader
+  const handleBack = useCallback(() => setView('empty'), [])
+  const handleOpenSettings = useCallback(() => setShowTimingSettingsModal(true), [])
+  const handleHelp = useCallback(() => setShowHelpModal(true), [])
+  const handleToggleAutoFix = useCallback(() => setEnableAutoFix(prev => !prev), [])
+  const handleToggleRightPanel = useCallback(() => setRightPanelOpen(prev => !prev), [])
+  const handleOpenSearch = useCallback(() => search.open(false), [search.open])
+
+  // Стабильный массив сцен для SceneNavigator (без нового массива каждый рендер)
+  const navigatorScenes = useMemo(() => scenes.map(s => ({
+    id: s.id,
+    number: s.number,
+    type: s.type,
+    location: s.location,
+    sublocation: s.sublocation,
+    time: s.time,
+    pages: s.pages || 0,
+    charCount: s.charCount,
+    cast: s.cast,
+  })), [scenes])
+
   if (view === 'empty') {
     return (
       <ScriptEmptyState
@@ -194,21 +218,21 @@ export default function ScriptPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {!focusMode.isFocused && <ScriptHeader
           isDark={isDark}
-          colors={{ sidebarBg, border, textPrimary, textSecondary }}
+          colors={headerColors}
           selectedScene={selectedScene}
           currentScript={currentScript}
           isSaving={isSaving}
           enableAutoFix={enableAutoFix}
           rightPanelOpen={rightPanelOpen}
           formatLocked={formatLocked}
-          onBack={() => setView('empty')}
+          onBack={handleBack}
           onSave={handleSave}
-          onOpenSettings={() => setShowTimingSettingsModal(true)}
-          onHelp={() => setShowHelpModal(true)}
-          onToggleAutoFix={() => setEnableAutoFix(!enableAutoFix)}
-          onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+          onOpenSettings={handleOpenSettings}
+          onHelp={handleHelp}
+          onToggleAutoFix={handleToggleAutoFix}
+          onToggleRightPanel={handleToggleRightPanel}
           onToggleFormatLock={toggleFormatLock}
-          onOpenSearch={() => search.open(false)}
+          onOpenSearch={handleOpenSearch}
           isFocusMode={focusMode.isFocused}
           onToggleFocusMode={focusMode.toggle}
           isSplitScreen={splitScreen.isActive}
@@ -287,17 +311,7 @@ export default function ScriptPage() {
         ) : (
           <div className={`flex-1 flex overflow-hidden${focusMode.isFocused ? ' justify-center' : ''}`}>
             {!focusMode.isFocused && <SceneNavigator
-              scenes={scenes.map(s => ({
-                id: s.id,
-                number: s.number,
-                type: s.type,
-                location: s.location,
-                sublocation: s.sublocation,
-                time: s.time,
-                pages: s.pages || 0,
-                charCount: s.charCount,
-                cast: s.cast,
-              }))}
+              scenes={navigatorScenes}
               isDark={isDark}
               timingSystem={currentScript?.timingSystem || 'page'}
               genreCoefficient={currentScript?.genreCoefficient || 1.0}
@@ -470,7 +484,7 @@ export default function ScriptPage() {
         {activeTab === 'text' && (
           <ScriptStatusBar
             isDark={isDark}
-            colors={{ sidebarBg, border, textPrimary, textSecondary }}
+            colors={headerColors}
             scenesCount={scriptStats.scenes}
             seriesPages={scriptStats.pages}
             seriesDuration={seriesDuration}
