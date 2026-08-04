@@ -42,7 +42,6 @@ export interface Scene {
   cast: string[] // имена персонажей в сцене
   dialogCharacters?: string[] // персонажи, которые реально говорят в сцене
   breakdownElements?: BreakdownElement[]
-  scriptText?: string // полный текст сцены (из редактора)
   colorTag?: string // цветная ревизия (белый/синий/розовый...)
   isOmitted?: boolean // сцена исключена из съёмок
   order?: number // порядок в сценарии

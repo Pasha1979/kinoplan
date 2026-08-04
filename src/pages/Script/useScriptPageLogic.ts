@@ -105,7 +105,6 @@ export function useScriptPageLogic() {
         cast: s.cast,
         dialogCharacters: s.dialogCharacters || existing?.dialogCharacters || [],
         breakdownElements: existing?.breakdownElements || [],
-        scriptText: existing?.scriptText,
         colorTag: existing?.colorTag,
         isOmitted: existing?.isOmitted || false,
         order: existing?.order ?? 0,
