@@ -570,27 +570,26 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       child.removeAttribute('data-page')
       child.style.marginBottom = ''
     })
-    if (pageBreaksRef.current.length <= 1) return
+    if (children.length === 0) return
 
-    const pageHeightPx = A4_HEIGHT_MM * mmToPx
-    for (let i = 1; i < pageBreaksRef.current.length; i++) {
-      const { page, startIndex } = pageBreaksRef.current[i]
-      const child = children[startIndex]
-      if (!child) continue
+    const mmToPx = 96 / 25.4
+    const pageHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
+    const marginPx = PAGE_MARGIN_TOP_BOTTOM_MM * mmToPx
+    let page = 2
+    let contentEnd = pageHeightPx
 
-      const pageStartPx = (page - 1) * pageHeightPx
-      const prevChild = children[startIndex - 1]
-      if (prevChild) {
-        const remaining = pageStartPx - (prevChild.offsetTop + prevChild.offsetHeight)
-        if (remaining > 0) {
-          prevChild.style.marginBottom = `${remaining}px`
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if (child.offsetTop >= contentEnd) {
+        const paperStart = contentEnd + marginPx
+        const remaining = paperStart - child.offsetTop
+        if (remaining > 0 && i > 0) {
+          children[i - 1].style.marginBottom = `${remaining}px`
         }
-      }
-
-      // Помечаем только если ребенок действительно прибыл на новую страницу
-      if (child.offsetTop >= pageStartPx) {
         child.classList.add('page-start')
         child.setAttribute('data-page', `Страница ${page}`)
+        page++
+        contentEnd += pageHeightPx
       }
     }
   }, [editor])
