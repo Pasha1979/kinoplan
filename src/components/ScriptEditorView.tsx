@@ -143,25 +143,19 @@ export function ScriptEditorView({
         {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
         {a4Mode ? (
           <div
-            className="mx-auto rounded-xl"
+            className="mx-auto"
             style={{
               width: '210mm', // Стандарт A4
               minHeight: '297mm',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'transparent',
               backgroundImage: `repeating-linear-gradient(
                 to bottom,
-                transparent 0,
-                transparent 277mm,
-                rgba(0, 0, 0, 0.18) 277mm,
-                rgba(0, 0, 0, 0.18) 277.5mm,
-                transparent 277.5mm,
-                transparent 297mm
+                #ffffff 0,
+                #ffffff 297mm,
+                transparent 297mm,
+                transparent 307mm
               )`,
               color: '#000000',
-              boxShadow: isDark
-                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-                : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              border: '1px solid rgba(0, 0, 0, 0.08)',
               padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm (стандарт для сценариев)
             }}
           >

@@ -561,6 +561,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   })
 
   // Применяем page-start и отступы, чтобы содержимое начиналось с новой страницы А4
+  // Каждая страница — отдельный белый лист 297мм с зазором 10мм между листами
   const applyPageBreaks = useCallback(() => {
     if (!editor) return
     const editorDom = editor.view.dom as HTMLElement
@@ -573,23 +574,34 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (children.length === 0) return
 
     const mmToPx = 96 / 25.4
-    const pageHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
-    const marginPx = PAGE_MARGIN_TOP_BOTTOM_MM * mmToPx
+    const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
+    const gapPx = 10 * mmToPx // 10мм — зазор между листами
+    const marginPx = PAGE_MARGIN_TOP_BOTTOM_MM * mmToPx // 20мм — поля сверху/снизу
+    const contentHeightPx = pageHeightPx - 2 * marginPx // 257мм — полезная высота
+
     let page = 2
-    let contentEnd = pageHeightPx
+    let currentContentEnd = marginPx + contentHeightPx // 277мм для страницы 1
+    let nextPageStart = pageHeightPx + gapPx // 307мм для страницы 2
 
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
-      if (child.offsetTop >= contentEnd) {
-        const paperStart = contentEnd + marginPx
-        const remaining = paperStart - child.offsetTop
-        if (remaining > 0 && i > 0) {
-          children[i - 1].style.marginBottom = `${remaining}px`
+      const childEnd = child.offsetTop + child.offsetHeight
+
+      if (childEnd > currentContentEnd) {
+        // Этот блок не помещается на текущей странице — переносим на следующую
+        const prevChild = children[i - 1]
+        if (prevChild) {
+          const prevEnd = prevChild.offsetTop + prevChild.offsetHeight
+          const push = nextPageStart - prevEnd
+          if (push > 0) {
+            prevChild.style.marginBottom = `${push}px`
+          }
         }
         child.classList.add('page-start')
         child.setAttribute('data-page', `Страница ${page}`)
         page++
-        contentEnd += pageHeightPx
+        currentContentEnd = nextPageStart + marginPx + contentHeightPx
+        nextPageStart += pageHeightPx + gapPx
       }
     }
   }, [editor])

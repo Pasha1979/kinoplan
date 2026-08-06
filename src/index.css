@@ -466,10 +466,10 @@ body {
 [data-a4="true"] .tiptap-editor .page-start::before {
   content: attr(data-page);
   position: absolute;
-  top: -2cm;
+  top: -10mm;
   left: -3cm;
   right: -2cm;
-  height: 2cm;
+  height: 10mm;
   background: var(--page-break-bg);
   color: var(--page-break-color);
   display: flex;
@@ -478,6 +478,5 @@ body {
   font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  border-top: 1px dashed rgba(0, 0, 0, 0.15);
   pointer-events: none;
 }
