@@ -55,7 +55,8 @@ export function ScriptEditorView({
       const editorDom = editor.view.dom as HTMLElement
       const mmToPx = 96 / 25.4
       const hMm = editorDom.scrollHeight / mmToPx
-      const count = Math.max(1, Math.ceil((hMm + 4) / 301))
+      // +24 = 20mm top offset редактора + 4mm зазор, чтобы последний лист покрывал контент до самого низа
+      const count = Math.max(1, Math.ceil((hMm + 24) / 301))
       setPageCount(count)
     }
 

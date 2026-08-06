@@ -593,7 +593,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // Pass 2: вычисляем и применяем отступы с учётом накопленного смещения
     let page = 2
     let currentContentEnd = contentHeightPx // 257мм в координатах редактора
-    let nextPageContentStart = pageHeightPx + gapPx + marginPx // 321мм в координатах редактора
+    let nextPageContentStart = pageHeightPx + gapPx // 301мм в координатах редактора
     let accumulatedPush = 0
 
     for (let i = 0; i < children.length; i++) {
