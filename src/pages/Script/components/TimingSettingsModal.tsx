@@ -14,9 +14,11 @@ import {
   FileText,
   Film,
   Users,
+  Layout,
 } from 'lucide-react'
 import type { ScriptFormat, TimingSystem } from '../../../store/scriptStore'
 import { useScriptStore } from '../../../store/scriptStore'
+import { useUiStore } from '../../../store/uiStore'
 
 interface TimingSettingsModalProps {
   isDark: boolean
@@ -108,6 +110,8 @@ export default function TimingSettingsModal({
   const [tempFormat, setTempFormat] = useState<ScriptFormat>(initialFormat)
   const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
   const toggleShowPlaceholders = useScriptStore((s) => s.toggleShowPlaceholders)
+  const a4Mode = useUiStore((s) => s.a4Mode)
+  const toggleA4Mode = useUiStore((s) => s.toggleA4Mode)
 
   const surfaceBg = isDark ? '#1e1e3a' : '#ffffff'
   const sectionBg = isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc'
@@ -350,6 +354,43 @@ export default function TimingSettingsModal({
                   className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
                   style={{
                     left: showPlaceholders ? '24px' : '2px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  }}
+                />
+              </button>
+            </div>
+
+            <div
+              className="flex items-center justify-between p-4 rounded-xl mt-3"
+              style={{ background: sectionBg, border: `1px solid ${borderColor}` }}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
+                  style={{ background: 'rgba(99,102,241,0.1)', color: accentLight }}
+                >
+                  <Layout size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: textPrimary }}>Режим страницы A4</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
+                    {a4Mode ? 'Редактор отображается как лист A4' : 'Редактор растягивается на всю ширину'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={toggleA4Mode}
+                className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
+                style={{
+                  background: a4Mode ? accent : isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db',
+                }}
+                aria-checked={a4Mode}
+                role="switch"
+              >
+                <span
+                  className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                  style={{
+                    left: a4Mode ? '24px' : '2px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                   }}
                 />

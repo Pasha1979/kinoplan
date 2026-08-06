@@ -1,4 +1,4 @@
-import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight, Layout } from 'lucide-react'
+import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 
 function ComingSoonRow({ icon, label, isDark }: { icon: React.ReactNode; label: string; isDark: boolean }) {
@@ -24,7 +24,7 @@ function ComingSoonRow({ icon, label, isDark }: { icon: React.ReactNode; label: 
 }
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, a4Mode, toggleA4Mode } = useUiStore()
+  const { theme, toggleTheme } = useUiStore()
   const isDark = theme === 'dark'
 
   const bg = isDark ? '#0f0f20' : '#f5f7fa'
@@ -86,30 +86,6 @@ export default function SettingsPage() {
                 Скоро
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between px-5 py-4"
-            style={{ borderTop: `1px solid ${border}` }}>
-            <div className="flex items-center gap-3">
-              <Layout size={18} style={{ color: textSecondary }} />
-              <div>
-                <p className="text-sm font-medium" style={{ color: textPrimary }}>Режим страницы A4</p>
-                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>
-                  {a4Mode ? 'Редактор отображается как лист A4' : 'Редактор растягивается на всю ширину'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={toggleA4Mode}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-              style={{
-                background: a4Mode ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)') : 'transparent',
-                color: a4Mode ? (isDark ? '#818cf8' : '#6366f1') : textSecondary,
-                border: `1px solid ${a4Mode ? (isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)') : border}`,
-              }}
-            >
-              {a4Mode ? 'Включен' : 'Выключен'}
-            </button>
           </div>
         </div>
 
