@@ -472,12 +472,13 @@ body {
   top: -30mm;
   left: -3cm;
   right: -2cm;
-  height: 10mm;
+  height: 30mm;
   background: var(--page-break-bg);
   color: var(--page-break-color);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 2mm;
   font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;

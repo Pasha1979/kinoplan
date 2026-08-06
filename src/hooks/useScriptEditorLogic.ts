@@ -579,26 +579,40 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const marginPx = PAGE_MARGIN_TOP_BOTTOM_MM * mmToPx // 20мм — поля сверху/снизу
     const contentHeightPx = pageHeightPx - 2 * marginPx // 257мм — полезная высота
 
+    // Pass 1: читаем позиции ДО применения отступов (getBoundingClientRect не зависит от offsetParent)
+    const editorRect = editorDom.getBoundingClientRect()
+    const positions = children.map(child => {
+      const rect = child.getBoundingClientRect()
+      return {
+        top: rect.top - editorRect.top,
+        bottom: rect.bottom - editorRect.top,
+        height: rect.height,
+      }
+    })
+
+    // Pass 2: вычисляем и применяем отступы с учётом накопленного смещения
     let page = 2
-    let currentContentEnd = marginPx + contentHeightPx // 277мм — конец контента стр.1
-    let nextPageContentStart = pageHeightPx + gapPx + marginPx // 327мм — начало контента стр.2
+    let currentContentEnd = contentHeightPx // 257мм в координатах редактора
+    let nextPageContentStart = pageHeightPx + gapPx // 307мм в координатах редактора
+    let accumulatedPush = 0
 
     for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      const childEnd = child.offsetTop + child.offsetHeight
+      const childTop = positions[i].top + accumulatedPush
+      const childEnd = childTop + positions[i].height
 
       if (childEnd > currentContentEnd) {
         // Блок не помещается — переносим на следующую страницу
         const prevChild = children[i - 1]
         if (prevChild) {
-          const prevEnd = prevChild.offsetTop + prevChild.offsetHeight
+          const prevEnd = positions[i - 1].bottom + accumulatedPush
           const push = nextPageContentStart - prevEnd
           if (push > 0) {
             prevChild.style.marginBottom = `${push}px`
+            accumulatedPush += push
           }
         }
-        child.classList.add('page-start')
-        child.setAttribute('data-page', `Страница ${page}`)
+        children[i].classList.add('page-start')
+        children[i].setAttribute('data-page', `Страница ${page}`)
         page++
         currentContentEnd = nextPageContentStart + contentHeightPx
         nextPageContentStart += pageHeightPx + gapPx
