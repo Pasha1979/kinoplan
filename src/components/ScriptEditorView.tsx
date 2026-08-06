@@ -133,21 +133,23 @@ export function ScriptEditorView({
         ref={editorContentRef}
         className="flex-1 overflow-y-auto py-8 px-4"
         style={{
-          background: editorBg,
-          color: textPrimary,
+          background: a4Mode ? (isDark ? '#0a0a15' : '#e5e5e5') : editorBg,
+          color: a4Mode ? '#000000' : textPrimary,
         }}
       >
         {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
         {a4Mode ? (
           <div
-            className="mx-auto"
+            className="mx-auto rounded-xl"
             style={{
               width: '210mm', // Стандарт A4
               minHeight: '297mm',
-              background: isDark ? '#1a1a2e' : '#ffffff',
+              background: '#ffffff',
+              color: '#000000',
               boxShadow: isDark
-                ? '0 4px 20px rgba(0,0,0,0.5)'
-                : '0 4px 20px rgba(0,0,0,0.1)',
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
               padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm (стандарт для сценариев)
             }}
           >
@@ -158,6 +160,7 @@ export function ScriptEditorView({
                 fontFamily,
                 fontSize: `${fontSize}pt`,
                 lineHeight: '1.5',
+                color: '#000000',
               }}
             />
           </div>
