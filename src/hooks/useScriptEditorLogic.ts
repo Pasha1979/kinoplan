@@ -14,6 +14,7 @@ import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
+import { A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM } from '../constants/scriptConstants'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
@@ -559,24 +560,30 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
-  // Применяем page-start классы к DOM редактора (setTimeout — дать ProseMirror завершить рендер)
+  // Применяем page-start классы к DOM редактора на основе реального рендеринга
   const applyPageBreaks = useCallback(() => {
-    if (!editor || pageBreaksRef.current.length <= 1) return
-    setTimeout(() => {
-      const editorDom = editor.view.dom as HTMLElement
-      const children = Array.from(editorDom.children) as HTMLElement[]
-      children.forEach(child => {
-        child.classList.remove('page-start')
-        child.removeAttribute('data-page')
-      })
-      pageBreaksRef.current.slice(1).forEach(breakInfo => {
-        const child = children[breakInfo.startIndex]
-        if (child) {
-          child.classList.add('page-start')
-          child.setAttribute('data-page', `Страница ${breakInfo.page}`)
-        }
-      })
-    }, 0)
+    if (!editor) return
+    const editorDom = editor.view.dom as HTMLElement
+    const children = Array.from(editorDom.children) as HTMLElement[]
+    children.forEach(child => {
+      child.classList.remove('page-start')
+      child.removeAttribute('data-page')
+    })
+    if (children.length === 0) return
+
+    const mmToPx = 96 / 25.4
+    const pageHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
+    let page = 2
+    let threshold = pageHeightPx
+
+    for (const child of children) {
+      if (child.offsetTop >= threshold) {
+        child.classList.add('page-start')
+        child.setAttribute('data-page', `Страница ${page}`)
+        page++
+        threshold += pageHeightPx
+      }
+    }
   }, [editor])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
