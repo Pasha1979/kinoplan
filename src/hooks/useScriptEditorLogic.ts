@@ -560,7 +560,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
-  // Применяем page-start классы к DOM редактора на основе реального рендеринга
+  // Применяем page-start и отступы, чтобы содержимое начиналось с новой страницы А4
   const applyPageBreaks = useCallback(() => {
     if (!editor) return
     const editorDom = editor.view.dom as HTMLElement
@@ -568,20 +568,28 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     children.forEach(child => {
       child.classList.remove('page-start')
       child.removeAttribute('data-page')
+      child.style.marginBottom = ''
     })
-    if (children.length === 0) return
+    if (pageBreaksRef.current.length <= 1) return
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
-    let page = 2
-    let threshold = pageHeightPx
 
-    for (const child of children) {
-      if (child.offsetTop >= threshold) {
-        child.classList.add('page-start')
-        child.setAttribute('data-page', `Страница ${page}`)
-        page++
-        threshold += pageHeightPx
+    for (let i = 1; i < pageBreaksRef.current.length; i++) {
+      const { page, startIndex } = pageBreaksRef.current[i]
+      const child = children[startIndex]
+      if (!child) continue
+
+      child.classList.add('page-start')
+      child.setAttribute('data-page', `Страница ${page}`)
+
+      if (startIndex > 0) {
+        const prevChild = children[startIndex - 1]
+        const pageStartPx = (page - 1) * pageHeightPx
+        const remaining = pageStartPx - (prevChild.offsetTop + prevChild.offsetHeight)
+        if (remaining > 0) {
+          prevChild.style.marginBottom = `${remaining}px`
+        }
       }
     }
   }, [editor])
