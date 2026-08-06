@@ -469,12 +469,11 @@ body {
 [data-a4="true"] .tiptap-editor .page-start::before {
   content: '';
   position: absolute;
-  top: -24mm; /* 4мм зазор + 20мм верхнее поле следующей страницы */
+  top: -24mm; /* 4мм зазор между реальными листами */
   left: -3cm;
   right: -2cm;
   height: 4mm;
   background: transparent;
-  border-top: 1px dashed rgba(0, 0, 0, 0.12);
   pointer-events: auto;
   cursor: default;
 }

@@ -1,4 +1,4 @@
-import { useRef, memo } from 'react'
+import { useRef, useState, useEffect, memo } from 'react'
 import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2 } from 'lucide-react'
@@ -45,14 +45,32 @@ export function ScriptEditorView({
   multiCursorCount = 0,
 }: ScriptEditorViewProps) {
   const editorContentRef = useRef<HTMLDivElement | null>(null)
+  const a4Mode = useUiStore((state) => state.a4Mode)
+  const [pageCount, setPageCount] = useState(1)
+
+  useEffect(() => {
+    if (!editor || !a4Mode) return
+
+    const updatePageCount = () => {
+      const editorDom = editor.view.dom as HTMLElement
+      const mmToPx = 96 / 25.4
+      const hMm = editorDom.scrollHeight / mmToPx
+      const count = Math.max(1, Math.ceil((hMm + 4) / 301))
+      setPageCount(count)
+    }
+
+    updatePageCount()
+    editor.on('update', updatePageCount)
+    return () => {
+      editor.off('update', updatePageCount)
+    }
+  }, [editor, a4Mode])
 
   // Подсветка диалогов выбранного персонажа теперь реализована через
   // ProseMirror Decoration-плагин в DialogueHighlightExtension
   if (!editor) {
     return null
   }
-
-  const a4Mode = useUiStore((state) => state.a4Mode)
 
   const blockTypes = [
     { name: 'sceneHeader', label: 'Шапка', icon: Film, color: '#6366f1' },
@@ -143,34 +161,52 @@ export function ScriptEditorView({
         {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
         {a4Mode ? (
           <div
-            className="mx-auto"
+            className="mx-auto a4-container"
             style={{
-              width: '210mm', // Стандарт A4
+              width: '210mm',
               minHeight: '297mm',
-              backgroundColor: 'transparent',
-              backgroundImage: `repeating-linear-gradient(
-                to bottom,
-                #ffffff 0,
-                #ffffff 296.85mm,
-                rgba(0, 0, 0, 0.08) 296.85mm,
-                rgba(0, 0, 0, 0.08) 297mm,
-                transparent 297mm,
-                transparent 301mm
-              )`,
+              position: 'relative',
               color: '#000000',
-              padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm (стандарт для сценариев)
             }}
           >
-            <EditorContent
-              editor={editor}
-              className={`h-full tiptap-editor format-${format || 'russian'}`}
+            {/* Реальные листы А4 с тенями */}
+            {Array.from({ length: pageCount }).map((_, i) => (
+              <div
+                key={`page-sheet-${i}`}
+                className="pointer-events-none"
+                style={{
+                  position: 'absolute',
+                  top: `${i * 301}mm`,
+                  left: 0,
+                  width: '210mm',
+                  height: '297mm',
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
+                  zIndex: 0,
+                }}
+              />
+            ))}
+            {/* Слой редактора поверх листов */}
+            <div
               style={{
-                fontFamily,
-                fontSize: `${fontSize}pt`,
-                lineHeight: '1.5',
-                color: '#000000',
+                position: 'relative',
+                zIndex: 1,
+                padding: '2cm 2cm 2cm 3cm',
+                backgroundColor: 'transparent',
+                minHeight: '297mm',
               }}
-            />
+            >
+              <EditorContent
+                editor={editor}
+                className={`h-full tiptap-editor format-${format || 'russian'}`}
+                style={{
+                  fontFamily,
+                  fontSize: `${fontSize}pt`,
+                  lineHeight: '1.5',
+                  color: '#000000',
+                }}
+              />
+            </div>
           </div>
         ) : (
           <div className="w-full" style={{ padding: '2cm 2cm 2cm 3cm' }}>
