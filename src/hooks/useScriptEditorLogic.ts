@@ -572,24 +572,25 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     })
     if (pageBreaksRef.current.length <= 1) return
 
-    const mmToPx = 96 / 25.4
-    const pageHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
-
+    const pageHeightPx = A4_HEIGHT_MM * mmToPx
     for (let i = 1; i < pageBreaksRef.current.length; i++) {
       const { page, startIndex } = pageBreaksRef.current[i]
       const child = children[startIndex]
       if (!child) continue
 
-      child.classList.add('page-start')
-      child.setAttribute('data-page', `Страница ${page}`)
-
-      if (startIndex > 0) {
-        const prevChild = children[startIndex - 1]
-        const pageStartPx = (page - 1) * pageHeightPx
+      const pageStartPx = (page - 1) * pageHeightPx
+      const prevChild = children[startIndex - 1]
+      if (prevChild) {
         const remaining = pageStartPx - (prevChild.offsetTop + prevChild.offsetHeight)
         if (remaining > 0) {
           prevChild.style.marginBottom = `${remaining}px`
         }
+      }
+
+      // Помечаем только если ребенок действительно прибыл на новую страницу
+      if (child.offsetTop >= pageStartPx) {
+        child.classList.add('page-start')
+        child.setAttribute('data-page', `Страница ${page}`)
       }
     }
   }, [editor])
