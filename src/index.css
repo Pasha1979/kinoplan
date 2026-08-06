@@ -458,6 +458,10 @@ body {
    Визуальные разрывы страниц, применяемые через page-start класс.
    Активны только в A4-режиме (родитель должен иметь data-a4="true").
 ──────────────────────────────────────────────────────────────────── */
+[data-a4="true"] .tiptap-editor.ProseMirror {
+  overflow: visible !important;
+}
+
 [data-a4="true"] .tiptap-editor .page-start {
   position: relative;
 }
