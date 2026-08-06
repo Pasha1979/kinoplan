@@ -569,7 +569,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     children.forEach(child => {
       child.classList.remove('page-start')
       child.removeAttribute('data-page')
-      child.style.marginBottom = ''
+      child.style.removeProperty('margin-bottom')
     })
     if (children.length === 0) return
 
@@ -605,10 +605,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         const prevChild = children[i - 1]
         if (prevChild) {
           const prevEnd = positions[i - 1].bottom + accumulatedPush
+          const originalGap = positions[i].top - positions[i - 1].bottom
           const push = nextPageContentStart - prevEnd
-          if (push > 0) {
-            prevChild.style.marginBottom = `${push}px`
-            accumulatedPush += push
+          // CSS блоков использует margin с !important, поэтому ставим inline !important
+          // Двигаем только если push больше текущего зазора, иначе блок уже ниже цели
+          if (push > originalGap) {
+            prevChild.style.setProperty('margin-bottom', `${push}px`, 'important')
+            accumulatedPush += push - originalGap
           }
         }
         children[i].classList.add('page-start')
