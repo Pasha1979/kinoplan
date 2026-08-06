@@ -481,5 +481,6 @@ body {
   font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: default;
 }
