@@ -131,7 +131,7 @@ export function ScriptEditorView({
       {/* Область редактора */}
       <div
         ref={editorContentRef}
-        className="flex-1 overflow-y-auto py-8 px-4"
+        className={`flex-1 overflow-y-auto py-8 ${a4Mode ? 'px-4' : 'px-8'}`}
         style={{
           background: a4Mode ? (isDark ? '#0a0a15' : '#e5e5e5') : editorBg,
           color: a4Mode ? '#000000' : textPrimary,
