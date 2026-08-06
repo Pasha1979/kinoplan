@@ -147,7 +147,16 @@ export function ScriptEditorView({
             style={{
               width: '210mm', // Стандарт A4
               minHeight: '297mm',
-              background: '#ffffff',
+              backgroundColor: '#ffffff',
+              backgroundImage: `repeating-linear-gradient(
+                to bottom,
+                transparent 0,
+                transparent 277mm,
+                rgba(0, 0, 0, 0.18) 277mm,
+                rgba(0, 0, 0, 0.18) 277.5mm,
+                transparent 277.5mm,
+                transparent 297mm
+              )`,
               color: '#000000',
               boxShadow: isDark
                 ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
