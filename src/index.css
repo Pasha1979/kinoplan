@@ -467,13 +467,17 @@ body {
 }
 
 [data-a4="true"] .tiptap-editor .page-start::before {
-  content: '';
+  content: attr(data-page);
   position: absolute;
-  top: -24mm; /* 4мм зазор между реальными листами */
+  top: -24mm; /* 4мм зазор + 20мм верхнее поле */
   left: -3cm;
   right: -2cm;
-  height: 4mm;
-  background: transparent;
+  height: 24mm;
+  background: rgba(239, 68, 68, 0.8);
+  color: #ffffff;
+  font-size: 8pt;
+  line-height: 24mm;
+  text-align: center;
   pointer-events: auto;
   cursor: default;
 }
