@@ -150,8 +150,12 @@ export function ScriptEditorView({
               backgroundColor: 'transparent',
               backgroundImage: `repeating-linear-gradient(
                 to bottom,
-                #ffffff 0,
-                #ffffff 297mm,
+                rgba(0,0,0,0.10) 0,
+                rgba(0,0,0,0.03) 0.3mm,
+                #ffffff 0.3mm,
+                #ffffff 296.7mm,
+                rgba(0,0,0,0.03) 296.7mm,
+                rgba(0,0,0,0.10) 297mm,
                 transparent 297mm,
                 transparent 307mm
               )`,

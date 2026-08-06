@@ -580,19 +580,19 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const contentHeightPx = pageHeightPx - 2 * marginPx // 257мм — полезная высота
 
     let page = 2
-    let currentContentEnd = marginPx + contentHeightPx // 277мм для страницы 1
-    let nextPageStart = pageHeightPx + gapPx // 307мм для страницы 2
+    let currentContentEnd = marginPx + contentHeightPx // 277мм — конец контента стр.1
+    let nextPageContentStart = pageHeightPx + gapPx + marginPx // 327мм — начало контента стр.2
 
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       const childEnd = child.offsetTop + child.offsetHeight
 
       if (childEnd > currentContentEnd) {
-        // Этот блок не помещается на текущей странице — переносим на следующую
+        // Блок не помещается — переносим на следующую страницу
         const prevChild = children[i - 1]
         if (prevChild) {
           const prevEnd = prevChild.offsetTop + prevChild.offsetHeight
-          const push = nextPageStart - prevEnd
+          const push = nextPageContentStart - prevEnd
           if (push > 0) {
             prevChild.style.marginBottom = `${push}px`
           }
@@ -600,8 +600,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         child.classList.add('page-start')
         child.setAttribute('data-page', `Страница ${page}`)
         page++
-        currentContentEnd = nextPageStart + marginPx + contentHeightPx
-        nextPageStart += pageHeightPx + gapPx
+        currentContentEnd = nextPageContentStart + contentHeightPx
+        nextPageContentStart += pageHeightPx + gapPx
       }
     }
   }, [editor])

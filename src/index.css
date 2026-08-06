@@ -460,13 +460,12 @@ body {
 ──────────────────────────────────────────────────────────────────── */
 [data-a4="true"] .tiptap-editor .page-start {
   position: relative;
-  padding-top: 2cm !important;
 }
 
 [data-a4="true"] .tiptap-editor .page-start::before {
   content: attr(data-page);
   position: absolute;
-  top: -10mm;
+  top: -30mm;
   left: -3cm;
   right: -2cm;
   height: 10mm;
