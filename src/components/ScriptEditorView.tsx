@@ -131,11 +131,14 @@ export function ScriptEditorView({
       {/* Область редактора */}
       <div
         ref={editorContentRef}
+        data-a4={a4Mode}
         className="flex-1 overflow-y-auto py-8 px-4"
         style={{
           background: a4Mode ? (isDark ? '#0a0a15' : '#e5e5e5') : editorBg,
           color: a4Mode ? '#000000' : textPrimary,
-        }}
+          ['--page-break-bg' as string]: a4Mode ? (isDark ? '#0a0a15' : '#e5e5e5') : 'transparent',
+          ['--page-break-color' as string]: a4Mode ? (isDark ? '#9ca3af' : '#6b7280') : 'transparent',
+        } as any}
       >
         {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
         {a4Mode ? (

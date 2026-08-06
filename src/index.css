@@ -453,3 +453,31 @@ body {
 .scene-hidden {
   display: none !important;
 }
+
+/* ─── A4 Page Breaks ──────────────────────────────────────────────
+   Визуальные разрывы страниц, применяемые через page-start класс.
+   Активны только в A4-режиме (родитель должен иметь data-a4="true").
+──────────────────────────────────────────────────────────────────── */
+[data-a4="true"] .tiptap-editor .page-start {
+  position: relative;
+  margin-top: 2cm !important;
+}
+
+[data-a4="true"] .tiptap-editor .page-start::before {
+  content: attr(data-page);
+  position: absolute;
+  top: -2cm;
+  left: -3cm;
+  right: -2cm;
+  height: 2cm;
+  background: var(--page-break-bg);
+  color: var(--page-break-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
