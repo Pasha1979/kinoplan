@@ -575,7 +575,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
-    const gapPx = 10 * mmToPx // 10мм — зазор между листами
+    const gapPx = 4 * mmToPx // 4мм — мелкий зазор как в Word
     const marginPx = PAGE_MARGIN_TOP_BOTTOM_MM * mmToPx // 20мм — поля сверху/снизу
     const contentHeightPx = pageHeightPx - 2 * marginPx // 257мм — полезная высота
 
@@ -593,7 +593,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // Pass 2: вычисляем и применяем отступы с учётом накопленного смещения
     let page = 2
     let currentContentEnd = contentHeightPx // 257мм в координатах редактора
-    let nextPageContentStart = pageHeightPx + gapPx // 307мм в координатах редактора
+    let nextPageContentStart = pageHeightPx + gapPx + marginPx // 321мм в координатах редактора
     let accumulatedPush = 0
 
     for (let i = 0; i < children.length; i++) {

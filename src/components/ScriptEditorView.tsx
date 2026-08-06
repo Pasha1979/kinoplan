@@ -150,14 +150,12 @@ export function ScriptEditorView({
               backgroundColor: 'transparent',
               backgroundImage: `repeating-linear-gradient(
                 to bottom,
-                rgba(0,0,0,0.10) 0,
-                rgba(0,0,0,0.03) 0.3mm,
-                #ffffff 0.3mm,
-                #ffffff 296.7mm,
-                rgba(0,0,0,0.03) 296.7mm,
-                rgba(0,0,0,0.10) 297mm,
+                #ffffff 0,
+                #ffffff 296.85mm,
+                rgba(0, 0, 0, 0.08) 296.85mm,
+                rgba(0, 0, 0, 0.08) 297mm,
                 transparent 297mm,
-                transparent 307mm
+                transparent 301mm
               )`,
               color: '#000000',
               padding: '2cm 2cm 2cm 3cm', // Поля: верх/низ 2cm, левое 3cm, правое 2cm (стандарт для сценариев)

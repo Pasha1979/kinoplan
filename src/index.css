@@ -467,21 +467,14 @@ body {
 }
 
 [data-a4="true"] .tiptap-editor .page-start::before {
-  content: attr(data-page);
+  content: '';
   position: absolute;
-  top: -30mm;
+  top: -24mm; /* 4мм зазор + 20мм верхнее поле следующей страницы */
   left: -3cm;
   right: -2cm;
-  height: 30mm;
-  background: var(--page-break-bg);
-  color: var(--page-break-color);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 2mm;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  height: 4mm;
+  background: transparent;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
   pointer-events: auto;
   cursor: default;
 }
