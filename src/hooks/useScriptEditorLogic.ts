@@ -170,6 +170,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Debug: одноразовый alert чтобы понять, запускается ли applyPageBreaks
+  const pageBreakDebugAlertShownRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -572,6 +574,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       child.style.removeProperty('margin-bottom')
     })
     if (children.length === 0) return
+
+    if (!pageBreakDebugAlertShownRef.current) {
+      pageBreakDebugAlertShownRef.current = true
+      setTimeout(() => {
+        const pageStarts = children.filter(c => c.classList.contains('page-start')).length
+        alert(`DEBUG: applyPageBreaks, children=${children.length}, pageStarts=${pageStarts}`)
+      }, 0)
+    }
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
