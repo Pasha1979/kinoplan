@@ -629,6 +629,15 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     pageBreakApplyTimeoutRef.current = setTimeout(() => {
       console.log('[PageBreaks] Re-applying after ProseMirror render')
       applyPageBreaks()
+      // Проверяем margin-bottom после повторного применения
+      setTimeout(() => {
+        const childrenAfter = Array.from(editorDom.children) as HTMLElement[]
+        const withMargin = childrenAfter.filter(c => c.style.marginBottom && parseInt(c.style.marginBottom) > 50)
+        console.log(`[PageBreaks] After re-apply: ${withMargin.length} blocks have margin-bottom > 50px`)
+        withMargin.forEach((c, i) => {
+          console.log(`  Block ${i}: margin-bottom=${c.style.marginBottom}`)
+        })
+      }, 100)
       pageBreakApplyTimeoutRef.current = null
     }, 1000)
   }, [editor])
