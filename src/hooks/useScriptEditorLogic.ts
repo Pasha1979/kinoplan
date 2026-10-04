@@ -170,8 +170,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Debug: одноразовый alert чтобы понять, запускается ли applyPageBreaks
-  const pageBreakDebugAlertShownRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -575,12 +573,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     })
     if (children.length === 0) return
 
-    if (!pageBreakDebugAlertShownRef.current) {
-      pageBreakDebugAlertShownRef.current = true
-      const pageStartsBefore = children.filter(c => c.classList.contains('page-start')).length
-      alert(`DEBUG: applyPageBreaks START, children=${children.length}, pageStarts=${pageStartsBefore}`)
-    }
-
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
     const gapPx = 4 * mmToPx // 4мм — мелкий зазор как в Word
@@ -620,34 +612,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           if (push > originalGap) {
             prevChild.style.setProperty('margin-bottom', `${push}px`, 'important')
             accumulatedPush += push - originalGap
-            if (pageBreakDebugAlertShownRef.current) {
-              setTimeout(() => {
-                alert(`DEBUG: Page ${page}, prevEnd=${Math.round(prevEnd)}px, push=${Math.round(push)}px, originalGap=${Math.round(originalGap)}px`)
-              }, 200 + page * 100)
-            }
           }
         }
         children[i].classList.add('page-start')
         children[i].setAttribute('data-page', `Страница ${page}`)
-        children[i].style.setProperty('background', 'rgba(239, 68, 68, 0.3)', 'important')
         page++
         currentContentEnd = nextPageContentStart + contentHeightPx
         nextPageContentStart += pageHeightPx + gapPx
       }
-    }
-
-    if (pageBreakDebugAlertShownRef.current) {
-      const pageStartsAfter = children.filter(c => c.classList.contains('page-start')).length
-      setTimeout(() => {
-        alert(`DEBUG: applyPageBreaks END, pageStarts=${pageStartsAfter}`)
-      }, 100)
-
-      // Проверяем, сохранились ли margin-bottom через 500мс (после рендера ProseMirror)
-      setTimeout(() => {
-        const childrenAfter = Array.from(editorDom.children) as HTMLElement[]
-        const withMargin = childrenAfter.filter(c => c.style.marginBottom && parseInt(c.style.marginBottom) > 50)
-        alert(`DEBUG: After 500ms, ${withMargin.length} blocks have margin-bottom > 50px`)
-      }, 500)
     }
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
