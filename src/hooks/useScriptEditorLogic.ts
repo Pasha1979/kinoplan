@@ -641,6 +641,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       setTimeout(() => {
         alert(`DEBUG: applyPageBreaks END, pageStarts=${pageStartsAfter}`)
       }, 100)
+
+      // Проверяем, сохранились ли margin-bottom через 500мс (после рендера ProseMirror)
+      setTimeout(() => {
+        const childrenAfter = Array.from(editorDom.children) as HTMLElement[]
+        const withMargin = childrenAfter.filter(c => c.style.marginBottom && parseInt(c.style.marginBottom) > 50)
+        alert(`DEBUG: After 500ms, ${withMargin.length} blocks have margin-bottom > 50px`)
+      }, 500)
     }
   }, [editor])
 
