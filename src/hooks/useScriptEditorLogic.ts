@@ -577,10 +577,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     if (!pageBreakDebugAlertShownRef.current) {
       pageBreakDebugAlertShownRef.current = true
-      setTimeout(() => {
-        const pageStarts = children.filter(c => c.classList.contains('page-start')).length
-        alert(`DEBUG: applyPageBreaks, children=${children.length}, pageStarts=${pageStarts}`)
-      }, 0)
+      const pageStartsBefore = children.filter(c => c.classList.contains('page-start')).length
+      alert(`DEBUG: applyPageBreaks START, children=${children.length}, pageStarts=${pageStartsBefore}`)
     }
 
     const mmToPx = 96 / 25.4
@@ -630,6 +628,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         currentContentEnd = nextPageContentStart + contentHeightPx
         nextPageContentStart += pageHeightPx + gapPx
       }
+    }
+
+    if (pageBreakDebugAlertShownRef.current) {
+      const pageStartsAfter = children.filter(c => c.classList.contains('page-start')).length
+      setTimeout(() => {
+        alert(`DEBUG: applyPageBreaks END, pageStarts=${pageStartsAfter}`)
+      }, 100)
     }
   }, [editor])
 
