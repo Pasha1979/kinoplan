@@ -575,6 +575,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     })
     if (children.length === 0) return
 
+    console.log(`[PageBreaks] applyPageBreaks called, children=${children.length}`)
+
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
     const gapPx = 4 * mmToPx // 4мм — мелкий зазор как в Word
@@ -613,7 +615,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           // Двигаем только если push больше текущего зазора, иначе блок уже ниже цели
           if (push > originalGap) {
             prevChild.style.setProperty('margin-bottom', `${push}px`, 'important')
+            console.log(`[PageBreaks] Set margin-bottom=${Math.round(push)}px on block ${i-1}`)
             accumulatedPush += push - originalGap
+          } else {
+            console.log(`[PageBreaks] Skip margin-bottom: push=${Math.round(push)}px <= originalGap=${Math.round(originalGap)}px`)
           }
         }
         children[i].classList.add('page-start')
