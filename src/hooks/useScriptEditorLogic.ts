@@ -620,6 +620,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           if (push > originalGap) {
             prevChild.style.setProperty('margin-bottom', `${push}px`, 'important')
             accumulatedPush += push - originalGap
+            if (pageBreakDebugAlertShownRef.current) {
+              setTimeout(() => {
+                alert(`DEBUG: Page ${page}, prevEnd=${Math.round(prevEnd)}px, push=${Math.round(push)}px, originalGap=${Math.round(originalGap)}px`)
+              }, 200 + page * 100)
+            }
           }
         }
         children[i].classList.add('page-start')
