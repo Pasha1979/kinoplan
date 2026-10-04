@@ -170,6 +170,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Флаг чтобы предотвратить бесконечный цикл при повторном применении
+  const isReApplyingRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -623,23 +625,28 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
-    if (pageBreakApplyTimeoutRef.current) {
-      clearTimeout(pageBreakApplyTimeoutRef.current)
+    // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
+    if (!isReApplyingRef.current) {
+      if (pageBreakApplyTimeoutRef.current) {
+        clearTimeout(pageBreakApplyTimeoutRef.current)
+      }
+      pageBreakApplyTimeoutRef.current = setTimeout(() => {
+        isReApplyingRef.current = true
+        console.log('[PageBreaks] Re-applying after ProseMirror render')
+        applyPageBreaks()
+        // Проверяем margin-bottom после повторного применения
+        setTimeout(() => {
+          const childrenAfter = Array.from(editorDom.children) as HTMLElement[]
+          const withMargin = childrenAfter.filter(c => c.style.marginBottom && parseInt(c.style.marginBottom) > 50)
+          console.log(`[PageBreaks] After re-apply: ${withMargin.length} blocks have margin-bottom > 50px`)
+          withMargin.forEach((c, i) => {
+            console.log(`  Block ${i}: margin-bottom=${c.style.marginBottom}`)
+          })
+          isReApplyingRef.current = false
+        }, 100)
+        pageBreakApplyTimeoutRef.current = null
+      }, 1000)
     }
-    pageBreakApplyTimeoutRef.current = setTimeout(() => {
-      console.log('[PageBreaks] Re-applying after ProseMirror render')
-      applyPageBreaks()
-      // Проверяем margin-bottom после повторного применения
-      setTimeout(() => {
-        const childrenAfter = Array.from(editorDom.children) as HTMLElement[]
-        const withMargin = childrenAfter.filter(c => c.style.marginBottom && parseInt(c.style.marginBottom) > 50)
-        console.log(`[PageBreaks] After re-apply: ${withMargin.length} blocks have margin-bottom > 50px`)
-        withMargin.forEach((c, i) => {
-          console.log(`  Block ${i}: margin-bottom=${c.style.marginBottom}`)
-        })
-      }, 100)
-      pageBreakApplyTimeoutRef.current = null
-    }, 1000)
   }, [editor])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
