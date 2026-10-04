@@ -572,6 +572,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       child.classList.remove('page-start')
       child.removeAttribute('data-page')
       child.style.removeProperty('margin-bottom')
+      child.classList.remove('page-break-margin-200', 'page-break-margin-300', 'page-break-margin-400')
     })
     if (children.length === 0) return
 
@@ -614,8 +615,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           // CSS блоков использует margin с !important, поэтому ставим inline !important
           // Двигаем только если push больше текущего зазора, иначе блок уже ниже цели
           if (push > originalGap) {
-            prevChild.style.setProperty('margin-bottom', `${push}px`, 'important')
-            console.log(`[PageBreaks] Set margin-bottom=${Math.round(push)}px on block ${i-1}`)
+            // Используем CSS классы вместо inline стилей (ProseMirror сохраняет классы)
+            const marginClass = push < 250 ? 'page-break-margin-200' : push < 350 ? 'page-break-margin-300' : 'page-break-margin-400'
+            prevChild.classList.add(marginClass)
+            console.log(`[PageBreaks] Add class ${marginClass} to block ${i-1} (push=${Math.round(push)}px)`)
             accumulatedPush += push - originalGap
           } else {
             console.log(`[PageBreaks] Skip margin-bottom: push=${Math.round(push)}px <= originalGap=${Math.round(originalGap)}px`)

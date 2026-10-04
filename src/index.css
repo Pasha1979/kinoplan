@@ -477,3 +477,16 @@ body {
   pointer-events: auto;
   cursor: default;
 }
+
+/* CSS классы для margin-bottom разрывов страниц (ProseMirror-safe) */
+.page-break-margin-200 {
+  margin-bottom: 200px !important;
+}
+
+.page-break-margin-300 {
+  margin-bottom: 300px !important;
+}
+
+.page-break-margin-400 {
+  margin-bottom: 400px !important;
+}
