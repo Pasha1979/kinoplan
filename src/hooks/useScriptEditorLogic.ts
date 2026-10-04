@@ -624,6 +624,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
         children[i].classList.add('page-start')
         children[i].setAttribute('data-page', `Страница ${page}`)
+        children[i].style.setProperty('background', 'rgba(239, 68, 68, 0.3)', 'important')
         page++
         currentContentEnd = nextPageContentStart + contentHeightPx
         nextPageContentStart += pageHeightPx + gapPx
