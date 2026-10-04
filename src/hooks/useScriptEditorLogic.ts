@@ -649,6 +649,15 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         alert(`DEBUG: After 500ms, ${withMargin.length} blocks have margin-bottom > 50px`)
       }, 500)
     }
+
+    // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
+    if (pageBreakApplyTimeoutRef.current) {
+      clearTimeout(pageBreakApplyTimeoutRef.current)
+    }
+    pageBreakApplyTimeoutRef.current = setTimeout(() => {
+      applyPageBreaks()
+      pageBreakApplyTimeoutRef.current = null
+    }, 600)
   }, [editor])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
