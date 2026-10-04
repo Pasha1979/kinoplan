@@ -462,11 +462,13 @@ body {
   overflow: visible !important;
 }
 
-[data-a4="true"] .tiptap-editor .page-start {
+/* Debug: временно без data-a4 чтобы проверить работает ли вообще */
+.tiptap-editor .page-start {
   position: relative;
+  background: rgba(239, 68, 68, 0.1) !important; /* временный фон для отладки */
 }
 
-[data-a4="true"] .tiptap-editor .page-start::before {
+.tiptap-editor .page-start::before {
   content: attr(data-page);
   position: absolute;
   top: -24mm; /* 4мм зазор + 20мм верхнее поле */
