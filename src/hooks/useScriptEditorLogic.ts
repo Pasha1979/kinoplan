@@ -627,9 +627,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       clearTimeout(pageBreakApplyTimeoutRef.current)
     }
     pageBreakApplyTimeoutRef.current = setTimeout(() => {
+      console.log('[PageBreaks] Re-applying after ProseMirror render')
       applyPageBreaks()
       pageBreakApplyTimeoutRef.current = null
-    }, 600)
+    }, 1000)
   }, [editor])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
