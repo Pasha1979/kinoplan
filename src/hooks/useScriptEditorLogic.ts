@@ -14,7 +14,7 @@ import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
-import { A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM } from '../constants/scriptConstants'
+import { A4_HEIGHT_MM } from '../constants/scriptConstants'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'

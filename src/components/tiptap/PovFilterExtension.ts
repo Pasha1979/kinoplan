@@ -28,7 +28,7 @@ function computeDecorations(doc: any, character: string | null): DecorationSet {
         if (nextNode.type.name === 'sceneHeader') break
         if (nextNode.type.name === 'sceneCast') {
           const castText = nextNode.textContent.trim()
-          currentSceneCast = castText.split(',').map(c => c.trim().toUpperCase())
+          currentSceneCast = castText.split(',').map((c: string) => c.trim().toUpperCase())
           break
         }
         j++

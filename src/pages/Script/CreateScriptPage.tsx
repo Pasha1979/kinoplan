@@ -104,6 +104,7 @@ export default function CreateScriptPage() {
           fontFamily,
           fontSize,
           episodeNumber: ep,
+          autoExtractCharacters: true,
         }
         addScript(episodeScript)
       }
@@ -123,6 +124,7 @@ export default function CreateScriptPage() {
         genreCoefficient: coefficient,
         fontFamily,
         fontSize,
+        autoExtractCharacters: true,
       }
       addScript(newScript)
     }

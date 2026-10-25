@@ -126,7 +126,7 @@ export function useMultiCursor() {
       isActiveRef.current = true
       setActiveCount(rangesRef.current.length)
       updateDecorations(editor)
-      editor.chain().setTextSelection({ from: found.to, to: found.to }).run()
+      editor.chain().setTextSelection({ from: (found as MultiRange).to, to: (found as MultiRange).to }).run()
     }
     return !!found
   }, [updateDecorations])
