@@ -195,6 +195,8 @@ export function ScriptEditorView({
                 padding: '2cm 2cm 2cm 3cm',
                 backgroundColor: 'transparent',
                 minHeight: '297mm',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
               }}
             >
               <EditorContent
@@ -205,12 +207,14 @@ export function ScriptEditorView({
                   fontSize: `${fontSize}pt`,
                   lineHeight: '1.5',
                   color: '#000000',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
                 }}
               />
             </div>
           </div>
         ) : (
-          <div className="w-full" style={{ padding: '2cm 2cm 2cm 3cm' }}>
+          <div className="w-full" style={{ padding: '2cm 2cm 2cm 3cm', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
             <EditorContent
               editor={editor}
               className={`h-full tiptap-editor format-${format || 'russian'}`}
@@ -218,6 +222,8 @@ export function ScriptEditorView({
                 fontFamily,
                 fontSize: `${fontSize}pt`,
                 lineHeight: '1.5',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
               }}
             />
           </div>

@@ -144,6 +144,35 @@ body {
   --parenthetical-margin-bottom: var(--russian-parenthetical-margin-bottom);
   --parenthetical-left-indent: var(--russian-parenthetical-left-indent);
   --parenthetical-right-indent: var(--russian-parenthetical-right-indent);
+  /* Предотвращаем обрезку текста */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  width: 100%;
+}
+
+.tiptap-editor > div {
+  max-width: 100%;
+  width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ProseMirror override */
+.tiptap-editor.ProseMirror {
+  max-width: 100% !important;
+  width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Все параграфы внутри редактора */
+.tiptap-editor p,
+.tiptap-editor div {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  width: 100%;
 }
 
 /* Scene Node: Container for entire scene (header + content) */
@@ -183,6 +212,11 @@ body {
   position: relative;
   padding-left: 0 !important;
   margin: var(--action-margin-top) 0 var(--action-margin-bottom) 0 !important;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
 }
 
 /* Scene Character (Speaking): "ВЛАДА" — Russian: центрирование */
@@ -214,6 +248,11 @@ body {
   padding-left: var(--dialog-left-indent) !important;
   padding-right: var(--dialog-right-indent) !important;
   margin: var(--dialog-margin-top) 0 var(--dialog-margin-bottom) 0 !important;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
 }
 
 /* Scene Parenthetical: "(нервно)" — Russian */

@@ -562,8 +562,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
-  // Применяем page-start и отступы, чтобы содержимое начиналось с новой страницы А4
-  // Каждая страница — отдельный белый лист 297мм с зазором 10мм между листами
+  // Применяем page-start и отступы на основе точных данных из pageCounter
+  // Используем pageBreaksRef (вычисленный через виртуальный A4-рендеринг)
   const applyPageBreaks = useCallback(() => {
     if (!editor) return
     const editorDom = editor.view.dom as HTMLElement
@@ -574,17 +574,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       child.style.removeProperty('margin-bottom')
       child.classList.remove('page-break-margin-200', 'page-break-margin-300', 'page-break-margin-400')
     })
-    if (children.length === 0) return
-
-    console.log(`[PageBreaks] applyPageBreaks called, children=${children.length}`)
+    if (children.length === 0 || pageBreaksRef.current.length === 0) return
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
-    const gapPx = 4 * mmToPx // 4мм — мелкий зазор как в Word
-    const marginPx = PAGE_MARGIN_TOP_BOTTOM_MM * mmToPx // 20мм — поля сверху/снизу
-    const contentHeightPx = pageHeightPx - 2 * marginPx // 257мм — полезная высота
+    const gapPx = 4 * mmToPx // 4мм — зазор между страницами
 
-    // Pass 1: читаем позиции ДО применения отступов (getBoundingClientRect не зависит от offsetParent)
+    // Читаем текущие позиции блоков (до применения отступов)
     const editorRect = editorDom.getBoundingClientRect()
     const positions = children.map(child => {
       const rect = child.getBoundingClientRect()
@@ -595,42 +591,36 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
     })
 
-    // Pass 2: вычисляем и применяем отступы с учётом накопленного смещения
-    let page = 2
-    let currentContentEnd = contentHeightPx // 257мм в координатах редактора
-    let nextPageContentStart = pageHeightPx + gapPx // 301мм в координатах редактора
+    // Вычисляем page boundaries (где должны начинаться страницы)
+    const pageBoundaries = new Map<number, number>() // page -> startY
+    pageBreaksRef.current.forEach((breakInfo) => {
+      pageBoundaries.set(breakInfo.page, (breakInfo.page - 1) * (pageHeightPx + gapPx))
+    })
+
+    // Применяем page breaks из pageBreaksRef
     let accumulatedPush = 0
+    pageBreaksRef.current.forEach((breakInfo) => {
+      const { page, startIndex } = breakInfo
+      if (startIndex >= children.length) return
 
-    for (let i = 0; i < children.length; i++) {
-      const childTop = positions[i].top + accumulatedPush
-      const childEnd = childTop + positions[i].height
+      // Блок, который начинается на новой странице
+      const startChild = children[startIndex]
+      startChild.classList.add('page-start')
+      startChild.setAttribute('data-page', `Страница ${page}`)
 
-      if (childEnd > currentContentEnd) {
-        // Блок не помещается — переносим на следующую страницу
-        const prevChild = children[i - 1]
-        if (prevChild) {
-          const prevEnd = positions[i - 1].bottom + accumulatedPush
-          const originalGap = positions[i].top - positions[i - 1].bottom
-          const push = nextPageContentStart - prevEnd
-          // CSS блоков использует margin с !important, поэтому ставим inline !important
-          // Двигаем только если push больше текущего зазора, иначе блок уже ниже цели
-          if (push > originalGap) {
-            // Используем CSS классы вместо inline стилей (ProseMirror сохраняет классы)
-            const marginClass = push < 250 ? 'page-break-margin-200' : push < 350 ? 'page-break-margin-300' : 'page-break-margin-400'
-            prevChild.classList.add(marginClass)
-            console.log(`[PageBreaks] Add class ${marginClass} to block ${i-1} (push=${Math.round(push)}px)`)
-            accumulatedPush += push - originalGap
-          } else {
-            console.log(`[PageBreaks] Skip margin-bottom: push=${Math.round(push)}px <= originalGap=${Math.round(originalGap)}px`)
-          }
+      // Предыдущий блок — добавляем margin-bottom
+      if (startIndex > 0) {
+        const prevChild = children[startIndex - 1]
+        const prevEnd = positions[startIndex - 1].bottom + accumulatedPush
+        const targetY = pageBoundaries.get(page) || 0
+        const push = targetY - prevEnd
+
+        if (push > 0) {
+          prevChild.style.marginBottom = `${push}px !important`
+          accumulatedPush += push
         }
-        children[i].classList.add('page-start')
-        children[i].setAttribute('data-page', `Страница ${page}`)
-        page++
-        currentContentEnd = nextPageContentStart + contentHeightPx
-        nextPageContentStart += pageHeightPx + gapPx
       }
-    }
+    })
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
     // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
@@ -640,18 +630,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
       pageBreakApplyTimeoutRef.current = setTimeout(() => {
         isReApplyingRef.current = true
-        console.log('[PageBreaks] Re-applying after ProseMirror render')
         applyPageBreaks()
-        // Проверяем margin-bottom после повторного применения
-        setTimeout(() => {
-          const childrenAfter = Array.from(editorDom.children) as HTMLElement[]
-          const withMargin = childrenAfter.filter(c => c.style.marginBottom && parseInt(c.style.marginBottom) > 50)
-          console.log(`[PageBreaks] After re-apply: ${withMargin.length} blocks have margin-bottom > 50px`)
-          withMargin.forEach((c, i) => {
-            console.log(`  Block ${i}: margin-bottom=${c.style.marginBottom}`)
-          })
-          isReApplyingRef.current = false
-        }, 100)
+        isReApplyingRef.current = false
         pageBreakApplyTimeoutRef.current = null
       }, 1000)
     }
