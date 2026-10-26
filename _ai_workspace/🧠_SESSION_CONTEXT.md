@@ -58,6 +58,10 @@ status: "В работе - сохранение перед контекст ли
 - [x] Интегрирован Active Assistant в workflows
 - [x] Создан 🔄_CONTEXT_SNAPSHOT.md (резюме сессии)
 - [x] Создан 🧠_SESSION_CONTEXT.md (автосохранение контекста)
+- [x] Создан 🔐_TOKEN_STORAGE.md (безопасное хранение токена в .env)
+- [x] Создан .env файл с токеном (не коммитится)
+- [x] Обновлён .gitignore (защита .env)
+- [x] Создан 🔔_CONTEXT_LOSS_DETECTION.md (автоопределение потери контекста)
 
 ### Следующие шаги
 1. Настроить автоматическое обновление 🧠_SESSION_CONTEXT.md в .windsurfrules
@@ -74,9 +78,9 @@ status: "В работе - сохранение перед контекст ли
 - 🔄_CONTEXT_SNAPSHOT.md
 
 ### Дополнительные данные
-- Vercel токен: хранится в памяти AI, не в коде репозитория
-- Last commit: 75a7f3c (docs: add context snapshot)
-- Last Vercel deploy: Ready (nvjyf4l5y)
+- Vercel токен: в .env файле (не коммитится, защищён .gitignore)
+- Last commit: c7757b2 (feat: add token storage and context loss detection)
+- Last Vercel deploy: не проверен после коммита
 
 ---
 
