@@ -29,61 +29,52 @@
 
 ### Метаданные
 ```yaml
-session_id: "2026-10-26_03-50-00"
-date: "26.10.2026 03:50"
-focus: "System Improvement - Complete automation system with Idea Manager and Project Evolution"
+session_id: "2026-10-27_14-30-00"
+date: "27.10.2026 14:30"
+focus: "Audit - проверка реализации + идеи для улучшения начального экрана"
 ```
 
 ### Текущая задача
 ```yaml
-module: "System"
-submodule: "Automation"
-task: "Complete automation system - Idea Manager + Project Evolution"
+module: "Homepage"
+submodule: "UI/UX"
+task: "Аудит реализации + генерация идей для улучшения HomePage"
 status: "Завершена - сессия завершена пользователем"
 ```
 
 ### Что сделано в этой сессии
-- [x] Page Breaks Integration (pageCounter + applyPageBreaks)
-- [x] Убраны console.log из applyPageBreaks
-- [x] Исправлены TypeScript ошибки для Vercel
-- [x] Установлен Vercel CLI и настроен токен
-- [x] Создан 🤖_АКТИВНЫЙ_АССИСТЕНТ.md (proactive suggestions)
-- [x] Исправлены сломанные связи в _ai_workspace
-- [x] Убраны устаревшие файлы (CURRENT_TASK.md, LESSONS.md, BRAIN.md)
-- [x] Исправлены workflows (ссылки на актуальные файлы)
-- [x] Убраны дубликаты workflows
-- [x] Архивированы ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md (138K) и DASHBOARD_АРХИТЕКТУРА.md (39K)
-- [x] Создан 📚_КАТАЛОГ_ФАЙЛОВ.md
-- [x] Добавлен урок 31: passive vs active memory
-- [x] Интегрирован Active Assistant в workflows
-- [x] Создан 🔄_CONTEXT_SNAPSHOT.md (резюме сессии)
-- [x] Создан 🧠_SESSION_CONTEXT.md (автосохранение контекста)
-- [x] Создан 🔐_TOKEN_STORAGE.md (безопасное хранение токена в .env)
-- [x] Создан .env файл с токеном (не коммитится)
-- [x] Обновлён .gitignore (защита .env)
-- [x] Создан 🔔_CONTEXT_LOSS_DETECTION.md (автоопределение потери контекста)
-- [x] Создан 📊_CONTEXT_LIMIT_TRACKER.md (отслеживание лимита контекста)
-- [x] Создан 📝_DIALOG_HISTORY.md (полная история диалога)
-- [x] Создан 🔍_LESSON_MATCHING.md (автоматический поиск уроков)
-- [x] Создан ✅_PLAN_VALIDATION.md (проверка логики)
-- [x] Создан 🔗_LINK_VALIDATOR.md (проверка связей)
-- [x] Создан 🔔_NOTIFICATIONS.md (уведомления)
-- [x] Создан 📊_ERROR_PREDICTION.md (предиктивный анализ ошибок)
-- [x] Создан 🤖_AUTO_FIX.md (авто-исправление ошибок)
-- [x] Создан 📊_METRICS.md (метрики прогресса)
-- [x] Создан 📝_AUTO_DOCS.md (авто-документация)
-- [x] Создан 🧠_SMART_PRIORITIES.md (умная приоритезация)
-- [x] Создан 💡_IDEA_MANAGER.md (управление идеями пользователя)
-- [x] Интегрирован IDEA_MANAGER с существующим 💡_ЗАДЕЛЫ_ИДЕИ.md
-- [x] Создан 🌟_PROJECT_EVOLUTION.md (полное понимание проекта от задумки до финала)
-- [x] Обновлён .windsurfrules (интеграция всех улучшений + IDEA_MANAGER + PROJECT_EVOLUTION)
-- [x] Обновлён МОЗГ_ПРОЕКТА.md (новые файлы + IDEA_MANAGER + PROJECT_EVOLUTION)
+- [x] Прочитана память проекта при старте сессии
+- [x] Проверена реализация начального экрана (SplashScreen)
+- [x] Проверена реализация экрана создания проекта (HomePage + CreateProjectModal)
+- [x] Проверена реализация модуля сценарист (ScriptPage + ScriptEditorTiptap + SceneNavigator)
+- [x] Проверена реализация DashboardPage
+- [x] Проверены placeholder-страницы (ComingSoonPage)
+- [x] Проверена сборка (npm run build) — успешно
+- [x] Составлен отчёт о проверке реализации
+- [x] Выявлены архитектурные проблемы (нет SQLite, нет Electron/Capacitor, не Local-First)
+- [x] Сгенерированы идеи для улучшения начального экрана (HomePage)
+- [x] Идеи записаны в 💡_ЗАДЕЛЫ_ИДЕИ.md с приоритетами P0, P1, P2
+- [x] Идеи проанализированы по системе IDEA_MANAGER
+- [x] Отклонены идеи: Совет дня, мини-превью сценариев, шаблоны проектов (по запросу пользователя)
+- [x] Обновлён 🧠_SESSION_CONTEXT.md (текущая сессия)
 
 ### Следующие шаги
-1. Настроить автоматическое обновление 🧠_SESSION_CONTEXT.md в .windsurfrules
-2. Тестировать систему восстановления контекста
-3. Обновить приоритеты в ПЛАН_РАБОТ.md (P1-8 выполнён)
-4. P0-5: Drag-and-drop — ProseMirror транзакции
+1. Реализация идей для улучшения HomePage (по команде пользователя):
+   - P0: Прогресс на карточках проектов
+   - P0: Последние проекты (Recently Opened)
+   - P0: Избранное (Favorites)
+   - P0: Сортировка и фильтры
+   - P1: Быстрые действия (Quick Actions)
+   - P1: Активность на карточках
+   - P2: Теги/категории
+   - P2: Drag-and-drop сортировка
+   - P2: Контекстное меню
+   - P2: Список дел
+   - P2: Мини-календарь
+2. Архитектурные изменения (в будущем):
+   - Реализовать Electron + SQLite
+   - Реализовать IPC/repositories/services
+   - Code-splitting для bundle (уменьшить размер с 1.1MB)
 
 ### Важные файлы для чтения
 - 🧠_МОЗГ_ПРОЕКТА.md
@@ -97,9 +88,11 @@ status: "Завершена - сессия завершена пользоват
 - 🌟_PROJECT_EVOLUTION.md (полное понимание проекта)
 
 ### Дополнительные данные
-- Vercel токен: в .env файле (не коммитится, защищён .gitignore)
-- Last commit: c7757b2 (feat: add token storage and context loss detection)
-- Last Vercel deploy: не проверен после коммита
+- Вердикт аудита: реализовано SplashScreen, HomePage, CreateProjectModal, ScriptPage — хорошо сделано (4-5/5)
+- Остальные модули: placeholder-страницы (ComingSoonPage)
+- Архитектурные проблемы: нет SQLite, нет Electron/Capacitor, не Local-First
+- Bundle warning: chunk 1.1MB после минификации (нужен code-splitting)
+- Новые идеи записаны: улучшения HomePage в 💡_ЗАДЕЛЫ_ИДЕИ.md
 
 ---
 
