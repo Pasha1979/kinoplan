@@ -1,14 +1,34 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload, Star } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
 import { useUiStore } from '../../store/uiStore'
 import { browserFS } from '../../adapters/BrowserFS'
-import ProjectCard from './ProjectCard'
+import ProjectCard, { TYPE_LABELS, STATUS_LABELS, getOverallProgress } from './ProjectCard'
+import FilterDropdown from './FilterDropdown'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../store/projectStore'
+
+type SortBy = 'updated' | 'name' | 'created' | 'progress'
+
+const SORT_OPTIONS = [
+  { value: 'updated', label: 'Сначала изменённые' },
+  { value: 'name', label: 'По названию (А–Я)' },
+  { value: 'created', label: 'По дате создания' },
+  { value: 'progress', label: 'По прогрессу' },
+]
+
+const TYPE_OPTIONS = [
+  { value: 'all', label: 'Все типы' },
+  ...Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label })),
+]
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'Все статусы' },
+  ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })),
+]
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -20,6 +40,9 @@ export default function HomePage() {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'recent'>('all')
+  const [sortBy, setSortBy] = useState<SortBy>('updated')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const projectList = useMemo(() => Object.values(projects), [projects])
 
@@ -28,24 +51,57 @@ export default function HomePage() {
     return projectList.filter((p: Project) => p.lastOpenedAt).length
   }, [projectList])
 
-  // Фильтрация по вкладкам
+  const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all'
+
+  const resetFilters = () => {
+    setTypeFilter('all')
+    setStatusFilter('all')
+  }
+
+  // Фильтрация по вкладкам, поиску, типу и статусу + сортировка
   const displayProjects = useMemo(() => {
     let filtered = projectList.filter((p: Project) =>
       p.name.toLowerCase().includes(search.toLowerCase())
     )
 
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((p: Project) => p.type === typeFilter)
+    }
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((p: Project) => p.status === statusFilter)
+    }
+
     if (activeTab === 'favorites') {
       filtered = filtered.filter((p: Project) => p.isFavorite)
-    } else if (activeTab === 'recent') {
-      filtered = filtered.filter((p: Project) => p.lastOpenedAt)
-      filtered = filtered.sort((a: Project, b: Project) => 
-        new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime()
-      )
     }
-    // 'all' — показываем все
 
-    return filtered
-  }, [projectList, search, activeTab])
+    if (activeTab === 'recent') {
+      return filtered
+        .filter((p: Project) => p.lastOpenedAt)
+        .sort((a: Project, b: Project) =>
+          new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime()
+        )
+    }
+
+    const bySort = (a: Project, b: Project): number => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name, 'ru')
+        case 'created':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        case 'progress':
+          return getOverallProgress(b) - getOverallProgress(a)
+        default:
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      }
+    }
+
+    // Избранные всегда сверху, затем выбранная сортировка
+    return filtered.sort((a: Project, b: Project) => {
+      const fav = Number(b.isFavorite ?? false) - Number(a.isFavorite ?? false)
+      return fav !== 0 ? fav : bySort(a, b)
+    })
+  }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter])
 
   useEffect(() => {
     projectService.getProjects()
@@ -231,26 +287,64 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Поиск */}
-            <div className={`relative mb-12 max-w-md`}>
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Найти проект..."
-                className={`w-full pl-12 pr-4 py-3 rounded-xl text-sm border focus:outline-none transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/40'
-                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
-                }`}
+            {/* Поиск + сортировка + фильтры */}
+            <div className="flex items-center gap-3 flex-wrap mb-12">
+              <div className="relative flex-1 min-w-[220px] max-w-md">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Найти проект..."
+                  className={`w-full pl-12 pr-4 py-3 rounded-xl text-sm border focus:outline-none transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/40'
+                      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
+                  }`}
+                />
+              </div>
+
+              {activeTab !== 'recent' && (
+                <FilterDropdown
+                  icon={<ArrowUpDown size={14} />}
+                  options={SORT_OPTIONS}
+                  value={sortBy}
+                  onChange={(v) => setSortBy(v as SortBy)}
+                />
+              )}
+              <FilterDropdown
+                options={TYPE_OPTIONS}
+                value={typeFilter}
+                onChange={setTypeFilter}
+                highlight={typeFilter !== 'all'}
               />
+              <FilterDropdown
+                options={STATUS_OPTIONS}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                highlight={statusFilter !== 'all'}
+              />
+
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className={`flex items-center gap-1.5 px-3 py-3 rounded-xl text-sm transition-colors ${
+                    theme === 'dark'
+                      ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Сбросить фильтры"
+                >
+                  <X size={14} />
+                  Сбросить
+                </button>
+              )}
             </div>
 
             {/* Сетка карточек */}
             {displayProjects.length === 0 ? (
               <div className={`py-16 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                {search
+                {search || hasActiveFilters
                   ? 'Ничего не найдено'
                   : activeTab === 'favorites'
                     ? 'Нет избранных проектов — нажмите на звёздочку на карточке проекта'

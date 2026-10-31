@@ -1,7 +1,8 @@
 import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download, Star } from 'lucide-react'
 import type { Project } from '../../store/projectStore'
+import { formatRelativeTime } from '../../utils/relativeTime'
 
-const TYPE_LABELS: Record<Project['type'], string> = {
+export const TYPE_LABELS: Record<Project['type'], string> = {
   serial: 'Сериал',
   film: 'Полный метр',
   ad: 'Реклама',
@@ -9,7 +10,7 @@ const TYPE_LABELS: Record<Project['type'], string> = {
   other: 'Другое',
 }
 
-const STATUS_LABELS: Record<Project['status'], string> = {
+export const STATUS_LABELS: Record<Project['status'], string> = {
   preproduction: 'Пре-продакшн',
   shooting: 'В съёмке',
   postproduction: 'Пост-продакшн',
@@ -47,6 +48,12 @@ function formatDate(iso?: string) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+export function getOverallProgress(project: Project): number {
+  return Math.round(
+    (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
+  )
+}
+
 interface ProjectCardProps {
   project: Project
   onClick: () => void
@@ -56,9 +63,7 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite }: ProjectCardProps) {
-  const overallProgress = Math.round(
-    (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
-  )
+  const overallProgress = getOverallProgress(project)
 
   return (
     <div className="group relative">
@@ -158,7 +163,11 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         </div>
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Clock size={12} />
-          <span>Изменён {formatDate(project.updatedAt)}</span>
+          <span>
+            {project.lastOpenedAt
+              ? `Открыт ${formatRelativeTime(project.lastOpenedAt)}`
+              : `Изменён ${formatDate(project.updatedAt)}`}
+          </span>
         </div>
       </div>
       </div>
