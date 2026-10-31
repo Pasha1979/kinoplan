@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, HelpCircle } from 'lucide-react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
@@ -14,6 +14,7 @@ import FilterDropdown from './FilterDropdown'
 import SortableCard from './SortableCard'
 import ContextMenu from './ContextMenu'
 import TagEditor from './TagEditor'
+import HomeHelpModal from './HomeHelpModal'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../store/projectStore'
 
@@ -54,6 +55,7 @@ export default function HomePage() {
   const [tagFilter, setTagFilter] = useState('all')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [tagEditor, setTagEditor] = useState<{ x: number; y: number; project: Project } | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -312,6 +314,17 @@ export default function HomePage() {
           >
             {theme === 'dark' ? '☀️ Светлая' : '🌙 Тёмная'}
           </button>
+          {/* Помощь по разделу */}
+          <button
+            onClick={() => setShowHelp(true)}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-white hover:bg-white/8'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+            title="Помощь по этой странице">
+            <HelpCircle size={18} />
+          </button>
           <button
             onClick={() => showToast('Настройки приложения будут реализованы позже', 'info')}
             className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
@@ -569,6 +582,14 @@ export default function HomePage() {
           tags={projects[tagEditor.project.id]?.tags ?? []}
           onChange={(tags) => updateProject(tagEditor.project.id, { tags })}
           onClose={() => setTagEditor(null)}
+        />
+      )}
+
+      {/* Помощь по странице */}
+      {showHelp && (
+        <HomeHelpModal
+          isDark={theme === 'dark'}
+          onClose={() => setShowHelp(false)}
         />
       )}
 
