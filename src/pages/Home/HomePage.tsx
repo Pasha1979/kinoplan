@@ -276,12 +276,18 @@ export default function HomePage() {
   }
 
   return (
-    <div className={`h-screen flex flex-col overflow-x-hidden ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Верхняя панель */}
-      <header className={`sticky top-0 z-30 h-16 border-b ${
-        theme === 'dark' ? 'bg-[#0d0d1a]/80 border-white/8 backdrop-blur-md' : 'bg-white border-gray-200'
+    <div className={`h-screen flex flex-col p-3 sm:p-5 md:p-8 overflow-hidden ${
+      theme === 'dark' ? 'bg-[#050510] text-white' : 'bg-gray-200 text-gray-900'
+    }`}>
+      {/* Рамка приложения */}
+      <div className={`flex-1 flex flex-col min-h-0 rounded-2xl border overflow-hidden ${
+        theme === 'dark' ? 'bg-[#0d0d1a] border-white/10' : 'bg-gray-50 border-gray-300 shadow-sm'
       }`}>
-        <div className="max-w-6xl mx-auto px-6 md:px-10 h-full flex items-center justify-between">
+      {/* Верхняя панель */}
+      <header className={`h-16 shrink-0 border-b ${
+        theme === 'dark' ? 'bg-[#0d0d1a]/80 border-white/8' : 'bg-white border-gray-200'
+      }`}>
+        <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
             <Film size={16} className="text-white" />
@@ -340,8 +346,8 @@ export default function HomePage() {
       </header>
 
       {/* Основной контент */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-6 md:px-10 py-8 w-full flex flex-col min-h-full">
+      <main className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-6xl mx-auto px-6 py-8 w-full flex flex-col min-h-full">
         {isLoading && projectList.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Загрузка...</span>
@@ -567,6 +573,7 @@ export default function HomePage() {
         )}
         </div>
       </main>
+      </div>
 
       {/* Контекстное меню карточки */}
       {contextMenu && (
