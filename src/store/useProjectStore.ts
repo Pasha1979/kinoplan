@@ -20,6 +20,7 @@ interface NormalizedProjectActions {
   updateProject: (projectId: string, updates: Partial<Project>) => void
   updateLastOpenedAt: (projectId: string) => void
   toggleFavorite: (projectId: string) => void
+  reorderProjects: (orderedIds: string[]) => void
   updateScene: (sceneId: string, updates: Partial<Scene>) => void
   revertScene: (sceneId: string) => void
   setScenesBatch: (scenes: Scene[]) => void
@@ -85,6 +86,15 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
           if (state.projects[projectId]) {
             state.projects[projectId].isFavorite = !state.projects[projectId].isFavorite
           }
+        }),
+
+      reorderProjects: (orderedIds) =>
+        set((state) => {
+          orderedIds.forEach((id, index) => {
+            if (state.projects[id]) {
+              state.projects[id].sortOrder = index
+            }
+          })
         }),
 
       setScenesBatch: (scenes) =>

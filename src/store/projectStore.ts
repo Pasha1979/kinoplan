@@ -79,6 +79,8 @@ export interface Project {
   updatedAt: string
   lastOpenedAt?: string       // ISO дата последнего открытия проекта
   isFavorite?: boolean         // Избранный проект
+  isArchived?: boolean         // Проект в архиве (скрыт из основных списков)
+  sortOrder?: number           // Ручной порядок сортировки (drag-and-drop)
   tags?: string[]              // Теги проекта
   // Статистика (заглушки — заполнятся из модулей)
   scriptProgress: number     // 0-100%

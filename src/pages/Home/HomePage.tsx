@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
@@ -8,16 +11,21 @@ import { useUiStore } from '../../store/uiStore'
 import { browserFS } from '../../adapters/BrowserFS'
 import ProjectCard, { TYPE_LABELS, STATUS_LABELS, getOverallProgress } from './ProjectCard'
 import FilterDropdown from './FilterDropdown'
+import SortableCard from './SortableCard'
+import ContextMenu from './ContextMenu'
+import TagEditor from './TagEditor'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../store/projectStore'
 
-type SortBy = 'updated' | 'name' | 'created' | 'progress'
+type TabKey = 'all' | 'favorites' | 'recent' | 'archive'
+type SortBy = 'updated' | 'name' | 'created' | 'progress' | 'manual'
 
 const SORT_OPTIONS = [
   { value: 'updated', label: 'Сначала изменённые' },
   { value: 'name', label: 'По названию (А–Я)' },
   { value: 'created', label: 'По дате создания' },
   { value: 'progress', label: 'По прогрессу' },
+  { value: 'manual', label: 'Свой порядок' },
 ]
 
 const TYPE_OPTIONS = [
@@ -32,43 +40,77 @@ const STATUS_OPTIONS = [
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { projects, isLoading, error, toggleFavorite, updateLastOpenedAt } = useNormalizedProjectStore()
+  const { projects, isLoading, error, toggleFavorite, updateLastOpenedAt, updateProject, reorderProjects } = useNormalizedProjectStore()
   const { theme, toggleTheme } = useUiStore()
   const { showToast } = useToastStore()
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'recent'>('all')
+  const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [sortBy, setSortBy] = useState<SortBy>('updated')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [tagFilter, setTagFilter] = useState('all')
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null)
+  const [tagEditor, setTagEditor] = useState<{ x: number; y: number; project: Project } | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   const projectList = useMemo(() => Object.values(projects), [projects])
 
-  // Количество недавно открытых проектов (по lastOpenedAt)
+  // Количество недавно открытых проектов (по lastOpenedAt, без архива)
   const recentCount = useMemo(() => {
-    return projectList.filter((p: Project) => p.lastOpenedAt).length
+    return projectList.filter((p: Project) => p.lastOpenedAt && !p.isArchived).length
   }, [projectList])
 
-  const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all'
+  const archiveCount = useMemo(() => {
+    return projectList.filter((p: Project) => p.isArchived).length
+  }, [projectList])
+
+  // Все уникальные теги для фильтра
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    projectList.forEach((p: Project) => p.tags?.forEach((t) => set.add(t)))
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ru'))
+  }, [projectList])
+
+  const tagOptions = useMemo(() => [
+    { value: 'all', label: 'Все теги' },
+    ...allTags.map((t) => ({ value: t, label: t })),
+  ], [allTags])
+
+  const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all' || tagFilter !== 'all'
 
   const resetFilters = () => {
     setTypeFilter('all')
     setStatusFilter('all')
+    setTagFilter('all')
   }
 
-  // Фильтрация по вкладкам, поиску, типу и статусу + сортировка
+  // Фильтрация по вкладкам, поиску, типу, статусу и тегу + сортировка
   const displayProjects = useMemo(() => {
     let filtered = projectList.filter((p: Project) =>
       p.name.toLowerCase().includes(search.toLowerCase())
     )
+
+    // Архив показывается только на своей вкладке
+    if (activeTab === 'archive') {
+      filtered = filtered.filter((p: Project) => p.isArchived)
+    } else {
+      filtered = filtered.filter((p: Project) => !p.isArchived)
+    }
 
     if (typeFilter !== 'all') {
       filtered = filtered.filter((p: Project) => p.type === typeFilter)
     }
     if (statusFilter !== 'all') {
       filtered = filtered.filter((p: Project) => p.status === statusFilter)
+    }
+    if (tagFilter !== 'all') {
+      filtered = filtered.filter((p: Project) => p.tags?.includes(tagFilter))
     }
 
     if (activeTab === 'favorites') {
@@ -91,17 +133,36 @@ export default function HomePage() {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         case 'progress':
           return getOverallProgress(b) - getOverallProgress(a)
+        case 'manual':
+          return (a.sortOrder ?? 1e9) - (b.sortOrder ?? 1e9)
+            || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         default:
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       }
     }
 
-    // Избранные всегда сверху, затем выбранная сортировка
+    // Избранные всегда сверху (кроме ручного порядка), затем выбранная сортировка
     return filtered.sort((a: Project, b: Project) => {
-      const fav = Number(b.isFavorite ?? false) - Number(a.isFavorite ?? false)
-      return fav !== 0 ? fav : bySort(a, b)
+      if (sortBy !== 'manual') {
+        const fav = Number(b.isFavorite ?? false) - Number(a.isFavorite ?? false)
+        if (fav !== 0) return fav
+      }
+      return bySort(a, b)
     })
-  }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter])
+  }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
+
+  // Drag-and-drop доступен на вкладке «Все» в ручном порядке без фильтров
+  const isDraggable = activeTab === 'all' && sortBy === 'manual' && !search && !hasActiveFilters
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const ids = displayProjects.map((p) => p.id)
+    const from = ids.indexOf(active.id as string)
+    const to = ids.indexOf(over.id as string)
+    if (from === -1 || to === -1) return
+    reorderProjects(arrayMove(ids, from, to))
+  }
 
   useEffect(() => {
     projectService.getProjects()
@@ -122,6 +183,64 @@ export default function HomePage() {
   const handleDelete = async (id: string) => {
     await projectService.deleteProject(id)
   }
+
+  const handleDuplicate = async (project: Project) => {
+    const { id, createdAt, updatedAt, ...rest } = project
+    try {
+      await projectService.createProject({ ...rest, name: `${project.name} (копия)` })
+      showToast('Проект продублирован', 'success')
+    } catch {
+      showToast('Не удалось продублировать проект', 'error')
+    }
+  }
+
+  const handleToggleArchive = (project: Project) => {
+    updateProject(project.id, { isArchived: !project.isArchived })
+    showToast(project.isArchived ? 'Проект возвращён из архива' : 'Проект перемещён в архив', 'info')
+  }
+
+  const menuItems = contextMenu ? [
+    {
+      label: 'Открыть',
+      icon: <FolderOpen size={14} />,
+      onClick: () => handleOpen(contextMenu.project),
+    },
+    {
+      label: contextMenu.project.isFavorite ? 'Убрать из избранного' : 'В избранное',
+      icon: <Star size={14} fill={contextMenu.project.isFavorite ? 'currentColor' : 'none'} />,
+      onClick: () => toggleFavorite(contextMenu.project.id),
+    },
+    {
+      label: 'Теги…',
+      icon: <Tag size={14} />,
+      onClick: () => setTagEditor({ x: contextMenu.x, y: contextMenu.y, project: contextMenu.project }),
+    },
+    {
+      label: 'Дублировать',
+      icon: <Copy size={14} />,
+      onClick: () => { void handleDuplicate(contextMenu.project) },
+    },
+    {
+      label: 'Экспорт',
+      icon: <Download size={14} />,
+      onClick: () => { void handleExport(contextMenu.project.id, contextMenu.project.name) },
+    },
+    {
+      label: contextMenu.project.isArchived ? 'Вернуть из архива' : 'В архив',
+      icon: contextMenu.project.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />,
+      onClick: () => handleToggleArchive(contextMenu.project),
+    },
+    {
+      label: 'Удалить',
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: () => {
+        if (confirm(`Удалить проект "${contextMenu.project.name}"? Это действие нельзя отменить.`)) {
+          void handleDelete(contextMenu.project.id)
+        }
+      },
+    },
+  ] : []
 
   const handleExport = async (projectId: string, projectName: string) => {
     if (isExporting) return
@@ -277,6 +396,19 @@ export default function HomePage() {
                 >
                   Недавние <span className={`ml-2 text-xs opacity-70`}>{recentCount}</span>
                 </button>
+                <button
+                  onClick={() => setActiveTab('archive')}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                    activeTab === 'archive'
+                      ? 'bg-orange-500 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Archive size={16} />
+                  Архив <span className={`ml-2 text-xs opacity-70`}>{archiveCount}</span>
+                </button>
               </div>
               <button
                 onClick={() => setShowModal(true)}
@@ -324,6 +456,15 @@ export default function HomePage() {
                 onChange={setStatusFilter}
                 highlight={statusFilter !== 'all'}
               />
+              {allTags.length > 0 && (
+                <FilterDropdown
+                  icon={<Tag size={14} />}
+                  options={tagOptions}
+                  value={tagFilter}
+                  onChange={setTagFilter}
+                  highlight={tagFilter !== 'all'}
+                />
+              )}
 
               {hasActiveFilters && (
                 <button
@@ -348,8 +489,32 @@ export default function HomePage() {
                   ? 'Ничего не найдено'
                   : activeTab === 'favorites'
                     ? 'Нет избранных проектов — нажмите на звёздочку на карточке проекта'
-                    : 'Нет недавно открытых проектов'}
+                    : activeTab === 'archive'
+                      ? 'Архив пуст — переместить проект можно через правый клик по карточке'
+                      : 'Нет недавно открытых проектов'}
               </div>
+            ) : isDraggable ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {displayProjects.map((project: Project) => (
+                      <SortableCard key={project.id} id={project.id}>
+                        <ProjectCard
+                          project={project}
+                          onClick={() => handleOpen(project)}
+                          onDelete={() => handleDelete(project.id)}
+                          onExport={() => handleExport(project.id, project.name)}
+                          onToggleFavorite={() => toggleFavorite(project.id)}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            setContextMenu({ x: e.clientX, y: e.clientY, project })
+                          }}
+                        />
+                      </SortableCard>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {displayProjects.map((project: Project) => (
@@ -360,6 +525,10 @@ export default function HomePage() {
                     onDelete={() => handleDelete(project.id)}
                     onExport={() => handleExport(project.id, project.name)}
                     onToggleFavorite={() => toggleFavorite(project.id)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setContextMenu({ x: e.clientX, y: e.clientY, project })
+                    }}
                   />
                 ))}
               </div>
@@ -367,6 +536,27 @@ export default function HomePage() {
           </>
         )}
       </main>
+
+      {/* Контекстное меню карточки */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={menuItems}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Редактор тегов проекта */}
+      {tagEditor && (
+        <TagEditor
+          x={tagEditor.x}
+          y={tagEditor.y}
+          tags={projects[tagEditor.project.id]?.tags ?? []}
+          onChange={(tags) => updateProject(tagEditor.project.id, { tags })}
+          onClose={() => setTagEditor(null)}
+        />
+      )}
 
       {/* Модальное окно создания проекта */}
       {showModal && (

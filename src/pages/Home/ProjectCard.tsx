@@ -60,9 +60,10 @@ interface ProjectCardProps {
   onDelete: () => void
   onExport?: () => void
   onToggleFavorite?: () => void
+  onContextMenu?: (e: React.MouseEvent) => void
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu }: ProjectCardProps) {
   const overallProgress = getOverallProgress(project)
 
   return (
@@ -71,6 +72,7 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         role="button"
         tabIndex={0}
         onClick={onClick}
+        onContextMenu={onContextMenu}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -89,7 +91,20 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
               <h3 className="text-white font-semibold text-base leading-tight group-hover:text-orange-300 transition-colors">
                 {project.name}
               </h3>
-              <span className="text-gray-500 text-xs">{TYPE_LABELS[project.type]}</span>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <span className="text-gray-500 text-xs">{TYPE_LABELS[project.type]}</span>
+                {project.tags?.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-300"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {(project.tags?.length ?? 0) > 3 && (
+                  <span className="text-[10px] text-gray-500">+{project.tags!.length - 3}</span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
