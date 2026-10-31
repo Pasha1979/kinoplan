@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, Play } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
@@ -14,7 +14,6 @@ import FilterDropdown from './FilterDropdown'
 import SortableCard from './SortableCard'
 import ContextMenu from './ContextMenu'
 import TagEditor from './TagEditor'
-import { formatRelativeTime } from '../../utils/relativeTime'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../store/projectStore'
 
@@ -69,13 +68,6 @@ export default function HomePage() {
 
   const archiveCount = useMemo(() => {
     return projectList.filter((p: Project) => p.isArchived).length
-  }, [projectList])
-
-  // Последний открытый проект — для карточки «Продолжить работу»
-  const lastOpenedProject = useMemo(() => {
-    return projectList
-      .filter((p: Project) => p.lastOpenedAt && !p.isArchived)
-      .sort((a: Project, b: Project) => new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime())[0]
   }, [projectList])
 
   // Все уникальные теги для фильтра
@@ -440,36 +432,6 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
-
-            {/* Быстрый возврат к последнему проекту */}
-            {activeTab === 'all' && !search && !hasActiveFilters && lastOpenedProject && (
-              <button
-                onClick={() => handleOpen(lastOpenedProject)}
-                className={`w-full flex items-center gap-4 mb-10 px-5 py-4 rounded-2xl border text-left transition-all hover:-translate-y-0.5 ${
-                  theme === 'dark'
-                    ? 'bg-gradient-to-r from-orange-500/10 to-red-500/5 border-orange-500/25 hover:border-orange-500/50'
-                    : 'bg-gradient-to-r from-orange-50 to-red-50/50 border-orange-200 hover:border-orange-300'
-                }`}
-              >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white shrink-0">
-                  <Play size={18} fill="currentColor" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className={`text-xs mb-0.5 ${theme === 'dark' ? 'text-orange-400/80' : 'text-orange-600/80'}`}>
-                    Продолжить работу
-                  </div>
-                  <div className={`font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    {lastOpenedProject.name}
-                  </div>
-                  <div className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                    {TYPE_LABELS[lastOpenedProject.type]} · {getOverallProgress(lastOpenedProject)}% готовности · открыт {formatRelativeTime(lastOpenedProject.lastOpenedAt)}
-                  </div>
-                </div>
-                <span className={`text-sm font-medium shrink-0 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
-                  Открыть →
-                </span>
-              </button>
-            )}
 
             {/* Поиск + сортировка + фильтры */}
             <div className="flex items-center gap-3 flex-wrap mb-12">
