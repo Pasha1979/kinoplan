@@ -278,7 +278,7 @@ export default function HomePage() {
   return (
     <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Верхняя панель */}
-      <header className={`sticky top-0 z-30 flex items-center justify-between px-6 h-16 border-b ${
+      <header className={`sticky top-0 z-30 flex items-center justify-between px-10 md:px-16 lg:px-24 h-16 border-b ${
         theme === 'dark' ? 'bg-[#0d0d1a]/80 border-white/8 backdrop-blur-md' : 'bg-white border-gray-200'
       }`}>
         <div className="flex items-center gap-3">
@@ -338,7 +338,7 @@ export default function HomePage() {
       </header>
 
       {/* Основной контент */}
-      <main className="flex-1 flex flex-col px-8 py-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 flex flex-col px-10 md:px-16 lg:px-24 py-8 max-w-[1400px] mx-auto w-full">
         {isLoading && projectList.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Загрузка...</span>
