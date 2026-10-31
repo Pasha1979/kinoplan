@@ -29,50 +29,38 @@
 
 ### Метаданные
 ```yaml
-session_id: "2026-10-29_15-00-00"
-date: "29.10.2026 15:00"
-focus: "Code-splitting implementation"
+session_id: "2026-10-31_00-00-00"
+date: "31.10.2026"
+focus: "HomePage improvements (P0 ideas)"
 ```
 
 ### Текущая задача
 ```yaml
-module: "Performance"
-submodule: "Bundle optimization"
-task: "Implement code-splitting to reduce bundle size"
-status: "Завершена - код успешно закоммичен и запушен"
+module: "HomePage"
+submodule: "Project list UX"
+task: "Tabs (All/Favorites/Recent), favorite star, lastOpenedAt tracking"
+status: "Завершена - закоммичено (61ecb04), запушено, деплой Ready"
 ```
 
 ### Что сделано в этой сессии
-- [x] Прочитана память проекта при старте сессии
-- [x] Реализован code-splitting (React.lazy для всех маршрутов)
-- [x] Добавлен Suspense с loading fallback (PageLoader)
-- [x] Настроен manualChunks в vite.config.ts (разделение на логические чанки)
-- [x] Протестирована сборка (npm run build) — успешно
-- [x] Главный bundle уменьшен с 1.1MB до 64KB (улучшение в 17 раз)
-- [x] Созданы чанки: vendor (219KB), script-editor (505KB), ScriptPage (228KB), index (64KB)
-- [x] Запущен dev server на порту 5174
-- [x] Проверена работоспособность — всё работает как раньше
-- [x] Закоммичены изменения (commit f6bd246)
-- [x] Запушено на GitHub
-- [x] Обновлён 🧠_SESSION_CONTEXT.md (текущая сессия)
+- [x] Восстановлен контекст из файлов памяти (предыдущая сессия оставила незакоммиченные изменения HomePage)
+- [x] Найдены и исправлены баги: вложенный `<button>` в ProjectCard, оверлей действий перекрывал звёздочку, счётчик «Недавние»
+- [x] Вкладки Все/Избранное/Недавние со счётчиками
+- [x] Звёздочка избранного + `isFavorite`, `lastOpenedAt`, `tags` в `Project`
+- [x] Actions в store: `updateProject`, `updateLastOpenedAt`, `toggleFavorite`
+- [x] Пустые состояния списков, редизайн карточек
+- [x] Сборка успешна, commit 61ecb04 запушен, Vercel деплой Ready
 
 ### Следующие шаги
-1. Реализация идей для улучшения HomePage (по команде пользователя):
-   - P0: Прогресс на карточках проектов
-   - P0: Последние проекты (Recently Opened)
-   - P0: Избранное (Favorites)
+1. Оставшиеся идеи HomePage:
    - P0: Сортировка и фильтры
    - P1: Быстрые действия (Quick Actions)
    - P1: Активность на карточках
-   - P2: Теги/категории
-   - P2: Drag-and-drop сортировка
-   - P2: Контекстное меню
-   - P2: Список дел
-   - P2: Мини-календарь
-2. Доработка модуля сценарий (Breakdown, Библия персонажей, Синопсис, Посерийник, Отчёты)
-3. Архитектурные изменения (в будущем):
-   - Реализовать Electron + SQLite
-   - Реализовать IPC/repositories/services
+   - P2: Теги/категории (поле `tags` готово, UI нет)
+   - P2: Drag-and-drop, контекстное меню, список дел, мини-календарь
+2. Идея из 💡_ЗАДЕЛЫ_ИДЕИ.md (новая, P0): Система отслеживания изменений сценария (версии сцен, diff viewer, индикация для режиссёра) — НЕ реализовывать без команды пользователя
+3. Доработка модуля сценарий (Breakdown, Библия персонажей, Синопсис, Посерийник, Отчёты)
+4. Архитектурные изменения (в будущем): Electron + SQLite, IPC/repositories/services
 
 ### Важные файлы для чтения
 - 🧠_МОЗГ_ПРОЕКТА.md
