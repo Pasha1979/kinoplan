@@ -77,6 +77,9 @@ export interface Project {
   cloudStorage: 'none' | 'yandex' | 'vk' | 'later'
   createdAt: string
   updatedAt: string
+  lastOpenedAt?: string       // ISO дата последнего открытия проекта
+  isFavorite?: boolean         // Избранный проект
+  tags?: string[]              // Теги проекта
   // Статистика (заглушки — заполнятся из модулей)
   scriptProgress: number     // 0-100%
   castingProgress: number

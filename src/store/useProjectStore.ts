@@ -17,6 +17,9 @@ interface NormalizedProjectActions {
   setProjects: (projects: Project[]) => void
   deleteProject: (projectId: string) => void
   setCurrentProjectId: (id: string | null) => void
+  updateProject: (projectId: string, updates: Partial<Project>) => void
+  updateLastOpenedAt: (projectId: string) => void
+  toggleFavorite: (projectId: string) => void
   updateScene: (sceneId: string, updates: Partial<Scene>) => void
   revertScene: (sceneId: string) => void
   setScenesBatch: (scenes: Scene[]) => void
@@ -61,6 +64,27 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
       setCurrentProjectId: (id) =>
         set((state) => {
           state.currentProjectId = id
+        }),
+
+      updateProject: (projectId, updates) =>
+        set((state) => {
+          if (state.projects[projectId]) {
+            Object.assign(state.projects[projectId], updates)
+          }
+        }),
+
+      updateLastOpenedAt: (projectId: string) =>
+        set((state) => {
+          if (state.projects[projectId]) {
+            state.projects[projectId].lastOpenedAt = new Date().toISOString()
+          }
+        }),
+
+      toggleFavorite: (projectId) =>
+        set((state) => {
+          if (state.projects[projectId]) {
+            state.projects[projectId].isFavorite = !state.projects[projectId].isFavorite
+          }
         }),
 
       setScenesBatch: (scenes) =>

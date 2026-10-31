@@ -1,4 +1,4 @@
-import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download } from 'lucide-react'
+import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download, Star } from 'lucide-react'
 import type { Project } from '../../store/projectStore'
 
 const TYPE_LABELS: Record<Project['type'], string> = {
@@ -33,7 +33,7 @@ const TYPE_ICONS: Record<Project['type'], React.ReactNode> = {
 
 function ProgressBar({ value, color }: { value: number; color: string }) {
   return (
-    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
       <div
         className={`h-full rounded-full ${color}`}
         style={{ width: `${value}%` }}
@@ -52,23 +52,32 @@ interface ProjectCardProps {
   onClick: () => void
   onDelete: () => void
   onExport?: () => void
+  onToggleFavorite?: () => void
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onExport }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite }: ProjectCardProps) {
   const overallProgress = Math.round(
     (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
   )
 
   return (
     <div className="group relative">
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
-        className="w-full text-left bg-[#13132a] border border-white/8 rounded-2xl p-5 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
+        className="w-full text-left cursor-pointer bg-[#13132a] border border-white/8 rounded-2xl p-6 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
       >
         {/* Шапка карточки */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center text-orange-400">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center text-orange-400">
               {TYPE_ICONS[project.type]}
             </div>
             <div>
@@ -78,18 +87,37 @@ export default function ProjectCard({ project, onClick, onDelete, onExport }: Pr
               <span className="text-gray-500 text-xs">{TYPE_LABELS[project.type]}</span>
             </div>
           </div>
-          <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLORS[project.status]}`}>
-            {STATUS_LABELS[project.status]}
-          </span>
+          <div className="flex items-center gap-2">
+            {/* Звёздочка избранного */}
+            {onToggleFavorite && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleFavorite()
+                }}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                  project.isFavorite
+                    ? 'text-yellow-400 bg-yellow-400/10'
+                    : 'text-gray-600 hover:text-yellow-400 hover:bg-yellow-400/5'
+                }`}
+                title={project.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+              >
+                <Star size={16} fill={project.isFavorite ? 'currentColor' : 'none'} />
+              </button>
+            )}
+            <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLORS[project.status]}`}>
+              {STATUS_LABELS[project.status]}
+            </span>
+          </div>
         </div>
 
       {/* Статистика */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-white/3 rounded-lg p-2.5 text-center">
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="bg-white/3 rounded-lg p-3 text-center">
           <div className="text-white font-semibold text-lg leading-none">{project.plannedShootingDays}</div>
           <div className="text-gray-500 text-xs mt-1">дней съёмок</div>
         </div>
-        <div className="bg-white/3 rounded-lg p-2.5 text-center">
+        <div className="bg-white/3 rounded-lg p-3 text-center">
           <div className="text-white font-semibold text-lg leading-none">
             {project.type === 'serial' ? project.episodesCount ?? '—' : '—'}
           </div>
@@ -97,33 +125,33 @@ export default function ProjectCard({ project, onClick, onDelete, onExport }: Pr
             {project.type === 'serial' ? 'серий' : 'мин. хронометраж'}
           </div>
         </div>
-        <div className="bg-white/3 rounded-lg p-2.5 text-center">
+        <div className="bg-white/3 rounded-lg p-3 text-center">
           <div className="text-orange-400 font-semibold text-lg leading-none">{overallProgress}%</div>
           <div className="text-gray-500 text-xs mt-1">готовность</div>
         </div>
       </div>
 
       {/* Полоса общей готовности */}
-      <div className="mb-3">
+      <div className="mb-4">
         <ProgressBar value={overallProgress} color="bg-gradient-to-r from-orange-500 to-red-500" />
       </div>
 
       {/* Детализация по модулям */}
-      <div className="space-y-1.5 mb-4">
-        <div className="flex items-center justify-between text-xs">
+      <div className="space-y-3 mb-5">
+        <div className="flex items-center justify-between text-sm">
           <span className="text-gray-500">Сценарий</span>
-          <span className="text-gray-400">{project.scriptProgress}%</span>
+          <span className="text-gray-300 font-medium">{project.scriptProgress}%</span>
         </div>
         <ProgressBar value={project.scriptProgress} color="bg-blue-400" />
-        <div className="flex items-center justify-between text-xs mt-2">
+        <div className="flex items-center justify-between text-sm mt-3">
           <span className="text-gray-500">Расписание</span>
-          <span className="text-gray-400">{project.scheduleProgress}%</span>
+          <span className="text-gray-300 font-medium">{project.scheduleProgress}%</span>
         </div>
         <ProgressBar value={project.scheduleProgress} color="bg-purple-400" />
       </div>
 
       {/* Даты */}
-      <div className="flex items-center justify-between pt-3 border-t border-white/5">
+      <div className="flex items-center justify-between pt-4 border-t border-white/5">
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Calendar size={12} />
           <span>{formatDate(project.startDate)}</span>
@@ -133,10 +161,10 @@ export default function ProjectCard({ project, onClick, onDelete, onExport }: Pr
           <span>Изменён {formatDate(project.updatedAt)}</span>
         </div>
       </div>
-      </button>
+      </div>
 
       {/* Кнопки действий */}
-      <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {onExport && (
           <button
             onClick={(e) => {

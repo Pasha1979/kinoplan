@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
@@ -12,31 +12,54 @@ import type { Project } from '../../store/projectStore'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { projects, isLoading, error } = useNormalizedProjectStore()
+  const { projects, isLoading, error, toggleFavorite, updateLastOpenedAt } = useNormalizedProjectStore()
   const { theme, toggleTheme } = useUiStore()
   const { showToast } = useToastStore()
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'recent'>('all')
 
-  const projectList = Object.values(projects)
+  const projectList = useMemo(() => Object.values(projects), [projects])
+
+  // Количество недавно открытых проектов (по lastOpenedAt)
+  const recentCount = useMemo(() => {
+    return projectList.filter((p: Project) => p.lastOpenedAt).length
+  }, [projectList])
+
+  // Фильтрация по вкладкам
+  const displayProjects = useMemo(() => {
+    let filtered = projectList.filter((p: Project) =>
+      p.name.toLowerCase().includes(search.toLowerCase())
+    )
+
+    if (activeTab === 'favorites') {
+      filtered = filtered.filter((p: Project) => p.isFavorite)
+    } else if (activeTab === 'recent') {
+      filtered = filtered.filter((p: Project) => p.lastOpenedAt)
+      filtered = filtered.sort((a: Project, b: Project) => 
+        new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime()
+      )
+    }
+    // 'all' — показываем все
+
+    return filtered
+  }, [projectList, search, activeTab])
 
   useEffect(() => {
     projectService.getProjects()
   }, [])
 
-  const filteredProjects = projectList.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
-
   const handleCreate = async (data: Partial<Project>) => {
     const created = await projectService.createProject(data)
     setShowModal(false)
+    updateLastOpenedAt(created.id)
     navigate(`/project/${created.id}`)
   }
 
   const handleOpen = (project: Project) => {
+    updateLastOpenedAt(project.id)
     navigate(`/project/${project.id}`)
   }
 
@@ -65,6 +88,7 @@ export default function HomePage() {
     try {
       const text = await browserFS.uploadFile('.json')
       const imported = await projectService.importProjectFromJSON(text)
+      updateLastOpenedAt(imported.id)
       navigate(`/project/${imported.id}`)
       showToast('Проект импортирован', 'success')
     } catch {
@@ -126,7 +150,7 @@ export default function HomePage() {
       </header>
 
       {/* Основной контент */}
-      <main className="flex-1 flex flex-col px-6 py-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 flex flex-col px-8 py-8 max-w-7xl mx-auto w-full">
         {isLoading && projectList.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Загрузка...</span>
@@ -157,69 +181,95 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            {/* Шапка списка проектов */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  Мои проекты
-                </h1>
-                <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {projectList.length} {projectList.length === 1 ? 'проект' : projectList.length < 5 ? 'проекта' : 'проектов'}
-                </p>
+            {/* Горизонтальные вкладки */}
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    activeTab === 'all'
+                      ? 'bg-orange-500 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Все <span className={`ml-2 text-xs opacity-70`}>{projectList.length}</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('favorites')}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                    activeTab === 'favorites'
+                      ? 'bg-orange-500 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Star size={16} fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
+                  Избранное <span className={`ml-2 text-xs opacity-70`}>{projectList.filter(p => p.isFavorite).length}</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('recent')}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    activeTab === 'recent'
+                      ? 'bg-orange-500 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Недавние <span className={`ml-2 text-xs opacity-70`}>{recentCount}</span>
+                </button>
               </div>
               <button
                 onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-xl font-medium text-sm transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-400 hover:to-red-400 shadow-lg shadow-orange-500/20"
               >
-                <Plus size={16} />
+                <Plus size={20} />
                 Новый проект
               </button>
             </div>
 
             {/* Поиск */}
-            {projectList.length > 3 && (
-              <div className={`relative mb-6 max-w-sm`}>
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Найти проект..."
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none transition-colors ${
-                    theme === 'dark'
-                      ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/40'
-                      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
-                  }`}
-                />
-              </div>
-            )}
+            <div className={`relative mb-12 max-w-md`}>
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Найти проект..."
+                className={`w-full pl-12 pr-4 py-3 rounded-xl text-sm border focus:outline-none transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/40'
+                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
+                }`}
+              />
+            </div>
 
             {/* Сетка карточек */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onClick={() => handleOpen(project)}
-                  onDelete={() => handleDelete(project.id)}
-                  onExport={() => handleExport(project.id, project.name)}
-                />
-              ))}
-              {/* Карточка создания нового */}
-              <button
-                onClick={() => setShowModal(true)}
-                className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center gap-3 min-h-48 transition-all hover:-translate-y-0.5 active:translate-y-0 ${
-                  theme === 'dark'
-                    ? 'border-white/10 text-gray-600 hover:border-orange-500/30 hover:text-orange-400 hover:bg-orange-500/3'
-                    : 'border-gray-200 text-gray-400 hover:border-orange-400 hover:text-orange-500'
-                }`}
-              >
-                <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
-                  <Plus size={24} />
-                </div>
-                <span className="text-sm font-medium">Новый проект</span>
-              </button>
-            </div>
+            {displayProjects.length === 0 ? (
+              <div className={`py-16 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                {search
+                  ? 'Ничего не найдено'
+                  : activeTab === 'favorites'
+                    ? 'Нет избранных проектов — нажмите на звёздочку на карточке проекта'
+                    : 'Нет недавно открытых проектов'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {displayProjects.map((project: Project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onClick={() => handleOpen(project)}
+                    onDelete={() => handleDelete(project.id)}
+                    onExport={() => handleExport(project.id, project.name)}
+                    onToggleFavorite={() => toggleFavorite(project.id)}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
       </main>
