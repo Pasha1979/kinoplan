@@ -338,7 +338,7 @@ export default function HomePage() {
       </header>
 
       {/* Основной контент */}
-      <main className="flex-1 flex flex-col px-10 md:px-16 lg:px-24 py-8 max-w-[1400px] mx-auto w-full">
+      <main className="flex-1 flex flex-col px-8 md:px-12 py-8 max-w-6xl mx-auto w-full">
         {isLoading && projectList.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Загрузка...</span>
@@ -370,8 +370,8 @@ export default function HomePage() {
         ) : (
           <>
             {/* Горизонтальные вкладки */}
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-10">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
