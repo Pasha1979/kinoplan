@@ -276,11 +276,12 @@ export default function HomePage() {
   }
 
   return (
-    <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`h-screen flex flex-col overflow-x-hidden ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Верхняя панель */}
-      <header className={`sticky top-0 z-30 flex items-center justify-between px-10 md:px-16 lg:px-24 h-16 border-b ${
+      <header className={`sticky top-0 z-30 h-16 border-b ${
         theme === 'dark' ? 'bg-[#0d0d1a]/80 border-white/8 backdrop-blur-md' : 'bg-white border-gray-200'
       }`}>
+        <div className="max-w-6xl mx-auto px-6 md:px-10 h-full flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
             <Film size={16} className="text-white" />
@@ -335,10 +336,12 @@ export default function HomePage() {
             <Settings size={18} />
           </button>
         </div>
+        </div>
       </header>
 
       {/* Основной контент */}
-      <main className="flex-1 flex flex-col px-8 md:px-12 py-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-6 md:px-10 py-8 w-full flex flex-col min-h-full">
         {isLoading && projectList.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Загрузка...</span>
@@ -562,6 +565,7 @@ export default function HomePage() {
             )}
           </>
         )}
+        </div>
       </main>
 
       {/* Контекстное меню карточки */}
