@@ -61,9 +61,10 @@ interface ProjectCardProps {
   onExport?: () => void
   onToggleFavorite?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
+  onResizeEdge?: (e: React.PointerEvent) => void
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, onResizeEdge }: ProjectCardProps) {
   const overallProgress = getOverallProgress(project)
 
   return (
@@ -186,6 +187,18 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         </div>
       </div>
       </div>
+
+      {/* Ручка изменения ширины карточек (правый край) */}
+      {onResizeEdge && (
+        <div
+          onPointerDown={onResizeEdge}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-0 -right-1.5 w-3 h-full cursor-ew-resize z-20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          title="Потяните, чтобы изменить ширину карточек"
+        >
+          <div className="w-1 h-8 rounded-full bg-orange-500/60" />
+        </div>
+      )}
 
       {/* Кнопки действий */}
       <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">

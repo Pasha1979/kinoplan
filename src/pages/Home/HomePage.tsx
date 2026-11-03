@@ -56,9 +56,9 @@ export default function HomePage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [tagEditor, setTagEditor] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [showHelp, setShowHelp] = useState(false)
-  const [cardCols, setCardCols] = useState<number>(() => {
-    const saved = Number(localStorage.getItem('kinoplan_card_cols'))
-    return saved >= 2 && saved <= 6 ? saved : 3
+  const [cardWidth, setCardWidth] = useState<number>(() => {
+    const saved = Number(localStorage.getItem('kinoplan_card_width'))
+    return saved >= 180 && saved <= 640 ? saved : 380
   })
 
   const sensors = useSensors(
@@ -90,19 +90,31 @@ export default function HomePage() {
 
   const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all' || tagFilter !== 'all'
 
-  // Размер карточек — выбирается слайдером, сохраняется в localStorage
-  const GRID_COLS: Record<number, string> = {
-    2: 'grid-cols-1 sm:grid-cols-2',
-    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-    5: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5',
-    6: 'grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6',
-  }
-  const gridClass = `grid ${GRID_COLS[cardCols] ?? GRID_COLS[3]} gap-4`
+  // Ширина карточек — слайдер или перетаскивание за край, сохраняется в localStorage
+  const CARD_W_MIN = 200
+  const CARD_W_MAX = 560
+  const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, 1fr))` }
+  const gridClass = 'grid gap-4'
 
-  const handleColsChange = (cols: number) => {
-    setCardCols(cols)
-    localStorage.setItem('kinoplan_card_cols', String(cols))
+  const setCardW = (w: number) => {
+    const clamped = Math.max(CARD_W_MIN, Math.min(CARD_W_MAX, Math.round(w)))
+    setCardWidth(clamped)
+    localStorage.setItem('kinoplan_card_width', String(clamped))
+  }
+
+  // Перетаскивание за край карточки — меняет ширину всех карточек
+  const startCardResize = (e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startW = cardWidth
+    const onMove = (ev: PointerEvent) => setCardW(startW + (ev.clientX - startX))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }
 
   const resetFilters = () => {
@@ -531,19 +543,19 @@ export default function HomePage() {
               <div className={`ml-auto flex items-center gap-2 px-3 py-2 rounded-xl ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}>
-                <span className="text-xs whitespace-nowrap">Колонок:</span>
+                <span className="text-xs whitespace-nowrap">Ширина:</span>
                 <input
                   type="range"
-                  min={2}
-                  max={6}
-                  step={1}
-                  value={cardCols}
-                  onChange={(e) => handleColsChange(Number(e.target.value))}
+                  min={CARD_W_MIN}
+                  max={CARD_W_MAX}
+                  step={10}
+                  value={cardWidth}
+                  onChange={(e) => setCardW(Number(e.target.value))}
                   className="w-24 accent-orange-500 cursor-pointer"
-                  title="Размер карточек проектов"
+                  title="Ширина карточек проектов"
                 />
-                <span className={`text-xs font-medium w-3 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
-                  {cardCols}
+                <span className={`text-xs font-medium w-8 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
+                  {cardWidth}
                 </span>
               </div>
             </div>
@@ -562,7 +574,7 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <div className={gridClass}>
+                  <div className={gridClass} style={gridStyle}>
                     {displayProjects.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <ProjectCard
@@ -571,6 +583,7 @@ export default function HomePage() {
                           onDelete={() => handleDelete(project.id)}
                           onExport={() => handleExport(project.id, project.name)}
                           onToggleFavorite={() => toggleFavorite(project.id)}
+                          onResizeEdge={startCardResize}
                           onContextMenu={(e) => {
                             e.preventDefault()
                             setContextMenu({ x: e.clientX, y: e.clientY, project })
@@ -582,7 +595,7 @@ export default function HomePage() {
                 </SortableContext>
               </DndContext>
             ) : (
-              <div className={gridClass}>
+              <div className={gridClass} style={gridStyle}>
                 {displayProjects.map((project: Project) => (
                   <ProjectCard
                     key={project.id}
@@ -591,6 +604,7 @@ export default function HomePage() {
                     onDelete={() => handleDelete(project.id)}
                     onExport={() => handleExport(project.id, project.name)}
                     onToggleFavorite={() => toggleFavorite(project.id)}
+                    onResizeEdge={startCardResize}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setContextMenu({ x: e.clientX, y: e.clientY, project })
