@@ -332,7 +332,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`home-root h-screen flex flex-col ${theme === 'dark' ? 'bg-[#0d0d1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Верхняя панель */}
       <header className={`sticky top-0 z-30 flex items-center justify-between px-6 h-16 border-b ${
         theme === 'dark' ? 'bg-[#0d0d1a]/80 border-white/8 backdrop-blur-md' : 'bg-white border-gray-200'

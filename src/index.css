@@ -2,6 +2,16 @@
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ТОЛЬКО для HomePage: восстанавливаем работу margin/padding утилит Tailwind.
+   Глобальный *{margin:0;padding:0} выше побеждает @layer-утилиты (Tailwind v4),
+   revert-layer откатывает к слою утилит — остальные страницы не затрагиваются. */
+.home-root * {
+  margin: revert-layer;
+  padding: revert-layer;
 }
 
 html, body, #root {
