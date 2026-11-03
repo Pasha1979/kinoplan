@@ -131,43 +131,18 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
           </div>
         </div>
 
-      {/* Статистика */}
-      <div className="grid grid-cols-3 gap-2.5 mb-4">
-        <div className="bg-white/3 rounded-lg p-2 text-center">
-          <div className="text-white font-semibold text-base leading-none">{project.plannedShootingDays}</div>
-          <div className="text-gray-500 text-xs mt-1">дней съёмок</div>
-        </div>
-        <div className="bg-white/3 rounded-lg p-2 text-center">
-          <div className="text-white font-semibold text-base leading-none">
-            {project.type === 'serial' ? project.episodesCount ?? '—' : '—'}
-          </div>
-          <div className="text-gray-500 text-xs mt-1">
-            {project.type === 'serial' ? 'серий' : 'мин. хронометраж'}
-          </div>
-        </div>
-        <div className="bg-white/3 rounded-lg p-2 text-center">
-          <div className="text-orange-400 font-semibold text-base leading-none">{overallProgress}%</div>
-          <div className="text-gray-500 text-xs mt-1">готовность</div>
-        </div>
+      {/* Компактная статистика одной строкой */}
+      <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+        <span>{project.plannedShootingDays} дн. съёмок</span>
+        <span>·</span>
+        <span>{project.type === 'serial' ? `${project.episodesCount ?? '—'} сер.` : '—'}</span>
+        <span>·</span>
+        <span className="text-orange-400 font-medium">{overallProgress}%</span>
       </div>
 
       {/* Полоса общей готовности */}
       <div className="mb-3">
         <ProgressBar value={overallProgress} color="bg-gradient-to-r from-orange-500 to-red-500" />
-      </div>
-
-      {/* Детализация по модулям */}
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">Сценарий</span>
-          <span className="text-gray-300 font-medium">{project.scriptProgress}%</span>
-        </div>
-        <ProgressBar value={project.scriptProgress} color="bg-blue-400" />
-        <div className="flex items-center justify-between text-xs mt-2">
-          <span className="text-gray-500">Расписание</span>
-          <span className="text-gray-300 font-medium">{project.scheduleProgress}%</span>
-        </div>
-        <ProgressBar value={project.scheduleProgress} color="bg-purple-400" />
       </div>
 
       {/* Даты */}
