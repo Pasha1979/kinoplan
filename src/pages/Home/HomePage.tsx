@@ -60,6 +60,10 @@ export default function HomePage() {
     const saved = Number(localStorage.getItem('kinoplan_card_width'))
     return saved >= 180 && saved <= 640 ? saved : 380
   })
+  const [cardHeight, setCardHeight] = useState<number>(() => {
+    const saved = Number(localStorage.getItem('kinoplan_card_height'))
+    return saved >= 140 && saved <= 700 ? saved : 0 // 0 = auto
+  })
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -109,6 +113,27 @@ export default function HomePage() {
     const startX = e.clientX
     const startW = cardWidth
     const onMove = (ev: PointerEvent) => setCardW(startW + (ev.clientX - startX))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  const setCardH = (h: number) => {
+    const clamped = Math.max(140, Math.min(700, Math.round(h)))
+    setCardHeight(clamped)
+    localStorage.setItem('kinoplan_card_height', String(clamped))
+  }
+
+  // Перетаскивание за нижний край карточки — меняет высоту всех карточек
+  const startHeightResize = (e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startH = cardHeight || 340
+    const onMove = (ev: PointerEvent) => setCardH(startH + (ev.clientY - startY))
     const onUp = () => {
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
@@ -584,6 +609,8 @@ export default function HomePage() {
                           onExport={() => handleExport(project.id, project.name)}
                           onToggleFavorite={() => toggleFavorite(project.id)}
                           onResizeEdge={startCardResize}
+                          onResizeBottom={startHeightResize}
+                          cardHeight={cardHeight || undefined}
                           onContextMenu={(e) => {
                             e.preventDefault()
                             setContextMenu({ x: e.clientX, y: e.clientY, project })
@@ -605,6 +632,8 @@ export default function HomePage() {
                     onExport={() => handleExport(project.id, project.name)}
                     onToggleFavorite={() => toggleFavorite(project.id)}
                     onResizeEdge={startCardResize}
+                          onResizeBottom={startHeightResize}
+                          cardHeight={cardHeight || undefined}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setContextMenu({ x: e.clientX, y: e.clientY, project })

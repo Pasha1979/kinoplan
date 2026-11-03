@@ -62,13 +62,15 @@ interface ProjectCardProps {
   onToggleFavorite?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
   onResizeEdge?: (e: React.PointerEvent) => void
+  onResizeBottom?: (e: React.PointerEvent) => void
+  cardHeight?: number
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, onResizeEdge }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, onResizeEdge, onResizeBottom, cardHeight }: ProjectCardProps) {
   const overallProgress = getOverallProgress(project)
 
   return (
-    <div className="group relative">
+    <div className="group relative" style={cardHeight ? { height: cardHeight } : undefined}>
       <div
         role="button"
         tabIndex={0}
@@ -80,7 +82,7 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
             onClick()
           }
         }}
-        className="w-full text-left cursor-pointer bg-[#13132a] border border-white/8 rounded-2xl p-6 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
+        className="w-full h-full text-left cursor-pointer bg-[#13132a] border border-white/8 rounded-2xl p-6 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0 overflow-hidden"
       >
         {/* Шапка карточки */}
         <div className="flex items-start justify-between gap-3 mb-5">
@@ -197,6 +199,18 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
           title="Потяните, чтобы изменить ширину карточек"
         >
           <div className="w-1 h-8 rounded-full bg-orange-500/60" />
+        </div>
+      )}
+
+      {/* Ручка изменения высоты карточек (нижний край) */}
+      {onResizeBottom && (
+        <div
+          onPointerDown={onResizeBottom}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          title="Потяните, чтобы изменить высоту карточек"
+        >
+          <div className="h-1 w-8 rounded-full bg-orange-500/60" />
         </div>
       )}
 
