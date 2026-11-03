@@ -58,11 +58,11 @@ export default function HomePage() {
   const [showHelp, setShowHelp] = useState(false)
   const [cardWidth, setCardWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_width'))
-    return saved >= 180 && saved <= 640 ? saved : 380
+    return saved >= 180 && saved <= 640 ? saved : 366 // дефолт выбран пользователем
   })
   const [cardHeight, setCardHeight] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_height'))
-    return saved >= 140 && saved <= 700 ? saved : 0 // 0 = auto
+    return saved >= 140 && saved <= 700 ? saved : 210 // дефолт выбран пользователем
   })
 
   const sensors = useSensors(
