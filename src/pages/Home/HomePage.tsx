@@ -600,6 +600,13 @@ export default function HomePage() {
           onCreate={handleCreate}
         />
       )}
+
+      {/* Отладка ширины viewport (только dev) */}
+      {import.meta.env.DEV && (
+        <div className="fixed bottom-2 left-2 z-[999] rounded bg-black/70 px-2 py-1 text-[10px] text-green-400 font-mono">
+          {window.innerWidth}×{window.innerHeight} DPR:{window.devicePixelRatio}
+        </div>
+      )}
     </div>
   )
 }
