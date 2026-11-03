@@ -370,7 +370,7 @@ export default function HomePage() {
         ) : (
           <>
             {/* Горизонтальные вкладки */}
-            <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-10">
               <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={() => setActiveTab('all')}
@@ -447,7 +447,7 @@ export default function HomePage() {
             </div>
 
             {/* Поиск + сортировка + фильтры */}
-            <div className="flex items-center gap-3 flex-wrap mb-8">
+            <div className="flex items-center gap-3 flex-wrap mb-12">
               <div className="relative flex-1 min-w-[220px] max-w-md">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -523,7 +523,7 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                     {displayProjects.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <ProjectCard
@@ -543,7 +543,7 @@ export default function HomePage() {
                 </SortableContext>
               </DndContext>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {displayProjects.map((project: Project) => (
                   <ProjectCard
                     key={project.id}

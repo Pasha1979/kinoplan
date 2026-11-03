@@ -34,7 +34,7 @@ const TYPE_ICONS: Record<Project['type'], React.ReactNode> = {
 
 function ProgressBar({ value, color }: { value: number; color: string }) {
   return (
-    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
       <div
         className={`h-full rounded-full ${color}`}
         style={{ width: `${value}%` }}
@@ -79,12 +79,12 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
             onClick()
           }
         }}
-        className="w-full text-left cursor-pointer bg-[#13132a] border border-white/8 rounded-lg p-4 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
+        className="w-full text-left cursor-pointer bg-[#13132a] border border-white/8 rounded-2xl p-6 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0"
       >
         {/* Шапка карточки */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center text-orange-400">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/20 flex items-center justify-center text-orange-400">
               {TYPE_ICONS[project.type]}
             </div>
             <div>
@@ -132,38 +132,38 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         </div>
 
       {/* Статистика */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="bg-white/3 rounded p-1.5 text-center">
-          <div className="text-white font-semibold text-sm leading-none">{project.plannedShootingDays}</div>
-          <div className="text-gray-500 text-[10px] mt-0.5">дней съёмок</div>
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="bg-white/3 rounded-lg p-3 text-center">
+          <div className="text-white font-semibold text-lg leading-none">{project.plannedShootingDays}</div>
+          <div className="text-gray-500 text-xs mt-1">дней съёмок</div>
         </div>
-        <div className="bg-white/3 rounded p-1.5 text-center">
-          <div className="text-white font-semibold text-sm leading-none">
+        <div className="bg-white/3 rounded-lg p-3 text-center">
+          <div className="text-white font-semibold text-lg leading-none">
             {project.type === 'serial' ? project.episodesCount ?? '—' : '—'}
           </div>
-          <div className="text-gray-500 text-[10px] mt-0.5">
+          <div className="text-gray-500 text-xs mt-1">
             {project.type === 'serial' ? 'серий' : 'мин. хронометраж'}
           </div>
         </div>
-        <div className="bg-white/3 rounded p-1.5 text-center">
-          <div className="text-orange-400 font-semibold text-sm leading-none">{overallProgress}%</div>
-          <div className="text-gray-500 text-[10px] mt-0.5">готовность</div>
+        <div className="bg-white/3 rounded-lg p-3 text-center">
+          <div className="text-orange-400 font-semibold text-lg leading-none">{overallProgress}%</div>
+          <div className="text-gray-500 text-xs mt-1">готовность</div>
         </div>
       </div>
 
       {/* Полоса общей готовности */}
-      <div className="mb-2">
+      <div className="mb-4">
         <ProgressBar value={overallProgress} color="bg-gradient-to-r from-orange-500 to-red-500" />
       </div>
 
       {/* Детализация по модулям */}
-      <div className="space-y-1 mb-3">
-        <div className="flex items-center justify-between text-[11px]">
+      <div className="space-y-3 mb-5">
+        <div className="flex items-center justify-between text-sm">
           <span className="text-gray-500">Сценарий</span>
           <span className="text-gray-300 font-medium">{project.scriptProgress}%</span>
         </div>
         <ProgressBar value={project.scriptProgress} color="bg-blue-400" />
-        <div className="flex items-center justify-between text-[11px] mt-1.5">
+        <div className="flex items-center justify-between text-sm mt-3">
           <span className="text-gray-500">Расписание</span>
           <span className="text-gray-300 font-medium">{project.scheduleProgress}%</span>
         </div>
@@ -171,7 +171,7 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
       </div>
 
       {/* Даты */}
-      <div className="flex items-center justify-between pt-3 border-t border-white/5">
+      <div className="flex items-center justify-between pt-4 border-t border-white/5">
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Calendar size={12} />
           <span>{formatDate(project.startDate)}</span>
