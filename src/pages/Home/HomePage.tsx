@@ -56,6 +56,10 @@ export default function HomePage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [tagEditor, setTagEditor] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [showHelp, setShowHelp] = useState(false)
+  const [cardCols, setCardCols] = useState<number>(() => {
+    const saved = Number(localStorage.getItem('kinoplan_card_cols'))
+    return saved >= 2 && saved <= 6 ? saved : 3
+  })
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -85,6 +89,21 @@ export default function HomePage() {
   ], [allTags])
 
   const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all' || tagFilter !== 'all'
+
+  // Размер карточек — выбирается слайдером, сохраняется в localStorage
+  const GRID_COLS: Record<number, string> = {
+    2: 'grid-cols-1 sm:grid-cols-2',
+    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+    5: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5',
+    6: 'grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6',
+  }
+  const gridClass = `grid ${GRID_COLS[cardCols] ?? GRID_COLS[3]} gap-4`
+
+  const handleColsChange = (cols: number) => {
+    setCardCols(cols)
+    localStorage.setItem('kinoplan_card_cols', String(cols))
+  }
 
   const resetFilters = () => {
     setTypeFilter('all')
@@ -507,6 +526,26 @@ export default function HomePage() {
                   Сбросить
                 </button>
               )}
+
+              {/* Слайдер размера карточек */}
+              <div className={`ml-auto flex items-center gap-2 px-3 py-2 rounded-xl ${
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+              }`}>
+                <span className="text-xs whitespace-nowrap">Колонок:</span>
+                <input
+                  type="range"
+                  min={2}
+                  max={6}
+                  step={1}
+                  value={cardCols}
+                  onChange={(e) => handleColsChange(Number(e.target.value))}
+                  className="w-24 accent-orange-500 cursor-pointer"
+                  title="Размер карточек проектов"
+                />
+                <span className={`text-xs font-medium w-3 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
+                  {cardCols}
+                </span>
+              </div>
             </div>
 
             {/* Сетка карточек */}
@@ -523,7 +562,7 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className={gridClass}>
                     {displayProjects.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <ProjectCard
@@ -543,7 +582,7 @@ export default function HomePage() {
                 </SortableContext>
               </DndContext>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className={gridClass}>
                 {displayProjects.map((project: Project) => (
                   <ProjectCard
                     key={project.id}
