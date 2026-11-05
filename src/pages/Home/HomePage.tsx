@@ -112,7 +112,7 @@ export default function HomePage() {
     return (
       <div
         className={`${className ?? ''} relative outline-2 outline-dashed outline-orange-500/60`}
-        style={{ ...style, transform: `translate(${s.dx}px, ${s.dy}px)`, width: s.w, height: s.h, zIndex: 30, overflow: 'auto' }}
+        style={{ ...style, transform: `translate(${s.dx}px, ${s.dy}px)`, width: s.w, height: s.h, zIndex: 30, overflow: 'visible' }}
         onPointerDown={startBlockDrag(id)}
       >
         {children}
