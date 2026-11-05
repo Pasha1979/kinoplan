@@ -186,6 +186,24 @@ export default function HomePage() {
 
   const isDummy = (p: Project) => p.id.startsWith('dummy-')
 
+  // Временные тестовые карточки (убрать позже)
+  const DUMMY_PROJECTS: Project[] = Array.from({ length: 5 }, (_, i) => ({
+    id: `dummy-${i + 1}`,
+    name: `Проект ${i + 1}`,
+    type: 'film' as const,
+    status: 'preproduction' as const,
+    plannedShootingDays: 10 + i * 5,
+    dailyOutput: 5,
+    shootingGroups: 1 as const,
+    cloudStorage: 'none' as const,
+    createdAt: '2026-01-01',
+    updatedAt: '2026-11-01',
+    scriptProgress: i * 15,
+    castingProgress: 0,
+    locationsProgress: 0,
+    scheduleProgress: i * 10,
+  } as unknown as Project))
+
   const resetFilters = () => {
     setTypeFilter('all')
     setStatusFilter('all')
@@ -253,7 +271,7 @@ export default function HomePage() {
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
-  const cardsToShow = displayProjects
+  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 5 - displayProjects.length))]
   const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
   const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
   const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
