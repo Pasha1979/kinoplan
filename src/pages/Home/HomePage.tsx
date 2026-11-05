@@ -673,7 +673,7 @@ export default function HomePage() {
                   <LB id="grid" className={`${gridClass} relative border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
                     {/* Водяной знак — фон поля */}
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none z-0">
-                      <span className={`text-7xl font-black tracking-widest ${theme === 'dark' ? 'text-white/[0.03]' : 'text-gray-900/[0.04]'}`}>КИНОПЛАН</span>
+                      <span className="w-full text-center font-black tracking-wider bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent opacity-15" style={{ fontSize: "clamp(3rem, 9vw, 9rem)" }}>КИНОПЛАН</span>
                     </div>
                     {cardsToShow.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
@@ -700,7 +700,7 @@ export default function HomePage() {
               <LB id="grid" className={`${gridClass} relative border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
                 {/* Водяной знак — фон поля */}
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none z-0">
-                  <span className={`text-7xl font-black tracking-widest ${theme === 'dark' ? 'text-white/[0.03]' : 'text-gray-900/[0.04]'}`}>КИНОПЛАН</span>
+                  <span className="w-full text-center font-black tracking-wider bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent opacity-15" style={{ fontSize: "clamp(3rem, 9vw, 9rem)" }}>КИНОПЛАН</span>
                 </div>
                 {cardsToShow.map((project: Project) => (
                   <LB key={project.id} id={`card-${project.id}`}>
