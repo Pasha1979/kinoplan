@@ -58,11 +58,11 @@ export default function HomePage() {
   const [showHelp, setShowHelp] = useState(false)
   const [cardWidth, setCardWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_width'))
-    return saved >= 180 && saved <= 640 ? saved : 341 // дефолт выбран пользователем
+    return saved >= 180 && saved <= 640 ? saved : 403 // дефолт выбран пользователем
   })
   const [cardHeight, setCardHeight] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_height'))
-    return saved >= 140 && saved <= 700 ? saved : 206 // дефолт выбран пользователем
+    return saved >= 140 && saved <= 700 ? saved : 210 // дефолт выбран пользователем
   })
   // Режим макета: свободно двигать/растягивать блоки и отправить раскладку ассистенту
   const [layoutMode, setLayoutMode] = useState(false)
@@ -107,22 +107,22 @@ export default function HomePage() {
 
   // Применённая раскладка пользователя из режима макета (dx/dy/размеры)
   const APPLIED_LAYOUT: Record<string, { dx: number; dy: number; w?: number; h?: number }> = {
-    'tab-all': { dx: -134.4, dy: -26.4, w: 113.4, h: 42.4 },
-    'tab-fav': { dx: -135.2, dy: -26.4, w: 120.6, h: 42.4 },
-    'tab-recent': { dx: -132, dy: -27.2, w: 113.2, h: 43.2 },
-    'tab-archive': { dx: -131.2, dy: -27.2, w: 120.8, h: 43.2 },
-    search: { dx: 410.4, dy: -88.8, w: 412, h: 40 },
-    'btn-new': { dx: 133.6, dy: 95.2 },
-    'btn-import': { dx: 308.8, dy: 169.6 },
+    'tab-all': { dx: -124, dy: -24, w: 128.2, h: 46.8 },
+    'tab-fav': { dx: -123.2, dy: -25.6, w: 120.6, h: 42.4 },
+    'tab-recent': { dx: -121.6, dy: -25.6, w: 113.2, h: 43.2 },
+    'tab-archive': { dx: -120.8, dy: -25.6, w: 120.8, h: 43.2 },
+    search: { dx: 418.4, dy: -89.6, w: 412, h: 40 },
+    'btn-new': { dx: 134.4, dy: 88.8 },
+    'btn-import': { dx: 308.8, dy: 150.4 },
     sort: { dx: 424, dy: -113.6, w: 192.6, h: 43.6 },
     'filter-type': { dx: 424.8, dy: -112.8 },
     'filter-status': { dx: 420.8, dy: -112.8 },
-    grid: { dx: -124.8, dy: -102.4, w: 1279.2, h: 627.2 },
-    'card-dummy-1': { dx: 4.8, dy: 5.6 },
-    'card-dummy-2': { dx: 4.8, dy: 4.8 },
-    'card-dummy-3': { dx: -4.8, dy: 20 },
-    'card-dummy-4': { dx: 3.2, dy: 20.8 },
-    'card-dummy-5': { dx: 6.4, dy: 21.6 },
+    grid: { dx: -124.8, dy: -102.4, w: 1290.2, h: 604.6 },
+    'card-dummy-1': { dx: 0, dy: 0.8 },
+    'card-dummy-2': { dx: 4.8, dy: 0.8 },
+    'card-dummy-3': { dx: -0.8, dy: -62.4 },
+    'card-dummy-4': { dx: 0.8, dy: -62.4 },
+    'card-dummy-5': { dx: 4, dy: -64 },
   }
 
   // Обёртка блока в режиме макета
