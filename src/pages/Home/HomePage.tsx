@@ -56,11 +56,11 @@ export default function HomePage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [tagEditor, setTagEditor] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [showHelp, setShowHelp] = useState(false)
-  const [cardWidth, setCardWidth] = useState<number>(() => {
+  const [cardWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_width'))
     return saved >= 180 && saved <= 640 ? saved : 403 // дефолт выбран пользователем
   })
-  const [cardHeight, setCardHeight] = useState<number>(() => {
+  const [cardHeight] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_height'))
     return saved >= 140 && saved <= 700 ? saved : 210 // дефолт выбран пользователем
   })
@@ -180,55 +180,11 @@ export default function HomePage() {
 
   const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all' || tagFilter !== 'all'
 
-  // Ширина карточек — слайдер или перетаскивание за край, сохраняется в localStorage
-  const CARD_W_MIN = 200
-  const CARD_W_MAX = 560
+  // Размер карточек сохранён в localStorage (меняется через режим макета)
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, 1fr))` }
   const gridClass = 'grid gap-4'
 
   const isDummy = (p: Project) => p.id.startsWith('dummy-')
-
-  const setCardW = (w: number) => {
-    const clamped = Math.max(CARD_W_MIN, Math.min(CARD_W_MAX, Math.round(w)))
-    setCardWidth(clamped)
-    localStorage.setItem('kinoplan_card_width', String(clamped))
-  }
-
-  // Перетаскивание за край карточки — меняет ширину всех карточек
-  const startCardResize = (e: React.PointerEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const startX = e.clientX
-    const startW = cardWidth
-    const onMove = (ev: PointerEvent) => setCardW(startW + (ev.clientX - startX))
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
-
-  const setCardH = (h: number) => {
-    const clamped = Math.max(140, Math.min(700, Math.round(h)))
-    setCardHeight(clamped)
-    localStorage.setItem('kinoplan_card_height', String(clamped))
-  }
-
-  // Перетаскивание за нижний край карточки — меняет высоту всех карточек
-  const startHeightResize = (e: React.PointerEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const startY = e.clientY
-    const startH = cardHeight || 340
-    const onMove = (ev: PointerEvent) => setCardH(startH + (ev.clientY - startY))
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
 
   const resetFilters = () => {
     setTypeFilter('all')
@@ -724,8 +680,6 @@ export default function HomePage() {
                           onDelete={() => cardDelete(project)}
                           onExport={() => cardExport(project)}
                           onToggleFavorite={() => cardFav(project)}
-                          onResizeEdge={startCardResize}
-                          onResizeBottom={startHeightResize}
                           cardHeight={cardHeight || undefined}
                           onContextMenu={(e) => {
                             e.preventDefault()
@@ -749,9 +703,7 @@ export default function HomePage() {
                     onDelete={() => cardDelete(project)}
                     onExport={() => cardExport(project)}
                     onToggleFavorite={() => cardFav(project)}
-                    onResizeEdge={startCardResize}
-                          onResizeBottom={startHeightResize}
-                          cardHeight={cardHeight || undefined}
+                    cardHeight={cardHeight || undefined}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       !isDummy(project) && setContextMenu({ x: e.clientX, y: e.clientY, project })

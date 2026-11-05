@@ -61,12 +61,10 @@ interface ProjectCardProps {
   onExport?: () => void
   onToggleFavorite?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
-  onResizeEdge?: (e: React.PointerEvent) => void
-  onResizeBottom?: (e: React.PointerEvent) => void
   cardHeight?: number
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, onResizeEdge, onResizeBottom, cardHeight }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, cardHeight }: ProjectCardProps) {
   const overallProgress = getOverallProgress(project)
 
   return (
@@ -189,30 +187,6 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         </div>
       </div>
       </div>
-
-      {/* Ручка изменения ширины карточек (правый край) */}
-      {onResizeEdge && (
-        <div
-          onPointerDown={onResizeEdge}
-          onClick={(e) => e.stopPropagation()}
-          className="absolute top-0 -right-1.5 w-3 h-full cursor-ew-resize z-20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-          title="Потяните, чтобы изменить ширину карточек"
-        >
-          <div className="w-1 h-8 rounded-full bg-orange-500/60" />
-        </div>
-      )}
-
-      {/* Ручка изменения высоты карточек (нижний край) */}
-      {onResizeBottom && (
-        <div
-          onPointerDown={onResizeBottom}
-          onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-          title="Потяните, чтобы изменить высоту карточек"
-        >
-          <div className="h-1 w-8 rounded-full bg-orange-500/60" />
-        </div>
-      )}
 
       {/* Кнопки действий */}
       <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
