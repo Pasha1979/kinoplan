@@ -762,6 +762,12 @@ export default function HomePage() {
             📋 Отправить макет
           </button>
           <button
+            onClick={() => setLayout({})}
+            className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
+          >
+            🔄 Сбросить
+          </button>
+          <button
             onClick={() => {
               setLayoutMode(false)
               setLayout({})
