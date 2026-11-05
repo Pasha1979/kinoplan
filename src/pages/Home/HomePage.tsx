@@ -72,6 +72,7 @@ export default function HomePage() {
   const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
     if (!layoutMode) return
     e.preventDefault()
+    e.stopPropagation()
     const startX = e.clientX, startY = e.clientY
     const s = layout[id] ?? { dx: 0, dy: 0 }
     const onMove = (ev: PointerEvent) =>
@@ -497,6 +498,7 @@ export default function HomePage() {
             {/* Горизонтальные вкладки */}
             <LB id="tabs" className="flex items-center justify-between gap-4 flex-wrap mb-10">
               <div className="flex items-center gap-3 flex-wrap">
+                <LB id="tab-all">
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
@@ -509,6 +511,8 @@ export default function HomePage() {
                 >
                   Все <span className={`ml-2 text-xs opacity-70`}>{projectList.length}</span>
                 </button>
+                </LB>
+                <LB id="tab-fav">
                 <button
                   onClick={() => setActiveTab('favorites')}
                   className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -522,6 +526,8 @@ export default function HomePage() {
                   <Star size={16} fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
                   Избранное <span className={`ml-2 text-xs opacity-70`}>{projectList.filter(p => p.isFavorite).length}</span>
                 </button>
+                </LB>
+                <LB id="tab-recent">
                 <button
                   onClick={() => setActiveTab('recent')}
                   className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
@@ -534,6 +540,8 @@ export default function HomePage() {
                 >
                   Недавние <span className={`ml-2 text-xs opacity-70`}>{recentCount}</span>
                 </button>
+                </LB>
+                <LB id="tab-archive">
                 <button
                   onClick={() => setActiveTab('archive')}
                   className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -547,8 +555,10 @@ export default function HomePage() {
                   <Archive size={16} />
                   Архив <span className={`ml-2 text-xs opacity-70`}>{archiveCount}</span>
                 </button>
+                </LB>
               </div>
               <div className="flex items-center gap-3">
+                <LB id="btn-import">
                 <button
                   onClick={handleImportClick}
                   disabled={isImporting}
@@ -561,6 +571,8 @@ export default function HomePage() {
                   <Upload size={16} />
                   Импорт
                 </button>
+                </LB>
+                <LB id="btn-new">
                 <button
                   onClick={() => setShowModal(true)}
                   className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-400 hover:to-red-400 shadow-lg shadow-orange-500/20"
@@ -568,12 +580,13 @@ export default function HomePage() {
                   <Plus size={20} />
                   Новый проект
                 </button>
+                </LB>
               </div>
             </LB>
 
             {/* Поиск + сортировка + фильтры */}
             <LB id="toolbar" className="flex items-center gap-3 flex-wrap mb-12">
-              <div className="relative flex-1 min-w-[220px] max-w-md">
+              <LB id="search" className="relative flex-1 min-w-[220px] max-w-md">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
@@ -586,29 +599,36 @@ export default function HomePage() {
                       : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
                   }`}
                 />
-              </div>
+              </LB>
 
               {activeTab !== 'recent' && (
+                <LB id="sort">
                 <FilterDropdown
                   icon={<ArrowUpDown size={14} />}
                   options={SORT_OPTIONS}
                   value={sortBy}
                   onChange={(v) => setSortBy(v as SortBy)}
                 />
+                </LB>
               )}
+              <LB id="filter-type">
               <FilterDropdown
                 options={TYPE_OPTIONS}
                 value={typeFilter}
                 onChange={setTypeFilter}
                 highlight={typeFilter !== 'all'}
               />
+              </LB>
+              <LB id="filter-status">
               <FilterDropdown
                 options={STATUS_OPTIONS}
                 value={statusFilter}
                 onChange={setStatusFilter}
                 highlight={statusFilter !== 'all'}
               />
+              </LB>
               {allTags.length > 0 && (
+                <LB id="filter-tag">
                 <FilterDropdown
                   icon={<Tag size={14} />}
                   options={tagOptions}
@@ -616,9 +636,11 @@ export default function HomePage() {
                   onChange={setTagFilter}
                   highlight={tagFilter !== 'all'}
                 />
+                </LB>
               )}
 
               {hasActiveFilters && (
+                <LB id="btn-reset">
                 <button
                   onClick={resetFilters}
                   className={`flex items-center gap-1.5 px-3 py-3 rounded-xl text-sm transition-colors ${
@@ -631,10 +653,11 @@ export default function HomePage() {
                   <X size={14} />
                   Сбросить
                 </button>
+                </LB>
               )}
 
               {/* Слайдер размера карточек */}
-              <div className={`ml-auto flex items-center gap-2 px-3 py-2 rounded-xl ${
+              <LB id="slider" className={`ml-auto flex items-center gap-2 px-3 py-2 rounded-xl ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}>
                 <span className="text-xs whitespace-nowrap">Ширина:</span>
@@ -651,7 +674,7 @@ export default function HomePage() {
                 <span className={`text-xs font-medium w-8 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
                   {cardWidth}
                 </span>
-              </div>
+              </LB>
             </LB>
 
             {/* Сетка карточек */}
