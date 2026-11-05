@@ -120,9 +120,9 @@ export default function HomePage() {
     grid: { dx: -124.8, dy: -102.4, w: 1290.2, h: 604.6 },
     'card-dummy-1': { dx: 0, dy: 0.8 },
     'card-dummy-2': { dx: 4.8, dy: 0.8 },
-    'card-dummy-3': { dx: -0.8, dy: -62.4 },
-    'card-dummy-4': { dx: 0.8, dy: -62.4 },
-    'card-dummy-5': { dx: 4, dy: -64 },
+    'card-dummy-3': { dx: -4.8, dy: -4.8 },
+    'card-dummy-4': { dx: -4, dy: -3.2 },
+    'card-dummy-5': { dx: 2.4, dy: -3.2 },
   }
 
   // Обёртка блока в режиме макета
