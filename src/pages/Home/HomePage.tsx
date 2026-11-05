@@ -280,14 +280,24 @@ export default function HomePage() {
   // Drag-and-drop доступен на вкладке «Все» в ручном порядке без фильтров
   const isDraggable = activeTab === 'all' && sortBy === 'manual' && !search && !hasActiveFilters
 
+  // Локальный порядок карточек (включая тестовые) — override после drag
+  const [cardOrder, setCardOrder] = useState<string[]>([])
+  const orderedCards = useMemo(() => {
+    const byId = new Map(cardsToShow.map((p) => [p.id, p]))
+    const ordered = cardOrder.map((id) => byId.get(id)).filter((p): p is Project => !!p)
+    return ordered.length === cardsToShow.length ? ordered : cardsToShow
+  }, [cardOrder, cardsToShow])
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const ids = displayProjects.map((p) => p.id)
+    const ids = orderedCards.map((p) => p.id)
     const from = ids.indexOf(active.id as string)
     const to = ids.indexOf(over.id as string)
     if (from === -1 || to === -1) return
-    reorderProjects(arrayMove(ids, from, to))
+    const newOrder = arrayMove(ids, from, to)
+    setCardOrder(newOrder)
+    reorderProjects(newOrder.filter((id) => !id.startsWith('dummy-')))
   }
 
   useEffect(() => {
@@ -687,7 +697,7 @@ export default function HomePage() {
               </div>
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={cardsToShow.map((p) => p.id)} strategy={rectSortingStrategy}>
+                <SortableContext items={orderedCards.map((p) => p.id)} strategy={rectSortingStrategy}>
                   <LB id="grid" className={`relative border border-white/10 rounded-2xl h-[60vh] bg-black/10`}>
                     {/* Водяной знак — неподвижен при скролле */}
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 select-none z-0 opacity-[0.12]">
@@ -697,7 +707,7 @@ export default function HomePage() {
                       <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)", textShadow: "0 0 25px rgba(249,115,22,0.6), 0 0 60px rgba(239,68,68,0.35), 0 0 120px rgba(249,115,22,0.2)" }}>КИНОПЛАН</span>
                     </div>
                     <div className={`${gridClass} relative z-10 h-full overflow-y-auto p-4`} style={gridStyle}>
-                    {cardsToShow.map((project: Project) => (
+                    {orderedCards.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <LB id={`card-${project.id}`}>
                         <ProjectCard
@@ -729,7 +739,7 @@ export default function HomePage() {
                   <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)", textShadow: "0 0 25px rgba(249,115,22,0.6), 0 0 60px rgba(239,68,68,0.35), 0 0 120px rgba(249,115,22,0.2)" }}>КИНОПЛАН</span>
                 </div>
                 <div className={`${gridClass} relative z-10 h-full overflow-y-auto p-4`} style={gridStyle}>
-                {cardsToShow.map((project: Project) => (
+                {orderedCards.map((project: Project) => (
                   <LB key={project.id} id={`card-${project.id}`}>
                   <ProjectCard
                     key={project.id}
