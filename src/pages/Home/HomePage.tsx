@@ -202,6 +202,10 @@ export default function HomePage() {
     castingProgress: 0,
     locationsProgress: 0,
     scheduleProgress: i * 10,
+    // Тест категорий: 4-6 избранные, 7-8 недавно открытые, 9-10 архивные
+    isFavorite: i >= 3 && i < 6,
+    lastOpenedAt: i >= 6 && i < 8 ? '2026-11-02' : undefined,
+    isArchived: i >= 8,
   } as unknown as Project))
 
   const resetFilters = () => {
@@ -271,7 +275,14 @@ export default function HomePage() {
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
-  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 10 - displayProjects.length))]
+  // Тестовые карточки подчиняются активной вкладке
+  const dummiesForTab = DUMMY_PROJECTS.filter((p) =>
+    activeTab === 'archive' ? p.isArchived
+    : activeTab === 'favorites' ? (p.isFavorite && !p.isArchived)
+    : activeTab === 'recent' ? (p.lastOpenedAt && !p.isArchived)
+    : !p.isArchived
+  )
+  const cardsToShow = [...displayProjects, ...dummiesForTab]
   const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
   const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
   const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
