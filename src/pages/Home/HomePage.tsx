@@ -562,7 +562,7 @@ export default function HomePage() {
                 <LB id="tab-all">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  className={`w-full h-full px-2 py-1 rounded-xl text-xs font-medium transition-colors ${
                     activeTab === 'all'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -570,13 +570,13 @@ export default function HomePage() {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Все <span className={`ml-2 text-xs opacity-70`}>{projectList.length}</span>
+                  Все <span className={`ml-1 text-[10px] opacity-70`}>{projectList.length}</span>
                 </button>
                 </LB>
                 <LB id="tab-fav">
                 <button
                   onClick={() => setActiveTab('favorites')}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`w-full h-full px-2 py-1 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
                     activeTab === 'favorites'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -584,14 +584,14 @@ export default function HomePage() {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Star size={16} fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
-                  Избранное <span className={`ml-2 text-xs opacity-70`}>{projectList.filter(p => p.isFavorite).length}</span>
+                  <Star size={12} fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
+                  Избранное <span className={`ml-1 text-[10px] opacity-70`}>{projectList.filter(p => p.isFavorite).length}</span>
                 </button>
                 </LB>
                 <LB id="tab-recent">
                 <button
                   onClick={() => setActiveTab('recent')}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  className={`w-full h-full px-2 py-1 rounded-xl text-xs font-medium transition-colors ${
                     activeTab === 'recent'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -599,13 +599,13 @@ export default function HomePage() {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Недавние <span className={`ml-2 text-xs opacity-70`}>{recentCount}</span>
+                  Недавние <span className={`ml-1 text-[10px] opacity-70`}>{recentCount}</span>
                 </button>
                 </LB>
                 <LB id="tab-archive">
                 <button
                   onClick={() => setActiveTab('archive')}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`w-full h-full px-2 py-1 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
                     activeTab === 'archive'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -613,8 +613,8 @@ export default function HomePage() {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Archive size={16} />
-                  Архив <span className={`ml-2 text-xs opacity-70`}>{archiveCount}</span>
+                  <Archive size={12} />
+                  Архив <span className={`ml-1 text-[10px] opacity-70`}>{archiveCount}</span>
                 </button>
                 </LB>
               </div>
