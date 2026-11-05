@@ -156,6 +156,25 @@ export default function HomePage() {
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, 1fr))` }
   const gridClass = 'grid gap-4'
 
+  // Временные заглушки карточек для настройки макета (убрать позже)
+  const DUMMY_PROJECTS: Project[] = Array.from({ length: 6 }, (_, i) => ({
+    id: `dummy-${i + 1}`,
+    name: `Проект ${i + 1}`,
+    type: 'film' as const,
+    status: 'preproduction' as const,
+    plannedShootingDays: 10 + i * 5,
+    dailyOutput: 5,
+    shootingGroups: 1 as const,
+    cloudStorage: 'none' as const,
+    createdAt: '2026-01-01',
+    updatedAt: '2026-11-01',
+    scriptProgress: i * 15,
+    castingProgress: 0,
+    locationsProgress: 0,
+    scheduleProgress: i * 10,
+  } as unknown as Project))
+  const isDummy = (p: Project) => p.id.startsWith('dummy-')
+
   const setCardW = (w: number) => {
     const clamped = Math.max(CARD_W_MIN, Math.min(CARD_W_MAX, Math.round(w)))
     setCardWidth(clamped)
@@ -264,6 +283,13 @@ export default function HomePage() {
       return bySort(a, b)
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
+
+  // Карточки для показа: реальные + заглушки до 6 штук (заглушки временные)
+  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 6 - displayProjects.length))]
+  const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
+  const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
+  const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
+  const cardFav = (p: Project) => { if (!isDummy(p)) toggleFavorite(p.id) }
 
   // Drag-and-drop доступен на вкладке «Все» в ручном порядке без фильтров
   const isDraggable = activeTab === 'all' && sortBy === 'manual' && !search && !hasActiveFilters
@@ -496,7 +522,7 @@ export default function HomePage() {
         ) : (
           <>
             {/* Горизонтальные вкладки */}
-            <LB id="tabs" className="flex items-center justify-between gap-4 flex-wrap mb-10">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-10">
               <div className="flex items-center gap-3 flex-wrap">
                 <LB id="tab-all">
                 <button
@@ -582,10 +608,10 @@ export default function HomePage() {
                 </button>
                 </LB>
               </div>
-            </LB>
+            </div>
 
             {/* Поиск + сортировка + фильтры */}
-            <LB id="toolbar" className="flex items-center gap-3 flex-wrap mb-12">
+            <div className="flex items-center gap-3 flex-wrap mb-12">
               <LB id="search" className="relative flex-1 min-w-[220px] max-w-md">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -655,7 +681,7 @@ export default function HomePage() {
                 </button>
                 </LB>
               )}
-            </LB>
+            </div>
 
             {/* Сетка карточек */}
             {displayProjects.length === 0 ? (
@@ -670,47 +696,51 @@ export default function HomePage() {
               </div>
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <LB id="grid" className={gridClass} style={gridStyle}>
-                    {displayProjects.map((project: Project) => (
+                <SortableContext items={cardsToShow.map((p) => p.id)} strategy={rectSortingStrategy}>
+                  <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
+                    {cardsToShow.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
+                        <LB id={`card-${project.id}`}>
                         <ProjectCard
                           project={project}
-                          onClick={() => handleOpen(project)}
-                          onDelete={() => handleDelete(project.id)}
-                          onExport={() => handleExport(project.id, project.name)}
-                          onToggleFavorite={() => toggleFavorite(project.id)}
+                          onClick={() => cardOpen(project)}
+                          onDelete={() => cardDelete(project)}
+                          onExport={() => cardExport(project)}
+                          onToggleFavorite={() => cardFav(project)}
                           onResizeEdge={startCardResize}
                           onResizeBottom={startHeightResize}
                           cardHeight={cardHeight || undefined}
                           onContextMenu={(e) => {
                             e.preventDefault()
-                            setContextMenu({ x: e.clientX, y: e.clientY, project })
+                            !isDummy(project) && setContextMenu({ x: e.clientX, y: e.clientY, project })
                           }}
                         />
+                        </LB>
                       </SortableCard>
                     ))}
                   </LB>
                 </SortableContext>
               </DndContext>
             ) : (
-              <LB id="grid" className={gridClass} style={gridStyle}>
-                {displayProjects.map((project: Project) => (
+              <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
+                {cardsToShow.map((project: Project) => (
+                  <LB key={project.id} id={`card-${project.id}`}>
                   <ProjectCard
                     key={project.id}
                     project={project}
-                    onClick={() => handleOpen(project)}
-                    onDelete={() => handleDelete(project.id)}
-                    onExport={() => handleExport(project.id, project.name)}
-                    onToggleFavorite={() => toggleFavorite(project.id)}
+                    onClick={() => cardOpen(project)}
+                    onDelete={() => cardDelete(project)}
+                    onExport={() => cardExport(project)}
+                    onToggleFavorite={() => cardFav(project)}
                     onResizeEdge={startCardResize}
                           onResizeBottom={startHeightResize}
                           cardHeight={cardHeight || undefined}
                     onContextMenu={(e) => {
                       e.preventDefault()
-                      setContextMenu({ x: e.clientX, y: e.clientY, project })
+                      !isDummy(project) && setContextMenu({ x: e.clientX, y: e.clientY, project })
                     }}
                   />
+                  </LB>
                 ))}
               </LB>
             )}
