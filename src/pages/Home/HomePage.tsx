@@ -186,24 +186,7 @@ export default function HomePage() {
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, 1fr))` }
   const gridClass = 'grid gap-4'
 
-  // Временные заглушки карточек для настройки макета (убрать позже)
-  const DUMMY_PROJECTS: Project[] = Array.from({ length: 12 }, (_, i) => ({
-    id: `dummy-${i + 1}`,
-    name: `Проект ${i + 1}`,
-    type: 'film' as const,
-    status: 'preproduction' as const,
-    plannedShootingDays: 10 + i * 5,
-    dailyOutput: 5,
-    shootingGroups: 1 as const,
-    cloudStorage: 'none' as const,
-    createdAt: '2026-01-01',
-    updatedAt: '2026-11-01',
-    scriptProgress: i * 15,
-    castingProgress: 0,
-    locationsProgress: 0,
-    scheduleProgress: i * 10,
-  } as unknown as Project))
-  const isDummy = (p: Project) => p.id.startsWith('dummy-')
+  const isDummy = (_p: Project) => false // заглушки убраны
 
   const setCardW = (w: number) => {
     const clamped = Math.max(CARD_W_MIN, Math.min(CARD_W_MAX, Math.round(w)))
@@ -314,12 +297,12 @@ export default function HomePage() {
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
-  // Карточки для показа: реальные + заглушки до 6 штук (заглушки временные)
-  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 12 - displayProjects.length))]
-  const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
-  const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
-  const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
-  const cardFav = (p: Project) => { if (!isDummy(p)) toggleFavorite(p.id) }
+  // Карточки для показа
+  const cardsToShow = displayProjects
+  const cardOpen = handleOpen
+  const cardDelete = (p: Project) => handleDelete(p.id)
+  const cardExport = (p: Project) => handleExport(p.id, p.name)
+  const cardFav = (p: Project) => toggleFavorite(p.id)
 
   // Drag-and-drop доступен на вкладке «Все» в ручном порядке без фильтров
   const isDraggable = activeTab === 'all' && sortBy === 'manual' && !search && !hasActiveFilters
@@ -883,12 +866,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Отладка ширины viewport (только dev) */}
-      {import.meta.env.DEV && (
-        <div className="fixed bottom-2 left-2 z-[999] rounded bg-black/70 px-2 py-1 text-[10px] text-green-400 font-mono">
-          {window.innerWidth}×{window.innerHeight} DPR:{window.devicePixelRatio} card:{cardWidth}×{cardHeight || 'auto'}
-        </div>
-      )}
     </div>
   )
 }
