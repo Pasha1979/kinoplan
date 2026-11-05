@@ -106,7 +106,7 @@ export default function HomePage() {
   }
 
   // Применённая раскладка пользователя из режима макета (dx/dy/размеры)
-  const APPLIED_LAYOUT: Record<string, { dx?: number; dy?: number; w?: number; h?: number }> = {
+  const APPLIED_LAYOUT: Record<string, { dx: number; dy: number; w?: number; h?: number }> = {
     'tab-all': { dx: -134.4, dy: -26.4, w: 113.4, h: 42.4 },
     'tab-fav': { dx: -135.2, dy: -26.4, w: 120.6, h: 42.4 },
     'tab-recent': { dx: -132, dy: -27.2, w: 113.2, h: 43.2 },
