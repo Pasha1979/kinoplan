@@ -50,7 +50,7 @@ export default function FilterDropdown({ icon, options, value, onChange, highlig
           highlight
             ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
             : isDark
-              ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'
+              ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20 hover:shadow-lg hover:shadow-orange-500/25'
               : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
         }`}
       >

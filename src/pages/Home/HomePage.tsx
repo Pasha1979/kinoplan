@@ -504,7 +504,7 @@ export default function HomePage() {
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-2xl font-semibold text-base transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white rounded-2xl font-semibold text-base transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/50 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
             >
               <Plus size={20} />
               Создать первый проект
@@ -522,7 +522,7 @@ export default function HomePage() {
                     activeTab === 'all'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
-                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5 hover:shadow-lg hover:shadow-orange-500/25'
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -536,7 +536,7 @@ export default function HomePage() {
                     activeTab === 'favorites'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
-                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5 hover:shadow-lg hover:shadow-orange-500/25'
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -551,7 +551,7 @@ export default function HomePage() {
                     activeTab === 'recent'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
-                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5 hover:shadow-lg hover:shadow-orange-500/25'
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -565,7 +565,7 @@ export default function HomePage() {
                     activeTab === 'archive'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
-                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5 hover:shadow-lg hover:shadow-orange-500/25'
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -581,7 +581,7 @@ export default function HomePage() {
                   disabled={isImporting}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors border disabled:opacity-50 ${
                     theme === 'dark'
-                      ? 'border-white/15 text-gray-300 hover:border-orange-500/40 hover:text-white'
+                      ? 'border-white/15 text-gray-300 hover:border-orange-500/40 hover:text-white hover:shadow-lg hover:shadow-orange-500/25'
                       : 'border-gray-200 text-gray-600 hover:border-orange-400 hover:text-gray-900'
                   }`}
                 >
@@ -592,7 +592,7 @@ export default function HomePage() {
                 <LB id="btn-new">
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-400 hover:to-red-400 shadow-lg shadow-orange-500/20"
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-400 hover:to-red-400 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/50"
                 >
                   <Plus size={20} />
                   Новый проект
@@ -662,7 +662,7 @@ export default function HomePage() {
                   onClick={resetFilters}
                   className={`flex items-center gap-1.5 px-3 py-3 rounded-xl text-sm transition-colors ${
                     theme === 'dark'
-                      ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'text-gray-400 hover:text-white hover:bg-white/5 hover:shadow-lg hover:shadow-orange-500/25'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                   title="Сбросить фильтры"
