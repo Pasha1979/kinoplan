@@ -691,10 +691,10 @@ export default function HomePage() {
                   <LB id="grid" className={`relative border border-white/10 rounded-2xl h-[60vh] bg-black/10`}>
                     {/* Водяной знак — неподвижен при скролле */}
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 select-none z-0 opacity-[0.12]">
-                      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+                      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center" style={{ boxShadow: "0 0 45px rgba(249,115,22,0.45), 0 0 90px rgba(249,115,22,0.2)" }}>
                         <Film size={52} className="text-white" />
                       </div>
-                      <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)" }}>КИНОПЛАН</span>
+                      <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)", textShadow: "0 0 25px rgba(249,115,22,0.6), 0 0 60px rgba(239,68,68,0.35), 0 0 120px rgba(249,115,22,0.2)" }}>КИНОПЛАН</span>
                     </div>
                     <div className={`${gridClass} relative z-10 h-full overflow-y-auto p-4`} style={gridStyle}>
                     {cardsToShow.map((project: Project) => (
@@ -723,10 +723,10 @@ export default function HomePage() {
               <LB id="grid" className={`relative border border-white/10 rounded-2xl h-[60vh] bg-black/10`}>
                 {/* Водяной знак — неподвижен при скролле */}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 select-none z-0 opacity-[0.12]">
-                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center" style={{ boxShadow: "0 0 45px rgba(249,115,22,0.45), 0 0 90px rgba(249,115,22,0.2)" }}>
                     <Film size={52} className="text-white" />
                   </div>
-                  <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)" }}>КИНОПЛАН</span>
+                  <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)", textShadow: "0 0 25px rgba(249,115,22,0.6), 0 0 60px rgba(239,68,68,0.35), 0 0 120px rgba(249,115,22,0.2)" }}>КИНОПЛАН</span>
                 </div>
                 <div className={`${gridClass} relative z-10 h-full overflow-y-auto p-4`} style={gridStyle}>
                 {cardsToShow.map((project: Project) => (
