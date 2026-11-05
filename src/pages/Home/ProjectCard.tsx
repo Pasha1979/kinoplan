@@ -80,7 +80,7 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
             onClick()
           }
         }}
-        className="w-full h-full text-left cursor-pointer bg-[#13132a] border border-white/8 rounded-lg p-3 hover:border-orange-500/40 hover:bg-[#16163a] transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0 overflow-hidden flex flex-col"
+        className="w-full h-full text-left cursor-pointer bg-[#13132a]/75 backdrop-blur-md border border-white/8 rounded-lg p-3 hover:border-orange-500/40 hover:bg-[#16163a]/85 transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 active:translate-y-0 overflow-hidden flex flex-col"
       >
         {/* Шапка карточки */}
         <div className="flex items-start justify-between gap-2 mb-2">
