@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 
@@ -19,14 +20,17 @@ interface FilterDropdownProps {
 export default function FilterDropdown({ icon, options, value, onChange, highlight }: FilterDropdownProps) {
   const { theme } = useUiStore()
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, right: 0, minWidth: 180 })
   const rootRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
+    const r = rootRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom + 8, right: window.innerWidth - r.right, minWidth: Math.max(180, r.width) })
     const onPointerDown = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      if (rootRef.current?.contains(e.target as Node) || menuRef.current?.contains(e.target as Node)) return
+      setOpen(false)
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
@@ -59,11 +63,15 @@ export default function FilterDropdown({ icon, options, value, onChange, highlig
         <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className={`absolute top-full right-0 mt-2 rounded-xl overflow-hidden z-50 min-w-[180px] border shadow-xl ${
-            isDark ? 'bg-[#1e1e3a] border-white/12 shadow-black/40' : 'bg-white border-gray-200 shadow-gray-300/50'
+          ref={menuRef}
+          className={`fixed rounded-xl overflow-hidden border backdrop-blur-md min-w-[180px] ${
+            isDark
+              ? 'bg-[#13132a]/85 border-orange-500/30 shadow-[0_0_35px_rgba(249,115,22,0.35)]'
+              : 'bg-white/90 border-orange-300 shadow-[0_0_35px_rgba(249,115,22,0.25)]'
           }`}
+          style={{ top: pos.top, right: pos.right, minWidth: pos.minWidth, zIndex: 999 }}
         >
           {options.map((opt) => (
             <button
@@ -83,7 +91,8 @@ export default function FilterDropdown({ icon, options, value, onChange, highlig
               {opt.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
