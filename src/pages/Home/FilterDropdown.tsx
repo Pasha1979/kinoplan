@@ -46,7 +46,7 @@ export default function FilterDropdown({ icon, options, value, onChange, highlig
     <div ref={rootRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm border transition-colors ${
+        className={`flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm border transition-colors w-full ${
           highlight
             ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
             : isDark
