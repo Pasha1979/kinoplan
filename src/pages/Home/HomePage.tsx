@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, HelpCircle, Move } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, HelpCircle } from 'lucide-react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
@@ -65,9 +65,8 @@ export default function HomePage() {
     return saved >= 140 && saved <= 700 ? saved : 210 // дефолт выбран пользователем
   })
   // Режим макета: свободно двигать/растягивать блоки и отправить раскладку ассистенту
-  const [layoutMode, setLayoutMode] = useState(false)
+  const [layoutMode] = useState(false)
   const [layout, setLayout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>({})
-  const [showLayoutReport, setShowLayoutReport] = useState(false)
 
   const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
     if (!layoutMode) return
@@ -190,29 +189,6 @@ export default function HomePage() {
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, 1fr))` }
   const gridClass = 'grid gap-4'
 
-  const isDummy = (p: Project) => p.id.startsWith('dummy-')
-
-  // Временные тестовые карточки (убрать позже)
-  const DUMMY_PROJECTS: Project[] = Array.from({ length: 10 }, (_, i) => ({
-    id: `dummy-${i + 1}`,
-    name: `Проект ${i + 1}`,
-    type: 'film' as const,
-    status: i === 9 ? 'completed' as const : 'preproduction' as const, // dummy-10 завершён → авто-архив
-    plannedShootingDays: 10 + i * 5,
-    dailyOutput: 5,
-    shootingGroups: 1 as const,
-    cloudStorage: 'none' as const,
-    createdAt: '2026-01-01',
-    updatedAt: i === 8 ? '2023-01-01' : '2026-11-01', // dummy-9 старше 24 мес → авто-архив
-    scriptProgress: i * 15,
-    castingProgress: 0,
-    locationsProgress: 0,
-    scheduleProgress: i * 10,
-    // Тест категорий: 4-6 избранные, 7-8 недавно открытые, 9-10 архивные
-    isFavorite: i >= 3 && i < 6,
-    lastOpenedAt: i === 6 ? new Date(Date.now() - 30 * 864e5).toISOString() : i === 7 ? new Date(Date.now() - 240 * 864e5).toISOString() : undefined, // 7 — недавний, 8 — старше 6 мес
-    isArchived: false,
-  } as unknown as Project))
 
   const resetFilters = () => {
     setTypeFilter('all')
@@ -288,21 +264,11 @@ export default function HomePage() {
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
-  // Тестовые карточки подчиняются активной вкладке
-  const isDummyAutoArchived = (p: Project) =>
-    !!p.isArchived || p.status === 'completed' ||
-    (p.updatedAt ? Date.now() - new Date(p.updatedAt).getTime() > 24 * 30.44 * 864e5 : false)
-  const dummiesForTab = DUMMY_PROJECTS.filter((p) =>
-    activeTab === 'archive' ? isDummyAutoArchived(p)
-    : activeTab === 'favorites' ? (p.isFavorite && !isDummyAutoArchived(p))
-    : activeTab === 'recent' ? (p.lastOpenedAt && !isDummyAutoArchived(p) && new Date(p.lastOpenedAt).getTime() > Date.now() - 6 * 30.44 * 864e5)
-    : !isDummyAutoArchived(p)
-  )
-  const cardsToShow = [...displayProjects, ...dummiesForTab]
-  const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
-  const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
-  const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
-  const cardFav = (p: Project) => { if (!isDummy(p)) toggleFavorite(p.id) }
+  const cardsToShow = displayProjects
+  const cardOpen = (p: Project) => handleOpen(p)
+  const cardDelete = (p: Project) => handleDelete(p.id)
+  const cardExport = (p: Project) => handleExport(p.id, p.name)
+  const cardFav = (p: Project) => toggleFavorite(p.id)
 
   // Drag-and-drop доступен на вкладке «Все» в ручном порядке без фильтров
   const isDraggable = activeTab === 'all' && sortBy === 'manual' && !search && !hasActiveFilters
@@ -485,25 +451,6 @@ export default function HomePage() {
             }`}
             title="Помощь по этой странице">
             <HelpCircle size={18} />
-          </button>
-          {/* Режим макета — двигать блоки и отправить раскладку */}
-          <button
-            onClick={() => {
-              setLayoutMode((v) => {
-                if (!v) setLayout(APPLIED_LAYOUT) // вход — стартуем с применённой раскладки
-                return !v
-              })
-            }}
-            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
-              layoutMode
-                ? 'text-orange-400 bg-orange-500/20'
-                : theme === 'dark'
-                  ? 'text-gray-400 hover:text-white hover:bg-white/8'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-            }`}
-            title="Режим макета — передвигай блоки, потом отправь раскладку"
-          >
-            <Move size={18} />
           </button>
           <button
             onClick={() => showToast('Настройки приложения будут реализованы позже', 'info')}
@@ -746,7 +693,7 @@ export default function HomePage() {
                           cardHeight={cardHeight || undefined}
                           onContextMenu={(e) => {
                             e.preventDefault()
-                            !isDummy(project) && setContextMenu({ x: e.clientX, y: e.clientY, project })
+                            setContextMenu({ x: e.clientX, y: e.clientY, project })
                           }}
                         />
                         </LB>
@@ -778,7 +725,7 @@ export default function HomePage() {
                     cardHeight={cardHeight || undefined}
                     onContextMenu={(e) => {
                       e.preventDefault()
-                      !isDummy(project) && setContextMenu({ x: e.clientX, y: e.clientY, project })
+                      setContextMenu({ x: e.clientX, y: e.clientY, project })
                     }}
                   />
                   </LB>
@@ -825,69 +772,6 @@ export default function HomePage() {
           onClose={() => setShowModal(false)}
           onCreate={handleCreate}
         />
-      )}
-
-      {/* Режим макета — кнопка отправки раскладки */}
-      {layoutMode && (
-        <div className="fixed bottom-4 right-4 z-40 flex gap-2">
-          <button
-            onClick={() => setShowLayoutReport(true)}
-            className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-medium shadow-lg hover:bg-orange-600"
-          >
-            📋 Отправить макет
-          </button>
-          <button
-            onClick={() => setLayout({})}
-            className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
-          >
-            🔄 Сбросить
-          </button>
-          <button
-            onClick={() => {
-              setLayoutMode(false)
-              setLayout({})
-            }}
-            className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
-          >
-            ✖ Выйти
-          </button>
-        </div>
-      )}
-
-      {/* Отчёт раскладки — скопировать и отправить ассистенту */}
-      {showLayoutReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowLayoutReport(false)}>
-          <div className="bg-[#13132a] border border-white/10 rounded-2xl p-6 max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-white font-semibold mb-1">📋 Твой макет</h3>
-            <p className="text-gray-400 text-xs mb-3">Нажми «Скопировать» и вставь в чат — я применю эту раскладку к коду.</p>
-            <pre className="text-[11px] text-green-400 bg-black/40 rounded-lg p-3 overflow-auto max-h-64 font-mono">
-              {JSON.stringify(layout, null, 2)}
-            </pre>
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(JSON.stringify(layout, null, 2))
-                  showToast('Макет скопирован — вставь в чат', 'success')
-                }}
-                className="flex-1 px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
-              >
-                Скопировать
-              </button>
-              <button
-                onClick={() => setLayout({})}
-                className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
-              >
-                Сбросить
-              </button>
-              <button
-                onClick={() => setShowLayoutReport(false)}
-                className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
-              >
-                Закрыть
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
     </div>
