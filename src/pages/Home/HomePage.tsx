@@ -495,7 +495,12 @@ export default function HomePage() {
           </button>
           {/* Режим макета — двигать блоки и отправить раскладку */}
           <button
-            onClick={() => setLayoutMode((v) => !v)}
+            onClick={() => {
+              setLayoutMode((v) => {
+                if (!v) setLayout(APPLIED_LAYOUT) // вход — стартуем с применённой раскладки
+                return !v
+              })
+            }}
             className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
               layoutMode
                 ? 'text-orange-400 bg-orange-500/20'
