@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, HelpCircle } from 'lucide-react'
+import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, HelpCircle, Move } from 'lucide-react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
@@ -64,6 +64,61 @@ export default function HomePage() {
     const saved = Number(localStorage.getItem('kinoplan_card_height'))
     return saved >= 140 && saved <= 700 ? saved : 210 // дефолт выбран пользователем
   })
+  // Режим макета: свободно двигать/растягивать блоки и отправить раскладку ассистенту
+  const [layoutMode, setLayoutMode] = useState(false)
+  const [layout, setLayout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>({})
+  const [showLayoutReport, setShowLayoutReport] = useState(false)
+
+  const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
+    if (!layoutMode) return
+    e.preventDefault()
+    const startX = e.clientX, startY = e.clientY
+    const s = layout[id] ?? { dx: 0, dy: 0 }
+    const onMove = (ev: PointerEvent) =>
+      setLayout((l) => ({ ...l, [id]: { ...(l[id] ?? s), dx: s.dx + ev.clientX - startX, dy: s.dy + ev.clientY - startY } }))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  const startBlockResize = (id: string) => (e: React.PointerEvent) => {
+    if (!layoutMode) return
+    e.preventDefault()
+    e.stopPropagation()
+    const el = (e.currentTarget as HTMLElement).parentElement
+    const startW = el?.offsetWidth ?? 0, startH = el?.offsetHeight ?? 0
+    const startX = e.clientX, startY = e.clientY
+    const onMove = (ev: PointerEvent) =>
+      setLayout((l) => ({
+        ...l,
+        [id]: { ...(l[id] ?? { dx: 0, dy: 0 }), w: Math.max(80, startW + ev.clientX - startX), h: Math.max(40, startH + ev.clientY - startY) },
+      }))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  // Обёртка блока в режиме макета
+  const LB = ({ id, className, style, children }: { id: string; className?: string; style?: React.CSSProperties; children: React.ReactNode }) => {
+    if (!layoutMode) return <div className={className} style={style}>{children}</div>
+    const s = layout[id] ?? { dx: 0, dy: 0 }
+    return (
+      <div
+        className={`${className ?? ''} relative outline-2 outline-dashed outline-orange-500/60`}
+        style={{ ...style, transform: `translate(${s.dx}px, ${s.dy}px)`, width: s.w, height: s.h, zIndex: 30, overflow: 'visible' }}
+        onPointerDown={startBlockDrag(id)}
+      >
+        {children}
+        <div className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-orange-500/80 rounded-tl" onPointerDown={startBlockResize(id)} />
+      </div>
+    )
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -381,6 +436,20 @@ export default function HomePage() {
             title="Помощь по этой странице">
             <HelpCircle size={18} />
           </button>
+          {/* Режим макета — двигать блоки и отправить раскладку */}
+          <button
+            onClick={() => setLayoutMode((v) => !v)}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+              layoutMode
+                ? 'text-orange-400 bg-orange-500/20'
+                : theme === 'dark'
+                  ? 'text-gray-400 hover:text-white hover:bg-white/8'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+            title="Режим макета — передвигай блоки, потом отправь раскладку"
+          >
+            <Move size={18} />
+          </button>
           <button
             onClick={() => showToast('Настройки приложения будут реализованы позже', 'info')}
             className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
@@ -426,7 +495,7 @@ export default function HomePage() {
         ) : (
           <>
             {/* Горизонтальные вкладки */}
-            <div className="flex items-center justify-between gap-4 flex-wrap mb-10">
+            <LB id="tabs" className="flex items-center justify-between gap-4 flex-wrap mb-10">
               <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={() => setActiveTab('all')}
@@ -500,10 +569,10 @@ export default function HomePage() {
                   Новый проект
                 </button>
               </div>
-            </div>
+            </LB>
 
             {/* Поиск + сортировка + фильтры */}
-            <div className="flex items-center gap-3 flex-wrap mb-12">
+            <LB id="toolbar" className="flex items-center gap-3 flex-wrap mb-12">
               <div className="relative flex-1 min-w-[220px] max-w-md">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -583,7 +652,7 @@ export default function HomePage() {
                   {cardWidth}
                 </span>
               </div>
-            </div>
+            </LB>
 
             {/* Сетка карточек */}
             {displayProjects.length === 0 ? (
@@ -599,7 +668,7 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <div className={gridClass} style={gridStyle}>
+                  <LB id="grid" className={gridClass} style={gridStyle}>
                     {displayProjects.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <ProjectCard
@@ -618,11 +687,11 @@ export default function HomePage() {
                         />
                       </SortableCard>
                     ))}
-                  </div>
+                  </LB>
                 </SortableContext>
               </DndContext>
             ) : (
-              <div className={gridClass} style={gridStyle}>
+              <LB id="grid" className={gridClass} style={gridStyle}>
                 {displayProjects.map((project: Project) => (
                   <ProjectCard
                     key={project.id}
@@ -640,7 +709,7 @@ export default function HomePage() {
                     }}
                   />
                 ))}
-              </div>
+              </LB>
             )}
           </>
         )}
@@ -681,6 +750,63 @@ export default function HomePage() {
           onClose={() => setShowModal(false)}
           onCreate={handleCreate}
         />
+      )}
+
+      {/* Режим макета — кнопка отправки раскладки */}
+      {layoutMode && (
+        <div className="fixed bottom-4 right-4 z-40 flex gap-2">
+          <button
+            onClick={() => setShowLayoutReport(true)}
+            className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-medium shadow-lg hover:bg-orange-600"
+          >
+            📋 Отправить макет
+          </button>
+          <button
+            onClick={() => {
+              setLayoutMode(false)
+              setLayout({})
+            }}
+            className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
+          >
+            ✖ Выйти
+          </button>
+        </div>
+      )}
+
+      {/* Отчёт раскладки — скопировать и отправить ассистенту */}
+      {showLayoutReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowLayoutReport(false)}>
+          <div className="bg-[#13132a] border border-white/10 rounded-2xl p-6 max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-white font-semibold mb-1">📋 Твой макет</h3>
+            <p className="text-gray-400 text-xs mb-3">Нажми «Скопировать» и вставь в чат — я применю эту раскладку к коду.</p>
+            <pre className="text-[11px] text-green-400 bg-black/40 rounded-lg p-3 overflow-auto max-h-64 font-mono">
+              {JSON.stringify(layout, null, 2)}
+            </pre>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(layout, null, 2))
+                  showToast('Макет скопирован — вставь в чат', 'success')
+                }}
+                className="flex-1 px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
+              >
+                Скопировать
+              </button>
+              <button
+                onClick={() => setLayout({})}
+                className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
+              >
+                Сбросить
+              </button>
+              <button
+                onClick={() => setShowLayoutReport(false)}
+                className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-sm hover:bg-white/15"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Отладка ширины viewport (только dev) */}
