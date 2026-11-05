@@ -105,9 +105,39 @@ export default function HomePage() {
     document.addEventListener('pointerup', onUp)
   }
 
+  // Применённая раскладка пользователя из режима макета (dx/dy/размеры)
+  const APPLIED_LAYOUT: Record<string, { dx?: number; dy?: number; w?: number; h?: number }> = {
+    'tab-all': { dx: -134.4, dy: -26.4, w: 113.4, h: 42.4 },
+    'tab-fav': { dx: -135.2, dy: -26.4, w: 120.6, h: 42.4 },
+    'tab-recent': { dx: -132, dy: -27.2, w: 113.2, h: 43.2 },
+    'tab-archive': { dx: -131.2, dy: -27.2, w: 120.8, h: 43.2 },
+    search: { dx: 420, dy: -112.8, w: 412, h: 40 },
+    'btn-new': { dx: 125.6, dy: 38.4 },
+    'btn-import': { dx: 302.4, dy: 96.8 },
+    sort: { dx: 424, dy: -113.6, w: 192.6, h: 43.6 },
+    'filter-type': { dx: 424.8, dy: -112.8 },
+    'filter-status': { dx: 420.8, dy: -112.8 },
+    grid: { dx: -124.8, dy: -102.4, w: 1243.6, h: 548 },
+    'card-dummy-1': { dx: -18.4, dy: 0 },
+    'card-dummy-2': { dx: -4, dy: 3.2 },
+    'card-dummy-3': { dx: 0.8, dy: -26.4 },
+    'card-dummy-4': { dx: -5.6, dy: -21.6 },
+    'card-dummy-5': { dx: -34.4, dy: -23.2 },
+  }
+
   // Обёртка блока в режиме макета
   const LB = ({ id, className, style, children }: { id: string; className?: string; style?: React.CSSProperties; children: React.ReactNode }) => {
-    if (!layoutMode) return <div className={className} style={style}>{children}</div>
+    if (!layoutMode) {
+      const a = APPLIED_LAYOUT[id]
+      return (
+        <div
+          className={className}
+          style={{ ...style, ...(a ? { transform: `translate(${a.dx ?? 0}px, ${a.dy ?? 0}px)`, width: a.w, height: a.h } : {}) }}
+        >
+          {children}
+        </div>
+      )
+    }
     const s = layout[id] ?? { dx: 0, dy: 0 }
     return (
       <div
@@ -521,13 +551,13 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            {/* Строка 1: вкладки слева + поиск/фильтры справа (раскладка пользователя) */}
-            <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-              <div className="flex items-center gap-2 flex-wrap">
+            {/* Горизонтальные вкладки */}
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-10">
+              <div className="flex items-center gap-3 flex-wrap">
                 <LB id="tab-all">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
                     activeTab === 'all'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -541,7 +571,7 @@ export default function HomePage() {
                 <LB id="tab-fav">
                 <button
                   onClick={() => setActiveTab('favorites')}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                     activeTab === 'favorites'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -549,14 +579,14 @@ export default function HomePage() {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Star size={14} fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
+                  <Star size={16} fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
                   Избранное <span className={`ml-2 text-xs opacity-70`}>{projectList.filter(p => p.isFavorite).length}</span>
                 </button>
                 </LB>
                 <LB id="tab-recent">
                 <button
                   onClick={() => setActiveTab('recent')}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
                     activeTab === 'recent'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -570,7 +600,7 @@ export default function HomePage() {
                 <LB id="tab-archive">
                 <button
                   onClick={() => setActiveTab('archive')}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                     activeTab === 'archive'
                       ? 'bg-orange-500 text-white'
                       : theme === 'dark'
@@ -578,107 +608,109 @@ export default function HomePage() {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Archive size={14} />
+                  <Archive size={16} />
                   Архив <span className={`ml-2 text-xs opacity-70`}>{archiveCount}</span>
                 </button>
                 </LB>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <LB id="search" className="relative w-[412px]">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Найти проект..."
-                    className={`w-full h-10 pl-12 pr-4 rounded-xl text-sm border focus:outline-none transition-colors ${
-                      theme === 'dark'
-                        ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/40'
-                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
-                    }`}
-                  />
+              <div className="flex items-center gap-3">
+                <LB id="btn-import">
+                <button
+                  onClick={handleImportClick}
+                  disabled={isImporting}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors border disabled:opacity-50 ${
+                    theme === 'dark'
+                      ? 'border-white/15 text-gray-300 hover:border-orange-500/40 hover:text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-orange-400 hover:text-gray-900'
+                  }`}
+                >
+                  <Upload size={16} />
+                  Импорт
+                </button>
                 </LB>
-                {activeTab !== 'recent' && (
-                  <LB id="sort">
-                  <FilterDropdown
-                    icon={<ArrowUpDown size={14} />}
-                    options={SORT_OPTIONS}
-                    value={sortBy}
-                    onChange={(v) => setSortBy(v as SortBy)}
-                  />
-                  </LB>
-                )}
-                <LB id="filter-type">
-                <FilterDropdown
-                  options={TYPE_OPTIONS}
-                  value={typeFilter}
-                  onChange={setTypeFilter}
-                  highlight={typeFilter !== 'all'}
-                />
+                <LB id="btn-new">
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-colors bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-400 hover:to-red-400 shadow-lg shadow-orange-500/20"
+                >
+                  <Plus size={20} />
+                  Новый проект
+                </button>
                 </LB>
-                <LB id="filter-status">
-                <FilterDropdown
-                  options={STATUS_OPTIONS}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  highlight={statusFilter !== 'all'}
-                />
-                </LB>
-                {allTags.length > 0 && (
-                  <LB id="filter-tag">
-                  <FilterDropdown
-                    icon={<Tag size={14} />}
-                    options={tagOptions}
-                    value={tagFilter}
-                    onChange={setTagFilter}
-                    highlight={tagFilter !== 'all'}
-                  />
-                  </LB>
-                )}
-                {hasActiveFilters && (
-                  <LB id="btn-reset">
-                  <button
-                    onClick={resetFilters}
-                    className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                      theme === 'dark'
-                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                    }`}
-                    title="Сбросить фильтры"
-                  >
-                    <X size={14} />
-                    Сбросить
-                  </button>
-                  </LB>
-                )}
               </div>
             </div>
 
-            {/* Строка 2: кнопки справа (раскладка пользователя) */}
-            <div className="flex items-center justify-end gap-3 mb-4">
-              <LB id="btn-new">
-              <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-400 hover:to-red-400 shadow-lg shadow-orange-500/20"
-              >
-                <Plus size={20} />
-                Новый проект
-              </button>
+            {/* Поиск + сортировка + фильтры */}
+            <div className="flex items-center gap-3 flex-wrap mb-12">
+              <LB id="search" className="relative flex-1 min-w-[220px] max-w-md">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Найти проект..."
+                  className={`w-full pl-12 pr-4 py-3 rounded-xl text-sm border focus:outline-none transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/40'
+                      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
+                  }`}
+                />
               </LB>
-              <LB id="btn-import">
-              <button
-                onClick={handleImportClick}
-                disabled={isImporting}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors border disabled:opacity-50 ${
-                  theme === 'dark'
-                    ? 'border-white/15 text-gray-300 hover:border-orange-500/40 hover:text-white'
-                    : 'border-gray-200 text-gray-600 hover:border-orange-400 hover:text-gray-900'
-                }`}
-              >
-                <Upload size={16} />
-                Импорт
-              </button>
+
+              {activeTab !== 'recent' && (
+                <LB id="sort">
+                <FilterDropdown
+                  icon={<ArrowUpDown size={14} />}
+                  options={SORT_OPTIONS}
+                  value={sortBy}
+                  onChange={(v) => setSortBy(v as SortBy)}
+                />
+                </LB>
+              )}
+              <LB id="filter-type">
+              <FilterDropdown
+                options={TYPE_OPTIONS}
+                value={typeFilter}
+                onChange={setTypeFilter}
+                highlight={typeFilter !== 'all'}
+              />
               </LB>
+              <LB id="filter-status">
+              <FilterDropdown
+                options={STATUS_OPTIONS}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                highlight={statusFilter !== 'all'}
+              />
+              </LB>
+              {allTags.length > 0 && (
+                <LB id="filter-tag">
+                <FilterDropdown
+                  icon={<Tag size={14} />}
+                  options={tagOptions}
+                  value={tagFilter}
+                  onChange={setTagFilter}
+                  highlight={tagFilter !== 'all'}
+                />
+                </LB>
+              )}
+
+              {hasActiveFilters && (
+                <LB id="btn-reset">
+                <button
+                  onClick={resetFilters}
+                  className={`flex items-center gap-1.5 px-3 py-3 rounded-xl text-sm transition-colors ${
+                    theme === 'dark'
+                      ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Сбросить фильтры"
+                >
+                  <X size={14} />
+                  Сбросить
+                </button>
+                </LB>
+              )}
             </div>
 
             {/* Сетка карточек */}
@@ -695,7 +727,7 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={cardsToShow.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[548px] overflow-y-auto bg-black/10`} style={gridStyle}>
+                  <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
                     {cardsToShow.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <LB id={`card-${project.id}`}>
@@ -720,7 +752,7 @@ export default function HomePage() {
                 </SortableContext>
               </DndContext>
             ) : (
-              <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[548px] overflow-y-auto bg-black/10`} style={gridStyle}>
+              <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
                 {cardsToShow.map((project: Project) => (
                   <LB key={project.id} id={`card-${project.id}`}>
                   <ProjectCard
