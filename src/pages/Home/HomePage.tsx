@@ -187,7 +187,7 @@ export default function HomePage() {
   const isDummy = (p: Project) => p.id.startsWith('dummy-')
 
   // Временные тестовые карточки (убрать позже)
-  const DUMMY_PROJECTS: Project[] = Array.from({ length: 5 }, (_, i) => ({
+  const DUMMY_PROJECTS: Project[] = Array.from({ length: 10 }, (_, i) => ({
     id: `dummy-${i + 1}`,
     name: `Проект ${i + 1}`,
     type: 'film' as const,
@@ -271,7 +271,7 @@ export default function HomePage() {
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
-  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 5 - displayProjects.length))]
+  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 10 - displayProjects.length))]
   const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
   const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
   const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
@@ -688,14 +688,15 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={cardsToShow.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <LB id="grid" className={`${gridClass} relative border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
-                    {/* Водяной знак — фон поля */}
+                  <LB id="grid" className={`relative border border-white/10 rounded-2xl h-[60vh] bg-black/10`}>
+                    {/* Водяной знак — неподвижен при скролле */}
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 select-none z-0 opacity-[0.12]">
                       <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
                         <Film size={52} className="text-white" />
                       </div>
                       <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)" }}>КИНОПЛАН</span>
                     </div>
+                    <div className={`${gridClass} relative z-10 h-full overflow-y-auto p-4`} style={gridStyle}>
                     {cardsToShow.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <LB id={`card-${project.id}`}>
@@ -714,18 +715,20 @@ export default function HomePage() {
                         </LB>
                       </SortableCard>
                     ))}
+                    </div>
                   </LB>
                 </SortableContext>
               </DndContext>
             ) : (
-              <LB id="grid" className={`${gridClass} relative border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
-                {/* Водяной знак — фон поля */}
+              <LB id="grid" className={`relative border border-white/10 rounded-2xl h-[60vh] bg-black/10`}>
+                {/* Водяной знак — неподвижен при скролле */}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 select-none z-0 opacity-[0.12]">
                   <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
                     <Film size={52} className="text-white" />
                   </div>
                   <span className="w-full text-center font-black tracking-widest bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent" style={{ fontSize: "clamp(4rem, 11vw, 11rem)" }}>КИНОПЛАН</span>
                 </div>
+                <div className={`${gridClass} relative z-10 h-full overflow-y-auto p-4`} style={gridStyle}>
                 {cardsToShow.map((project: Project) => (
                   <LB key={project.id} id={`card-${project.id}`}>
                   <ProjectCard
@@ -743,6 +746,7 @@ export default function HomePage() {
                   />
                   </LB>
                 ))}
+                </div>
               </LB>
             )}
           </>
