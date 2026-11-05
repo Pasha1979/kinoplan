@@ -670,7 +670,11 @@ export default function HomePage() {
             ) : isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={cardsToShow.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
+                  <LB id="grid" className={`${gridClass} relative border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
+                    {/* Водяной знак — фон поля */}
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none z-0">
+                      <span className={`text-7xl font-black tracking-widest ${theme === 'dark' ? 'text-white/[0.03]' : 'text-gray-900/[0.04]'}`}>КИНОПЛАН</span>
+                    </div>
                     {cardsToShow.map((project: Project) => (
                       <SortableCard key={project.id} id={project.id}>
                         <LB id={`card-${project.id}`}>
@@ -693,7 +697,11 @@ export default function HomePage() {
                 </SortableContext>
               </DndContext>
             ) : (
-              <LB id="grid" className={`${gridClass} border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
+              <LB id="grid" className={`${gridClass} relative border border-white/10 rounded-2xl p-4 h-[60vh] overflow-y-auto bg-black/10`} style={gridStyle}>
+                {/* Водяной знак — фон поля */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none z-0">
+                  <span className={`text-7xl font-black tracking-widest ${theme === 'dark' ? 'text-white/[0.03]' : 'text-gray-900/[0.04]'}`}>КИНОПЛАН</span>
+                </div>
                 {cardsToShow.map((project: Project) => (
                   <LB key={project.id} id={`card-${project.id}`}>
                   <ProjectCard
