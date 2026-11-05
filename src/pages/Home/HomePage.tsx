@@ -187,7 +187,7 @@ export default function HomePage() {
   const gridClass = 'grid gap-4'
 
   // Временные заглушки карточек для настройки макета (убрать позже)
-  const DUMMY_PROJECTS: Project[] = Array.from({ length: 6 }, (_, i) => ({
+  const DUMMY_PROJECTS: Project[] = Array.from({ length: 12 }, (_, i) => ({
     id: `dummy-${i + 1}`,
     name: `Проект ${i + 1}`,
     type: 'film' as const,
@@ -315,7 +315,7 @@ export default function HomePage() {
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
   // Карточки для показа: реальные + заглушки до 6 штук (заглушки временные)
-  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 6 - displayProjects.length))]
+  const cardsToShow = [...displayProjects, ...DUMMY_PROJECTS.slice(0, Math.max(0, 12 - displayProjects.length))]
   const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
   const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
   const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
