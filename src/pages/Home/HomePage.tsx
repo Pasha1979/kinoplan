@@ -655,26 +655,6 @@ export default function HomePage() {
                 </button>
                 </LB>
               )}
-
-              {/* Слайдер размера карточек */}
-              <LB id="slider" className={`ml-auto flex items-center gap-2 px-3 py-2 rounded-xl ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                <span className="text-xs whitespace-nowrap">Ширина:</span>
-                <input
-                  type="range"
-                  min={CARD_W_MIN}
-                  max={CARD_W_MAX}
-                  step={10}
-                  value={cardWidth}
-                  onChange={(e) => setCardW(Number(e.target.value))}
-                  className="w-24 accent-orange-500 cursor-pointer"
-                  title="Ширина карточек проектов"
-                />
-                <span className={`text-xs font-medium w-8 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
-                  {cardWidth}
-                </span>
-              </LB>
             </LB>
 
             {/* Сетка карточек */}
