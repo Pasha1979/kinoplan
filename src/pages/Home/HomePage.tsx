@@ -157,13 +157,19 @@ export default function HomePage() {
 
   const projectList = useMemo(() => Object.values(projects), [projects])
 
-  // Количество недавно открытых проектов (по lastOpenedAt, без архива)
+  // Авто-архив: завершённые или старше 24 месяцев
+  const isAutoArchived = (p: Project) =>
+    !!p.isArchived || p.status === 'completed' ||
+    (p.updatedAt ? Date.now() - new Date(p.updatedAt).getTime() > 24 * 30.44 * 864e5 : false)
+
+  // Количество недавно открытых проектов (за 6 месяцев, без архива)
   const recentCount = useMemo(() => {
-    return projectList.filter((p: Project) => p.lastOpenedAt && !p.isArchived).length
+    const sixMonthsAgo = Date.now() - 6 * 30.44 * 864e5
+    return projectList.filter((p: Project) => p.lastOpenedAt && !isAutoArchived(p) && new Date(p.lastOpenedAt).getTime() > sixMonthsAgo).length
   }, [projectList])
 
   const archiveCount = useMemo(() => {
-    return projectList.filter((p: Project) => p.isArchived).length
+    return projectList.filter(isAutoArchived).length
   }, [projectList])
 
   // Все уникальные теги для фильтра
@@ -191,21 +197,21 @@ export default function HomePage() {
     id: `dummy-${i + 1}`,
     name: `Проект ${i + 1}`,
     type: 'film' as const,
-    status: 'preproduction' as const,
+    status: i === 9 ? 'completed' as const : 'preproduction' as const, // dummy-10 завершён → авто-архив
     plannedShootingDays: 10 + i * 5,
     dailyOutput: 5,
     shootingGroups: 1 as const,
     cloudStorage: 'none' as const,
     createdAt: '2026-01-01',
-    updatedAt: '2026-11-01',
+    updatedAt: i === 8 ? '2023-01-01' : '2026-11-01', // dummy-9 старше 24 мес → авто-архив
     scriptProgress: i * 15,
     castingProgress: 0,
     locationsProgress: 0,
     scheduleProgress: i * 10,
     // Тест категорий: 4-6 избранные, 7-8 недавно открытые, 9-10 архивные
     isFavorite: i >= 3 && i < 6,
-    lastOpenedAt: i >= 6 && i < 8 ? '2026-11-02' : undefined,
-    isArchived: i >= 8,
+    lastOpenedAt: i === 6 ? new Date(Date.now() - 30 * 864e5).toISOString() : i === 7 ? new Date(Date.now() - 240 * 864e5).toISOString() : undefined, // 7 — недавний, 8 — старше 6 мес
+    isArchived: false,
   } as unknown as Project))
 
   const resetFilters = () => {
@@ -220,11 +226,16 @@ export default function HomePage() {
       p.name.toLowerCase().includes(search.toLowerCase())
     )
 
+    // Авто-архив: завершённые или старше 24 месяцев
+    const isAutoArchived = (p: Project) =>
+      !!p.isArchived || p.status === 'completed' ||
+      (p.updatedAt ? Date.now() - new Date(p.updatedAt).getTime() > 24 * 30.44 * 864e5 : false)
+
     // Архив показывается только на своей вкладке
     if (activeTab === 'archive') {
-      filtered = filtered.filter((p: Project) => p.isArchived)
+      filtered = filtered.filter(isAutoArchived)
     } else {
-      filtered = filtered.filter((p: Project) => !p.isArchived)
+      filtered = filtered.filter((p: Project) => !isAutoArchived(p))
     }
 
     if (typeFilter !== 'all') {
@@ -242,8 +253,10 @@ export default function HomePage() {
     }
 
     if (activeTab === 'recent') {
+      // Только открытые за последние 6 месяцев
+      const sixMonthsAgo = Date.now() - 6 * 30.44 * 864e5
       return filtered
-        .filter((p: Project) => p.lastOpenedAt)
+        .filter((p: Project) => p.lastOpenedAt && new Date(p.lastOpenedAt).getTime() > sixMonthsAgo)
         .sort((a: Project, b: Project) =>
           new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime()
         )
@@ -276,11 +289,14 @@ export default function HomePage() {
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
   // Тестовые карточки подчиняются активной вкладке
+  const isDummyAutoArchived = (p: Project) =>
+    !!p.isArchived || p.status === 'completed' ||
+    (p.updatedAt ? Date.now() - new Date(p.updatedAt).getTime() > 24 * 30.44 * 864e5 : false)
   const dummiesForTab = DUMMY_PROJECTS.filter((p) =>
-    activeTab === 'archive' ? p.isArchived
-    : activeTab === 'favorites' ? (p.isFavorite && !p.isArchived)
-    : activeTab === 'recent' ? (p.lastOpenedAt && !p.isArchived)
-    : !p.isArchived
+    activeTab === 'archive' ? isDummyAutoArchived(p)
+    : activeTab === 'favorites' ? (p.isFavorite && !isDummyAutoArchived(p))
+    : activeTab === 'recent' ? (p.lastOpenedAt && !isDummyAutoArchived(p) && new Date(p.lastOpenedAt).getTime() > Date.now() - 6 * 30.44 * 864e5)
+    : !isDummyAutoArchived(p)
   )
   const cardsToShow = [...displayProjects, ...dummiesForTab]
   const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
