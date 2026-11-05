@@ -186,7 +186,7 @@ export default function HomePage() {
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, 1fr))` }
   const gridClass = 'grid gap-4'
 
-  const isDummy = (_p: Project) => false // заглушки убраны
+  const isDummy = (p: Project) => p.id.startsWith('dummy-')
 
   const setCardW = (w: number) => {
     const clamped = Math.max(CARD_W_MIN, Math.min(CARD_W_MAX, Math.round(w)))
@@ -297,12 +297,11 @@ export default function HomePage() {
     })
   }, [projectList, search, activeTab, sortBy, typeFilter, statusFilter, tagFilter])
 
-  // Карточки для показа
   const cardsToShow = displayProjects
-  const cardOpen = handleOpen
-  const cardDelete = (p: Project) => handleDelete(p.id)
-  const cardExport = (p: Project) => handleExport(p.id, p.name)
-  const cardFav = (p: Project) => toggleFavorite(p.id)
+  const cardOpen = (p: Project) => { if (!isDummy(p)) handleOpen(p) }
+  const cardDelete = (p: Project) => { if (!isDummy(p)) handleDelete(p.id) }
+  const cardExport = (p: Project) => { if (!isDummy(p)) handleExport(p.id, p.name) }
+  const cardFav = (p: Project) => { if (!isDummy(p)) toggleFavorite(p.id) }
 
   // Drag-and-drop доступен на вкладке «Все» в ручном порядке без фильтров
   const isDraggable = activeTab === 'all' && sortBy === 'manual' && !search && !hasActiveFilters
