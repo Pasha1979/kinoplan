@@ -473,13 +473,13 @@ body {
    Ненавязчивый маркер разрыва страницы — пунктирная линия с номером.
    Текст течёт непрерывно, без физических зазоров.
 ──────────────────────────────────────────────────────────────────── */
-.tiptap-editor .page-break-marker {
+.tiptap-editor [data-page-break] {
   position: relative;
   margin-top: 24px; /* Небольшой, безопасный отступ, чтобы линия не наезжала на текст */
 }
 
-.tiptap-editor .page-break-marker::before {
-  content: '--- РАЗРЫВ: ' attr(data-page) ' ---';
+.tiptap-editor [data-page-break]::before {
+  content: '--- РАЗРЫВ: ' attr(data-page-break) ' ---';
   position: absolute;
   top: -12px; /* Центрируем линию в отступе 24px */
   left: 0;
@@ -499,17 +499,17 @@ body {
 }
 
 /* Для темной темы */
-:root.dark .tiptap-editor .page-break-marker::before {
+:root.dark .tiptap-editor [data-page-break]::before {
   border-top-color: #475569;
   color: #64748b;
 }
 
 @media print {
-  .tiptap-editor .page-break-marker {
+  .tiptap-editor [data-page-break] {
     margin-top: 0 !important;
     page-break-before: always;
   }
-  .tiptap-editor .page-break-marker::before {
+  .tiptap-editor [data-page-break]::before {
     display: none !important;
   }
 }

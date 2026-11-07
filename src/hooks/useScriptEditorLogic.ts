@@ -569,18 +569,19 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const editorDom = editor.view.dom as HTMLElement
     const children = Array.from(editorDom.children) as HTMLElement[]
     children.forEach(child => {
-      child.classList.remove('page-start', 'page-break-marker')
+      child.removeAttribute('data-page-break')
       child.removeAttribute('data-page')
+      child.classList.remove('page-start', 'page-break-marker')
     })
     if (children.length === 0 || pageBreaksRef.current.length === 0) return
 
-    // Маркер разрыва — только класс и номер страницы, без отступов.
-    // Текст течёт непрерывно, пунктирная линия рисуется через ::before.
+    // Маркер разрыва через data-атрибут — он переживает рендеры ProseMirror
+    // (PM затирает class/style узлов при перерисовке, data-* не трогает).
+    // Пунктирная линия рисуется через CSS ::before, без отступов-хаков.
     pageBreaksRef.current.forEach((breakInfo) => {
       const { page, startIndex } = breakInfo
       if (startIndex >= children.length) return
-      children[startIndex].classList.add('page-break-marker')
-      children[startIndex].setAttribute('data-page', `Страница ${page}`)
+      children[startIndex].setAttribute('data-page-break', `Страница ${page}`)
     })
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
