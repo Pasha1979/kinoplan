@@ -652,6 +652,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const editorDom = editor.view.dom as HTMLElement
     const children = Array.from(editorDom.children) as HTMLElement[]
     if (children.length === 0) return
+    console.log('[enforce] run, children:', children.length)
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx
@@ -675,6 +676,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const pageIndex = Math.max(0, Math.floor(top / stride))
       const pageBottom = pageIndex * stride + usableHeightPx
       if (bottom <= pageBottom + 2) continue
+      console.log('[enforce] overflow block, bottom:', Math.round(bottom), 'pageBottom:', Math.round(pageBottom), 'page:', pageIndex)
 
       // Блок пересёк низ листа — определяем его узел в документе
       let nodeStart = -1
@@ -683,16 +685,31 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       } catch {
         continue
       }
-      const $p = editor.state.doc.resolve(nodeStart)
-      const node = $p.nodeAfter ?? $p.parent
-      if (!node || !splittableTypes.has(node.type.name)) continue
+      if (nodeStart < 0) continue
+      let node = null as any
+      try {
+        const $p = editor.state.doc.resolve(nodeStart)
+        node = $p.nodeAfter ?? $p.parent
+      } catch {
+        continue
+      }
+      if (!node || !splittableTypes.has(node.type.name)) {
+        console.log('[enforce] not splittable:', node?.type?.name)
+        continue
+      }
 
       // Находим позицию в документе, соответствующую линии границы листа
       const boundaryClientY = editorRect.top + pageBottom - 4
       const hit = editor.view.posAtCoords({ left: r.left + 6, top: boundaryClientY })
-      if (!hit) continue
+      if (!hit) {
+        console.log('[enforce] posAtCoords null')
+        continue
+      }
       const nodeEnd = nodeStart + node.nodeSize
-      if (hit.pos <= nodeStart + 1 || hit.pos >= nodeEnd - 1) continue
+      if (hit.pos <= nodeStart + 1 || hit.pos >= nodeEnd - 1) {
+        console.log('[enforce] hit.pos out of node:', hit.pos, 'node:', nodeStart, '-', nodeEnd)
+        continue
+      }
 
       // Node Splitting: блоки имеют defining:true — обычный tr.split
       // молча не работает. Режем вручную: удаляем хвост текста из первого
@@ -710,6 +727,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         const mapped = Math.min(tr.mapping.map(selFrom), tr.doc.content.size)
         tr.setSelection(TextSelection.near(tr.doc.resolve(mapped), -1))
         editor.view.dispatch(tr)
+        console.log('[enforce] SPLIT at', hit.pos)
+      } catch (err) {
+        console.error('[enforce] split error', err)
       } finally {
         setTimeout(() => { isSplittingRef.current = false }, 0)
       }
