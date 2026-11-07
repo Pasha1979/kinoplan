@@ -87,7 +87,7 @@ export function ScriptEditorView({
     <div className="flex-1 flex flex-col overflow-hidden relative h-full">
       {/* Панель инструментов */}
       <div
-        className="shrink-0 flex items-center gap-2 px-4 py-2 border-b"
+        className="shrink-0 flex items-center gap-2 px-4 py-2 border-b flex-wrap"
         style={{
           background: isDark ? '#1a1a2e' : '#f8f9fc',
           borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb',
