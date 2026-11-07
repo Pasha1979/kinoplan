@@ -166,6 +166,7 @@ export default function ScriptPage() {
     address: '',
     draftNumber: '1',
     date: new Date().toISOString().split('T')[0],
+    print: true,
   }), [project?.name, currentScript?.title])
 
   const handleTitlePageChange = useCallback((titlePage: TitlePage) => {

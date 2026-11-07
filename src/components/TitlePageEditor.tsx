@@ -19,7 +19,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#6b7280' : '#9ca3af'
 
-  const handleChange = (field: keyof TitlePage, value: string) => {
+  const handleChange = (field: keyof TitlePage, value: string | boolean) => {
     onChange({ ...data, [field]: value })
   }
 
@@ -107,7 +107,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
             </label>
             <input
               type="text"
-              value={data.company}
+              value={data.company ?? ''}
               onChange={(e) => handleChange('company', e.target.value)}
               className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
               placeholder="Название компании"
@@ -147,7 +147,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
                 <MapPin size={14} style={{ color: textSecondary }} />
                 <input
                   type="text"
-                  value={data.address}
+                  value={data.address ?? ''}
                   onChange={(e) => handleChange('address', e.target.value)}
                   className={`flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
                   placeholder="г. Москва, ул. Примерная, 1"
@@ -212,15 +212,20 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
               ))}
             </div>
           <button
-            onClick={() => setShowPreview(!showPreview)}
+            onClick={() => {
+              const next = !(data.print !== false)
+              handleChange('print', next)
+              setShowPreview(next)
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
-              background: isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
-              color: textSecondary,
+              background: (data.print !== false) ? 'rgba(99,102,241,0.15)' : (isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'),
+              color: (data.print !== false) ? '#818cf8' : textSecondary,
             }}
+            title="Включать титульный лист при печати и экспорте"
           >
-            {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
-            {showPreview ? 'Скрыть' : 'Показать'}
+            {(data.print !== false) ? <Eye size={14} /> : <EyeOff size={14} />}
+            {(data.print !== false) ? 'Печатать' : 'Не печатать'}
           </button>
           </div>
         </div>

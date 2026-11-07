@@ -45,6 +45,8 @@ export interface TitlePage {
   address: string
   draftNumber: string
   date: string
+  /** Печатать титульный лист при печати/экспорте */
+  print?: boolean
 }
 
 export interface Script {
