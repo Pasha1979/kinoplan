@@ -694,13 +694,19 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const nodeEnd = nodeStart + node.nodeSize
       if (hit.pos <= nodeStart + 1 || hit.pos >= nodeEnd - 1) continue
 
-      // Node Splitting: разрезаем узел по линии границы страницы
+      // Node Splitting: блоки имеют defining:true — обычный tr.split
+      // молча не работает. Режем вручную: удаляем хвост текста из первого
+      // узла и вставляем его новым узлом того же типа сразу после.
       isSplittingRef.current = true
       try {
-        const selFrom = editor.state.selection.from
-        const tr = editor.state.tr.split(hit.pos, 1)
-        // Курсор остаётся на месте — позиция мапится через разделение;
-        // если курсор был в точке разрыва — он окажется в начале нового узла
+        const state = editor.state
+        const selFrom = state.selection.from
+        const tail = state.doc.slice(hit.pos, nodeEnd - 1).content
+        const tr = state.tr
+        tr.delete(hit.pos, nodeEnd - 1)
+        // После удаления первый узел заканчивается на hit.pos,
+        // позиция сразу за ним = hit.pos + 1
+        tr.insert(hit.pos + 1, node.type.create(node.attrs, tail))
         const mapped = Math.min(tr.mapping.map(selFrom), tr.doc.content.size)
         tr.setSelection(TextSelection.near(tr.doc.resolve(mapped), -1))
         editor.view.dispatch(tr)
@@ -1348,6 +1354,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     pageBreaksRef.current = result.breaks
     applyPageBreaks()
+    // И на загруженном/вставленном контенте тоже режем переполненные блоки —
+    // не только на update при печати
+    enforcePageBoundaries()
   }, [])
 
   // Загружаем контент только при создании редактора / смене скрипта
