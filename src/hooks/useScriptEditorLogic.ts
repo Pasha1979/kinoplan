@@ -5,6 +5,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { DOMSerializer, Node as PMNode } from 'prosemirror-model'
+import { TextSelection } from 'prosemirror-state'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
@@ -172,6 +173,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Флаг чтобы предотвратить бесконечный цикл при повторном применении
   const isReApplyingRef = useRef(false)
+  // Флаг: идёт принудительное разделение узла по границе страницы (защита от рекурсии)
+  const isSplittingRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -639,6 +642,71 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
   }, [editor])
 
+  // ── Строгое ограничение границ А4: Node Splitting ──────────────────
+  // Если блок пересекает нижнюю границу листа — режем его tr.split()
+  // ровно по линии границы. Первая часть остаётся на листе, вторая
+  // станет page-start на следующем (её подвинет applyPageBreaks).
+  // Это реальное изменение документа, а не визуальный трюк.
+  const enforcePageBoundaries = useCallback(() => {
+    if (!editor || editor.isDestroyed || isSplittingRef.current) return
+    const editorDom = editor.view.dom as HTMLElement
+    const children = Array.from(editorDom.children) as HTMLElement[]
+    if (children.length === 0) return
+
+    const mmToPx = 96 / 25.4
+    const pageHeightPx = A4_HEIGHT_MM * mmToPx
+    const gapPx = 16 * mmToPx
+    const stride = pageHeightPx + gapPx
+    const editorRect = editorDom.getBoundingClientRect()
+
+    const splittableTypes = new Set([
+      'paragraph', 'sceneAction', 'sceneDialog', 'sceneCast',
+      'sceneParenthetical', 'sceneCharacter', 'sceneHeader', 'sceneTransition',
+    ])
+
+    for (const child of children) {
+      const r = child.getBoundingClientRect()
+      const top = r.top - editorRect.top
+      const bottom = r.bottom - editorRect.top
+      const pageIndex = Math.max(0, Math.floor(top / stride))
+      const pageBottom = pageIndex * stride + pageHeightPx
+      if (bottom <= pageBottom + 2) continue
+
+      // Блок пересёк низ листа — определяем его узел в документе
+      let nodeStart = -1
+      try {
+        nodeStart = editor.view.posAtDOM(child, 0)
+      } catch {
+        continue
+      }
+      const $p = editor.state.doc.resolve(nodeStart)
+      const node = $p.nodeAfter ?? $p.parent
+      if (!node || !splittableTypes.has(node.type.name)) continue
+
+      // Находим позицию в документе, соответствующую линии границы листа
+      const boundaryClientY = editorRect.top + pageBottom - 4
+      const hit = editor.view.posAtCoords({ left: r.left + 6, top: boundaryClientY })
+      if (!hit) continue
+      const nodeEnd = nodeStart + node.nodeSize
+      if (hit.pos <= nodeStart + 1 || hit.pos >= nodeEnd - 1) continue
+
+      // Node Splitting: разрезаем узел по линии границы страницы
+      isSplittingRef.current = true
+      try {
+        const selFrom = editor.state.selection.from
+        const tr = editor.state.tr.split(hit.pos, 1)
+        // Курсор остаётся на месте — позиция мапится через разделение;
+        // если курсор был в точке разрыва — он окажется в начале нового узла
+        const mapped = Math.min(tr.mapping.map(selFrom), tr.doc.content.size)
+        tr.setSelection(TextSelection.near(tr.doc.resolve(mapped), -1))
+        editor.view.dispatch(tr)
+      } finally {
+        setTimeout(() => { isSplittingRef.current = false }, 0)
+      }
+      break // один сплит за проход — следующий onUpdate доведёт остаток
+    }
+  }, [editor])
+
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
   // eslint-disable-next-line react-hooks/refs
   handleCopyRef.current = (view, event) => {
@@ -960,6 +1028,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       calculateAndReportStats(editorInstance)
       pageCountTimeoutRef.current = null
     }, 150)
+
+    // Строгие границы А4: режем узел, пересекающий низ листа (Node Splitting)
+    enforcePageBoundaries()
 
     // Отключаем автоформатирование при active multi-selection
     if (isMultiSelectingRef.current) {
