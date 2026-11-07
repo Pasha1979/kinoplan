@@ -669,7 +669,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       'sceneParenthetical', 'sceneCharacter', 'sceneHeader', 'sceneTransition',
     ])
 
-    for (const child of children) {
+    for (let ci = 0; ci < children.length; ci++) {
+      const child = children[ci]
       const r = child.getBoundingClientRect()
       const top = r.top - editorRect.top
       const bottom = r.bottom - editorRect.top
@@ -744,6 +745,18 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         tr.setSelection(TextSelection.near(tr.doc.resolve(mapped), -1))
         editor.view.dispatch(tr)
         console.log('[enforce] SPLIT at', hit.pos)
+
+        // Мгновенно подвигаем вторую половину на начало следующего листа —
+        // не ждём пересчёта виртуального счётчика (~150мс "зависание" в зазоре)
+        const targetY = (pageIndex + 1) * stride
+        setTimeout(() => {
+          const nextEl = editorDom.children[ci + 1] as HTMLElement | undefined
+          if (nextEl) {
+            const rect = nextEl.getBoundingClientRect()
+            const push = targetY - (rect.top - editorDom.getBoundingClientRect().top)
+            if (push > 0) nextEl.style.setProperty('padding-top', `${push}px`, 'important')
+          }
+        }, 0)
       } catch (err) {
         console.error('[enforce] split error', err)
       } finally {
