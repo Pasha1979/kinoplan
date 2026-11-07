@@ -681,6 +681,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
             ? suggestion.text + '.' 
             : suggestion.text
           
+          const wasCharacterBlock = currentNode?.type.name === 'sceneCharacter'
+
           editor
             .chain()
             .focus()
@@ -690,6 +692,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
           st.recordUsage(suggestion)
           st.closeSuggestions()
+
+          // Приняли имя персонажа → курсор сразу в блок реплики
+          if (wasCharacterBlock) {
+            editor.chain().splitBlock().setNode('sceneDialog').run()
+          }
         }
       }
       return true
