@@ -1,10 +1,10 @@
-import { useRef, useState, useEffect, memo } from 'react'
+import { useRef, memo } from 'react'
 import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2 } from 'lucide-react'
 import { SmartTypePopup } from './SmartTypePopup'
 import type { ScriptFormat } from '../store/scriptStore'
-import { useUiStore } from '../store/uiStore'
+
 
 import type { SmartTypeSuggestion } from '../hooks/useSmartType'
 
@@ -45,27 +45,6 @@ export function ScriptEditorView({
   multiCursorCount = 0,
 }: ScriptEditorViewProps) {
   const editorContentRef = useRef<HTMLDivElement | null>(null)
-  const a4Mode = useUiStore((state) => state.a4Mode)
-  const [pageCount, setPageCount] = useState(1)
-
-  useEffect(() => {
-    if (!editor || !a4Mode) return
-
-    const updatePageCount = () => {
-      const editorDom = editor.view.dom as HTMLElement
-      const mmToPx = 96 / 25.4
-      const hMm = editorDom.scrollHeight / mmToPx
-      // +36 = 20mm top offset редактора + 16mm зазор, чтобы последний лист покрывал контент до самого низа
-      const count = Math.max(1, Math.ceil((hMm + 36) / 313))
-      setPageCount(count)
-    }
-
-    updatePageCount()
-    editor.on('update', updatePageCount)
-    return () => {
-      editor.off('update', updatePageCount)
-    }
-  }, [editor, a4Mode])
 
   // Подсветка диалогов выбранного персонажа теперь реализована через
   // ProseMirror Decoration-плагин в DialogueHighlightExtension
@@ -147,87 +126,37 @@ export function ScriptEditorView({
         })}
       </div>
 
-      {/* Область редактора */}
+      {/* Область редактора — сплошной документ, без имитации листов */}
       <div
         ref={editorContentRef}
-        data-a4={a4Mode}
         className="flex-1 overflow-y-auto py-8 px-4"
         style={{
-          background: a4Mode ? (isDark ? '#0a0a15' : '#e5e5e5') : editorBg,
-          color: a4Mode ? '#000000' : textPrimary,
-          ['--page-break-bg' as string]: a4Mode ? (isDark ? '#0a0a15' : '#e5e5e5') : 'transparent',
-          ['--page-break-color' as string]: a4Mode ? (isDark ? '#9ca3af' : '#6b7280') : 'transparent',
-        } as any}
+          background: editorBg,
+          color: textPrimary,
+        }}
       >
-        {/* Контейнер страницы A4 — фиксированная ширина для правильного форматирования */}
-        {a4Mode ? (
-          <div
-            className="mx-auto a4-container"
+        <div
+          className="mx-auto"
+          style={{
+            width: '210mm',
+            minHeight: '297mm',
+            padding: '2cm 2cm 2cm 3cm',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+          }}
+        >
+          <EditorContent
+            editor={editor}
+            className={`h-full tiptap-editor format-${format || 'russian'}`}
             style={{
-              width: '210mm',
-              minHeight: '297mm',
-              position: 'relative',
-              color: '#000000',
+              fontFamily,
+              fontSize: `${fontSize}pt`,
+              lineHeight: '1.5',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
             }}
-          >
-            {/* Реальные листы А4 с тенями */}
-            {Array.from({ length: pageCount }).map((_, i) => (
-              <div
-                key={`page-sheet-${i}`}
-                className="pointer-events-none"
-                style={{
-                  position: 'absolute',
-                  top: `${i * 313}mm`,
-                  left: 0,
-                  width: '210mm',
-                  height: '297mm',
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05)',
-                  zIndex: 0,
-                }}
-              />
-            ))}
-            {/* Слой редактора поверх листов */}
-            <div
-              style={{
-                position: 'relative',
-                zIndex: 1,
-                padding: '2cm 2cm 2cm 3cm',
-                backgroundColor: 'transparent',
-                minHeight: '297mm',
-                wordWrap: 'break-word',
-                overflowWrap: 'break-word',
-              }}
-            >
-              <EditorContent
-                editor={editor}
-                className={`h-full tiptap-editor format-${format || 'russian'}`}
-                style={{
-                  fontFamily,
-                  fontSize: `${fontSize}pt`,
-                  lineHeight: '1.5',
-                  color: '#000000',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="w-full" style={{ padding: '2cm 2cm 2cm 3cm', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-            <EditorContent
-              editor={editor}
-              className={`h-full tiptap-editor format-${format || 'russian'}`}
-              style={{
-                fontFamily,
-                fontSize: `${fontSize}pt`,
-                lineHeight: '1.5',
-                wordWrap: 'break-word',
-                overflowWrap: 'break-word',
-              }}
-            />
-          </div>
-        )}
+          />
+        </div>
       </div>
 
       {/* Статусбар */}

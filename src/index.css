@@ -469,36 +469,47 @@ body {
   display: none !important;
 }
 
-/* ─── A4 Page Breaks ──────────────────────────────────────────────
-   Визуальные разрывы страниц, применяемые через page-start класс.
-   Активны только в A4-режиме (родитель должен иметь data-a4="true").
+/* ─── Page Break Marker ───────────────────────────────────────────
+   Ненавязчивый маркер разрыва страницы — пунктирная линия с номером.
+   Текст течёт непрерывно, без физических зазоров.
 ──────────────────────────────────────────────────────────────────── */
-[data-a4="true"] .tiptap-editor.ProseMirror {
-  overflow: visible !important;
-}
-
-[data-a4="true"] .tiptap-editor .page-start {
+.tiptap-editor .page-break-marker {
   position: relative;
-  clear: both;
+  margin-top: 24px; /* Небольшой, безопасный отступ, чтобы линия не наезжала на текст */
 }
 
-/* Тонкая линия ровно на границе страницы — визуальный барьер:
-   если текст предыдущего блока чуть переполнит лист, он выглядит
-   как естественное продолжение над линией, а не баг в серой зоне */
-[data-a4="true"] .tiptap-editor .page-start::before {
-  content: '';
+.tiptap-editor .page-break-marker::before {
+  content: '--- РАЗРЫВ: ' attr(data-page) ' ---';
   position: absolute;
-  top: 0;
+  top: -12px; /* Центрируем линию в отступе 24px */
   left: 0;
   right: 0;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.05);
+  text-align: center;
+
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.1em;
+
+  border-top: 2px dashed #cbd5e1;
+  padding-top: 4px;
   pointer-events: none;
+  z-index: 5;
 }
 
-/* Чистый разрыв при печати/экспорте в PDF — без серого фона и теней */
+/* Для темной темы */
+:root.dark .tiptap-editor .page-break-marker::before {
+  border-top-color: #475569;
+  color: #64748b;
+}
+
 @media print {
-  [data-a4="true"] .tiptap-editor .page-start {
+  .tiptap-editor .page-break-marker {
+    margin-top: 0 !important;
     page-break-before: always;
+  }
+  .tiptap-editor .page-break-marker::before {
+    display: none !important;
   }
 }

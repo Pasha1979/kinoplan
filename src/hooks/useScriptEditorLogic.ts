@@ -14,7 +14,7 @@ import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
-import { A4_HEIGHT_MM } from '../constants/scriptConstants'
+
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
@@ -569,59 +569,18 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const editorDom = editor.view.dom as HTMLElement
     const children = Array.from(editorDom.children) as HTMLElement[]
     children.forEach(child => {
-      child.classList.remove('page-start')
+      child.classList.remove('page-start', 'page-break-marker')
       child.removeAttribute('data-page')
-      child.style.removeProperty('margin-bottom')
-      child.style.removeProperty('padding-top')
-      child.classList.remove('page-break-margin-200', 'page-break-margin-300', 'page-break-margin-400')
     })
     if (children.length === 0 || pageBreaksRef.current.length === 0) return
 
-    const mmToPx = 96 / 25.4
-    const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
-    const gapPx = 16 * mmToPx // 16мм — заметный зазор между страницами (Word-style)
-
-    // Читаем текущие позиции блоков (до применения отступов)
-    const editorRect = editorDom.getBoundingClientRect()
-    const positions = children.map(child => {
-      const rect = child.getBoundingClientRect()
-      return {
-        top: rect.top - editorRect.top,
-        bottom: rect.bottom - editorRect.top,
-        height: rect.height,
-      }
-    })
-
-    // Вычисляем page boundaries (где должны начинаться страницы)
-    const pageBoundaries = new Map<number, number>() // page -> startY
-    pageBreaksRef.current.forEach((breakInfo) => {
-      pageBoundaries.set(breakInfo.page, (breakInfo.page - 1) * (pageHeightPx + gapPx))
-    })
-
-    // Применяем page breaks из pageBreaksRef
-    let accumulatedPush = 0
+    // Маркер разрыва — только класс и номер страницы, без отступов.
+    // Текст течёт непрерывно, пунктирная линия рисуется через ::before.
     pageBreaksRef.current.forEach((breakInfo) => {
       const { page, startIndex } = breakInfo
       if (startIndex >= children.length) return
-
-      // Блок, который начинается на новой странице
-      const startChild = children[startIndex]
-      startChild.classList.add('page-start')
-      startChild.setAttribute('data-page', `Страница ${page}`)
-
-      // Отступ применяем к НОВОМУ блоку (padding-top), а не к предыдущему:
-      // зона зазора принадлежит startChild — текст предыдущего блока не может
-      // "впечататься" в неё при наборе (padding не схлопывается и не стирается ростом)
-      if (startIndex > 0) {
-        const prevEnd = positions[startIndex - 1].bottom + accumulatedPush
-        const targetY = pageBoundaries.get(page) || 0
-        const push = targetY - prevEnd
-
-        if (push > 0) {
-          startChild.style.setProperty('padding-top', `${push}px`, 'important')
-          accumulatedPush += push
-        }
-      }
+      children[startIndex].classList.add('page-break-marker')
+      children[startIndex].setAttribute('data-page', `Страница ${page}`)
     })
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
