@@ -565,6 +565,33 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
+  // Привязка: любой блок, начинающийся в запретной зоне (ниже текстовой
+  // области 257мм или в сером зазоре), пододвигаем к верху следующего листа.
+  // Вынесено отдельно — вызывается при каждом пересчёте И при каждом update,
+  // потому что ProseMirror стирает inline-стили при рендере узлов.
+  const applySnapPass = useCallback(() => {
+    if (!editor || editor.isDestroyed) return
+    const editorDom = editor.view.dom as HTMLElement
+    const children = Array.from(editorDom.children) as HTMLElement[]
+    if (children.length === 0) return
+
+    const mmToPx = 96 / 25.4
+    const stride = (A4_HEIGHT_MM + 16) * mmToPx
+    const usableHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
+    const editorRect = editorDom.getBoundingClientRect()
+
+    for (const el of children) {
+      const top = el.getBoundingClientRect().top - editorRect.top
+      const pi = Math.max(0, Math.floor(top / stride))
+      const zoneTop = pi * stride + usableHeightPx
+      const zoneEnd = (pi + 1) * stride
+      if (top > zoneTop + 1 && top < zoneEnd - 2) {
+        console.log('[snap] push block top:', Math.round(top), '→', Math.round(zoneEnd))
+        el.style.setProperty('padding-top', `${zoneEnd - top}px`, 'important')
+      }
+    }
+  }, [editor])
+
   // Применяем page-start и отступы на основе точных данных из pageCounter
   // Используем pageBreaksRef (вычисленный через виртуальный A4-рендеринг)
   const applyPageBreaks = useCallback(() => {
@@ -629,21 +656,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
     })
 
-    // Привязка: любой блок, начинающийся в запретной зоне (ниже текстовой
-    // области или в сером зазоре), пододвигаем к верху следующего листа.
-    // Это подхватывает вторые половины разрезанных узлов — даже если
-    // виртуальный счётчик считает их ещё частью прошлой страницы.
-    console.log('[snap] run, breaks:', pageBreaksRef.current.length)
-    for (const el of children) {
-      const top = el.getBoundingClientRect().top - editorRect.top
-      const pi = Math.max(0, Math.floor(top / stride))
-      const zoneTop = pi * stride + usableHeightPx // конец текстовой зоны листа
-      const zoneEnd = (pi + 1) * stride // верх следующего листа
-      if (top > zoneTop + 1 && top < zoneEnd - 2) {
-        console.log('[snap] push block top:', Math.round(top), '→', Math.round(zoneEnd))
-        el.style.setProperty('padding-top', `${zoneEnd - top}px`, 'important')
-      }
-    }
+    applySnapPass()
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
     // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
@@ -782,7 +795,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
       break // один сплит за проход — следующий onUpdate доведёт остаток
     }
-  }, [editor])
+
+    // После проверки переполнений — восстановить сдвиги (PM мог стереть стили)
+    applySnapPass()
+  }, [editor, applySnapPass])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
   // eslint-disable-next-line react-hooks/refs
