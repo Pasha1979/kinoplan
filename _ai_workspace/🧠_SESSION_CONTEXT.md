@@ -88,7 +88,8 @@ status: "✅ ЗАВЕРШЕНА — сессия закрыта пользова
 - [x] Word-style разрывы страниц (3c70080): gapPx 4→16мм в applyPageBreaks, листы top i*313mm, усиленная тень бумаги, удалены page-break-margin-* и старый коммент. CSS, добавлен @media print. Логика PageCounter НЕ тронута
 - [x] FIX перетекания текста в зазор (59a4bd1): отступ теперь padding-top на startChild (не margin-bottom на prevChild); критично — style.X='..!important' молча не работал, заменено на setProperty; ::before = 1px линия-граница; debounce 400→150мс, reapply 1000→300мс
 - [x] NODE SPLITTING (365c9c7): enforcePageBoundaries — блок, пересекающий низ листа, режется tr.split(posAtCoords(граница)); курсор мапится через разделение; isSplittingRef от рекурсии; 1 сплит за проход. applyPageBreaks (padding-top) ОСТАЛСЯ — он позиционирует page-start'ы, не мешает
-- [x] FIX границы сплита (d749df9): резал по 297мм, а реальная текстовая область = 257мм (297−2×20мм полей). Блок мог свисать на 20мм ниже края листа — видно на скрине. Теперь pageBottom = pageIndex*313 + usableHeightPx(257мм), как в PageCounter
+- [x] FIX границы сплита (d749df9): резал по 297мм, а реальная текстовая область = 257мм (297−2×20мм полей). Теперь pageBottom = pageIndex*313 + 257мм, как в PageCounter
+- [x] КРИТИЧНЫЙ FIX (836b240): sceneDialog/sceneAction имеют defining:true → tr.split МОЛЧА не работал (вот почему ничего не менялось!). Теперь ручной сплит: delete хвоста + insert нового узла того же типа. Плюс enforce вызывается и при загрузке контента, не только при печати
 - [x] Авто-архив (ee5d8fe): isAutoArchived = isArchived || completed || updatedAt>24 мес; Недавние = открытые за 6 мес
 - [x] Водяной знак НЕПОДВИЖЕН при скролле (2502a3d): выведен из прокручиваемой области — LB=рамка, watermark absolute, внутренний div скролится
 - [x] НЕОНОВОЕ свечение водяного знака (a36336d): textShadow/boxShadow оранж-красный многослойный glow
