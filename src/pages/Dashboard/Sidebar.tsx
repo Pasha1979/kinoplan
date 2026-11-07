@@ -16,6 +16,7 @@ interface NavItem {
   label: string
   path: string
   ready: boolean
+  beta?: boolean
   group?: string
 }
 
@@ -45,6 +46,10 @@ function NavButton({ item, isActive, sidebarExpanded, onClick }: {
             <span className="text-xs px-1.5 py-0.5 rounded-md shrink-0"
               style={{ background: 'rgba(255,255,255,0.05)', color: '#374151' }}>скоро</span>
           )}
+          {item.beta && (
+            <span className="text-xs px-1.5 py-0.5 rounded-md shrink-0"
+              style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>бета</span>
+          )}
         </>
       )}
     </button>
@@ -69,7 +74,7 @@ export default function Sidebar() {
   const navItems: NavItem[] = [
     // Основные
     { icon: <Film size={20} />,        label: 'Обзор',        path: `/project/${project.id}`,           ready: true },
-    { icon: <FileText size={20} />,    label: 'Сценарий',     path: `/project/${project.id}/script`,    ready: false },
+    { icon: <FileText size={20} />,    label: 'Сценарий',     path: `/project/${project.id}/script`,    ready: true, beta: true },
     { icon: <Calendar size={20} />,    label: 'Планирование', path: `/project/${project.id}/schedule`,  ready: false },
     { icon: <ClipboardList size={20}/>,label: 'Вызывные',     path: `/project/${project.id}/callsheets`,ready: false },
     // Пре-продакшн
