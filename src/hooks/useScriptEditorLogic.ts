@@ -984,6 +984,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     } else {
       st.closeSuggestions()
     }
+
+    // Авто-переход к составу: шапка завершена временем («ДЕНЬ.», «НОЧЬ.», «УТРО.»)
+    // Срабатывает и при ручном наборе, и при выборе подсказки SmartType
+    if (currentType === 'sceneHeader' && !isReplacingRef.current) {
+      const node = $from.node()
+      const text = node?.textContent || ''
+      const atEnd = $from.parentOffset === (node?.content.size ?? -1)
+      if (atEnd && /(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|РАННЕЕ УТРО|ПОЗДНЯЯ НОЧЬ)\.\s*$/i.test(text)) {
+        editorInstance.chain().splitBlock().setNode('sceneCast').run()
+      }
+    }
   }
 
   // Обновляем CSS-класс формата при переключении RU/EN
