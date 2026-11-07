@@ -578,7 +578,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
-    const gapPx = 4 * mmToPx // 4мм — зазор между страницами
+    const gapPx = 16 * mmToPx // 16мм — заметный зазор между страницами (Word-style)
 
     // Читаем текущие позиции блоков (до применения отступов)
     const editorRect = editorDom.getBoundingClientRect()
