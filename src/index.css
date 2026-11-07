@@ -479,18 +479,21 @@ body {
 
 [data-a4="true"] .tiptap-editor .page-start {
   position: relative;
+  clear: both;
 }
 
+/* Тонкая линия ровно на границе страницы — визуальный барьер:
+   если текст предыдущего блока чуть переполнит лист, он выглядит
+   как естественное продолжение над линией, а не баг в серой зоне */
 [data-a4="true"] .tiptap-editor .page-start::before {
   content: '';
   position: absolute;
-  top: -36mm; /* 16мм зазор + 20мм верхнее поле */
-  left: -3cm;
-  right: -2cm;
-  height: 16mm;
-  background: transparent;
-  pointer-events: auto;
-  cursor: default;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.05);
+  pointer-events: none;
 }
 
 /* Чистый разрыв при печати/экспорте в PDF — без серого фона и теней */

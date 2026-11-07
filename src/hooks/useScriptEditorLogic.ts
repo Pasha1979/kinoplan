@@ -572,6 +572,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       child.classList.remove('page-start')
       child.removeAttribute('data-page')
       child.style.removeProperty('margin-bottom')
+      child.style.removeProperty('padding-top')
       child.classList.remove('page-break-margin-200', 'page-break-margin-300', 'page-break-margin-400')
     })
     if (children.length === 0 || pageBreaksRef.current.length === 0) return
@@ -608,15 +609,16 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       startChild.classList.add('page-start')
       startChild.setAttribute('data-page', `Страница ${page}`)
 
-      // Предыдущий блок — добавляем margin-bottom
+      // Отступ применяем к НОВОМУ блоку (padding-top), а не к предыдущему:
+      // зона зазора принадлежит startChild — текст предыдущего блока не может
+      // "впечататься" в неё при наборе (padding не схлопывается и не стирается ростом)
       if (startIndex > 0) {
-        const prevChild = children[startIndex - 1]
         const prevEnd = positions[startIndex - 1].bottom + accumulatedPush
         const targetY = pageBoundaries.get(page) || 0
         const push = targetY - prevEnd
 
         if (push > 0) {
-          prevChild.style.marginBottom = `${push}px !important`
+          startChild.style.setProperty('padding-top', `${push}px`, 'important')
           accumulatedPush += push
         }
       }
@@ -633,7 +635,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         applyPageBreaks()
         isReApplyingRef.current = false
         pageBreakApplyTimeoutRef.current = null
-      }, 1000)
+      }, 300)
     }
   }, [editor])
 
@@ -957,7 +959,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     pageCountTimeoutRef.current = setTimeout(() => {
       calculateAndReportStats(editorInstance)
       pageCountTimeoutRef.current = null
-    }, 400)
+    }, 150)
 
     // Отключаем автоформатирование при active multi-selection
     if (isMultiSelectingRef.current) {
