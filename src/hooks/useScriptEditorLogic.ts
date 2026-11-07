@@ -844,6 +844,27 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           return true
         }
       }
+
+      // Двойной Enter на пустом paragraph → новая сцена (sceneHeader)
+      // Иначе цепочка обрывается после sceneAction→paragraph
+      if (currentType === 'paragraph') {
+        const textContent = currentNode?.textContent?.trim() || ''
+        if (textContent === '') {
+          event.preventDefault()
+          const nextNumber = getNextSceneNumber(view.state.doc)
+          const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
+          const headerText = isSerial
+            ? `${currentSeriesRef.current}-${nextNumber}. `
+            : `${nextNumber}. `
+
+          editor?.chain()
+            .splitBlock()
+            .setNode('sceneHeader')
+            .insertContent(headerText)
+            .run()
+          return true
+        }
+      }
     }
     
     return false
