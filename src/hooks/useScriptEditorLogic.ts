@@ -15,7 +15,7 @@ import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
-import { A4_HEIGHT_MM } from '../constants/scriptConstants'
+import { A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM } from '../constants/scriptConstants'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
@@ -657,6 +657,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const pageHeightPx = A4_HEIGHT_MM * mmToPx
     const gapPx = 16 * mmToPx
     const stride = pageHeightPx + gapPx
+    // Реальная текстовая область листа: 297мм - поля (2см верх + 2см низ) = 257мм.
+    // Блок начинает страницу на 2см ниже верха листа → его низ не должен
+    // пересекать pageTop + 257мм, иначе текст визуально уйдёт в зазор.
+    const usableHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
     const editorRect = editorDom.getBoundingClientRect()
 
     const splittableTypes = new Set([
@@ -669,7 +673,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       const top = r.top - editorRect.top
       const bottom = r.bottom - editorRect.top
       const pageIndex = Math.max(0, Math.floor(top / stride))
-      const pageBottom = pageIndex * stride + pageHeightPx
+      const pageBottom = pageIndex * stride + usableHeightPx
       if (bottom <= pageBottom + 2) continue
 
       // Блок пересёк низ листа — определяем его узел в документе
