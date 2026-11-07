@@ -520,6 +520,10 @@ export default function ScriptPage() {
           scenes={scenes}
           characters={scriptCharacters}
           timingSystem={currentScript?.timingSystem || 'page'}
+          onIssueClick={(issue) => {
+            const s = scenes.find(x => x.id === issue.sceneId) || scenes.find(x => x.number === issue.sceneNumber)
+            if (s) handleSceneClickRouted(s.id)
+          }}
         />
       )}
 

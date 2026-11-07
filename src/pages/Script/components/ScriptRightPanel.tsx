@@ -28,6 +28,9 @@ interface ValidationIssue {
   suggestion?: string
   autoFixable: boolean
   lineNumber?: number
+  /** К какой сцене перейти по клику */
+  sceneId?: string
+  sceneNumber?: string
 }
 
 interface ScriptRightPanelProps {
@@ -39,6 +42,8 @@ interface ScriptRightPanelProps {
   format: 'russian' | 'hollywood'
   enableAutoFix: boolean
   onApplyFix?: (blockId: string, suggestion: string) => void
+  /** Клик по ошибке → переход к сцене */
+  onIssueClick?: (issue: ValidationIssue) => void
   // Scene & character quality
   scenes: Scene[]
   characters: Character[]
@@ -55,11 +60,14 @@ function useFormatValidation(
   return useMemo(() => {
     const issues: ValidationIssue[] = []
     let lineNumber = 1
+    let lastSceneNum = ''
 
     blocks.forEach((block) => {
       const content = block.content.trim()
 
       if (block.type === 'scene_header') {
+        const numMatch = content.match(/^(\d+(?:-\d+)?)\./)
+        if (numMatch) lastSceneNum = numMatch[1]
         const numberPattern = /^\d+(?:-\d+)?\./
         if (!numberPattern.test(content)) {
           issues.push({
@@ -71,6 +79,7 @@ function useFormatValidation(
             suggestion: `1. ${content}`,
             autoFixable: true,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
 
@@ -90,6 +99,7 @@ function useFormatValidation(
                 : 'Format: NUMBER. INT/EXT. LOCATION — TIME',
             autoFixable: false,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
       }
@@ -104,6 +114,7 @@ function useFormatValidation(
             suggestion: content.toUpperCase(),
             autoFixable: true,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
         if (/\d/.test(content)) {
@@ -114,6 +125,7 @@ function useFormatValidation(
             message: 'Имя персонажа не должно содержать цифры',
             autoFixable: false,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
       }
@@ -128,6 +140,7 @@ function useFormatValidation(
             suggestion: `(${content.replace(/[()]/g, '')})`,
             autoFixable: true,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
         if (/^\(\s*\)$/.test(content)) {
@@ -138,6 +151,7 @@ function useFormatValidation(
             message: 'Ремарка не должна быть пустой',
             autoFixable: false,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
       }
@@ -152,6 +166,7 @@ function useFormatValidation(
             suggestion: `${content}:`,
             autoFixable: true,
             lineNumber,
+            sceneNumber: lastSceneNum,
           })
         }
       }
@@ -174,6 +189,7 @@ function useSceneQualityValidation(scenes: Scene[]): ValidationIssue[] {
       if (!scene.cast || scene.cast.length === 0) {
         issues.push({
           id: `scene-${scene.id}-cast`,
+          sceneId: scene.id,
           severity: 'warning',
           category: 'scene',
           message: `Сцена ${scene.number}: не указаны действующие лица`,
@@ -183,6 +199,7 @@ function useSceneQualityValidation(scenes: Scene[]): ValidationIssue[] {
       if (!scene.location || scene.location.trim() === '') {
         issues.push({
           id: `scene-${scene.id}-loc`,
+          sceneId: scene.id,
           severity: 'warning',
           category: 'scene',
           message: `Сцена ${scene.number}: не указана локация`,
@@ -192,6 +209,7 @@ function useSceneQualityValidation(scenes: Scene[]): ValidationIssue[] {
       if (!scene.time || scene.time.trim() === '') {
         issues.push({
           id: `scene-${scene.id}-time`,
+          sceneId: scene.id,
           severity: 'warning',
           category: 'scene',
           message: `Сцена ${scene.number}: не указано время суток`,
@@ -206,6 +224,7 @@ function useSceneQualityValidation(scenes: Scene[]): ValidationIssue[] {
           if (!dialogSet.has(name.toUpperCase())) {
             issues.push({
               id: `scene-${scene.id}-cast-${name}`,
+              sceneId: scene.id,
               severity: 'info',
               category: 'scene',
               message: `Сцена ${scene.number}: ${name} в cast, но без реплик`,
@@ -266,6 +285,7 @@ function useTimingValidation(
         if (dur === 0) {
           issues.push({
             id: `time-${scene.id}-zero`,
+            sceneId: scene.id,
             severity: 'warning',
             category: 'timing',
             message: `Сцена ${scene.number}: ручной хронометраж = 0`,
@@ -293,6 +313,7 @@ function ScriptRightPanel({
   scenes,
   characters,
   timingSystem,
+  onIssueClick,
 }: ScriptRightPanelProps) {
   const [activeTab, setActiveTab] = useState<'validation' | 'notes' | 'versions'>(
     'validation'
@@ -427,13 +448,17 @@ function ScriptRightPanel({
 
   /* ── Issue row ── */
   function IssueRow({ issue }: { issue: ValidationIssue }) {
+    const clickable = !!(issue.sceneId || issue.sceneNumber) && !!onIssueClick
     return (
       <div
+        onClick={clickable ? () => onIssueClick(issue) : undefined}
         className="flex items-start gap-2 p-2 rounded-lg text-left transition-all"
         style={{
           background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff',
           border: `1px solid ${border}`,
+          cursor: clickable ? 'pointer' : 'default',
         }}
+        title={clickable ? 'Перейти к сцене' : undefined}
       >
         {severityIcon(issue.severity)}
         <div className="flex-1 min-w-0">
