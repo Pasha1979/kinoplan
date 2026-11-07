@@ -583,6 +583,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
     const gapPx = 16 * mmToPx // 16мм — заметный зазор между страницами (Word-style)
+    const stride = pageHeightPx + gapPx
+    const usableHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx // 257мм текстовая зона
 
     // Читаем текущие позиции блоков (до применения отступов)
     const editorRect = editorDom.getBoundingClientRect()
@@ -626,6 +628,20 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
       }
     })
+
+    // Привязка: любой блок, начинающийся в запретной зоне (ниже текстовой
+    // области или в сером зазоре), пододвигаем к верху следующего листа.
+    // Это подхватывает вторые половины разрезанных узлов — даже если
+    // виртуальный счётчик считает их ещё частью прошлой страницы.
+    for (const el of children) {
+      const top = el.getBoundingClientRect().top - editorRect.top
+      const pi = Math.max(0, Math.floor(top / stride))
+      const zoneTop = pi * stride + usableHeightPx // конец текстовой зоны листа
+      const zoneEnd = (pi + 1) * stride // верх следующего листа
+      if (top > zoneTop + 1 && top < zoneEnd - 2) {
+        el.style.setProperty('padding-top', `${zoneEnd - top}px`, 'important')
+      }
+    }
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
     // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
