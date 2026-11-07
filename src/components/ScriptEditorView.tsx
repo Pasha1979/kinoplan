@@ -55,8 +55,8 @@ export function ScriptEditorView({
       const editorDom = editor.view.dom as HTMLElement
       const mmToPx = 96 / 25.4
       const hMm = editorDom.scrollHeight / mmToPx
-      // +36 = 20mm top offset редактора + 16mm зазор, чтобы последний лист покрывал контент до самого низа
-      const count = Math.max(1, Math.ceil((hMm + 36) / 313))
+      // +24 = 20mm top offset редактора + 4mm зазор, чтобы последний лист покрывал контент до самого низа
+      const count = Math.max(1, Math.ceil((hMm + 24) / 301))
       setPageCount(count)
     }
 
@@ -177,12 +177,12 @@ export function ScriptEditorView({
                 className="pointer-events-none"
                 style={{
                   position: 'absolute',
-                  top: `${i * 313}mm`,
+                  top: `${i * 301}mm`,
                   left: 0,
                   width: '210mm',
                   height: '297mm',
                   backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05)',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
                   zIndex: 0,
                 }}
               />

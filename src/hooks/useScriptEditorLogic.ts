@@ -5,7 +5,6 @@ import Placeholder from '@tiptap/extension-placeholder'
 import DragHandle from '@tiptap/extension-drag-handle'
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { DOMSerializer, Node as PMNode } from 'prosemirror-model'
-import { TextSelection } from 'prosemirror-state'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../store/projectStore'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
@@ -15,7 +14,7 @@ import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
-import { A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM } from '../constants/scriptConstants'
+import { A4_HEIGHT_MM } from '../constants/scriptConstants'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
 import { useSceneEditorActions } from './useSceneEditorActions'
@@ -173,8 +172,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Флаг чтобы предотвратить бесконечный цикл при повторном применении
   const isReApplyingRef = useRef(false)
-  // Флаг: идёт принудительное разделение узла по границе страницы (защита от рекурсии)
-  const isSplittingRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   if (pageCounterRef.current == null) {
@@ -565,33 +562,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
-  // Привязка: любой блок, начинающийся в запретной зоне (ниже текстовой
-  // области 257мм или в сером зазоре), пододвигаем к верху следующего листа.
-  // Вынесено отдельно — вызывается при каждом пересчёте И при каждом update,
-  // потому что ProseMirror стирает inline-стили при рендере узлов.
-  const applySnapPass = useCallback(() => {
-    if (!editor || editor.isDestroyed) return
-    const editorDom = editor.view.dom as HTMLElement
-    const children = Array.from(editorDom.children) as HTMLElement[]
-    if (children.length === 0) return
-
-    const mmToPx = 96 / 25.4
-    const stride = (A4_HEIGHT_MM + 16) * mmToPx
-    const usableHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
-    const editorRect = editorDom.getBoundingClientRect()
-
-    for (const el of children) {
-      const top = el.getBoundingClientRect().top - editorRect.top
-      const pi = Math.max(0, Math.floor(top / stride))
-      const zoneTop = pi * stride + usableHeightPx
-      const zoneEnd = (pi + 1) * stride
-      if (top > zoneTop + 1 && top < zoneEnd - 2) {
-        console.log('[snap] push block top:', Math.round(top), '→', Math.round(zoneEnd))
-        el.style.setProperty('padding-top', `${zoneEnd - top}px`, 'important')
-      }
-    }
-  }, [editor])
-
   // Применяем page-start и отступы на основе точных данных из pageCounter
   // Используем pageBreaksRef (вычисленный через виртуальный A4-рендеринг)
   const applyPageBreaks = useCallback(() => {
@@ -602,14 +572,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       child.classList.remove('page-start')
       child.removeAttribute('data-page')
       child.style.removeProperty('margin-bottom')
-      child.style.removeProperty('padding-top')
       child.classList.remove('page-break-margin-200', 'page-break-margin-300', 'page-break-margin-400')
     })
     if (children.length === 0 || pageBreaksRef.current.length === 0) return
 
     const mmToPx = 96 / 25.4
     const pageHeightPx = A4_HEIGHT_MM * mmToPx // 297мм — полная высота листа
-    const gapPx = 16 * mmToPx // 16мм — заметный зазор между страницами (Word-style)
+    const gapPx = 4 * mmToPx // 4мм — зазор между страницами
 
     // Читаем текущие позиции блоков (до применения отступов)
     const editorRect = editorDom.getBoundingClientRect()
@@ -639,22 +608,19 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       startChild.classList.add('page-start')
       startChild.setAttribute('data-page', `Страница ${page}`)
 
-      // Отступ применяем к НОВОМУ блоку (padding-top), а не к предыдущему:
-      // зона зазора принадлежит startChild — текст предыдущего блока не может
-      // "впечататься" в неё при наборе (padding не схлопывается и не стирается ростом)
+      // Предыдущий блок — добавляем margin-bottom
       if (startIndex > 0) {
+        const prevChild = children[startIndex - 1]
         const prevEnd = positions[startIndex - 1].bottom + accumulatedPush
         const targetY = pageBoundaries.get(page) || 0
         const push = targetY - prevEnd
 
         if (push > 0) {
-          startChild.style.setProperty('padding-top', `${push}px`, 'important')
+          prevChild.style.marginBottom = `${push}px !important`
           accumulatedPush += push
         }
       }
     })
-
-    applySnapPass()
 
     // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
     // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
@@ -667,136 +633,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         applyPageBreaks()
         isReApplyingRef.current = false
         pageBreakApplyTimeoutRef.current = null
-      }, 300)
+      }, 1000)
     }
   }, [editor])
-
-  // ── Строгое ограничение границ А4: Node Splitting ──────────────────
-  // Если блок пересекает нижнюю границу листа — режем его tr.split()
-  // ровно по линии границы. Первая часть остаётся на листе, вторая
-  // станет page-start на следующем (её подвинет applyPageBreaks).
-  // Это реальное изменение документа, а не визуальный трюк.
-  const enforcePageBoundaries = useCallback(() => {
-    if (!editor || editor.isDestroyed || isSplittingRef.current) return
-    const editorDom = editor.view.dom as HTMLElement
-    const children = Array.from(editorDom.children) as HTMLElement[]
-    if (children.length === 0) return
-    console.log('[enforce] run, children:', children.length)
-
-    const mmToPx = 96 / 25.4
-    const pageHeightPx = A4_HEIGHT_MM * mmToPx
-    const gapPx = 16 * mmToPx
-    const stride = pageHeightPx + gapPx
-    // Реальная текстовая область листа: 297мм - поля (2см верх + 2см низ) = 257мм.
-    // Блок начинает страницу на 2см ниже верха листа → его низ не должен
-    // пересекать pageTop + 257мм, иначе текст визуально уйдёт в зазор.
-    const usableHeightPx = (A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2) * mmToPx
-    const editorRect = editorDom.getBoundingClientRect()
-
-    const splittableTypes = new Set([
-      'paragraph', 'sceneAction', 'sceneDialog', 'sceneCast',
-      'sceneParenthetical', 'sceneCharacter', 'sceneHeader', 'sceneTransition',
-    ])
-
-    for (let ci = 0; ci < children.length; ci++) {
-      const child = children[ci]
-      const r = child.getBoundingClientRect()
-      const top = r.top - editorRect.top
-      const bottom = r.bottom - editorRect.top
-      const pageIndex = Math.max(0, Math.floor(top / stride))
-      const pageBottom = pageIndex * stride + usableHeightPx
-      if (bottom <= pageBottom + 2) continue
-      console.log('[enforce] overflow block, bottom:', Math.round(bottom), 'pageBottom:', Math.round(pageBottom), 'page:', pageIndex)
-
-      // Блок пересёк низ листа — определяем его узел в документе.
-      // Блоки верхнего уровня лежат на глубине 1: $p.node(1).
-      // $p.nodeAfter/parent могут дать текстовый узел — проверяем оба пути.
-      let nodeStart = -1
-      try {
-        nodeStart = editor.view.posAtDOM(child, 0)
-      } catch {
-        continue
-      }
-      if (nodeStart < 0) continue
-      let node = null as any
-      let blockStart = nodeStart
-      try {
-        const $p = editor.state.doc.resolve(nodeStart)
-        if ($p.depth > 0) {
-          node = $p.node(1)
-          blockStart = $p.before(1)
-        } else {
-          node = $p.nodeAfter
-        }
-      } catch {
-        continue
-      }
-      if (!node || !splittableTypes.has(node.type.name)) {
-        console.log('[enforce] not splittable:', node?.type?.name)
-        continue
-      }
-
-      // Находим позицию в документе, соответствующую линии границы листа.
-      // X берём по центру блока — у края может быть пустое поле без текста,
-      // тогда posAtCoords возвращает начало узла вместо точки разрыва.
-      const boundaryClientY = editorRect.top + pageBottom - 4
-      let hit = editor.view.posAtCoords({ left: r.left + r.width / 2, top: boundaryClientY })
-      if (!hit || hit.pos <= blockStart + 1) {
-        hit = editor.view.posAtCoords({ left: r.left + r.width * 0.7, top: boundaryClientY })
-      }
-      if (!hit || hit.pos <= blockStart + 1) {
-        hit = editor.view.posAtCoords({ left: r.left + r.width * 0.3, top: boundaryClientY })
-      }
-      if (!hit) {
-        console.log('[enforce] posAtCoords null')
-        continue
-      }
-      const nodeEnd = blockStart + node.nodeSize
-      if (hit.pos <= blockStart + 1 || hit.pos >= nodeEnd - 1) {
-        console.log('[enforce] hit.pos out of node:', hit.pos, 'node:', blockStart, '-', nodeEnd)
-        continue
-      }
-
-      // Node Splitting: блоки имеют defining:true — обычный tr.split
-      // молча не работает. Режем вручную: удаляем хвост текста из первого
-      // узла и вставляем его новым узлом того же типа сразу после.
-      isSplittingRef.current = true
-      try {
-        const state = editor.state
-        const selFrom = state.selection.from
-        const tail = state.doc.slice(hit.pos, nodeEnd - 1).content
-        const tr = state.tr
-        tr.delete(hit.pos, nodeEnd - 1)
-        // После удаления первый узел заканчивается на hit.pos,
-        // позиция сразу за ним = hit.pos + 1
-        tr.insert(hit.pos + 1, node.type.create(node.attrs, tail))
-        const mapped = Math.min(tr.mapping.map(selFrom), tr.doc.content.size)
-        tr.setSelection(TextSelection.near(tr.doc.resolve(mapped), -1))
-        editor.view.dispatch(tr)
-        console.log('[enforce] SPLIT at', hit.pos)
-
-        // Мгновенно подвигаем вторую половину на начало следующего листа —
-        // не ждём пересчёта виртуального счётчика (~150мс "зависание" в зазоре)
-        const targetY = (pageIndex + 1) * stride
-        setTimeout(() => {
-          const nextEl = editorDom.children[ci + 1] as HTMLElement | undefined
-          if (nextEl) {
-            const rect = nextEl.getBoundingClientRect()
-            const push = targetY - (rect.top - editorDom.getBoundingClientRect().top)
-            if (push > 0) nextEl.style.setProperty('padding-top', `${push}px`, 'important')
-          }
-        }, 0)
-      } catch (err) {
-        console.error('[enforce] split error', err)
-      } finally {
-        setTimeout(() => { isSplittingRef.current = false }, 0)
-      }
-      break // один сплит за проход — следующий onUpdate доведёт остаток
-    }
-
-    // После проверки переполнений — восстановить сдвиги (PM мог стереть стили)
-    applySnapPass()
-  }, [editor, applySnapPass])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
   // eslint-disable-next-line react-hooks/refs
@@ -1118,10 +957,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     pageCountTimeoutRef.current = setTimeout(() => {
       calculateAndReportStats(editorInstance)
       pageCountTimeoutRef.current = null
-    }, 150)
-
-    // Строгие границы А4: режем узел, пересекающий низ листа (Node Splitting)
-    enforcePageBoundaries()
+    }, 400)
 
     // Отключаем автоформатирование при active multi-selection
     if (isMultiSelectingRef.current) {
@@ -1435,9 +1271,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     pageBreaksRef.current = result.breaks
     applyPageBreaks()
-    // И на загруженном/вставленном контенте тоже режем переполненные блоки —
-    // не только на update при печати
-    enforcePageBoundaries()
   }, [])
 
   // Загружаем контент только при создании редактора / смене скрипта
