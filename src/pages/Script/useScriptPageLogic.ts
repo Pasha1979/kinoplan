@@ -238,8 +238,11 @@ export function useScriptPageLogic() {
     const [movedScene] = reordered.splice(fromIndex, 1)
     reordered.splice(toIndex, 0, movedScene)
 
-    // Перенумеровываем (номер серии берём из текущего Script'а)
-    const seriesPrefix = currentScript?.episodeNumber
+    // Перенумеровываем (номер серии берём из Script'а,
+    // а если его нет — из формата самих номеров «1-2», «1-3» → префикс «1»)
+    const seriesPrefix =
+      currentScript?.episodeNumber ??
+      reordered.find((s) => /^\d+-/.test(s.number))?.number.match(/^(\d+)-/)?.[1]
     const renumberedScenes = reordered.map((scene, index) => ({
       ...scene,
       number: seriesPrefix ? `${seriesPrefix}-${index + 1}` : (index + 1).toString(),
