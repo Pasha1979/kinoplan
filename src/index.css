@@ -489,19 +489,19 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 11px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #64748b;
   letter-spacing: 0.1em;
 
-  border-top: 2px dashed #cbd5e1;
+  border-top: 2px dashed #94a3b8;
   padding-top: 4px;
   pointer-events: none;
   z-index: 5;
 }
 
-/* Для темной темы */
+/* Для темной темы — белый маркер */
 :root.dark .tiptap-editor [data-page-break]::before {
-  border-top-color: #475569;
-  color: #64748b;
+  border-top-color: #e2e8f0;
+  color: #e2e8f0;
 }
 
 @media print {
