@@ -160,10 +160,12 @@ export default function ScriptPage() {
     writtenBy: '',
     basedOn: '',
     director: '',
+    company: '',
     email: '',
     phone: '',
+    address: '',
     draftNumber: '1',
-    date: new Date().toLocaleDateString('ru-RU'),
+    date: new Date().toISOString().split('T')[0],
   }), [project?.name, currentScript?.title])
 
   const handleTitlePageChange = useCallback((titlePage: TitlePage) => {

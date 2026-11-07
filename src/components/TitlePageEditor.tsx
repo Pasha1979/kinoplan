@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Calendar, User, Mail, Phone, FileText, Tag } from 'lucide-react'
+import { Eye, EyeOff, Calendar, User, Mail, Phone, FileText, Tag, MapPin, Building2 } from 'lucide-react'
 
 import type { TitlePage } from '../store/scriptStore'
 
@@ -11,6 +11,7 @@ interface TitlePageEditorProps {
 
 export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEditorProps) {
   const [showPreview, setShowPreview] = useState(true)
+  const [previewFormat, setPreviewFormat] = useState<'russian' | 'hollywood'>('russian')
 
   const bg = isDark ? '#0f0f20' : '#f5f5f5'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -98,6 +99,21 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
             />
           </div>
 
+          {/* Кинокомпания */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium mb-1.5" style={{ color: textSecondary }}>
+              <Building2 size={12} />
+              Кинокомпания (опционально)
+            </label>
+            <input
+              type="text"
+              value={data.company}
+              onChange={(e) => handleChange('company', e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
+              placeholder="Название компании"
+            />
+          </div>
+
           {/* Контакты */}
           <div className="pt-2 border-t" style={{ borderColor: border }}>
             <label className="text-xs font-medium mb-3 block" style={{ color: textSecondary }}>
@@ -126,6 +142,17 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
                   placeholder="+7 (999) 123-45-67"
                 />
               </div>
+
+              <div className="flex items-center gap-2">
+                <MapPin size={14} style={{ color: textSecondary }} />
+                <input
+                  type="text"
+                  value={data.address}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
+                  placeholder="г. Москва, ул. Примерная, 1"
+                />
+              </div>
             </div>
           </div>
 
@@ -150,7 +177,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
                 Дата
               </label>
               <input
-                type="text"
+                type="date"
                 value={data.date}
                 onChange={(e) => handleChange('date', e.target.value)}
                 className={`w-full px-3 py-2 rounded-lg text-sm outline-none transition-all border ${isDark ? 'bg-white/5 border-white/10 hover:border-indigo-400 focus:border-indigo-400' : 'bg-gray-100 border-gray-300 hover:border-indigo-400 focus:border-indigo-400'} ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -168,6 +195,22 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
           <span className="text-sm font-medium" style={{ color: textPrimary }}>
             Предпросмотр
           </span>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: border }}>
+              {(['russian', 'hollywood'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setPreviewFormat(f)}
+                  className="px-2.5 py-1.5 text-[11px] font-medium transition-all"
+                  style={{
+                    background: previewFormat === f ? 'rgba(99,102,241,0.15)' : 'transparent',
+                    color: previewFormat === f ? '#818cf8' : textSecondary,
+                  }}
+                >
+                  {f === 'russian' ? 'Русский' : 'Hollywood'}
+                </button>
+              ))}
+            </div>
           <button
             onClick={() => setShowPreview(!showPreview)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -179,6 +222,7 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
             {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
             {showPreview ? 'Скрыть' : 'Показать'}
           </button>
+          </div>
         </div>
 
         {/* Область предпросмотра */}
@@ -195,7 +239,8 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
                   : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
               }}
             >
-              {/* Титульная страница - российский формат */}
+              {previewFormat === 'russian' ? (
+              /* Титульная страница - российский формат */
               <div className="flex flex-col min-h-full">
                 {/* Верхняя часть - пустое пространство */}
                 <div className="flex-1" />
@@ -227,13 +272,17 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
                   )}
                 </div>
                 
-                {/* Низ - контакты и дата */}
+                {/* Низ - кинокомпания, контакты и дата */}
                 <div className="flex-1 flex flex-col justify-end">
-                  {(data.email || data.phone) && (
+                  {data.company && (
+                    <p className="text-center text-sm mb-3">{data.company}</p>
+                  )}
+                  {(data.email || data.phone || data.address) && (
                     <div className="text-center mb-4">
                       <p className="text-xs mb-1">контакты:</p>
                       {data.email && <p className="text-sm">{data.email}</p>}
                       {data.phone && <p className="text-sm">{data.phone}</p>}
+                      {data.address && <p className="text-sm">{data.address}</p>}
                     </div>
                   )}
                   
@@ -244,6 +293,48 @@ export default function TitlePageEditor({ isDark, data, onChange }: TitlePageEdi
                   </div>
                 </div>
               </div>
+              ) : (
+              /* Титульная страница - голливудский формат */
+              <div className="flex flex-col min-h-full">
+                <div className="flex-1" />
+                <div className="flex-1" />
+
+                {/* Центр - название и автор */}
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold uppercase tracking-wide underline mb-8">
+                    {data.title || 'НАЗВАНИЕ ФИЛЬМА'}
+                  </h1>
+
+                  {data.basedOn && (
+                    <p className="text-sm mb-6">
+                      based on «{data.basedOn}»
+                    </p>
+                  )}
+
+                  <p className="text-sm mb-2">written by</p>
+                  <p className="text-lg font-bold">
+                    {data.writtenBy || 'АВТОР'}
+                  </p>
+                </div>
+
+                <div className="flex-1" />
+
+                {/* Низ - слева контакты, справа кинокомпания */}
+                <div className="flex items-end justify-between">
+                  <div className="text-left text-sm space-y-0.5">
+                    {data.address && <p>{data.address}</p>}
+                    {data.phone && <p>{data.phone}</p>}
+                    {data.email && <p>{data.email}</p>}
+                  </div>
+                  <div className="text-right text-sm space-y-0.5">
+                    {data.company && <p>{data.company}</p>}
+                    <p className="text-xs">
+                      Draft {data.draftNumber} · {data.date}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              )}
             </div>
           </div>
         )}

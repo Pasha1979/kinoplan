@@ -39,8 +39,10 @@ export interface TitlePage {
   writtenBy: string
   basedOn: string
   director: string
+  company: string
   email: string
   phone: string
+  address: string
   draftNumber: string
   date: string
 }
