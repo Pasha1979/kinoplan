@@ -633,12 +633,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // области или в сером зазоре), пододвигаем к верху следующего листа.
     // Это подхватывает вторые половины разрезанных узлов — даже если
     // виртуальный счётчик считает их ещё частью прошлой страницы.
+    console.log('[snap] run, breaks:', pageBreaksRef.current.length)
     for (const el of children) {
       const top = el.getBoundingClientRect().top - editorRect.top
       const pi = Math.max(0, Math.floor(top / stride))
       const zoneTop = pi * stride + usableHeightPx // конец текстовой зоны листа
       const zoneEnd = (pi + 1) * stride // верх следующего листа
       if (top > zoneTop + 1 && top < zoneEnd - 2) {
+        console.log('[snap] push block top:', Math.round(top), '→', Math.round(zoneEnd))
         el.style.setProperty('padding-top', `${zoneEnd - top}px`, 'important')
       }
     }
