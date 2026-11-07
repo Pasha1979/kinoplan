@@ -678,7 +678,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       if (bottom <= pageBottom + 2) continue
       console.log('[enforce] overflow block, bottom:', Math.round(bottom), 'pageBottom:', Math.round(pageBottom), 'page:', pageIndex)
 
-      // Блок пересёк низ листа — определяем его узел в документе
+      // Блок пересёк низ листа — определяем его узел в документе.
+      // Блоки верхнего уровня лежат на глубине 1: $p.node(1).
+      // $p.nodeAfter/parent могут дать текстовый узел — проверяем оба пути.
       let nodeStart = -1
       try {
         nodeStart = editor.view.posAtDOM(child, 0)
@@ -687,9 +689,15 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
       if (nodeStart < 0) continue
       let node = null as any
+      let blockStart = nodeStart
       try {
         const $p = editor.state.doc.resolve(nodeStart)
-        node = $p.nodeAfter ?? $p.parent
+        if ($p.depth > 0) {
+          node = $p.node(1)
+          blockStart = $p.before(1)
+        } else {
+          node = $p.nodeAfter
+        }
       } catch {
         continue
       }
@@ -705,9 +713,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         console.log('[enforce] posAtCoords null')
         continue
       }
-      const nodeEnd = nodeStart + node.nodeSize
-      if (hit.pos <= nodeStart + 1 || hit.pos >= nodeEnd - 1) {
-        console.log('[enforce] hit.pos out of node:', hit.pos, 'node:', nodeStart, '-', nodeEnd)
+      const nodeEnd = blockStart + node.nodeSize
+      if (hit.pos <= blockStart + 1 || hit.pos >= nodeEnd - 1) {
+        console.log('[enforce] hit.pos out of node:', hit.pos, 'node:', blockStart, '-', nodeEnd)
         continue
       }
 
