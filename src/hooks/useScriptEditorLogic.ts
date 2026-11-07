@@ -706,9 +706,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         continue
       }
 
-      // Находим позицию в документе, соответствующую линии границы листа
+      // Находим позицию в документе, соответствующую линии границы листа.
+      // X берём по центру блока — у края может быть пустое поле без текста,
+      // тогда posAtCoords возвращает начало узла вместо точки разрыва.
       const boundaryClientY = editorRect.top + pageBottom - 4
-      const hit = editor.view.posAtCoords({ left: r.left + 6, top: boundaryClientY })
+      let hit = editor.view.posAtCoords({ left: r.left + r.width / 2, top: boundaryClientY })
+      if (!hit || hit.pos <= blockStart + 1) {
+        hit = editor.view.posAtCoords({ left: r.left + r.width * 0.7, top: boundaryClientY })
+      }
+      if (!hit || hit.pos <= blockStart + 1) {
+        hit = editor.view.posAtCoords({ left: r.left + r.width * 0.3, top: boundaryClientY })
+      }
       if (!hit) {
         console.log('[enforce] posAtCoords null')
         continue
