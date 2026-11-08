@@ -492,7 +492,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                     <div className="h-full rounded-full" style={{ width: `${(ch.scenes / Math.max(1, stats.characters[0]?.scenes || 1)) * 100}%`, background: '#a78bfa' }} />
                   </div>
-                  <span className="w-12 text-right text-[10px]" style={{ color: textPrimary }}>{ch.scenes} / {ch.dialogScenes}р</span>
+                  <span className="w-24 text-right text-[10px] whitespace-nowrap" style={{ color: textPrimary }}>{ch.scenes}с · {ch.dialogScenes}р · {fmtDuration(ch.durationSec)}</span>
                 </div>
               ))}
             </div>
@@ -523,7 +523,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                       <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                         <div className="h-full rounded-full" style={{ width: `${(l.count / maxLoc) * 100}%`, background: '#60a5fa' }} />
                       </div>
-                      <span className="w-8 text-right text-[11px] font-medium" style={{ color: textPrimary }}>{l.count}</span>
+                      <span className="w-20 text-right text-[11px] font-medium whitespace-nowrap" style={{ color: textPrimary }}>{l.count} · {fmtDuration(l.durationSec)}</span>
                     </div>
                     {expanded && l.sublocations.map((s) => (
                       <div key={s.name} className="flex items-center gap-2 mt-1 ml-7">
@@ -531,7 +531,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                         <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                           <div className="h-full rounded-full" style={{ width: `${(s.count / maxLoc) * 100}%`, background: '#93c5fd' }} />
                         </div>
-                        <span className="w-8 text-right text-[10px]" style={{ color: textSecondary }}>{s.count}</span>
+                        <span className="w-20 text-right text-[10px] whitespace-nowrap" style={{ color: textSecondary }}>{s.count} · {fmtDuration(s.durationSec ?? 0)}</span>
                       </div>
                     ))}
                   </div>

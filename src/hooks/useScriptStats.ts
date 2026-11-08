@@ -13,6 +13,8 @@ export interface CharacterStat {
   name: string
   scenes: number
   dialogScenes: number
+  /** суммарный хронометраж сцен, где персонаж в cast */
+  durationSec: number
   /** id первой сцены где появляется — для перехода */
   firstSceneId?: string
 }
@@ -27,11 +29,15 @@ export interface SceneTimingStat {
 export interface NamedCount {
   name: string
   count: number
+  /** суммарный хронометраж сцен (где считается) */
+  durationSec?: number
 }
 
 export interface LocationGroup {
   name: string
   count: number
+  /** суммарный хронометраж сцен в этой локации */
+  durationSec: number
   sublocations: NamedCount[]
 }
 
@@ -120,22 +126,24 @@ export function useScriptStats(
       : 0
 
     // Персонажи — активность по сценам
-    const charMap = new Map<string, { scenes: number; dialogScenes: number; firstSceneId?: string }>()
+    const charMap = new Map<string, { scenes: number; dialogScenes: number; durationSec: number; firstSceneId?: string }>()
     scenes.forEach((sc) => {
+      const dur = sc.manualDuration ?? sc.duration ?? 0
       const seen = new Set<string>()
       ;(sc.cast || []).forEach((name) => {
         const key = name.toUpperCase().trim()
         if (!key || seen.has(key)) return
         seen.add(key)
-        const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0 }
+        const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0, durationSec: 0 }
         entry.scenes++
+        entry.durationSec += dur
         if (!entry.firstSceneId) entry.firstSceneId = sc.id
         charMap.set(key, entry)
       })
       ;(sc.dialogCharacters || []).forEach((name) => {
         const key = name.toUpperCase().trim()
         if (!key) return
-        const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0 }
+        const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0, durationSec: 0 }
         entry.dialogScenes++
         charMap.set(key, entry)
       })
@@ -146,21 +154,29 @@ export function useScriptStats(
     const speakingCharacters = characters.filter((c) => c.dialogScenes > 0).length
 
     // Локации — иерархия: основная → подлокации
-    const locMap = new Map<string, { count: number; sub: Map<string, number> }>()
+    const locMap = new Map<string, { count: number; durationSec: number; sub: Map<string, { count: number; durationSec: number }> }>()
     scenes.forEach((sc) => {
+      const dur = sc.manualDuration ?? sc.duration ?? 0
       const l = (sc.location || '').trim() || 'БЕЗ ЛОКАЦИИ'
-      const entry = locMap.get(l) || { count: 0, sub: new Map() }
+      const entry = locMap.get(l) || { count: 0, durationSec: 0, sub: new Map() }
       entry.count++
+      entry.durationSec += dur
       const sub = (sc.sublocation || '').trim()
-      if (sub) entry.sub.set(sub, (entry.sub.get(sub) || 0) + 1)
+      if (sub) {
+        const se = entry.sub.get(sub) || { count: 0, durationSec: 0 }
+        se.count++
+        se.durationSec += dur
+        entry.sub.set(sub, se)
+      }
       locMap.set(l, entry)
     })
     const locations: LocationGroup[] = [...locMap.entries()]
       .map(([name, v]) => ({
         name,
         count: v.count,
+        durationSec: v.durationSec,
         sublocations: [...v.sub.entries()]
-          .map(([n, c]) => ({ name: n, count: c }))
+          .map(([n, c]) => ({ name: n, count: c.count, durationSec: c.durationSec }))
           .sort((a, b) => b.count - a.count),
       }))
       .sort((a, b) => b.count - a.count)
