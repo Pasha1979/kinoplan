@@ -219,6 +219,27 @@ export default function ScriptPage() {
 
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
 
+  // Блоки всех серий — парсим из сохранённого HTML каждого скрипта (data-type у блоков).
+  // Нужно статистике: темп и диалог/действие считаются по блокам, а у каждой серии свой документ
+  const allBlocks = useMemo(() => {
+    const out: Array<{ type: string; content: string }> = []
+    const TYPE_MAP: Record<string, string> = {
+      sceneHeader: 'scene_header', sceneDialog: 'dialog', sceneAction: 'action',
+      scene_header: 'scene_header', dialog: 'dialog', action: 'action',
+    }
+    for (const ep of episodeScripts) {
+      if (!ep.content) continue
+      try {
+        const doc = new DOMParser().parseFromString(ep.content, 'text/html')
+        doc.body.querySelectorAll('[data-type]').forEach((el) => {
+          const t = el.getAttribute('data-type') || ''
+          out.push({ type: TYPE_MAP[t] ?? t, content: el.textContent || '' })
+        })
+      } catch { /* битый контент скрипта — пропускаем */ }
+    }
+    return out
+  }, [episodeScripts])
+
   // SmartType: подсказки по всем сериям проекта — персонаж/локация из С1
   // должна подсказываться и в С2 (иначе в каждой серии словарь пустой)
   const smartTypeCharacters = useMemo(() => {
@@ -349,7 +370,7 @@ export default function ScriptPage() {
           <StatisticsView
             isDark={isDark}
             scenes={allScenes}
-            blocks={blocks}
+            blocks={allBlocks}
             precisePages={scriptStats?.pages || 0}
             onSceneClick={handleSceneClickRouted}
             isSerial={project?.type === 'serial'}
