@@ -197,9 +197,10 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
           </button>
         </div>
 
-        {/* Редактор — только эта сцена, вид «лист А4» по центру */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 flex items-center justify-center" style={{ background: isDark ? '#151528' : '#e8e8ec' }}>
-          <div
+        {/* Редактор — только эта сцена, вид «лист А4»; длинный лист скроллится целиком */}
+        <div className="flex-1 overflow-y-auto px-6 py-5" style={{ background: isDark ? '#151528' : '#e8e8ec' }}>
+          <div className="min-h-full flex items-center justify-center">
+            <div
             className="mx-auto"
             style={{
               maxWidth: 620,
@@ -214,6 +215,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
             }}
           >
             <EditorContent editor={editor} className="tiptap-editor format-russian h-full outline-none" />
+            </div>
           </div>
         </div>
 
