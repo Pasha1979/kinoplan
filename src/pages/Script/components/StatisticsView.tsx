@@ -411,12 +411,12 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           <LayoutBox k="m-chars"><MetricCard icon={<Users size={16} />} label="Персонажей" value={stats.totalCharacters} sub={`${stats.speakingCharacters} с репликами`} /></LayoutBox>
           {isSerial && (
             <LayoutBox k="m-series">
-              <div className="rounded-xl p-5 transition-all"
+              <div className="rounded-xl p-5 transition-all h-full flex flex-col"
                 style={{ background: cardBg, border: `1px solid ${border}` }}
                 onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
                 <div className="flex items-center gap-2 mb-1.5" style={{ color: '#fb923c' }}><Film size={16} /></div>
                 <div className="text-[11px]" style={{ color: textSecondary }}>Готовность серий</div>
-                <div className="space-y-1 mt-2 max-h-16 overflow-y-auto pr-1">
+                <div className="space-y-1 mt-2 flex-1 overflow-y-auto pr-1">
                   {seriesReadiness.map((r) => (
                     <div key={r.n} className="flex items-center gap-1.5" title={`Серия ${r.n}: ${fmtDuration(r.sec)}${episodeDuration ? ` из ${fmtDuration(episodeDuration * 60)}` : ' написано'}`}>
                       <span className="w-5 text-[10px] shrink-0" style={{ color: textSecondary }}>С{r.n}</span>
