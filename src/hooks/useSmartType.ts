@@ -25,6 +25,8 @@ export interface SmartTypeSuggestion {
   id: string
   text: string
   type: 'character' | 'location' | 'prop' | 'time' | 'scene_prefix'
+  /** если задан — вставляется этот текст вместо text (напр. только подлокация) */
+  insertText?: string
   frequency: number // сколько раз уже использовалось
 }
 
@@ -174,10 +176,18 @@ export function useSmartType(options: UseSmartTypeOptions) {
 
     // Фильтруем по совпадению
     const filtered = relevantSuggestions
-      .filter(s => 
-        s.text.toLowerCase().startsWith(currentWord.toLowerCase()) &&
-        s.text.toLowerCase() !== currentWord.toLowerCase()
-      )
+      .filter(s => {
+        const sug = s.text.toLowerCase()
+        const word = currentWord.toLowerCase()
+        if (sug.startsWith(word) && sug !== word) return true
+        // Подлокации: «ДОМ ДЕДА.С» → сравниваем последний сегмент после точки
+        if (s.type === 'location' && word.includes('.')) {
+          const wSeg = word.split('.').pop()!
+          const sSeg = sug.split('.').pop()!
+          return wSeg.length > 0 && sSeg.startsWith(wSeg) && sSeg !== wSeg
+        }
+        return false
+      })
       .sort((a, b) => b.frequency - a.frequency)
       .slice(0, maxSuggestions)
 
@@ -208,6 +218,13 @@ export function useSmartType(options: UseSmartTypeOptions) {
     setSuggestions([])
     
     return { newText, newCursorPos }
+  }, [])
+
+  // Открыть попап программно (напр. подлокации после выбора локации)
+  const openSuggestions = useCallback((list: SmartTypeSuggestion[]) => {
+    setSuggestions(list)
+    setIsOpen(list.length > 0)
+    setActiveIndex(0)
   }, [])
 
   // Навигация по подсказкам
@@ -242,6 +259,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     cursorPosition,
     updateSuggestions,
     selectSuggestion,
+    openSuggestions,
     navigateSuggestions,
     closeSuggestions,
     updateLists,

@@ -237,8 +237,9 @@ export default function ScriptPage() {
     episodeScripts.forEach((ep) => ep.scenes?.forEach((sc) => {
       const loc = (sc.location || '').trim()
       if (!loc) return
+      set.add(loc) // базовая локация — всегда, чтобы предлагать подлокации
       const sub = (sc.sublocation || '').trim()
-      set.add(sub ? `${loc}.${sub}` : loc)
+      if (sub) set.add(`${loc}.${sub}`)
     }))
     return [...set]
   }, [episodeScripts])

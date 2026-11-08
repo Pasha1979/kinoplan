@@ -673,13 +673,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         const match = beforeCursor.match(/[^\s]*$/)
         const currentWord = match ? match[0] : ''
         
-        if (currentWord) {
-          const wordStartPos = selection.from - currentWord.length
+        if (currentWord || suggestion.insertText) {
+          // Подлокация: удаляем только последний сегмент после точки
+          const isDotted = suggestion.type === 'location' && currentWord.includes('.')
+          const delLen = currentWord ? (isDotted ? currentWord.split('.').pop()!.length : currentWord.length) : 0
+          const wordStartPos = selection.from - delLen
           const wordEndPos = selection.from
           
-          const textToInsert = suggestion.type === 'time' 
-            ? suggestion.text + '.' 
-            : suggestion.text
+          const textToInsert = suggestion.insertText
+            ?? (isDotted
+              ? suggestion.text.split('.').pop()!
+              : suggestion.type === 'time' ? suggestion.text + '.' : suggestion.text)
           
           const wasCharacterBlock = currentNode?.type.name === 'sceneCharacter'
 
@@ -692,6 +696,26 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
           st.recordUsage(suggestion)
           st.closeSuggestions()
+
+          // Подлокации: если у выбранной локации есть подобъекты — ставим точку
+          // и сразу открываем подсказки второго уровня
+          if (suggestion.type === 'location' && smartTypeLocations?.length) {
+            const subs = smartTypeLocations.filter(
+              (l) => l.startsWith(suggestion.text + '.'),
+            )
+            if (subs.length) {
+              editor.chain().insertContent('.').run()
+              st.openSuggestions(
+                subs.map((l) => ({
+                  id: `sub-${l}`,
+                  text: l,
+                  insertText: l.slice(suggestion.text.length + 1),
+                  type: 'location' as const,
+                  frequency: 0,
+                })),
+              )
+            }
+          }
 
           // Приняли имя персонажа → курсор сразу в блок реплики
           if (wasCharacterBlock) {
