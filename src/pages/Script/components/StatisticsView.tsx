@@ -76,8 +76,20 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
     </div>
   )
 
+  // Фирменная подсветка при наведении
+  const cardHoverStyle = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.borderColor = 'rgba(249,115,22,0.5)'
+    e.currentTarget.style.boxShadow = '0 0 0 1px rgba(249,115,22,0.2), 0 4px 16px rgba(249,115,22,0.08)'
+  }
+  const cardLeaveStyle = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.borderColor = border
+    e.currentTarget.style.boxShadow = 'none'
+  }
+
   const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
-    <div className="rounded-xl p-4" style={{ background: cardBg, border: `1px solid ${border}` }}>
+    <div className="rounded-xl p-5 transition-all"
+      style={{ background: cardBg, border: `1px solid ${border}` }}
+      onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
       <div className="flex items-center gap-2 mb-3">
         <div style={{ color: textSecondary }}>{icon}</div>
         <span className="text-xs font-semibold" style={{ color: textPrimary }}>{title}</span>
@@ -87,8 +99,10 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
   )
 
   const MetricCard = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) => (
-    <div className="rounded-xl p-4" style={{ background: cardBg, border: `1px solid ${border}` }}>
-      <div className="flex items-center gap-2 mb-1.5" style={{ color: '#818cf8' }}>{icon}</div>
+    <div className="rounded-xl p-5 transition-all"
+      style={{ background: cardBg, border: `1px solid ${border}` }}
+      onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
+      <div className="flex items-center gap-2 mb-1.5" style={{ color: '#fb923c' }}>{icon}</div>
       <div className="text-xl font-bold" style={{ color: textPrimary }}>{value}</div>
       <div className="text-[11px]" style={{ color: textSecondary }}>{label}</div>
       {sub && <div className="text-[10px] mt-0.5" style={{ color: textSecondary }}>{sub}</div>}
@@ -132,11 +146,11 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
-      <div className="w-full space-y-4">
+      <div className="w-full space-y-6">
         <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
 
         {/* Карточки метрик */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           <MetricCard icon={<Film size={16} />} label="Сцен" value={stats.totalScenes} sub={`${stats.locations.length} локаций`} />
           <MetricCard icon={<FileText size={16} />} label="Страниц" value={stats.totalPages.toFixed(1)} sub={`${stats.totalWords.toLocaleString('ru-RU')} слов`} />
           <MetricCard icon={<Clock size={16} />} label="Хронометраж" value={fmtDuration(stats.totalDurationSec)} sub={`~${fmtDuration(stats.avgDurationSec)} на сцену`} />
@@ -144,7 +158,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
         </div>
 
         {/* Распределения */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <Section title="ИНТ / ЭКСТ" icon={<Film size={14} />}>
             <div className="flex items-center gap-4">
               <Donut parts={intExtParts} total={intExtTotal} />
@@ -188,7 +202,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
         </div>
 
         {/* Хронометраж по сценам + топ персонажей + локации */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.sceneTimings.map((s) => (
