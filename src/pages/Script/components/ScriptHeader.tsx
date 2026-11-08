@@ -117,8 +117,8 @@ function ScriptHeader({
               </div>
             </>
           ) : (
-            <p className="text-sm" style={{ color: textSecondary }}>
-              Нет сцен — начните писать
+            <p className="text-sm font-bold" style={{ color: textPrimary }}>
+              {currentScript?.title || 'Сценарий'}
             </p>
           )}
         </div>

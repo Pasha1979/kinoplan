@@ -235,7 +235,7 @@ export default function ScriptPage() {
         {!focusMode.isFocused && <ScriptHeader
           isDark={isDark}
           colors={headerColors}
-          selectedScene={selectedScene}
+          selectedScene={activeTab === 'text' ? selectedScene : undefined}
           currentScript={currentScript}
           isSaving={isSaving}
           enableAutoFix={enableAutoFix}
