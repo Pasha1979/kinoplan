@@ -26,8 +26,8 @@ type LayoutEntry = { dx: number; dy: number; w?: number; h?: number }
 // Раскладка пользователя из режима «Расстановка» (экспортированный JSON)
 const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   's-timings': { dx: 8, dy: 119.2, w: 352.8, h: 228 },
-  's-chars': { dx: -6.4, dy: 116, w: 368.6, h: 231.6 },
-  's-locs': { dx: -10.4, dy: 109.6, w: 355.6, h: 234.6 },
+  's-chars': { dx: -8, dy: 118.4, w: 368.6, h: 231.6 },
+  's-locs': { dx: -4.8, dy: 116.8, w: 355.6, h: 234.6 },
   's-intext': { dx: 6.4, dy: 55.2, w: 351.4, h: 124 },
   's-tod': { dx: -8.8, dy: 54.4 },
   's-dialog': { dx: -12, dy: 53.6 },
