@@ -49,34 +49,46 @@ const isHeader = (el: Element) => {
   return t === 'scene-header' || t === 'sceneHeader'
 }
 
-// Ищет блоки сцены по НОМЕРУ в тексте шапки — надёжнее индекса
+// Ищет элементы-границы сцены по НОМЕРУ в тексте шапки
 // (порядок в массиве scenes может расходиться с документом)
-function findSceneRange(blocks: Element[], sceneNumber: string, fallbackIndex: number): { start: number; end: number } {
-  const headers = blocks
-    .map((el, i) => ({ el, i }))
-    .filter(({ el }) => isHeader(el))
+function findSceneEls(blocks: Element[], sceneNumber: string, fallbackIndex: number): { startEl: Element | null; endEl: Element | null } {
+  const headers = blocks.filter((el) => isHeader(el))
   const num = sceneNumber.replace(/\./g, '').toLowerCase()
-  let start = -1
-  for (const { el, i } of headers) {
+  let startEl: Element | null = null
+  for (const el of headers) {
     const headNum = (el.textContent || '').trim().split(/\s/)[0]?.replace(/\./g, '').toLowerCase()
-    if (headNum === num) { start = i; break }
+    if (headNum === num) { startEl = el; break }
   }
-  if (start < 0 && headers[fallbackIndex]) start = headers[fallbackIndex].i
-  if (start < 0) return { start: -1, end: -1 }
-  let end = blocks.length
-  for (let i = start + 1; i < blocks.length; i++) {
-    if (isHeader(blocks[i])) { end = i; break }
+  if (!startEl && headers[fallbackIndex]) startEl = headers[fallbackIndex]
+  if (!startEl) return { startEl: null, endEl: null }
+  let endEl: Element | null = null
+  const startIdx = blocks.indexOf(startEl)
+  for (let i = startIdx + 1; i < blocks.length; i++) {
+    if (isHeader(blocks[i])) { endEl = blocks[i]; break }
   }
-  return { start, end }
+  return { startEl, endEl }
+}
+
+// DOM-узлы сцены: все соседи от шапки до следующей шапки (включая <p> без data-type)
+function sceneNodes(startEl: Element, endEl: Element | null): Node[] {
+  const nodes: Node[] = []
+  let cur: Node | null = startEl
+  while (cur && cur !== endEl) {
+    nodes.push(cur)
+    cur = cur.nextSibling
+  }
+  return nodes
 }
 
 // Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей
 function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
-  const { start, end } = findSceneRange(blocks, sceneNumber, fallbackIndex)
-  if (start < 0) return ''
-  return blocks.slice(start, end).map((el) => el.outerHTML).join('')
+  const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
+  if (!startEl) return ''
+  return sceneNodes(startEl, endEl)
+    .map((n) => (n.nodeType === 1 ? (n as Element).outerHTML : n.textContent || ''))
+    .join('')
 }
 
 // Вставляет фрагмент обратно: заменяет блоки сцены на новые из html
@@ -85,13 +97,11 @@ export function spliceSceneHtml(content: string, sceneNumber: string, fallbackIn
   const frag = new DOMParser().parseFromString(newHtml, 'text/html')
   const newBlocks = [...frag.body.children]
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
-  const { start, end } = findSceneRange(blocks, sceneNumber, fallbackIndex)
-  if (start < 0) return content
-  // удалить старые блоки сцены
-  for (let i = start; i < end; i++) blocks[i].remove()
-  // вставить новые на место anchor (anchor уже удалён — вставляем перед блоком, который был end)
-  const ref = blocks[end] ?? null
-  newBlocks.forEach((nb) => doc.body.insertBefore(doc.importNode(nb, true) as Node, ref))
+  const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
+  if (!startEl) return content
+  const parent = startEl.parentNode ?? doc.body
+  sceneNodes(startEl, endEl).forEach((n) => n.parentNode?.removeChild(n))
+  newBlocks.forEach((nb) => parent.insertBefore(doc.importNode(nb, true) as Node, endEl))
   return `<!DOCTYPE html><html><body>${doc.body.innerHTML}</body></html>`
     .replace(/^<!DOCTYPE html><html><body>/, '')
     .replace(/<\/body><\/html>$/, '')
