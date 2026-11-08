@@ -224,6 +224,7 @@ export default function ScriptPage() {
   const allBlocks = useMemo(() => {
     const out: Array<{ type: string; content: string }> = []
     const TYPE_MAP: Record<string, string> = {
+      'scene-header': 'scene_header', 'scene-dialog': 'dialog', 'scene-action': 'action',
       sceneHeader: 'scene_header', sceneDialog: 'dialog', sceneAction: 'action',
       scene_header: 'scene_header', dialog: 'dialog', action: 'action',
     }
