@@ -10,6 +10,8 @@ import TimingSettingsModal from './components/TimingSettingsModal'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import ScriptRightPanel from './components/ScriptRightPanel'
 import StatisticsView from './components/StatisticsView'
+import CardsView from './components/CardsView'
+import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
@@ -126,6 +128,16 @@ export default function ScriptPage() {
       handleSceneClick(sceneId)
     }
   }, [splitScreen.isActive, splitScreen.navigateToScene, handleSceneClick, viewAllSeries, episodeScripts, currentScript?.id])
+
+  // Обновление полей сцены (синопсис, статус, заметки, colorTag) — пишем
+  // в скрипт-владелец, работает и для серий, которые сейчас не открыты
+  const handleUpdateScene = useCallback((sceneId: string, patch: Partial<Scene>) => {
+    const owner = episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === sceneId))
+    if (!owner) return
+    updateScript(owner.id, {
+      scenes: owner.scenes!.map((s) => (s.id === sceneId ? { ...s, ...patch } : s)),
+    })
+  }, [episodeScripts, updateScript])
 
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
@@ -378,7 +390,17 @@ export default function ScriptPage() {
             episodesCount={project?.episodesCount || 8}
             episodeDuration={project?.episodeDuration}
           />
-        ) : ['breakdown', 'cards', 'development', 'plan'].includes(activeTab) ? (
+        ) : activeTab === 'cards' ? (
+          <CardsView
+            isDark={isDark}
+            scenes={allScenes}
+            blocks={allBlocks}
+            isSerial={project?.type === 'serial'}
+            episodesCount={project?.episodesCount || 8}
+            onSceneClick={handleSceneClickRouted}
+            onUpdateScene={handleUpdateScene}
+          />
+        ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
