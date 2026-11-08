@@ -213,11 +213,12 @@ export function useScriptStats(
       pages: sc.pages || 0,
     }))
 
-    // Под фильтром серии глобальные страницы документа нечестны —
-    // считаем сумму страниц отфильтрованных сцен
-    const totalPages = isFiltered
-      ? scenes.reduce((s, sc) => s + (sc.pages || 0), 0)
-      : precisePages
+    // Страницы — сумма страниц сцен текущего набора. Для сериала под «Все»
+    // сцены объединяют все скрипты → сумма честнее, чем precisePages
+    // (это только открытый документ). Fallback на precisePages если у сцен
+    // страниц нет вовсе (старые данные без разметки)
+    const scenesPagesSum = scenes.reduce((s, sc) => s + (sc.pages || 0), 0)
+    const totalPages = scenesPagesSum > 0 ? scenesPagesSum : (isFiltered ? 0 : precisePages)
 
     // Темп по сценам — считаем по ПОЛНОМУ списку сцен: блоки документа
     // идут в том же порядке что и сцены; фильтрация по серии — в UI
