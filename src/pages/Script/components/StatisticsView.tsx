@@ -1,4 +1,5 @@
-import { memo, useState, useEffect, Fragment, useRef } from 'react'
+import { memo, useState, useEffect, Fragment, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
@@ -346,6 +347,41 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   })
   const todColors = ['#f59e0b', '#3b82f6', '#a78bfa', '#34d399', '#f87171', '#94a3b8']
 
+  // Персонажи по локациям — для всплывашки при наведении (учитывает фильтр серии)
+  const locCharStats = useMemo(() => {
+    const map = new Map<string, Map<string, number>>() // "ЛОК" | "ЛОК.ПОД" -> персонаж -> сцен
+    filteredScenes.forEach((sc) => {
+      const loc = (sc.location || '').trim()
+      if (!loc) return
+      const sub = (sc.sublocation || '').trim()
+      const keys = sub ? [loc, `${loc}.${sub}`] : [loc]
+      ;(sc.cast || []).forEach((c) => {
+        const k = c.toUpperCase().trim()
+        if (!k) return
+        keys.forEach((key) => {
+          if (!map.has(key)) map.set(key, new Map())
+          const m = map.get(key)!
+          m.set(k, (m.get(k) || 0) + 1)
+        })
+      })
+    })
+    return map
+  }, [filteredScenes])
+
+  // Всплывашка локации: позиция + данные
+  const [locTip, setLocTip] = useState<{ x: number; y: number; title: string; items: [string, number][] } | null>(null)
+  const showLocTip = (el: HTMLElement, key: string) => {
+    const m = locCharStats.get(key)
+    if (!m?.size) return setLocTip(null)
+    const r = el.getBoundingClientRect()
+    setLocTip({
+      x: r.right + 8,
+      y: Math.min(r.top, window.innerHeight - 260),
+      title: key,
+      items: [...m.entries()].sort((a, b) => b[1] - a[1]),
+    })
+  }
+
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       <div className="w-full space-y-8">
@@ -572,6 +608,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                       } : undefined}
                       className="flex items-center gap-2 transition-all"
                       style={{ cursor: hasSub ? 'pointer' : 'default' }}
+                      onMouseEnter={(e) => showLocTip(e.currentTarget, l.name)}
+                      onMouseLeave={() => setLocTip(null)}
                     >
                       <span className="w-3.5 shrink-0">
                         {hasSub && (expanded
@@ -585,7 +623,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                       <span className="w-20 text-right text-[11px] font-medium whitespace-nowrap" style={{ color: textPrimary }}>{l.count} · {fmtDuration(l.durationSec)}</span>
                     </div>
                     {expanded && l.sublocations.map((s) => (
-                      <div key={s.name} className="flex items-center gap-2 mt-1 ml-7">
+                      <div key={s.name} className="flex items-center gap-2 mt-1 ml-7"
+                        onMouseEnter={(e) => showLocTip(e.currentTarget, `${l.name}.${s.name}`)}
+                        onMouseLeave={() => setLocTip(null)}>
                         <span className="w-16 text-[10px] truncate" style={{ color: textSecondary }}>{s.name}</span>
                         <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                           <div className="h-full rounded-full" style={{ width: `${(s.count / maxLoc) * 100}%`, background: '#93c5fd' }} />
@@ -705,6 +745,35 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           <AlignLeft size={12} />
           <span className="text-[10px]">Статистика обновляется автоматически при наборе текста</span>
         </div>
+
+        {/* Всплывашка: персонажи в локации/подлокации */}
+        {locTip && createPortal(
+          <div
+            className="rounded-lg p-2.5"
+            style={{
+              position: 'fixed',
+              left: locTip.x,
+              top: locTip.y,
+              background: isDark ? '#1e1e3a' : '#ffffff',
+              border: `1px solid ${border}`,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              zIndex: 9999,
+              minWidth: 160,
+              maxHeight: 240,
+              overflowY: 'auto',
+              pointerEvents: 'none',
+            }}
+          >
+            <div className="text-[10px] font-bold mb-1.5" style={{ color: '#fb923c' }}>{locTip.title}</div>
+            {locTip.items.map(([name, count]) => (
+              <div key={name} className="flex justify-between gap-4 text-[10px]">
+                <span style={{ color: textSecondary }}>{name}</span>
+                <span style={{ color: textPrimary }}>{count} сц</span>
+              </div>
+            ))}
+          </div>,
+          document.body,
+        )}
         </>
       </div>
     </div>
