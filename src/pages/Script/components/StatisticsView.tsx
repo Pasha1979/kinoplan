@@ -492,7 +492,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                     <div className="h-full rounded-full" style={{ width: `${(ch.scenes / Math.max(1, stats.characters[0]?.scenes || 1)) * 100}%`, background: '#a78bfa' }} />
                   </div>
-                  <span className="w-24 text-right text-[10px] whitespace-nowrap" style={{ color: textPrimary }}>{ch.scenes}с · {ch.dialogScenes}р · {fmtDuration(ch.durationSec)}</span>
+                  <span className="w-20 text-right text-[10px] whitespace-nowrap" style={{ color: textPrimary }} title={`${ch.dialogScenes} сцен с репликами`}>{ch.scenes}с · {fmtDuration(ch.durationSec)}</span>
                 </div>
               ))}
             </div>
