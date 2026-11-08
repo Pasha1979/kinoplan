@@ -84,11 +84,32 @@ function sceneNodes(startEl: Element, endEl: Element | null): Node[] {
 function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
+  const headers = blocks.filter((el) => isHeader(el))
+  // DEBUG: что парсер реально видит
+  console.log('[sceneExtract]', {
+    sceneNumber,
+    fallbackIndex,
+    headersFound: headers.length,
+    headerTexts: headers.slice(0, 12).map((h) => h.textContent?.trim().slice(0, 40)),
+    totalBlocks: blocks.length,
+    contentLen: content?.length,
+  })
   const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
-  if (!startEl) return ''
-  return sceneNodes(startEl, endEl)
+  if (!startEl) {
+    console.warn('[sceneExtract] ШАПКА НЕ НАЙДЕНА для сцены', sceneNumber)
+    return ''
+  }
+  const nodes = sceneNodes(startEl, endEl)
+  const frag = nodes
     .map((n) => (n.nodeType === 1 ? (n as Element).outerHTML : n.textContent || ''))
     .join('')
+  console.log('[sceneExtract]', {
+    startHTML: startEl.outerHTML.slice(0, 120),
+    nodesInScene: nodes.length,
+    fragLen: frag.length,
+    fragStart: frag.slice(0, 200),
+  })
+  return frag
 }
 
 // Вставляет фрагмент обратно: заменяет блоки сцены на новые из html
@@ -117,6 +138,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
     () => extractSceneHtml(script.content || '', scene.number, sceneIndex),
     [script.id, scene.id],
   )
+  console.log('[sceneEditModal]', { sceneNum: scene.number, scriptId: script.id, sceneIndex, initialHtmlLen: initialHtml.length, initialHtmlStart: initialHtml.slice(0, 300) })
 
   const editor = useEditor({
     enableInputRules: false,
