@@ -459,7 +459,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>}
           </Section></LayoutBox>
 
-          <LayoutBox k="s-dialog"><Section title={activeSeries !== 'all' ? 'Диалог / Действие · весь сценарий' : 'Диалог / Действие'} icon={<MessageSquare size={14} />}>
+          <LayoutBox k="s-dialog"><Section title={activeSeries !== 'all' ? `Диалог / Действие · серия ${activeSeries}` : 'Диалог / Действие'} icon={<MessageSquare size={14} />}>
             {empty ? <Empty text="Здесь будет баланс диалога и действия по объёму текста" /> :
             <div className="space-y-2">
               <div className="flex h-4 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
@@ -467,8 +467,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 <div style={{ width: `${(1 - stats.dialogRatio) * 100}%`, background: '#34d399' }} />
               </div>
               <div className="flex justify-between text-[11px]">
-                <span style={{ color: '#818cf8' }}>Диалог {Math.round(stats.dialogRatio * 100)}% ({stats.dialogBlocks})</span>
-                <span style={{ color: '#34d399' }}>Действие {Math.round((1 - stats.dialogRatio) * 100)}% ({stats.actionBlocks})</span>
+                <span style={{ color: '#818cf8' }}>Диалог {Math.round(stats.dialogRatio * 100)}%{activeSeries === 'all' ? ` (${stats.dialogBlocks})` : ''}</span>
+                <span style={{ color: '#34d399' }}>Действие {Math.round((1 - stats.dialogRatio) * 100)}%{activeSeries === 'all' ? ` (${stats.actionBlocks})` : ''}</span>
               </div>
               <p className="text-[10px]" style={{ color: textSecondary }}>
                 Блоки персонажей и реплик vs блоки действия

@@ -145,7 +145,7 @@ export function useScriptStats(
     const actionCharsTotal = blocks
       .filter((b) => b.type === 'action')
       .reduce((s, b) => s + b.content.length, 0)
-    const dialogRatio = dialogCharsTotal + actionCharsTotal > 0
+    let dialogRatio = dialogCharsTotal + actionCharsTotal > 0
       ? dialogCharsTotal / (dialogCharsTotal + actionCharsTotal)
       : 0
 
@@ -250,6 +250,15 @@ export function useScriptStats(
         }
       })
       flush()
+
+      // Диалог/действие честно по отфильтрованным сценам:
+      // суммируем объёмы только сцен текущего набора (tempo уже сгруппирован по сценам)
+      const filteredIds = new Set(scenes.map((s) => s.id))
+      let fd = 0, fa = 0
+      tempo.forEach((t) => {
+        if (filteredIds.has(t.id)) { fd += t.dialogChars; fa += t.actionChars }
+      })
+      if (fd + fa > 0) dialogRatio = fd / (fd + fa)
     }
 
     // ─── Алерты ───
