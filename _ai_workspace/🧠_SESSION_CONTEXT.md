@@ -244,3 +244,10 @@ status: "✅ ЗАВЕРШЕНА — сессия закрыта пользова
 - SmartType: подсказки теперь по ВСЕМ сериям проекта (smartTypeCharacters/smartTypeLocations из episodeScripts)
 - Двухуровневые локации: выбор «ДОМ ДЕДА» → автоточка + попап подлокаций (insertText в SmartTypeSuggestion, openSuggestions в useSmartType, сегментное совпадение после «.»)
 - Все коммиты запушены, деплой Ready
+
+## Продолжение 08.11 — фиксы темпа и серий
+- Статистика теперь на allScenes (все серии агрегатно + фильтр по серии работает)
+- SmartType: словари по всем сериям + двухуровневые локации (точка → попап подлокаций)
+- Фикс навигатора «Все серии» (viewAllSeries, без фантомного скрипта)
+- ДЕБАГ темпа: сцены выпадали за блок → layout merge per-key (h из APPLIED если нет в saved) + overflow:hidden на блоках с фикс h
+- Если темп всё ещё ломается — проверить chain h-full: Section fill → flex-1 min-h-0 → div overflow-y-auto

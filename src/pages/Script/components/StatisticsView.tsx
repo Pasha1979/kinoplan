@@ -184,7 +184,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           width: s.w,
           height: s.h,
           zIndex: layoutMode ? 30 : undefined,
-          overflow: 'visible',
+          overflow: s.h ? 'hidden' : 'visible',
           cursor: layoutMode ? 'grab' : undefined,
           touchAction: layoutMode ? 'none' : undefined,
         }}
@@ -605,7 +605,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </span>
           }>
             {tempoBySeries.size === 0 ? <Empty text="Здесь будет темп сцен — баланс диалога и действия" /> :
-            <div className="h-full overflow-y-auto pr-1">
+            <div className="h-full overflow-y-auto overscroll-contain pr-1">
               {[...tempoBySeries.entries()].map(([series, items]) => (
                 <div key={series}>
                   {tempoBySeries.size > 1 && (
