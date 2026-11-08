@@ -11,6 +11,7 @@ import TitlePageEditor from '../../components/TitlePageEditor'
 import ScriptRightPanel from './components/ScriptRightPanel'
 import StatisticsView from './components/StatisticsView'
 import CardsView from './components/CardsView'
+import SceneEditModal from './components/SceneEditModal'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
@@ -138,6 +139,20 @@ export default function ScriptPage() {
       scenes: owner.scenes!.map((s) => (s.id === sceneId ? { ...s, ...patch } : s)),
     })
   }, [episodeScripts, updateScript])
+
+  // Одиночный редактор сцены («Перейти к сцене» из карточки)
+  const [editScene, setEditScene] = useState<Scene | null>(null)
+  const editSceneOwner = editScene ? episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === editScene.id)) : undefined
+  const editSceneIndex = editScene && editSceneOwner ? editSceneOwner.scenes!.findIndex((s) => s.id === editScene.id) : -1
+  const handleSaveScene = useCallback((newContent: string) => {
+    if (!editSceneOwner) return
+    // 1) пишем в стор — сохранится и в PouchDB, и для закрытых серий
+    updateScript(editSceneOwner.id, { content: newContent })
+    // 2) если это открытый скрипт — обновляем живой редактор (пересчёт сцен пойдёт сам)
+    if (editSceneOwner.id === currentScript?.id && editorInstance) {
+      editorInstance.commands.setContent(newContent)
+    }
+  }, [editSceneOwner, currentScript?.id, editorInstance, updateScript])
 
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
@@ -402,6 +417,7 @@ export default function ScriptPage() {
               setActiveTab('text')
             }}
             onUpdateScene={handleUpdateScene}
+            onOpenSceneEditor={setEditScene}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
@@ -680,6 +696,18 @@ export default function ScriptPage() {
           onClose={() => setShowTimingSettingsModal(false)}
           autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
           onToggleAutoExtractCharacters={handleToggleAutoExtract}
+        />
+      )}
+
+      {/* Одиночный редактор сцены («Перейти к сцене» из карточек) */}
+      {editScene && editSceneOwner && editSceneIndex >= 0 && (
+        <SceneEditModal
+          scene={editScene}
+          script={editSceneOwner}
+          sceneIndex={editSceneIndex}
+          isDark={isDark}
+          onClose={() => setEditScene(null)}
+          onSave={handleSaveScene}
         />
       )}
     </div>

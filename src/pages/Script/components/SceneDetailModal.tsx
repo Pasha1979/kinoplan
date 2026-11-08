@@ -9,6 +9,8 @@ interface SceneDetailModalProps {
   isDark: boolean
   onClose: () => void
   onGoToScene?: (sceneId: string) => void
+  /** «Перейти к сцене» — открывает одиночный редактор сцены */
+  onEditScene?: (scene: Scene & { _episode?: number }) => void
   onUpdate?: (sceneId: string, patch: Partial<Scene>) => void
 }
 
@@ -30,7 +32,7 @@ function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpdate }: SceneDetailModalProps) {
+function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate }: SceneDetailModalProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#1a1a33' : '#ffffff'
@@ -38,9 +40,11 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpd
 
   const [syn, setSyn] = useState(scene.synopsis ?? synopsis)
   const [notes, setNotes] = useState(scene.productionNotes ?? '')
+  const [prio, setPrio] = useState<Scene['priority']>(scene.priority || 'medium')
   useEffect(() => {
     setSyn(scene.synopsis ?? synopsis)
     setNotes(scene.productionNotes ?? '')
+    setPrio(scene.priority || 'medium')
   }, [scene.id])
 
   const save = (patch: Partial<Scene>) => onUpdate?.(scene.id, patch)
@@ -64,7 +68,7 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpd
     >
       <div
         className="rounded-2xl overflow-hidden"
-        style={{ background: cardBg, border: `1px solid ${border}`, width: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+        style={{ background: cardBg, border: `1px solid ${border}`, width: 720, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Шапка */}
@@ -123,10 +127,14 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpd
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ПРИОРИТЕТ</div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[scene.priority || 'medium'] }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[prio] }} />
                 <select
-                  value={scene.priority || 'medium'}
-                  onChange={(e) => save({ priority: e.target.value as Scene['priority'] })}
+                  value={prio}
+                  onChange={(e) => {
+                    const v = e.target.value as Scene['priority']
+                    setPrio(v)
+                    save({ priority: v })
+                  }}
                   className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
                   style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
                 >
@@ -146,13 +154,13 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpd
             ))}
           </div>
 
-          {/* Переход к сцене */}
+          {/* Переход к сцене — одиночный редактор */}
           <button
-            onClick={() => onGoToScene?.(scene.id)}
+            onClick={() => onEditScene?.(scene)}
             className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all"
             style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
           >
-            <ArrowRight size={12} /> Перейти к сцене в редакторе
+            <ArrowRight size={12} /> Перейти к сцене
           </button>
         </div>
       </div>

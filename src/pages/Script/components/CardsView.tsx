@@ -13,6 +13,8 @@ interface CardsViewProps {
   episodesCount?: number
   onSceneClick?: (sceneId: string) => void
   onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
+  /** «Перейти к сцене» — открывает одиночный редактор сцены */
+  onOpenSceneEditor?: (scene: SceneWithEp) => void
 }
 
 function fmtDuration(sec: number): string {
@@ -31,7 +33,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -273,6 +275,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           isDark={isDark}
           onClose={() => setDetail(null)}
           onGoToScene={(id) => { setDetail(null); onSceneClick?.(id) }}
+          onEditScene={(sc) => { setDetail(null); onOpenSceneEditor?.(sc) }}
           onUpdate={onUpdateScene}
         />
       )}
