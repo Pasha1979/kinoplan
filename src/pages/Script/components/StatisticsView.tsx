@@ -35,18 +35,18 @@ const ACT_MARKERS = [
 
 // Раскладка пользователя из режима «Расстановка» (экспортированный JSON)
 const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
-  's-timings': { dx: 9.6, dy: 42.4, w: 345.4, h: 271.8 },
-  's-heatmap': { dx: 12.8, dy: -63.2, w: 1103.4, h: 132.4 },
-  's-chars': { dx: -11.2, dy: 41.6, w: 363, h: 271.2 },
-  's-locs': { dx: -19.2, dy: 40, w: 362.4, h: 269.8 },
-  's-intext': { dx: 8, dy: 24, w: 272.2, h: 125.6 },
-  's-tod': { dx: 484.8, dy: -99.2, w: 231, h: 100 },
-  's-dialog': { dx: -472.8, dy: 39.2, w: 351.2, h: 100 },
-  's-tempo': { dx: 660, dy: -375.2, w: 450.8, h: 122.4 },
+  's-timings': { dx: 16, dy: 18.4, w: 345.4, h: 271.8 },
+  's-heatmap': { dx: 24, dy: -81.6, w: 1401.4, h: 132 },
+  's-chars': { dx: -115.2, dy: 32, w: 351.8, h: 258.2 },
+  's-locs': { dx: -236.8, dy: 31.2, w: 383.2, h: 260 },
+  's-intext': { dx: 1148, dy: -96.8, w: 289.6, h: 123.6 },
+  's-tod': { dx: 400.8, dy: -97.6, w: 242.2, h: 100.8 },
+  's-dialog': { dx: -964.8, dy: 16.8, w: 348.6, h: 100 },
+  's-tempo': { dx: 384.8, dy: -380.8, w: 741.6, h: 117.6 },
   'm-scenes': { dx: 16.8, dy: 5.6, w: 200, h: 100 },
-  'm-pages': { dx: -60.8, dy: 4, w: 200, h: 100 },
-  'm-time': { dx: -135.2, dy: 4.8, w: 200, h: 100 },
-  'm-chars': { dx: -209.6, dy: 3.2, w: 200, h: 101.2 },
+  'm-pages': { dx: -132, dy: 5.6, w: 200, h: 100 },
+  'm-time': { dx: -282.4, dy: 5.6, w: 200, h: 100 },
+  'm-chars': { dx: -429.6, dy: 4, w: 200, h: 101.2 },
 }
 
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount }: StatisticsViewProps) {
