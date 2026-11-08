@@ -1,8 +1,7 @@
-import { memo, useState, useEffect, useRef } from 'react'
+import { memo, useState, Fragment, useRef } from 'react'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
-  Move, Download,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
 import { useScriptStore } from '../../../store/scriptStore'
@@ -57,7 +56,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     : scenes.filter((sc) => parseInt(sc.number.split('-')[0]) === activeSeries)
   // Серия выбрана, но сцен в ней нет — фильтр и шапка остаются видны
   const emptySeries = isSerial && activeSeries !== 'all' && filteredScenes.length === 0
-  const stats = useScriptStats(filteredScenes, blocks, precisePages)
+  const stats = useScriptStats(filteredScenes, blocks, precisePages, activeSeries !== 'all')
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
 
   // Структурные маркеры: сохранённые привязки (ключ → sceneId) из scriptStore
@@ -118,79 +117,23 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     delete next[key]
     updateScript(currentScriptId, { actMarkers: next })
   }
-  const [layoutMode, setLayoutMode] = useState(false)
-  const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
-      return { ...APPLIED_LAYOUT, ...saved } // свои правки поверх дефолта
-    } catch { return { ...APPLIED_LAYOUT } }
-  })
-  useEffect(() => {
-    localStorage.setItem('statsLayout', JSON.stringify(layout))
-  }, [layout])
+  // Финализированная раскладка пользователя — режим расстановки убран
+  const layout = APPLIED_LAYOUT
+  const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
-  // Точная копия паттерна HomePage — drag/resize блоков
-  const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
-    if (!layoutMode) return
-    e.preventDefault()
-    e.stopPropagation()
-    const startX = e.clientX, startY = e.clientY
-    const s = layout[id] ?? { dx: 0, dy: 0 }
-    const onMove = (ev: PointerEvent) =>
-      setLayout((l) => ({ ...l, [id]: { ...(l[id] ?? s), dx: s.dx + ev.clientX - startX, dy: s.dy + ev.clientY - startY } }))
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
-
-  const startBlockResize = (id: string) => (e: React.PointerEvent) => {
-    if (!layoutMode) return
-    e.preventDefault()
-    e.stopPropagation()
-    const el = (e.currentTarget as HTMLElement).parentElement
-    const startW = el?.offsetWidth ?? 0, startH = el?.offsetHeight ?? 0
-    const startX = e.clientX, startY = e.clientY
-    const onMove = (ev: PointerEvent) =>
-      setLayout((l) => ({
-        ...l,
-        [id]: { ...(l[id] ?? { dx: 0, dy: 0 }), w: Math.max(200, startW + ev.clientX - startX), h: Math.max(100, startH + ev.clientY - startY) },
-      }))
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
-
-  // Обёртка блока — как HomePage LB: pointerdown на самой обёртке
+  // Обёртка блока — применяет сохранённый dx/dy/w/h
   const LayoutBox = ({ k, children }: { k: string; children: React.ReactNode }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
     return (
       <div
-        className={layoutMode ? 'relative outline-2 outline-dashed outline-orange-500/60 rounded-xl' : undefined}
         style={{
           transform: `translate(${s.dx}px, ${s.dy}px)`,
           width: s.w,
           height: s.h,
-          zIndex: layoutMode ? 30 : undefined,
           overflow: 'visible',
-          cursor: layoutMode ? 'grab' : undefined,
-          touchAction: layoutMode ? 'none' : undefined,
         }}
-        onPointerDown={startBlockDrag(k)}
       >
         {children}
-        {layoutMode && (
-          <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-orange-500/80 rounded-tl"
-            style={{ zIndex: 40 }}
-            onPointerDown={startBlockResize(k)}
-          />
-        )}
       </div>
     )
   }
@@ -257,13 +200,14 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     e.currentTarget.style.boxShadow = 'none'
   }
 
-  const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+  const Section = ({ title, icon, right, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) => (
     <div className="rounded-xl p-5 transition-all"
       style={{ background: cardBg, border: `1px solid ${border}` }}
       onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
       <div className="flex items-center gap-2 mb-3">
         <div style={{ color: textSecondary }}>{icon}</div>
-        <span className="text-xs font-semibold" style={{ color: textPrimary }}>{title}</span>
+        <span className="text-xs font-semibold flex-1" style={{ color: textPrimary }}>{title}</span>
+        {right}
       </div>
       {children}
     </div>
@@ -340,32 +284,6 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {layoutMode && (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(JSON.stringify(layout, null, 2))
-                  alert('Макет скопирован в буфер обмена — отправь мне')
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
-              >
-                <Download size={12} /> Экспорт макета
-              </button>
-            )}
-            <button
-              onClick={() => setLayoutMode(!layoutMode)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-              style={{
-                background: layoutMode ? 'rgba(249,115,22,0.2)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f0f0f0'),
-                color: layoutMode ? '#fb923c' : textSecondary,
-                border: `1px solid ${layoutMode ? 'rgba(249,115,22,0.4)' : 'transparent'}`,
-              }}
-              title="Режим расстановки блоков"
-            >
-              <Move size={12} /> {layoutMode ? 'Готово' : 'Расстановка'}
-            </button>
-          </div>
         </div>
 
         {emptySeries ? (
@@ -420,7 +338,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>
           </Section></LayoutBox>
 
-          <LayoutBox k="s-dialog"><Section title="Диалог / Действие" icon={<MessageSquare size={14} />}>
+          <LayoutBox k="s-dialog"><Section title={activeSeries !== 'all' ? 'Диалог / Действие · весь сценарий' : 'Диалог / Действие'} icon={<MessageSquare size={14} />}>
             <div className="space-y-2">
               <div className="flex h-4 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                 <div style={{ width: `${stats.dialogRatio * 100}%`, background: '#818cf8' }} />
@@ -484,9 +402,25 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>
           </Section></LayoutBox>
 
-          <LayoutBox k="s-chars"><Section title="Топ персонажей (сцен)" icon={<Users size={14} />}>
+          <LayoutBox k="s-chars"><Section title="Топ персонажей" icon={<Users size={14} />} right={
+            <div className="flex gap-0.5">
+              {([['scenes', 'сцены'], ['duration', 'хроно']] as const).map(([v, l]) => (
+                <button
+                  key={v}
+                  onClick={() => setCharSort(v)}
+                  className="px-1.5 py-0.5 rounded text-[9px] font-medium transition-all"
+                  style={{
+                    background: charSort === v ? 'rgba(249,115,22,0.2)' : 'transparent',
+                    color: charSort === v ? '#fb923c' : textSecondary,
+                  }}
+                >{l}</button>
+              ))}
+            </div>
+          }>
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
-              {stats.characters.slice(0, 12).map((ch) => (
+              {[...stats.characters]
+                .sort((a, b) => charSort === 'duration' ? b.durationSec - a.durationSec : b.scenes - a.scenes)
+                .slice(0, 12).map((ch) => (
                 <div key={ch.name} className="flex items-center gap-2">
                   <span className="w-24 text-[11px] truncate" style={{ color: textSecondary }}>{ch.name}</span>
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
@@ -541,6 +475,34 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           </Section></LayoutBox>
         </div>
 
+        {/* Темп по сценам — доля диалога vs действия (только «Все серии») */}
+        {stats.tempo.length > 0 && (
+          <LayoutBox k="s-tempo"><Section title="Темп по сценам" icon={<MessageSquare size={14} />} right={
+            <span className="text-[9px]" style={{ color: textSecondary }}>
+              <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
+            </span>
+          }>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 max-h-64 overflow-y-auto pr-1">
+              {stats.tempo.map((t) => (
+                <div
+                  key={t.id}
+                  onClick={onSceneClick ? () => onSceneClick(t.id) : undefined}
+                  className="flex items-center gap-2 transition-all"
+                  style={{ cursor: onSceneClick ? 'pointer' : 'default' }}
+                  title={`Сцена ${t.number}: ${Math.round(t.ratio * 100)}% диалог`}
+                >
+                  <span className="w-9 text-[10px] truncate" style={{ color: textSecondary }}>{t.number}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden flex" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                    <div className="h-full" style={{ width: `${t.ratio * 100}%`, background: '#f97316' }} />
+                    <div className="h-full" style={{ width: `${(1 - t.ratio) * 100}%`, background: '#818cf8' }} />
+                  </div>
+                  <span className="w-8 text-right text-[9px]" style={{ color: textPrimary }}>{Math.round(t.ratio * 100)}%</span>
+                </div>
+              ))}
+            </div>
+          </Section></LayoutBox>
+        )}
+
         {/* Тепловая карта персонажей — кто в каких сценах */}
         <LayoutBox k="s-heatmap"><Section title="Активность персонажей по сценам" icon={<Users size={14} />}>
           <div className="overflow-x-auto pb-1">
@@ -558,7 +520,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               ))}
               {/* Строки персонажей */}
               {stats.characters.slice(0, 12).map((ch) => (
-                <>
+                <Fragment key={ch.name}>
                   <div key={`n-${ch.name}`} className="text-[10px] truncate flex items-center" style={{ color: textPrimary }} title={ch.name}>
                     {ch.name}
                   </div>
@@ -579,7 +541,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                       />
                     )
                   })}
-                </>
+                </Fragment>
               ))}
             </div>
           </div>

@@ -68,8 +68,19 @@ export interface ScriptStats {
   locations: LocationGroup[]
   // Хронометраж по сценам (для графика)
   sceneTimings: SceneTimingStat[]
+  // Темп по сценам: доля диалога vs действия (0..1), только при несфильтрованных сценах
+  tempo: SceneTempoStat[]
   // Алерты
   alerts: ScriptStatsAlert[]
+}
+
+export interface SceneTempoStat {
+  id: string
+  number: string
+  dialogChars: number
+  actionChars: number
+  /** доля диалога 0..1 */
+  ratio: number
 }
 
 interface BlockLike {
@@ -85,6 +96,9 @@ export function useScriptStats(
   scenes: Scene[],
   blocks: BlockLike[],
   precisePages: number,
+  /** true когда показываем подмножество сцен (фильтр по серии):
+   *  тогда глобальные метрики по блокам документа нечестно отображать как «по серии» */
+  isFiltered = false,
 ): ScriptStats {
   return useMemo(() => {
     const totalScenes = scenes.length
@@ -116,13 +130,20 @@ export function useScriptStats(
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
 
-    // Диалог/действие — по блокам документа
+    // Диалог/действие — по объёму текста (символы), не по числу блоков:
+    // одна длинная ремарка ≠ одной короткой реплике
     const dialogBlocks = blocks.filter(
       (b) => b.type === 'dialog' || b.type === 'character',
     ).length
     const actionBlocks = blocks.filter((b) => b.type === 'action').length
-    const dialogRatio = dialogBlocks + actionBlocks > 0
-      ? dialogBlocks / (dialogBlocks + actionBlocks)
+    const dialogCharsTotal = blocks
+      .filter((b) => b.type === 'dialog')
+      .reduce((s, b) => s + b.content.length, 0)
+    const actionCharsTotal = blocks
+      .filter((b) => b.type === 'action')
+      .reduce((s, b) => s + b.content.length, 0)
+    const dialogRatio = dialogCharsTotal + actionCharsTotal > 0
+      ? dialogCharsTotal / (dialogCharsTotal + actionCharsTotal)
       : 0
 
     // Персонажи — активность по сценам
@@ -189,6 +210,44 @@ export function useScriptStats(
       pages: sc.pages || 0,
     }))
 
+    // Под фильтром серии глобальные страницы документа нечестны —
+    // считаем сумму страниц отфильтрованных сцен
+    const totalPages = isFiltered
+      ? scenes.reduce((s, sc) => s + (sc.pages || 0), 0)
+      : precisePages
+
+    // Темп по сценам — только без фильтра: блоки документа идут в том же
+    // порядке что и сцены, при фильтрации соответствие ломается
+    const tempo: SceneTempoStat[] = []
+    if (!isFiltered) {
+      let sceneIdx = -1
+      let dlg = 0, act = 0
+      const flush = () => {
+        if (sceneIdx >= 0 && scenes[sceneIdx]) {
+          const total = dlg + act
+          tempo.push({
+            id: scenes[sceneIdx].id,
+            number: scenes[sceneIdx].number,
+            dialogChars: dlg,
+            actionChars: act,
+            ratio: total > 0 ? dlg / total : 0,
+          })
+        }
+      }
+      blocks.forEach((b) => {
+        if (b.type === 'scene_header') {
+          flush()
+          sceneIdx++
+          dlg = 0; act = 0
+        } else if (b.type === 'dialog') {
+          dlg += b.content.length
+        } else if (b.type === 'action') {
+          act += b.content.length
+        }
+      })
+      flush()
+    }
+
     // ─── Алерты ───
     const alerts: ScriptStatsAlert[] = []
 
@@ -245,7 +304,7 @@ export function useScriptStats(
     let streak = 0
     let streakStart = -1
     const sceneHeaders = blocks.filter((b) => b.type === 'scene_header').length
-    if (sceneHeaders > 0) {
+    if (sceneHeaders > 0 && !isFiltered) {
       // Считаем action-блоки между шапками
       let inSceneIdx = -1
       let sceneHasAction = false
@@ -279,6 +338,21 @@ export function useScriptStats(
       if (inSceneIdx >= 0) markStreak(sceneHasAction)
     }
 
+    // Поздний персонаж — впервые появляется после 60% сценария
+    characters.forEach((ch) => {
+      if (!ch.firstSceneId || ch.scenes < 2) return
+      const idx = scenes.findIndex((sc) => sc.id === ch.firstSceneId)
+      if (idx > 0 && idx / scenes.length >= 0.6) {
+        alerts.push({
+          id: `late-${ch.name}`,
+          severity: 'info',
+          message: `${ch.name}: впервые появляется только в сцене ${scenes[idx].number} (${Math.round((idx / scenes.length) * 100)}% сценария) — герой заявлен поздно`,
+          sceneId: scenes[idx].id,
+          sceneNumber: scenes[idx].number,
+        })
+      }
+    })
+
     // Непрерывность: время суток изменилось без перехода
     for (let i = 1; i < scenes.length; i++) {
       const prev = scenes[i - 1].time?.trim().toUpperCase()
@@ -299,7 +373,7 @@ export function useScriptStats(
 
     return {
       totalScenes,
-      totalPages: precisePages,
+      totalPages,
       totalChars,
       totalWords,
       totalDurationSec,
@@ -317,7 +391,8 @@ export function useScriptStats(
       speakingCharacters,
       locations,
       sceneTimings,
+      tempo,
       alerts,
     }
-  }, [scenes, blocks, precisePages])
+  }, [scenes, blocks, precisePages, isFiltered])
 }
