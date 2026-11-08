@@ -145,9 +145,10 @@ export default function ScriptPage() {
   const editSceneOwner = editScene ? episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === editScene.id)) : undefined
   const editSceneIndex = editScene && editSceneOwner ? editSceneOwner.scenes!.findIndex((s) => s.id === editScene.id) : -1
   const handleSaveScene = useCallback((newContent: string) => {
-    if (!editSceneOwner) return
+    if (!editSceneOwner) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
     // 1) пишем в стор — сохранится и в PouchDB, и для закрытых серий
     updateScript(editSceneOwner.id, { content: newContent })
+    console.log('[sceneSave] сохранено в скрипт', editSceneOwner.id, 'len:', newContent.length)
     // 2) если это открытый скрипт — обновляем живой редактор (пересчёт сцен пойдёт сам)
     if (editSceneOwner.id === currentScript?.id && editorInstance) {
       editorInstance.commands.setContent(newContent)

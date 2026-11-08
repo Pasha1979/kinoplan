@@ -162,8 +162,17 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
 
   const handleSave = () => {
     if (!editor) return
-    const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML())
-    onSave(newContent)
+    try {
+      const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML())
+      console.log('[sceneSave]', {
+        changed: newContent !== script.content,
+        oldLen: script.content?.length,
+        newLen: newContent.length,
+      })
+      onSave(newContent)
+    } catch (e) {
+      console.error('[sceneSave] ОШИБКА сохранения:', e)
+    }
     onClose()
   }
 
