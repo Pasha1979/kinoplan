@@ -16,6 +16,8 @@ interface StatisticsViewProps {
   onSceneClick?: (sceneId: string) => void
   isSerial?: boolean
   episodesCount?: number
+  /** целевой хронометраж серии, минут */
+  episodeDuration?: number
 }
 
 function fmtDuration(sec: number): string {
@@ -49,7 +51,7 @@ const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   'm-chars': { dx: -429.6, dy: 4, w: 200, h: 101.2 },
 }
 
-function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount }: StatisticsViewProps) {
+function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount, episodeDuration }: StatisticsViewProps) {
   const [activeSeries, setActiveSeries] = useState<number | 'all'>('all')
 
   // Фильтр по серии: номер сцены «1-2» → серия 1; без тире — вне фильтра
@@ -304,6 +306,18 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const maxTod = Math.max(1, ...stats.timeOfDay.map((t) => t.count))
   const maxSceneDur = Math.max(1, ...stats.sceneTimings.map((s) => s.durationSec))
   const maxLoc = Math.max(1, ...stats.locations.map((l) => l.count))
+
+  // Готовность серий: хронометраж сцен каждой серии vs целевой (episodeDuration, мин)
+  const seriesReadiness = isSerial
+    ? Array.from({ length: episodesCount || 8 }, (_, i) => {
+        const n = i + 1
+        const sec = scenes
+          .filter((sc) => parseInt(sc.number.split('-')[0]) === n)
+          .reduce((s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0), 0)
+        const target = (episodeDuration ?? 0) * 60
+        return { n, sec, pct: target > 0 ? Math.min(100, (sec / target) * 100) : null }
+      })
+    : []
   const todColors = ['#f59e0b', '#3b82f6', '#a78bfa', '#34d399', '#f87171', '#94a3b8']
 
   // Полностью пустой сценарий — только для несериального или «Все»
@@ -394,6 +408,29 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           <LayoutBox k="m-pages"><MetricCard icon={<FileText size={16} />} label="Страниц" value={stats.totalPages.toFixed(1)} sub={`${stats.totalWords.toLocaleString('ru-RU')} слов`} /></LayoutBox>
           <LayoutBox k="m-time"><MetricCard icon={<Clock size={16} />} label="Хронометраж" value={fmtDuration(stats.totalDurationSec)} sub={`~${fmtDuration(stats.avgDurationSec)} на сцену`} /></LayoutBox>
           <LayoutBox k="m-chars"><MetricCard icon={<Users size={16} />} label="Персонажей" value={stats.totalCharacters} sub={`${stats.speakingCharacters} с репликами`} /></LayoutBox>
+          {isSerial && (
+            <LayoutBox k="m-series">
+              <div className="rounded-xl p-5 transition-all"
+                style={{ background: cardBg, border: `1px solid ${border}` }}
+                onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
+                <div className="flex items-center gap-2 mb-1.5" style={{ color: '#fb923c' }}><Film size={16} /></div>
+                <div className="text-[11px]" style={{ color: textSecondary }}>Готовность серий</div>
+                <div className="space-y-1 mt-2 max-h-16 overflow-y-auto pr-1">
+                  {seriesReadiness.map((r) => (
+                    <div key={r.n} className="flex items-center gap-1.5" title={`Серия ${r.n}: ${fmtDuration(r.sec)}${episodeDuration ? ` из ${fmtDuration(episodeDuration * 60)}` : ' написано'}`}>
+                      <span className="w-5 text-[10px] shrink-0" style={{ color: textSecondary }}>С{r.n}</span>
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                        <div className="h-full rounded-full" style={{ width: `${r.pct ?? 0}%`, background: r.sec > 0 ? '#fb923c' : 'transparent' }} />
+                      </div>
+                      <span className="w-14 text-right text-[9px] whitespace-nowrap shrink-0" style={{ color: textPrimary }}>
+                        {fmtDuration(r.sec)}{episodeDuration ? `/${fmtDuration(episodeDuration * 60)}` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </LayoutBox>
+          )}
         </div>
 
         {/* Распределения */}

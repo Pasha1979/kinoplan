@@ -319,6 +319,7 @@ export default function ScriptPage() {
             onSceneClick={handleSceneClickRouted}
             isSerial={project?.type === 'serial'}
             episodesCount={project?.episodesCount || 8}
+            episodeDuration={project?.episodeDuration}
           />
         ) : ['breakdown', 'cards', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
