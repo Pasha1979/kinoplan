@@ -23,12 +23,29 @@ function fmtDuration(sec: number): string {
 
 type LayoutEntry = { dx: number; dy: number; w?: number; h?: number }
 
+// Раскладка пользователя из режима «Расстановка» (экспортированный JSON)
+const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
+  's-timings': { dx: 8, dy: 119.2, w: 352.8, h: 228 },
+  's-chars': { dx: -6.4, dy: 116, w: 368.6, h: 231.6 },
+  's-locs': { dx: -10.4, dy: 109.6, w: 355.6, h: 234.6 },
+  's-intext': { dx: 6.4, dy: 55.2, w: 351.4, h: 124 },
+  's-tod': { dx: -8.8, dy: 54.4 },
+  's-dialog': { dx: -12, dy: 53.6 },
+  'm-scenes': { dx: 16.8, dy: 5.6, w: 200, h: 100 },
+  'm-pages': { dx: -49.6, dy: 4.8, w: 212.8, h: 100 },
+  'm-time': { dx: -108, dy: 5.6, w: 224.8, h: 100 },
+  'm-chars': { dx: -150.4, dy: 4.8, w: 220.8, h: 100 },
+}
+
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: StatisticsViewProps) {
   const stats = useScriptStats(scenes, blocks, precisePages)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
   const [layoutMode, setLayoutMode] = useState(false)
   const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
-    try { return JSON.parse(localStorage.getItem('statsLayout') || '{}') } catch { return {} }
+    try {
+      const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
+      return { ...APPLIED_LAYOUT, ...saved } // свои правки поверх дефолта
+    } catch { return { ...APPLIED_LAYOUT } }
   })
   useEffect(() => {
     localStorage.setItem('statsLayout', JSON.stringify(layout))
