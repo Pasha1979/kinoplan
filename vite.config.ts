@@ -9,6 +9,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['pouchdb-browser'],
   },
+  test: {
+    exclude: ['e2e/**', 'node_modules/**'],
+  },
   build: {
     outDir: 'dist',
     // Code-splitting: разделение на логические чанки
