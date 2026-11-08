@@ -348,7 +348,7 @@ export default function ScriptPage() {
         ) : activeTab === 'statistics' ? (
           <StatisticsView
             isDark={isDark}
-            scenes={scenes}
+            scenes={allScenes}
             blocks={blocks}
             precisePages={scriptStats?.pages || 0}
             onSceneClick={handleSceneClickRouted}
