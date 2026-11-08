@@ -1,7 +1,7 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
-  MessageSquare, AlignLeft, Info,
+  MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
 import type { Scene } from '../../../types/scene'
@@ -22,6 +22,7 @@ function fmtDuration(sec: number): string {
 
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: StatisticsViewProps) {
   const stats = useScriptStats(scenes, blocks, precisePages)
+  const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
 
   const cardBg = isDark ? '#13132a' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
@@ -224,15 +225,43 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
 
           <Section title="Локации" icon={<MapPin size={14} />}>
             <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-              {stats.locations.map((l) => (
-                <div key={l.name} className="flex items-center gap-2">
-                  <span className="w-24 text-[11px] truncate" style={{ color: textSecondary }}>{l.name}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
-                    <div className="h-full rounded-full" style={{ width: `${(l.count / maxLoc) * 100}%`, background: '#60a5fa' }} />
+              {stats.locations.map((l) => {
+                const hasSub = l.sublocations.length > 0
+                const expanded = expandedLocs.has(l.name)
+                return (
+                  <div key={l.name}>
+                    <div
+                      onClick={hasSub ? () => {
+                        const next = new Set(expandedLocs)
+                        expanded ? next.delete(l.name) : next.add(l.name)
+                        setExpandedLocs(next)
+                      } : undefined}
+                      className="flex items-center gap-2 transition-all"
+                      style={{ cursor: hasSub ? 'pointer' : 'default' }}
+                    >
+                      <span className="w-3.5 shrink-0">
+                        {hasSub && (expanded
+                          ? <ChevronDown size={11} style={{ color: textSecondary }} />
+                          : <ChevronRight size={11} style={{ color: textSecondary }} />)}
+                      </span>
+                      <span className="w-20 text-[11px] truncate" style={{ color: hasSub ? textPrimary : textSecondary }}>{l.name}</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                        <div className="h-full rounded-full" style={{ width: `${(l.count / maxLoc) * 100}%`, background: '#60a5fa' }} />
+                      </div>
+                      <span className="w-8 text-right text-[11px] font-medium" style={{ color: textPrimary }}>{l.count}</span>
+                    </div>
+                    {expanded && l.sublocations.map((s) => (
+                      <div key={s.name} className="flex items-center gap-2 mt-1 ml-7">
+                        <span className="w-16 text-[10px] truncate" style={{ color: textSecondary }}>{s.name}</span>
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                          <div className="h-full rounded-full" style={{ width: `${(s.count / maxLoc) * 100}%`, background: '#93c5fd' }} />
+                        </div>
+                        <span className="w-8 text-right text-[10px]" style={{ color: textSecondary }}>{s.count}</span>
+                      </div>
+                    ))}
                   </div>
-                  <span className="w-8 text-right text-[11px] font-medium" style={{ color: textPrimary }}>{l.count}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </Section>
         </div>

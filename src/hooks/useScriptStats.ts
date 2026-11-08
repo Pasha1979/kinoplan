@@ -29,6 +29,12 @@ export interface NamedCount {
   count: number
 }
 
+export interface LocationGroup {
+  name: string
+  count: number
+  sublocations: NamedCount[]
+}
+
 export interface ScriptStats {
   // Итоги
   totalScenes: number
@@ -53,7 +59,7 @@ export interface ScriptStats {
   totalCharacters: number
   speakingCharacters: number
   // Локации
-  locations: NamedCount[]
+  locations: LocationGroup[]
   // Хронометраж по сценам (для графика)
   sceneTimings: SceneTimingStat[]
   // Алерты
@@ -139,14 +145,24 @@ export function useScriptStats(
       .sort((a, b) => b.scenes - a.scenes)
     const speakingCharacters = characters.filter((c) => c.dialogScenes > 0).length
 
-    // Локации
-    const locMap = new Map<string, number>()
+    // Локации — иерархия: основная → подлокации
+    const locMap = new Map<string, { count: number; sub: Map<string, number> }>()
     scenes.forEach((sc) => {
       const l = (sc.location || '').trim() || 'БЕЗ ЛОКАЦИИ'
-      locMap.set(l, (locMap.get(l) || 0) + 1)
+      const entry = locMap.get(l) || { count: 0, sub: new Map() }
+      entry.count++
+      const sub = (sc.sublocation || '').trim()
+      if (sub) entry.sub.set(sub, (entry.sub.get(sub) || 0) + 1)
+      locMap.set(l, entry)
     })
-    const locations = [...locMap.entries()]
-      .map(([name, count]) => ({ name, count }))
+    const locations: LocationGroup[] = [...locMap.entries()]
+      .map(([name, v]) => ({
+        name,
+        count: v.count,
+        sublocations: [...v.sub.entries()]
+          .map(([n, c]) => ({ name: n, count: c }))
+          .sort((a, b) => b.count - a.count),
+      }))
       .sort((a, b) => b.count - a.count)
 
     // Хронометраж по сценам
