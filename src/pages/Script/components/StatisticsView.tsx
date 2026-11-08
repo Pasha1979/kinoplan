@@ -36,29 +36,19 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
     localStorage.setItem('statsLayout', JSON.stringify(layout))
   }, [layout])
 
-  const onPointerMove = (ev: PointerEvent) => {
+  const handleDragMove = (ev: React.PointerEvent, k: string) => {
     const d = dragRef.current
-    if (!d) return
+    if (!d || d.key !== k) return
     setLayout((l) => {
-      const s = l[d.key] ?? { dx: 0, dy: 0 }
+      const s = l[k] ?? { dx: 0, dy: 0 }
       if (d.mode === 'move') {
-        return { ...l, [d.key]: { ...s, dx: s.dx + ev.clientX - d.startX, dy: s.dy + ev.clientY - d.startY } }
+        return { ...l, [k]: { ...s, dx: s.dx + ev.clientX - d.startX, dy: s.dy + ev.clientY - d.startY } }
       }
-      return { ...l, [d.key]: { ...s, w: Math.max(220, (s.w ?? 320) + ev.clientX - d.startX), h: Math.max(120, (s.h ?? 200) + ev.clientY - d.startY) } }
+      return { ...l, [k]: { ...s, w: Math.max(220, (s.w ?? 320) + ev.clientX - d.startX), h: Math.max(120, (s.h ?? 200) + ev.clientY - d.startY) } }
     })
     d.startX = ev.clientX
     d.startY = ev.clientY
   }
-  const onPointerUp = () => { dragRef.current = null }
-  useEffect(() => {
-    if (!layoutMode) return
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp)
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-    }
-  })
 
   // Обёртка блока: перетаскивание + ресайз в режиме расстановки
   const LayoutBox = ({ k, children, className }: { k: string; children: React.ReactNode; className?: string }) => {
@@ -77,14 +67,27 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
         {layoutMode && (
           <>
             <div
-              onPointerDown={(e) => { dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'move' }; e.preventDefault() }}
+              onPointerDown={(e) => {
+                dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'move' }
+                e.currentTarget.setPointerCapture(e.pointerId)
+                e.preventDefault()
+              }}
+              onPointerMove={(e) => handleDragMove(e, k)}
+              onPointerUp={() => { dragRef.current = null }}
               className="absolute inset-0 rounded-xl"
-              style={{ cursor: 'grab', background: 'rgba(249,115,22,0.08)', border: '2px dashed rgba(249,115,22,0.5)', zIndex: 20 }}
+              style={{ cursor: 'grab', touchAction: 'none', background: 'rgba(249,115,22,0.08)', border: '2px dashed rgba(249,115,22,0.5)', zIndex: 20 }}
             />
             <div
-              onPointerDown={(e) => { dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'resize' }; e.preventDefault(); e.stopPropagation() }}
+              onPointerDown={(e) => {
+                dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'resize' }
+                e.currentTarget.setPointerCapture(e.pointerId)
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+              onPointerMove={(e) => handleDragMove(e, k)}
+              onPointerUp={() => { dragRef.current = null }}
               className="absolute bottom-1 right-1 w-4 h-4 rounded-sm"
-              style={{ cursor: 'nwse-resize', background: 'rgba(249,115,22,0.6)', zIndex: 21 }}
+              style={{ cursor: 'nwse-resize', touchAction: 'none', background: 'rgba(249,115,22,0.6)', zIndex: 21 }}
             />
           </>
         )}
