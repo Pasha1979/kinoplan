@@ -5,7 +5,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import StatisticsView from './StatisticsView'
 import type { Scene } from '../../../types/scene'
 
-function sc(p: Partial<Scene> & { id: string; number: string }): Scene & { _episode?: number } {
+function sc(p: Record<string, unknown> & { id: string; number: string }): Scene & { _episode?: number } {
   return { type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', charCount: 100, cast: [], pages: 1, ...p } as Scene
 }
 
