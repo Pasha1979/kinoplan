@@ -34,60 +34,68 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
     localStorage.setItem('statsLayout', JSON.stringify(layout))
   }, [layout])
 
-  // Старт перетаскивания/ресайза — слушатели на window, снимаются на mouseup
-  const startDrag = (e: React.PointerEvent, k: string, mode: 'move' | 'resize') => {
+  // Точная копия паттерна HomePage — drag/resize блоков
+  const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
+    if (!layoutMode) return
     e.preventDefault()
     e.stopPropagation()
-    let lastX = e.clientX
-    let lastY = e.clientY
-    const move = (ev: PointerEvent) => {
-      setLayout((l) => {
-        const s = l[k] ?? { dx: 0, dy: 0 }
-        if (mode === 'move') {
-          return { ...l, [k]: { ...s, dx: s.dx + ev.clientX - lastX, dy: s.dy + ev.clientY - lastY } }
-        }
-        return { ...l, [k]: { ...s, w: Math.max(220, (s.w ?? 320) + ev.clientX - lastX), h: Math.max(120, (s.h ?? 200) + ev.clientY - lastY) } }
-      })
-      lastX = ev.clientX
-      lastY = ev.clientY
+    const startX = e.clientX, startY = e.clientY
+    const s = layout[id] ?? { dx: 0, dy: 0 }
+    const onMove = (ev: PointerEvent) =>
+      setLayout((l) => ({ ...l, [id]: { ...(l[id] ?? s), dx: s.dx + ev.clientX - startX, dy: s.dy + ev.clientY - startY } }))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
     }
-    const up = () => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }
 
-  // Обёртка блока: перетаскивание + ресайз в режиме расстановки
-  const LayoutBox = ({ k, children, className }: { k: string; children: React.ReactNode; className?: string }) => {
-    const s = layout[k]
+  const startBlockResize = (id: string) => (e: React.PointerEvent) => {
+    if (!layoutMode) return
+    e.preventDefault()
+    e.stopPropagation()
+    const el = (e.currentTarget as HTMLElement).parentElement
+    const startW = el?.offsetWidth ?? 0, startH = el?.offsetHeight ?? 0
+    const startX = e.clientX, startY = e.clientY
+    const onMove = (ev: PointerEvent) =>
+      setLayout((l) => ({
+        ...l,
+        [id]: { ...(l[id] ?? { dx: 0, dy: 0 }), w: Math.max(200, startW + ev.clientX - startX), h: Math.max(100, startH + ev.clientY - startY) },
+      }))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  // Обёртка блока — как HomePage LB: pointerdown на самой обёртке
+  const LayoutBox = ({ k, children }: { k: string; children: React.ReactNode }) => {
+    const s = layout[k] ?? { dx: 0, dy: 0 }
     return (
       <div
-        className={className}
+        className={layoutMode ? 'relative outline-2 outline-dashed outline-orange-500/60 rounded-xl' : undefined}
         style={{
-          transform: s ? `translate(${s.dx}px, ${s.dy}px)` : undefined,
-          width: s?.w,
-          height: s?.h,
-          position: 'relative',
-          zIndex: layoutMode ? 10 : undefined,
+          transform: `translate(${s.dx}px, ${s.dy}px)`,
+          width: s.w,
+          height: s.h,
+          zIndex: layoutMode ? 30 : undefined,
+          overflow: 'visible',
+          cursor: layoutMode ? 'grab' : undefined,
+          touchAction: layoutMode ? 'none' : undefined,
         }}
+        onPointerDown={startBlockDrag(k)}
       >
-        {layoutMode && (
-          <>
-            <div
-              onPointerDown={(e) => startDrag(e, k, 'move')}
-              className="absolute inset-0 rounded-xl"
-              style={{ cursor: 'grab', touchAction: 'none', background: 'rgba(249,115,22,0.08)', border: '2px dashed rgba(249,115,22,0.5)', zIndex: 20 }}
-            />
-            <div
-              onPointerDown={(e) => startDrag(e, k, 'resize')}
-              className="absolute bottom-1 right-1 w-4 h-4 rounded-sm"
-              style={{ cursor: 'nwse-resize', touchAction: 'none', background: 'rgba(249,115,22,0.6)', zIndex: 21 }}
-            />
-          </>
-        )}
         {children}
+        {layoutMode && (
+          <div
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-orange-500/80 rounded-tl"
+            style={{ zIndex: 40 }}
+            onPointerDown={startBlockResize(k)}
+          />
+        )}
       </div>
     )
   }
