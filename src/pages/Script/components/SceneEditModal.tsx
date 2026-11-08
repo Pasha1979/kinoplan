@@ -108,7 +108,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
       <div
         className="rounded-2xl flex flex-col overflow-hidden"
         style={{
-          background: cardBg, border: `1px solid ${border}`,
+          background: cardBg, border: `1px solid rgba(249,115,22,0.35)`, borderTop: `3px solid #fb923c`,
           width: 'min(780px, 92vw)', height: 'min(600px, 85vh)',
           boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
         }}
@@ -129,9 +129,24 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
           </button>
         </div>
 
-        {/* Редактор — только эта сцена */}
-        <div className="flex-1 overflow-y-auto px-8 py-5" style={{ fontFamily: '"Courier New", monospace' }}>
-          <EditorContent editor={editor} className="h-full" />
+        {/* Редактор — только эта сцена, вид «лист А4» */}
+        <div className="flex-1 overflow-y-auto px-6 py-5" style={{ background: isDark ? '#151528' : '#e8e8ec' }}>
+          <div
+            className="mx-auto"
+            style={{
+              maxWidth: 620,
+              minHeight: '100%',
+              background: '#ffffff',
+              color: '#1a1a1a',
+              fontFamily: '"Courier New", Courier, monospace',
+              fontSize: 13,
+              padding: '32px 40px',
+              borderRadius: 6,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+            }}
+          >
+            <EditorContent editor={editor} className="tiptap-editor format-russian h-full outline-none" />
+          </div>
         </div>
 
         {/* Кнопки */}

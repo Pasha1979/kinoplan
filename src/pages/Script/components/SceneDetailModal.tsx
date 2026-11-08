@@ -68,7 +68,7 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
     >
       <div
         className="rounded-2xl overflow-hidden"
-        style={{ background: cardBg, border: `1px solid ${border}`, width: 720, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+        style={{ background: cardBg, border: `1px solid rgba(249,115,22,0.35)`, borderTop: `3px solid #fb923c`, width: 720, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Шапка */}
@@ -136,9 +136,16 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
                     save({ priority: v })
                   }}
                   className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
-                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
+                  style={{
+                    background: isDark ? '#1a1a33' : '#f5f5f5',
+                    border: `1px solid ${border}`,
+                    color: textPrimary,
+                    colorScheme: isDark ? 'dark' : 'light',
+                  }}
                 >
-                  {PRIORITIES.map((p) => <option key={p.v} value={p.v!}>{p.l}</option>)}
+                  {PRIORITIES.map((p) => (
+                    <option key={p.v} value={p.v!} style={{ background: isDark ? '#1a1a33' : '#fff', color: textPrimary }}>{p.l}</option>
+                  ))}
                 </select>
               </div>
             </div>
