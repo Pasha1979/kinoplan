@@ -262,8 +262,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     e.currentTarget.style.boxShadow = 'none'
   }
 
-  const Section = ({ title, icon, right, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="rounded-xl p-5 transition-all"
+  const Section = ({ title, icon, right, fill, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; fill?: boolean; children: React.ReactNode }) => (
+    <div className={`rounded-xl p-5 transition-all ${fill ? 'h-full flex flex-col' : ''}`}
       style={{ background: cardBg, border: `1px solid ${border}` }}
       onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
       <div className="flex items-center gap-2 mb-3">
@@ -271,7 +271,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         <span className="text-xs font-semibold flex-1" style={{ color: textPrimary }}>{title}</span>
         {right}
       </div>
-      {children}
+      {fill ? <div className="flex-1 min-h-0">{children}</div> : children}
     </div>
   )
 
@@ -600,12 +600,12 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
 
         {/* Темп по сценам — доля диалога vs действия (только «Все серии») */}
         {stats.tempo.length > 0 && (
-          <LayoutBox k="s-tempo"><Section title="Темп по сценам" icon={<MessageSquare size={14} />} right={
+          <LayoutBox k="s-tempo"><Section fill title="Темп по сценам" icon={<MessageSquare size={14} />} right={
             <span className="text-[9px]" style={{ color: textSecondary }}>
               <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
             </span>
           }>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 max-h-64 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 h-full overflow-y-auto pr-1 content-start">
               {stats.tempo.map((t) => (
                 <div
                   key={t.id}
