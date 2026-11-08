@@ -127,7 +127,7 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ПРИОРИТЕТ</div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[prio] }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[prio ?? 'medium'] }} />
                 <select
                   value={prio}
                   onChange={(e) => {
