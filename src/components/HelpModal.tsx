@@ -342,7 +342,10 @@ export default function HelpModal({ isDark, onClose, context }: HelpModalProps) 
   const visibleTips = context
     ? TIPS.filter((t) => (TAG_PAGES[t.tag || ''] || 'text') === context)
     : TIPS
-  const [activeTab, setActiveTab] = useState<Tab>('shortcuts')
+  // На не-текстовых вкладках открываем сразу «Подсказки» (shortcuts/formatting — только редактора)
+  const isEditorTab = !context || context === 'text'
+  const [activeTab, setActiveTab] = useState<Tab>(isEditorTab ? 'shortcuts' : 'tips')
+  const visibleTabs = isEditorTab ? TABS : TABS.filter((t) => t.id === 'tips' || t.id === 'about')
 
   const bg         = isDark ? '#1e1e2e' : '#ffffff'
   const bgSecondary= isDark ? '#252535' : '#f8f9fc'
@@ -405,7 +408,7 @@ export default function HelpModal({ isDark, onClose, context }: HelpModalProps) 
 
         {/* Табы */}
         <div style={{ display: 'flex', gap: 2, padding: '0 20px', borderBottom: `1px solid ${border}` }}>
-          {TABS.map(tab => (
+          {visibleTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -487,6 +490,11 @@ export default function HelpModal({ isDark, onClose, context }: HelpModalProps) 
           {/* ── Подсказки ── */}
           {activeTab === 'tips' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {visibleTips.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 0', fontSize: 13, color: textMuted }}>
+                  Подсказки для этого раздела появятся по мере добавления функций
+                </div>
+              )}
               {visibleTips.map((tip, i) => (
                 <div
                   key={i}
