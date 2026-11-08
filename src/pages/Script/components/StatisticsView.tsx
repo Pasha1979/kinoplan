@@ -235,7 +235,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const maxLoc = Math.max(1, ...stats.locations.map((l) => l.count))
   const todColors = ['#f59e0b', '#3b82f6', '#a78bfa', '#34d399', '#f87171', '#94a3b8']
 
-  if (stats.totalScenes === 0) {
+  // Полностью пустой сценарий — только для несериального или «Все»
+  if (stats.totalScenes === 0 && !emptySeries) {
     return (
       <div className="flex-1 flex items-center justify-center" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
         <div className="text-center">
