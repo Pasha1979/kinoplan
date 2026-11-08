@@ -1,0 +1,291 @@
+import { useMemo } from 'react'
+import type { Scene } from '../types/scene'
+
+export interface ScriptStatsAlert {
+  id: string
+  severity: 'warning' | 'info'
+  message: string
+  sceneId?: string
+  sceneNumber?: string
+}
+
+export interface CharacterStat {
+  name: string
+  scenes: number
+  dialogScenes: number
+  /** id первой сцены где появляется — для перехода */
+  firstSceneId?: string
+}
+
+export interface SceneTimingStat {
+  id: string
+  number: string
+  durationSec: number
+  pages: number
+}
+
+export interface NamedCount {
+  name: string
+  count: number
+}
+
+export interface ScriptStats {
+  // Итоги
+  totalScenes: number
+  totalPages: number
+  totalChars: number
+  totalWords: number
+  totalDurationSec: number
+  avgDurationSec: number
+  // ИНТ/ЭКСТ
+  intCount: number
+  extCount: number
+  intExtCount: number
+  pavCount: number
+  // Время суток
+  timeOfDay: NamedCount[]
+  // Диалог/действие
+  dialogBlocks: number
+  actionBlocks: number
+  dialogRatio: number // 0..1
+  // Персонажи
+  characters: CharacterStat[]
+  totalCharacters: number
+  speakingCharacters: number
+  // Локации
+  locations: NamedCount[]
+  // Хронометраж по сценам (для графика)
+  sceneTimings: SceneTimingStat[]
+  // Алерты
+  alerts: ScriptStatsAlert[]
+}
+
+interface BlockLike {
+  type: string
+  content: string
+}
+
+const LONG_SCENE_SEC = 180 // >3 минут — длинная сцена
+const MISSING_CHAR_SCENES = 5 // персонаж пропал на N+ сцен
+const DIALOG_ONLY_STREAK = 3 // 3+ сцен подряд только диалоги
+
+export function useScriptStats(
+  scenes: Scene[],
+  blocks: BlockLike[],
+  precisePages: number,
+): ScriptStats {
+  return useMemo(() => {
+    const totalScenes = scenes.length
+    const totalChars = scenes.reduce((s, sc) => s + (sc.charCount || 0), 0)
+    const totalWords = Math.round(totalChars / 6) // приближение: ~6 символов на слово
+    const totalDurationSec = scenes.reduce(
+      (s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0),
+      0,
+    )
+    const avgDurationSec = totalScenes ? Math.round(totalDurationSec / totalScenes) : 0
+
+    // ИНТ/ЭКСТ
+    let intCount = 0, extCount = 0, intExtCount = 0, pavCount = 0
+    scenes.forEach((sc) => {
+      const t = (sc.type || '').toUpperCase()
+      if (t.includes('ИНТ-ЭКСТ') || t.includes('ИНТ/ЭКСТ')) intExtCount++
+      else if (t.startsWith('ИНТ')) intCount++
+      else if (t.startsWith('ЭКСТ')) extCount++
+      else pavCount++
+    })
+
+    // Время суток
+    const todMap = new Map<string, number>()
+    scenes.forEach((sc) => {
+      const t = (sc.time || '').trim().toUpperCase().replace(/\.$/, '') || 'НЕ УКАЗАНО'
+      todMap.set(t, (todMap.get(t) || 0) + 1)
+    })
+    const timeOfDay = [...todMap.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+
+    // Диалог/действие — по блокам документа
+    const dialogBlocks = blocks.filter(
+      (b) => b.type === 'dialog' || b.type === 'character',
+    ).length
+    const actionBlocks = blocks.filter((b) => b.type === 'action').length
+    const dialogRatio = dialogBlocks + actionBlocks > 0
+      ? dialogBlocks / (dialogBlocks + actionBlocks)
+      : 0
+
+    // Персонажи — активность по сценам
+    const charMap = new Map<string, { scenes: number; dialogScenes: number; firstSceneId?: string }>()
+    scenes.forEach((sc) => {
+      const seen = new Set<string>()
+      ;(sc.cast || []).forEach((name) => {
+        const key = name.toUpperCase().trim()
+        if (!key || seen.has(key)) return
+        seen.add(key)
+        const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0 }
+        entry.scenes++
+        if (!entry.firstSceneId) entry.firstSceneId = sc.id
+        charMap.set(key, entry)
+      })
+      ;(sc.dialogCharacters || []).forEach((name) => {
+        const key = name.toUpperCase().trim()
+        if (!key) return
+        const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0 }
+        entry.dialogScenes++
+        charMap.set(key, entry)
+      })
+    })
+    const characters: CharacterStat[] = [...charMap.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.scenes - a.scenes)
+    const speakingCharacters = characters.filter((c) => c.dialogScenes > 0).length
+
+    // Локации
+    const locMap = new Map<string, number>()
+    scenes.forEach((sc) => {
+      const l = (sc.location || '').trim() || 'БЕЗ ЛОКАЦИИ'
+      locMap.set(l, (locMap.get(l) || 0) + 1)
+    })
+    const locations = [...locMap.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+
+    // Хронометраж по сценам
+    const sceneTimings: SceneTimingStat[] = scenes.map((sc) => ({
+      id: sc.id,
+      number: sc.number,
+      durationSec: sc.manualDuration ?? sc.duration ?? 0,
+      pages: sc.pages || 0,
+    }))
+
+    // ─── Алерты ───
+    const alerts: ScriptStatsAlert[] = []
+
+    // Длинные сцены
+    scenes.forEach((sc) => {
+      const dur = sc.manualDuration ?? sc.duration ?? 0
+      if (dur > LONG_SCENE_SEC) {
+        alerts.push({
+          id: `long-${sc.id}`,
+          severity: 'warning',
+          message: `Сцена ${sc.number}: ${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')} — длиннее 3 минут`,
+          sceneId: sc.id,
+          sceneNumber: sc.number,
+        })
+      }
+    })
+
+    // Персонаж пропал на N+ сцен
+    characters.forEach((ch) => {
+      if (ch.scenes < 2) return
+      const sceneIndices = scenes
+        .map((sc, i) => ((sc.cast || []).some((c) => c.toUpperCase().trim() === ch.name) ? i : -1))
+        .filter((i) => i >= 0)
+      for (let i = 1; i < sceneIndices.length; i++) {
+        const gap = sceneIndices[i] - sceneIndices[i - 1] - 1
+        if (gap >= MISSING_CHAR_SCENES) {
+          alerts.push({
+            id: `missing-${ch.name}-${i}`,
+            severity: 'info',
+            message: `${ch.name}: пропал на ${gap} сцен (между ${scenes[sceneIndices[i - 1]].number} и ${scenes[sceneIndices[i]].number})`,
+            sceneId: scenes[sceneIndices[i]].id,
+            sceneNumber: scenes[sceneIndices[i]].number,
+          })
+          break
+        }
+      }
+      // Пропал до конца
+      const lastIdx = sceneIndices[sceneIndices.length - 1]
+      if (lastIdx !== undefined && scenes.length - 1 - lastIdx >= MISSING_CHAR_SCENES) {
+        alerts.push({
+          id: `missing-end-${ch.name}`,
+          severity: 'info',
+          message: `${ch.name}: не появляется после сцены ${scenes[lastIdx].number} (${scenes.length - 1 - lastIdx} сцен до конца)`,
+          sceneId: scenes[lastIdx].id,
+          sceneNumber: scenes[lastIdx].number,
+        })
+      }
+    })
+
+    // 3+ сцен подряд без action (только диалоги): сцены где все говорящие и нет действия
+    // Приближение: у сцены есть dialogCharacters и charCount низкий относительно реплик — сложно.
+    // Проще: сцены без action-блоков определить нельзя по Scene — считаем серии
+    // где dialogCharacters заполнены, а action отсутствует — по blocks между шапками.
+    let streak = 0
+    let streakStart = -1
+    const sceneHeaders = blocks.filter((b) => b.type === 'scene_header').length
+    if (sceneHeaders > 0) {
+      // Считаем action-блоки между шапками
+      let inSceneIdx = -1
+      let sceneHasAction = false
+      const markStreak = (hasAction: boolean) => {
+        if (!hasAction) {
+          if (streak === 0) streakStart = inSceneIdx
+          streak++
+        } else {
+          streak = 0
+          streakStart = -1
+        }
+        if (streak === DIALOG_ONLY_STREAK && streakStart >= 0 && scenes[streakStart]) {
+          alerts.push({
+            id: `dialog-streak-${streakStart}`,
+            severity: 'info',
+            message: `${DIALOG_ONLY_STREAK} сцены подряд только диалог (начиная со сцены ${scenes[streakStart].number}) — добавить действие?`,
+            sceneId: scenes[streakStart].id,
+            sceneNumber: scenes[streakStart].number,
+          })
+        }
+      }
+      blocks.forEach((b) => {
+        if (b.type === 'scene_header') {
+          if (inSceneIdx >= 0) markStreak(sceneHasAction)
+          inSceneIdx++
+          sceneHasAction = false
+        } else if (b.type === 'action' && b.content.trim()) {
+          sceneHasAction = true
+        }
+      })
+      if (inSceneIdx >= 0) markStreak(sceneHasAction)
+    }
+
+    // Непрерывность: время суток изменилось без перехода
+    for (let i = 1; i < scenes.length; i++) {
+      const prev = scenes[i - 1].time?.trim().toUpperCase()
+      const cur = scenes[i].time?.trim().toUpperCase()
+      if (prev && cur && prev !== cur) {
+        const sameLoc = scenes[i - 1].location?.trim().toUpperCase() === scenes[i].location?.trim().toUpperCase()
+        if (sameLoc) {
+          alerts.push({
+            id: `continuity-${scenes[i].id}`,
+            severity: 'info',
+            message: `Сцена ${scenes[i].number}: время сменилось ${prev} → ${cur} в той же локации — нужен переход?`,
+            sceneId: scenes[i].id,
+            sceneNumber: scenes[i].number,
+          })
+        }
+      }
+    }
+
+    return {
+      totalScenes,
+      totalPages: precisePages,
+      totalChars,
+      totalWords,
+      totalDurationSec,
+      avgDurationSec,
+      intCount,
+      extCount,
+      intExtCount,
+      pavCount,
+      timeOfDay,
+      dialogBlocks,
+      actionBlocks,
+      dialogRatio,
+      characters,
+      totalCharacters: characters.length,
+      speakingCharacters,
+      locations,
+      sceneTimings,
+      alerts,
+    }
+  }, [scenes, blocks, precisePages])
+}

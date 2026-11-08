@@ -9,6 +9,7 @@ import FormatSelectModal from './components/FormatSelectModal'
 import TimingSettingsModal from './components/TimingSettingsModal'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import ScriptRightPanel from './components/ScriptRightPanel'
+import StatisticsView from './components/StatisticsView'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
@@ -309,7 +310,15 @@ export default function ScriptPage() {
             data={currentScript?.titlePage || defaultTitlePage}
             onChange={handleTitlePageChange}
           />
-        ) : ['breakdown', 'cards', 'development', 'plan', 'statistics'].includes(activeTab) ? (
+        ) : activeTab === 'statistics' ? (
+          <StatisticsView
+            isDark={isDark}
+            scenes={scenes}
+            blocks={blocks}
+            precisePages={scriptStats?.pages || 0}
+            onSceneClick={handleSceneClickRouted}
+          />
+        ) : ['breakdown', 'cards', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
