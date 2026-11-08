@@ -350,6 +350,26 @@ export function useScriptStats(
         }
       })
       if (inSceneIdx >= 0) markStreak(sceneHasAction)
+    } else if (isFiltered) {
+      // Под фильтром серии считаем стрик по темпу: у сцены нет action-текста
+      const tempoById = new Map(tempo.map((t) => [t.id, t]))
+      let fStreak = 0, fStart = -1
+      scenes.forEach((sc, i) => {
+        const hasAction = (tempoById.get(sc.id)?.actionChars ?? 0) > 0
+        if (!hasAction) {
+          if (fStreak === 0) fStart = i
+          fStreak++
+        } else { fStreak = 0; fStart = -1 }
+        if (fStreak === DIALOG_ONLY_STREAK && fStart >= 0) {
+          alerts.push({
+            id: `dialog-streak-f-${fStart}`,
+            severity: 'info',
+            message: `${DIALOG_ONLY_STREAK} сцены подряд только диалог (начиная со сцены ${scenes[fStart].number}) — добавить действие?`,
+            sceneId: scenes[fStart].id,
+            sceneNumber: scenes[fStart].number,
+          })
+        }
+      })
     }
 
     // Поздний персонаж — впервые появляется после 60% сценария
