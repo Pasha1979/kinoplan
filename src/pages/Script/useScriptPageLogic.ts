@@ -329,9 +329,11 @@ export function useScriptPageLogic() {
     }
   }, [episodeScripts, project, currentScript, addScript, setCurrentScript])
 
-  // Все сцены всех серий — для режима «Все серии» в навигаторе
+  // Все сцены всех серий — каждая помечена своей серией (скрипт-владелец),
+  // чтобы фильтры не зависели от формата номера сцены
   const allScenes = useMemo(
-    () => episodeScripts.flatMap((s) => s.scenes || []),
+    () => episodeScripts.flatMap((s) =>
+      (s.scenes || []).map((sc) => ({ ...sc, _episode: s.episodeNumber ?? 1 }) as Scene & { _episode: number })),
     [episodeScripts],
   )
 

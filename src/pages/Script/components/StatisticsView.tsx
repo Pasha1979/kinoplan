@@ -55,10 +55,12 @@ const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount, episodeDuration }: StatisticsViewProps) {
   const [activeSeries, setActiveSeries] = useState<number | 'all'>('all')
 
-  // Фильтр по серии: номер сцены «1-2» → серия 1; без тире — вне фильтра
+  // Фильтр по серии: метка _episode скрипта-владельца (надёжнее разбора номера)
+  const sceneEpisode = (sc: Scene): number | undefined =>
+    (sc as Scene & { _episode?: number })._episode
   const filteredScenes = activeSeries === 'all' || !isSerial
     ? scenes
-    : scenes.filter((sc) => parseInt(sc.number.split('-')[0]) === activeSeries)
+    : scenes.filter((sc) => (sceneEpisode(sc) ?? parseInt(sc.number.split('-')[0])) === activeSeries)
   const stats = useScriptStats(filteredScenes, blocks, precisePages, activeSeries !== 'all', scenes)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
 
@@ -323,20 +325,21 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     ? Array.from({ length: episodesCount || 8 }, (_, i) => {
         const n = i + 1
         const sec = scenes
-          .filter((sc) => parseInt(sc.number.split('-')[0]) === n)
+          .filter((sc) => (sceneEpisode(sc) ?? parseInt(sc.number.split('-')[0])) === n)
           .reduce((s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0), 0)
         const target = (episodeDuration ?? 0) * 60
         return { n, sec, pct: target > 0 ? Math.min(100, (sec / target) * 100) : null }
       })
     : []
 
-  // Темп по сериям: группировка сцен по префиксу номера «1-2» → серия 1.
+  // Темп по сериям: группировка по метке _episode скрипта-владельца.
   // Темп считается по всем сценам — под фильтром показываем только свою серию
+  const episodeBySceneId = new Map(scenes.map((sc) => [sc.id, sceneEpisode(sc)]))
   const tempoBySeries = new Map<string, typeof stats.tempo>()
   stats.tempo.forEach((t) => {
-    if (activeSeries !== 'all' && !t.number.startsWith(`${activeSeries}-`)) return
-    const m = t.number.match(/^(\d+)-/)
-    const key = m ? m[1] : '—'
+    const ep = episodeBySceneId.get(t.id) ?? (t.number.match(/^(\d+)-/)?.[1] ? Number(t.number.split('-')[0]) : undefined)
+    if (activeSeries !== 'all' && ep !== activeSeries) return
+    const key = ep !== undefined ? String(ep) : '—'
     const arr = tempoBySeries.get(key) || []
     arr.push(t)
     tempoBySeries.set(key, arr)
