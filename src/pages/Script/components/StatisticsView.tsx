@@ -479,9 +479,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
 
         {/* Хронометраж по сценам + топ персонажей + локации */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <LayoutBox k="s-timings"><Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
+          <LayoutBox k="s-timings"><Section fill title="Хронометраж по сценам" icon={<Clock size={14} />}>
             {empty ? <Empty text="Здесь будет хронометраж каждой сцены с маркерами актов" /> :
-            <div ref={timingsRef} className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+            <div ref={timingsRef} className="space-y-1.5 h-full overflow-y-auto pr-1">
               {stats.sceneTimings.map((s, i) => (
                 <div key={s.id}>
                   {ACT_MARKERS.filter((m) => (dragMarker?.key === m.key ? dragMarker.index : markerIndex.get(m.key)) === i).map((m) => {
@@ -525,7 +525,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>}
           </Section></LayoutBox>
 
-          <LayoutBox k="s-chars"><Section title="Топ персонажей" icon={<Users size={14} />} right={
+          <LayoutBox k="s-chars"><Section fill title="Топ персонажей" icon={<Users size={14} />} right={
             <div className="flex gap-0.5">
               {([['scenes', 'сцены'], ['duration', 'хроно']] as const).map(([v, l]) => (
                 <button
@@ -541,10 +541,10 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>
           }>
             {empty ? <Empty text="Здесь будет рейтинг персонажей по сценам и экранному времени" /> :
-            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-1.5 h-full overflow-y-auto pr-1">
               {[...stats.characters]
                 .sort((a, b) => charSort === 'duration' ? b.durationSec - a.durationSec : b.scenes - a.scenes)
-                .slice(0, 12).map((ch) => (
+                .map((ch) => (
                 <div key={ch.name} className="flex items-center gap-2">
                   <span className="w-24 text-[11px] truncate" style={{ color: textSecondary }}>{ch.name}</span>
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
@@ -556,9 +556,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>}
           </Section></LayoutBox>
 
-          <LayoutBox k="s-locs"><Section title="Локации" icon={<MapPin size={14} />}>
+          <LayoutBox k="s-locs"><Section fill title="Локации" icon={<MapPin size={14} />}>
             {empty ? <Empty text="Здесь будут локации и подлокации с количеством сцен" /> :
-            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-1.5 h-full overflow-y-auto pr-1">
               {stats.locations.map((l) => {
                 const hasSub = l.sublocations.length > 0
                 const expanded = expandedLocs.has(l.name)
@@ -642,9 +642,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         )}
 
         {/* Тепловая карта персонажей — кто в каких сценах */}
-        <LayoutBox k="s-heatmap"><Section title="Активность персонажей по сценам" icon={<Users size={14} />}>
+        <LayoutBox k="s-heatmap"><Section fill title="Активность персонажей по сценам" icon={<Users size={14} />}>
           {empty ? <Empty text="Здесь будет тепловая карта персонажей по сценам — кто где появляется" /> : <>
-          <div className="overflow-x-auto pb-1">
+          <div className="overflow-auto pb-1" style={{ maxHeight: '100%' }}>
             <div className="inline-grid gap-x-[3px] gap-y-[3px]" style={{ gridTemplateColumns: `110px repeat(${filteredScenes.length}, minmax(14px, 1fr))` }}>
               {/* Шапка — номера сцен */}
               <div />
@@ -658,7 +658,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 </div>
               ))}
               {/* Строки персонажей */}
-              {stats.characters.slice(0, 12).map((ch) => (
+              {stats.characters.map((ch) => (
                 <Fragment key={ch.name}>
                   <div key={`n-${ch.name}`} className="text-[10px] truncate flex items-center" style={{ color: textPrimary }} title={ch.name}>
                     {ch.name}
