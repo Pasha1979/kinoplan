@@ -448,6 +448,55 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           </Section></LayoutBox>
         </div>
 
+        {/* Тепловая карта персонажей — кто в каких сценах */}
+        <LayoutBox k="s-heatmap"><Section title="Активность персонажей по сценам" icon={<Users size={14} />}>
+          <div className="overflow-x-auto pb-1">
+            <div className="inline-grid gap-x-[3px] gap-y-[3px]" style={{ gridTemplateColumns: `110px repeat(${filteredScenes.length}, minmax(14px, 1fr))` }}>
+              {/* Шапка — номера сцен */}
+              <div />
+              {filteredScenes.map((sc) => (
+                <div key={`h-${sc.id}`}
+                  onClick={onSceneClick ? () => onSceneClick(sc.id) : undefined}
+                  className="text-[8px] text-center font-medium transition-all"
+                  style={{ color: textSecondary, writingMode: 'vertical-rl', height: 34, cursor: onSceneClick ? 'pointer' : 'default' }}
+                  title={`Сцена ${sc.number}`}>
+                  {sc.number}
+                </div>
+              ))}
+              {/* Строки персонажей */}
+              {stats.characters.slice(0, 12).map((ch) => (
+                <>
+                  <div key={`n-${ch.name}`} className="text-[10px] truncate flex items-center" style={{ color: textPrimary }} title={ch.name}>
+                    {ch.name}
+                  </div>
+                  {filteredScenes.map((sc) => {
+                    const inScene = (sc.cast || []).some((c) => c.toUpperCase().trim() === ch.name)
+                    const speaks = inScene && (sc.dialogCharacters || []).some((c) => c.toUpperCase().trim() === ch.name)
+                    return (
+                      <div
+                        key={`${ch.name}-${sc.id}`}
+                        onClick={inScene && onSceneClick ? () => onSceneClick(sc.id) : undefined}
+                        className="rounded-[2px] transition-all"
+                        style={{
+                          height: 14,
+                          background: speaks ? '#f97316' : inScene ? 'rgba(249,115,22,0.35)' : isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb',
+                          cursor: inScene && onSceneClick ? 'pointer' : 'default',
+                        }}
+                        title={`${ch.name} — сцена ${sc.number}${speaks ? ' (реплики)' : inScene ? ' (в составе)' : ''}`}
+                      />
+                    )
+                  })}
+                </>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-4 mt-3 text-[10px]" style={{ color: textSecondary }}>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: '#f97316' }} /> с репликами</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(249,115,22,0.35)' }} /> в составе</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb' }} /> нет</span>
+          </div>
+        </Section></LayoutBox>
+
         {/* Алерты */}
         {stats.alerts.length > 0 && (
           <LayoutBox k="s-alerts"><Section title={`Инсайты и алерты (${stats.alerts.length})`} icon={<AlertTriangle size={14} />}>
