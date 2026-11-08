@@ -49,43 +49,44 @@ const isHeader = (el: Element) => {
   return t === 'scene-header' || t === 'sceneHeader'
 }
 
-// Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей
-function extractSceneHtml(content: string, sceneIndex: number): string {
-  const doc = new DOMParser().parseFromString(content || '', 'text/html')
-  const blocks = [...doc.body.querySelectorAll('[data-type]')]
+// Ищет блоки сцены по НОМЕРУ в тексте шапки — надёжнее индекса
+// (порядок в массиве scenes может расходиться с документом)
+function findSceneRange(blocks: Element[], sceneNumber: string, fallbackIndex: number): { start: number; end: number } {
+  const headers = blocks
+    .map((el, i) => ({ el, i }))
+    .filter(({ el }) => isHeader(el))
+  const num = sceneNumber.replace(/\./g, '').toLowerCase()
   let start = -1
-  blocks.forEach((el, i) => {
-    if (isHeader(el)) {
-      if (start === -1 && sceneIndex === 0) start = i
-      else sceneIndex--
-    }
-  })
-  if (start < 0) return ''
+  for (const { el, i } of headers) {
+    const headNum = (el.textContent || '').trim().split(/\s/)[0]?.replace(/\./g, '').toLowerCase()
+    if (headNum === num) { start = i; break }
+  }
+  if (start < 0 && headers[fallbackIndex]) start = headers[fallbackIndex].i
+  if (start < 0) return { start: -1, end: -1 }
   let end = blocks.length
   for (let i = start + 1; i < blocks.length; i++) {
     if (isHeader(blocks[i])) { end = i; break }
   }
+  return { start, end }
+}
+
+// Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей
+function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
+  const doc = new DOMParser().parseFromString(content || '', 'text/html')
+  const blocks = [...doc.body.querySelectorAll('[data-type]')]
+  const { start, end } = findSceneRange(blocks, sceneNumber, fallbackIndex)
+  if (start < 0) return ''
   return blocks.slice(start, end).map((el) => el.outerHTML).join('')
 }
 
 // Вставляет фрагмент обратно: заменяет блоки сцены на новые из html
-export function spliceSceneHtml(content: string, sceneIndex: number, newHtml: string): string {
+export function spliceSceneHtml(content: string, sceneNumber: string, fallbackIndex: number, newHtml: string): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const frag = new DOMParser().parseFromString(newHtml, 'text/html')
   const newBlocks = [...frag.body.children]
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
-  let start = -1
-  blocks.forEach((el, i) => {
-    if (isHeader(el)) {
-      if (start === -1 && sceneIndex === 0) start = i
-      else sceneIndex--
-    }
-  })
+  const { start, end } = findSceneRange(blocks, sceneNumber, fallbackIndex)
   if (start < 0) return content
-  let end = blocks.length
-  for (let i = start + 1; i < blocks.length; i++) {
-    if (isHeader(blocks[i])) { end = i; break }
-  }
   // удалить старые блоки сцены
   for (let i = start; i < end; i++) blocks[i].remove()
   // вставить новые на место anchor (anchor уже удалён — вставляем перед блоком, который был end)
@@ -103,8 +104,8 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
 
   const initialHtml = useMemo(
-    () => extractSceneHtml(script.content || '', sceneIndex),
-    [script.id, sceneIndex],
+    () => extractSceneHtml(script.content || '', scene.number, sceneIndex),
+    [script.id, scene.id],
   )
 
   const editor = useEditor({
@@ -125,7 +126,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
 
   const handleSave = () => {
     if (!editor) return
-    const newContent = spliceSceneHtml(script.content || '', sceneIndex, editor.getHTML())
+    const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML())
     onSave(newContent)
     onClose()
   }
