@@ -121,7 +121,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
       EnterFlow,
     ],
     content: initialHtml,
-    autofocus: 'end',
+    autofocus: 'start',
   })
 
   const handleSave = () => {
