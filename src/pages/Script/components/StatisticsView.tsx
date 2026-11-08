@@ -13,6 +13,8 @@ interface StatisticsViewProps {
   blocks: Array<{ type: string; content: string }>
   precisePages: number
   onSceneClick?: (sceneId: string) => void
+  isSerial?: boolean
+  episodesCount?: number
 }
 
 function fmtDuration(sec: number): string {
@@ -37,8 +39,14 @@ const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   'm-chars': { dx: -150.4, dy: 4.8, w: 220.8, h: 100 },
 }
 
-function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: StatisticsViewProps) {
-  const stats = useScriptStats(scenes, blocks, precisePages)
+function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount }: StatisticsViewProps) {
+  const [activeSeries, setActiveSeries] = useState<number | 'all'>('all')
+
+  // Фильтр по серии: номер сцены «1-2» → серия 1; без тире — вне фильтра
+  const filteredScenes = activeSeries === 'all' || !isSerial
+    ? scenes
+    : scenes.filter((sc) => parseInt(sc.number.split('-')[0]) === activeSeries)
+  const stats = useScriptStats(filteredScenes, blocks, precisePages)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
   const [layoutMode, setLayoutMode] = useState(false)
   const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
@@ -241,7 +249,26 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       <div className="w-full space-y-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
+            {isSerial && (
+              <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f0f0f0' }}>
+                {(['all', ...Array.from({ length: episodesCount || 8 }, (_, i) => i + 1)] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setActiveSeries(s as number | 'all')}
+                    className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+                    style={{
+                      background: activeSeries === s ? 'rgba(249,115,22,0.2)' : 'transparent',
+                      color: activeSeries === s ? '#fb923c' : textSecondary,
+                    }}
+                  >
+                    {s === 'all' ? 'Все' : `С${s}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {layoutMode && (
               <button

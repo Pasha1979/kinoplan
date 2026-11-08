@@ -317,6 +317,8 @@ export default function ScriptPage() {
             blocks={blocks}
             precisePages={scriptStats?.pages || 0}
             onSceneClick={handleSceneClickRouted}
+            isSerial={project?.type === 'serial'}
+            episodesCount={project?.episodesCount || 8}
           />
         ) : ['breakdown', 'cards', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
