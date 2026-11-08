@@ -125,7 +125,11 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
-      return { ...APPLIED_LAYOUT, ...saved } // свои правки поверх дефолта
+      // Помержим поключно: w/h из дефолта сохраняются, если в сохранённом их нет
+      // (иначе блоки без h теряют высоту → контент выпадает без скролла)
+      const merged = { ...APPLIED_LAYOUT }
+      for (const k of Object.keys(saved)) merged[k] = { ...APPLIED_LAYOUT[k], ...saved[k] }
+      return merged
     } catch { return { ...APPLIED_LAYOUT } }
   })
   useEffect(() => {
