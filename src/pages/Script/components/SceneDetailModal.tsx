@@ -12,16 +12,17 @@ interface SceneDetailModalProps {
   onUpdate?: (sceneId: string, patch: Partial<Scene>) => void
 }
 
-const STATUSES: Array<{ v: Scene['status']; l: string }> = [
-  { v: 'not_planned', l: 'Не запланирована' },
-  { v: 'planned', l: 'Запланирована' },
-  { v: 'shot', l: 'Снята' },
-]
+const STATUSES: Record<string, { l: string; c: string }> = {
+  not_planned: { l: 'Не запланирована', c: '#9ca3af' },
+  planned: { l: 'Запланирована', c: '#3b82f6' },
+  shot: { l: 'Снята', c: '#22c55e' },
+}
 const PRIORITIES: Array<{ v: Scene['priority']; l: string }> = [
   { v: 'high', l: 'Высокий' },
   { v: 'medium', l: 'Средний' },
   { v: 'low', l: 'Низкий' },
 ]
+export const PRIORITY_COLOR: Record<string, string> = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' }
 
 function fmtDuration(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -63,7 +64,7 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpd
     >
       <div
         className="rounded-2xl overflow-hidden"
-        style={{ background: cardBg, border: `1px solid ${border}`, width: 340, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+        style={{ background: cardBg, border: `1px solid ${border}`, width: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Шапка */}
@@ -112,25 +113,26 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onGoToScene, onUpd
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>СТАТУС</div>
-              <select
-                value={scene.status || 'not_planned'}
-                onChange={(e) => save({ status: e.target.value as Scene['status'] })}
-                className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
-                style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
-              >
-                {STATUSES.map((s) => <option key={s.v} value={s.v!}>{s.l}</option>)}
-              </select>
+              {/* Только чтение — назначается вторым режиссёром в планировании */}
+              <div className="w-full rounded-lg px-2 py-1.5 text-xs flex items-center gap-2"
+                style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', border: `1px solid ${border}` }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: STATUSES[scene.status || 'not_planned'].c }} />
+                <span style={{ color: textPrimary }}>{STATUSES[scene.status || 'not_planned'].l}</span>
+              </div>
             </div>
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ПРИОРИТЕТ</div>
-              <select
-                value={scene.priority || 'medium'}
-                onChange={(e) => save({ priority: e.target.value as Scene['priority'] })}
-                className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
-                style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
-              >
-                {PRIORITIES.map((p) => <option key={p.v} value={p.v!}>{p.l}</option>)}
-              </select>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[scene.priority || 'medium'] }} />
+                <select
+                  value={scene.priority || 'medium'}
+                  onChange={(e) => save({ priority: e.target.value as Scene['priority'] })}
+                  className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
+                >
+                  {PRIORITIES.map((p) => <option key={p.v} value={p.v!}>{p.l}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 

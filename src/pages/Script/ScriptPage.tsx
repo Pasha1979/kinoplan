@@ -397,7 +397,10 @@ export default function ScriptPage() {
             blocks={allBlocks}
             isSerial={project?.type === 'serial'}
             episodesCount={project?.episodesCount || 8}
-            onSceneClick={handleSceneClickRouted}
+            onSceneClick={(id) => {
+              handleSceneClickRouted(id)
+              setActiveTab('text')
+            }}
             onUpdateScene={handleUpdateScene}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
