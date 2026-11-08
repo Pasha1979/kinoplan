@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { pouchStorage } from '../services/storageService'
 import { immer } from 'zustand/middleware/immer'
 import type { Project } from './projectStore'
 import type { Scene } from '../types/scene'
@@ -126,6 +127,6 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
           state.isLoading = loading
         }),
     })),
-    { name: 'kinoplan-normalized-projects' }
+    { name: 'kinoplan-normalized-projects', storage: createJSONStorage(() => pouchStorage) }
   )
 )

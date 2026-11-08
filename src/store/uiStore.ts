@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { pouchStorage } from '../services/storageService'
 
 type Theme = 'dark' | 'light'
 
@@ -28,6 +29,6 @@ export const useUiStore = create<UiStore>()(
       toggleA4Mode: () =>
         set((state) => ({ a4Mode: !state.a4Mode })),
     }),
-    { name: 'kinoplan-ui' }
+    { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )
 )

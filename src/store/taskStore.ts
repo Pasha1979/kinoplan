@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { pouchStorage } from '../services/storageService'
 import type { Task, ActivityEvent } from './projectStore'
 
 interface TaskStore {
@@ -32,6 +33,6 @@ export const useTaskStore = create<TaskStore>()(
   getProjectActivity: (projectId) =>
     get().activity.filter((a) => a.projectId === projectId),
   }),
-  { name: 'kinoplan-tasks' }
+  { name: 'kinoplan-tasks', storage: createJSONStorage(() => pouchStorage) }
 )
 )

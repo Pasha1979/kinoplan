@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { pouchStorage } from '../services/storageService'
 
 export type ProjectType = 'serial' | 'film' | 'ad' | 'clip' | 'other'
 export type ProjectStatus = 'preproduction' | 'shooting' | 'postproduction' | 'completed'
@@ -135,6 +136,6 @@ export const useProjectStore = create<ProjectStore>()(
     return projects.find((p) => p.id === currentProjectId) ?? null
   },
   }),
-  { name: 'kinoplan-projects' }
+  { name: 'kinoplan-projects', storage: createJSONStorage(() => pouchStorage) }
 )
 )

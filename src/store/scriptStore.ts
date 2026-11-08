@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { pouchStorage } from '../services/storageService'
 import type {
   ScriptFormat,
   TimingSystem,
@@ -317,6 +318,6 @@ export const useScriptStore = create<ScriptStore>()(
       toggleShowPlaceholders: () =>
         set((state) => ({ showPlaceholders: !state.showPlaceholders })),
     }),
-    { name: 'kinoplan-scripts' }
+    { name: 'kinoplan-scripts', storage: createJSONStorage(() => pouchStorage) }
   )
 )

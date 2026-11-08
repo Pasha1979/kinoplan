@@ -1,73 +1,57 @@
-# React + TypeScript + Vite
+# 🎬 KinoPlan
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Local-first платформа для сценаристов, режиссёров и продакшн-команд** — от идеи и сценария до календарно-постановочного плана и разбивки на кастинг, локации и реквизит.
 
-Currently, two official plugins are available:
+Работает оффлайн. Данные хранятся локально, синхронизация — через PouchDB (планируется). Целевая сборка: **Electron-десктоп**, текущий runtime — веб-приложение на Vite + деплой на Vercel.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Стек
 
-## React Compiler
+| Технология | Зачем |
+|---|---|
+| React 19 + TypeScript | UI, строгая типизация |
+| Vite | сборка и dev-server |
+| Tailwind CSS v4 | стилизация, светлая/тёмная тема |
+| Tiptap (ProseMirror) | сценарный редактор: блоки, SmartType, автодетекция |
+| Zustand + persist | состояние; сейчас persist → localStorage, цель — SQLite/PouchDB |
+| @dnd-kit | drag-and-drop (сцены, карточки проектов, макеты) |
+| React Router | навигация между модулями |
+| Vitest + Testing Library | юнит-тесты (16 файлов: сторы, парсеры, экстракторы) |
+| lucide-react | иконки |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Запуск
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # dev-сервер
+npm run build      # tsc -b && vite build
+npm run test       # vitest run
+npm run lint       # eslint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Структура
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/
+├── pages/          # модули: Home (проекты), Script (сценарий), и др.
+│   ├── Home/       # дашборд проектов: карточки, теги, dnd, архив
+│   └── Script/     # редактор сценария, статистика, навигатор сцен
+├── store/          # Zustand-сторы: project, script, task, ui
+├── hooks/          # useScriptStats, useScriptEditorLogic и др.
+├── services/       # pageCounter, projectService, wordExport
+└── utils/          # sceneExtractor, scriptParser, sceneTiming
+
+_ai_workspace/      # «мозг» проекта для AI-ассистента:
+                    # SESSION_CONTEXT, ПЛАН_РАБОТ, LESSONS_LEARNED и др.
+```
+
+## Архитектура
+
+- **Local-first**: приложение работает оффлайн; React не обращается к БД напрямую — только через сервисный слой (в Electron — через IPC).
+- **Сценарий** хранится как документ Tiptap; сцены извлекаются через `sceneExtractor` и агрегируются статистикой `useScriptStats`.
+- **AI-workflow**: директория `_ai_workspace/` — память проекта (контекст сессии, план работ, уроки, архитектурный опекун), обновляется автоматически после задач.
+
+## Модули (статус)
+
+- ✅ **HomePage** — карточки проектов, теги, dnd-сортировка, архив, кастомный макет
+- 🚧 **Сценарий** — редактор (блоки, SmartType, валидация, титульная страница), статистика (метрики, фильтр по серии, тепловая карта), в работе: структурные маркеры актов
+- 📋 **Запланировано**: планирование, разбивка, кастинг, отчёты, экспорт PDF/FDX
