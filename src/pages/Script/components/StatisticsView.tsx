@@ -368,19 +368,38 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     return map
   }, [filteredScenes])
 
-  // Всплывашка локации: позиция + данные
+  // Локации по персонажам — для всплывашки при наведении на персонажа
+  const charLocStats = useMemo(() => {
+    const map = new Map<string, Map<string, number>>() // персонаж -> локация -> сцен
+    filteredScenes.forEach((sc) => {
+      const loc = (sc.location || '').trim()
+      if (!loc) return
+      const sub = (sc.sublocation || '').trim()
+      const key = sub ? `${loc}.${sub}` : loc
+      ;(sc.cast || []).forEach((c) => {
+        const k = c.toUpperCase().trim()
+        if (!k) return
+        if (!map.has(k)) map.set(k, new Map())
+        const m = map.get(k)!
+        m.set(key, (m.get(key) || 0) + 1)
+      })
+    })
+    return map
+  }, [filteredScenes])
+
+  // Всплывашка: позиция + данные (общая для локаций и персонажей)
   const [locTip, setLocTip] = useState<{ x: number; y: number; title: string; items: [string, number][] } | null>(null)
-  const showLocTip = (el: HTMLElement, key: string) => {
-    const m = locCharStats.get(key)
+  const showTip = (el: HTMLElement, title: string, m?: Map<string, number>) => {
     if (!m?.size) return setLocTip(null)
     const r = el.getBoundingClientRect()
     setLocTip({
       x: r.right + 8,
       y: Math.min(r.top, window.innerHeight - 260),
-      title: key,
+      title,
       items: [...m.entries()].sort((a, b) => b[1] - a[1]),
     })
   }
+  const showLocTip = (el: HTMLElement, key: string) => showTip(el, key, locCharStats.get(key))
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
@@ -581,7 +600,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               {[...stats.characters]
                 .sort((a, b) => charSort === 'duration' ? b.durationSec - a.durationSec : b.scenes - a.scenes)
                 .map((ch) => (
-                <div key={ch.name} className="flex items-center gap-2">
+                <div key={ch.name} className="flex items-center gap-2"
+                  onMouseEnter={(e) => showTip(e.currentTarget, ch.name, charLocStats.get(ch.name))}
+                  onMouseLeave={() => setLocTip(null)}>
                   <span className="w-24 text-[11px] truncate" style={{ color: textSecondary }}>{ch.name}</span>
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                     <div className="h-full rounded-full" style={{ width: `${(ch.scenes / Math.max(1, stats.characters[0]?.scenes || 1)) * 100}%`, background: '#a78bfa' }} />
@@ -700,7 +721,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               {/* Строки персонажей */}
               {stats.characters.map((ch) => (
                 <Fragment key={ch.name}>
-                  <div key={`n-${ch.name}`} className="text-[10px] truncate flex items-center" style={{ color: textPrimary }} title={ch.name}>
+                  <div key={`n-${ch.name}`} className="text-[10px] truncate flex items-center" style={{ color: textPrimary }}
+                    onMouseEnter={(e) => showTip(e.currentTarget, ch.name, charLocStats.get(ch.name))}
+                    onMouseLeave={() => setLocTip(null)}>
                     {ch.name}
                   </div>
                   {filteredScenes.map((sc) => {
