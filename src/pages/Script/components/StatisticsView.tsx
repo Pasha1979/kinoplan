@@ -319,6 +319,16 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         return { n, sec, pct: target > 0 ? Math.min(100, (sec / target) * 100) : null }
       })
     : []
+
+  // Темп по сериям: группировка сцен по префиксу номера «1-2» → серия 1
+  const tempoBySeries = new Map<string, typeof stats.tempo>()
+  stats.tempo.forEach((t) => {
+    const m = t.number.match(/^(\d+)-/)
+    const key = m ? m[1] : '—'
+    const arr = tempoBySeries.get(key) || []
+    arr.push(t)
+    tempoBySeries.set(key, arr)
+  })
   const todColors = ['#f59e0b', '#3b82f6', '#a78bfa', '#34d399', '#f87171', '#94a3b8']
 
   // Полностью пустой сценарий — только для несериального или «Все»
@@ -605,22 +615,33 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
             </span>
           }>
-            <div className="grid gap-x-5 gap-y-1.5 h-full overflow-y-auto pr-1 content-start"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
-              {stats.tempo.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={onSceneClick ? () => onSceneClick(t.id) : undefined}
-                  className="flex items-center gap-2 transition-all"
-                  style={{ cursor: onSceneClick ? 'pointer' : 'default' }}
-                  title={`Сцена ${t.number}: ${Math.round(t.ratio * 100)}% диалог`}
-                >
-                  <span className="w-9 text-[10px] truncate" style={{ color: textSecondary }}>{t.number}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden flex" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
-                    <div className="h-full" style={{ width: `${t.ratio * 100}%`, background: '#f97316' }} />
-                    <div className="h-full" style={{ width: `${(1 - t.ratio) * 100}%`, background: '#818cf8' }} />
+            <div className="h-full overflow-y-auto pr-1">
+              {[...tempoBySeries.entries()].map(([series, items]) => (
+                <div key={series}>
+                  {tempoBySeries.size > 1 && (
+                    <div className="text-[10px] font-bold mt-2 mb-1 first:mt-0" style={{ color: '#fb923c' }}>
+                      {series === '—' ? 'БЕЗ СЕРИИ' : `СЕРИЯ ${series}`}
+                    </div>
+                  )}
+                  <div className="grid gap-x-5 gap-y-1.5 content-start"
+                    style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+                    {items.map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={onSceneClick ? () => onSceneClick(t.id) : undefined}
+                        className="flex items-center gap-2 transition-all"
+                        style={{ cursor: onSceneClick ? 'pointer' : 'default' }}
+                        title={`Сцена ${t.number}: ${Math.round(t.ratio * 100)}% диалог`}
+                      >
+                        <span className="w-9 text-[10px] truncate" style={{ color: textSecondary }}>{t.number}</span>
+                        <div className="flex-1 h-2 rounded-full overflow-hidden flex" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                          <div className="h-full" style={{ width: `${t.ratio * 100}%`, background: '#f97316' }} />
+                          <div className="h-full" style={{ width: `${(1 - t.ratio) * 100}%`, background: '#818cf8' }} />
+                        </div>
+                        <span className="w-8 text-right text-[9px]" style={{ color: textPrimary }}>{Math.round(t.ratio * 100)}%</span>
+                      </div>
+                    ))}
                   </div>
-                  <span className="w-8 text-right text-[9px]" style={{ color: textPrimary }}>{Math.round(t.ratio * 100)}%</span>
                 </div>
               ))}
             </div>
