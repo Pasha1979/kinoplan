@@ -59,8 +59,6 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const filteredScenes = activeSeries === 'all' || !isSerial
     ? scenes
     : scenes.filter((sc) => parseInt(sc.number.split('-')[0]) === activeSeries)
-  // Серия выбрана, но сцен в ней нет — фильтр и шапка остаются видны
-  const emptySeries = isSerial && activeSeries !== 'all' && filteredScenes.length === 0
   const stats = useScriptStats(filteredScenes, blocks, precisePages, activeSeries !== 'all')
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
 
@@ -304,6 +302,14 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     </div>
   )
 
+  // Пустой набор (серия не написана) — блоки остаются, контент = заглушка
+  const empty = stats.totalScenes === 0
+  const Empty = ({ text }: { text: string }) => (
+    <div className="py-6 text-center text-[11px] rounded-lg" style={{ color: textSecondary, background: muted }}>
+      {text}
+    </div>
+  )
+
   const maxTod = Math.max(1, ...stats.timeOfDay.map((t) => t.count))
   const maxSceneDur = Math.max(1, ...stats.sceneTimings.map((s) => s.durationSec))
   const maxLoc = Math.max(1, ...stats.locations.map((l) => l.count))
@@ -330,19 +336,6 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     tempoBySeries.set(key, arr)
   })
   const todColors = ['#f59e0b', '#3b82f6', '#a78bfa', '#34d399', '#f87171', '#94a3b8']
-
-  // Полностью пустой сценарий — только для несериального или «Все»
-  if (stats.totalScenes === 0 && !emptySeries) {
-    return (
-      <div className="flex-1 flex items-center justify-center" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
-        <div className="text-center">
-          <Film size={48} style={{ color: textSecondary, margin: '0 auto 16px' }} />
-          <p className="text-sm font-medium mb-1" style={{ color: textPrimary }}>Пока нет сцен</p>
-          <p className="text-xs" style={{ color: textSecondary }}>Напишите сценарий — статистика появится автоматически</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
@@ -396,29 +389,13 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           </div>
         </div>
 
-        {emptySeries ? (
-          <div className="rounded-xl p-10 flex flex-col items-center justify-center text-center"
-            style={{
-              background: 'rgba(249,115,22,0.08)',
-              border: '1px solid rgba(249,115,22,0.35)',
-              boxShadow: '0 0 30px rgba(249,115,22,0.12)',
-            }}>
-            <Film size={36} style={{ color: '#fb923c', marginBottom: 12 }} />
-            <p className="text-base font-bold" style={{ color: '#fb923c' }}>
-              Серия {activeSeries} не написана
-            </p>
-            <p className="text-xs mt-1" style={{ color: textSecondary }}>
-              В этой серии пока нет сцен — статистика появится после написания
-            </p>
-          </div>
-        ) : (
         <>
         {/* Карточки метрик */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          <LayoutBox k="m-scenes"><MetricCard icon={<Film size={16} />} label="Сцен" value={stats.totalScenes} sub={`${stats.locations.length} локаций`} /></LayoutBox>
-          <LayoutBox k="m-pages"><MetricCard icon={<FileText size={16} />} label="Страниц" value={stats.totalPages.toFixed(1)} sub={`${stats.totalWords.toLocaleString('ru-RU')} слов`} /></LayoutBox>
-          <LayoutBox k="m-time"><MetricCard icon={<Clock size={16} />} label="Хронометраж" value={fmtDuration(stats.totalDurationSec)} sub={`~${fmtDuration(stats.avgDurationSec)} на сцену`} /></LayoutBox>
-          <LayoutBox k="m-chars"><MetricCard icon={<Users size={16} />} label="Персонажей" value={stats.totalCharacters} sub={`${stats.speakingCharacters} с репликами`} /></LayoutBox>
+          <LayoutBox k="m-scenes"><MetricCard icon={<Film size={16} />} label="Сцен" value={empty ? '—' : stats.totalScenes} sub={empty ? 'сцен пока нет' : `${stats.locations.length} локаций`} /></LayoutBox>
+          <LayoutBox k="m-pages"><MetricCard icon={<FileText size={16} />} label="Страниц" value={empty ? '—' : stats.totalPages.toFixed(1)} sub={empty ? 'появится со сценами' : `${stats.totalWords.toLocaleString('ru-RU')} слов`} /></LayoutBox>
+          <LayoutBox k="m-time"><MetricCard icon={<Clock size={16} />} label="Хронометраж" value={empty ? '—' : fmtDuration(stats.totalDurationSec)} sub={empty ? 'появится со сценами' : `~${fmtDuration(stats.avgDurationSec)} на сцену`} /></LayoutBox>
+          <LayoutBox k="m-chars"><MetricCard icon={<Users size={16} />} label="Персонажей" value={empty ? '—' : stats.totalCharacters} sub={empty ? 'появятся со сценами' : `${stats.speakingCharacters} с репликами`} /></LayoutBox>
           {isSerial && (
             <LayoutBox k="m-series">
               <div className="rounded-xl p-5 transition-all h-full flex flex-col"
@@ -447,6 +424,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         {/* Распределения */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <LayoutBox k="s-intext"><Section title="ИНТ / ЭКСТ" icon={<Film size={14} />}>
+            {empty ? <Empty text="Здесь будет баланс интерьерных и натурных сцен" /> :
             <div className="flex items-center gap-4">
               <Donut parts={intExtParts} total={intExtTotal} />
               <div className="space-y-1.5 flex-1">
@@ -460,18 +438,20 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   </div>
                 ))}
               </div>
-            </div>
+            </div>}
           </Section></LayoutBox>
 
           <LayoutBox k="s-tod"><Section title="Время суток" icon={<Clock size={14} />}>
+            {empty ? <Empty text="Здесь будет распределение сцен по времени суток" /> :
             <div className="space-y-2">
               {stats.timeOfDay.map((t, i) => (
                 <Bar key={t.name} label={t.name} value={t.count} max={maxTod} color={todColors[i % todColors.length]} />
               ))}
-            </div>
+            </div>}
           </Section></LayoutBox>
 
           <LayoutBox k="s-dialog"><Section title={activeSeries !== 'all' ? 'Диалог / Действие · весь сценарий' : 'Диалог / Действие'} icon={<MessageSquare size={14} />}>
+            {empty ? <Empty text="Здесь будет баланс диалога и действия по объёму текста" /> :
             <div className="space-y-2">
               <div className="flex h-4 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                 <div style={{ width: `${stats.dialogRatio * 100}%`, background: '#818cf8' }} />
@@ -484,13 +464,14 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               <p className="text-[10px]" style={{ color: textSecondary }}>
                 Блоки персонажей и реплик vs блоки действия
               </p>
-            </div>
+            </div>}
           </Section></LayoutBox>
         </div>
 
         {/* Хронометраж по сценам + топ персонажей + локации */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <LayoutBox k="s-timings"><Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
+            {empty ? <Empty text="Здесь будет хронометраж каждой сцены с маркерами актов" /> :
             <div ref={timingsRef} className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.sceneTimings.map((s, i) => (
                 <div key={s.id}>
@@ -532,7 +513,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 </div>
                 </div>
               ))}
-            </div>
+            </div>}
           </Section></LayoutBox>
 
           <LayoutBox k="s-chars"><Section title="Топ персонажей" icon={<Users size={14} />} right={
@@ -550,6 +531,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               ))}
             </div>
           }>
+            {empty ? <Empty text="Здесь будет рейтинг персонажей по сценам и экранному времени" /> :
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {[...stats.characters]
                 .sort((a, b) => charSort === 'duration' ? b.durationSec - a.durationSec : b.scenes - a.scenes)
@@ -562,10 +544,11 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   <span className="w-20 text-right text-[10px] whitespace-nowrap" style={{ color: textPrimary }} title={`${ch.dialogScenes} сцен с репликами`}>{ch.scenes}с · {fmtDuration(ch.durationSec)}</span>
                 </div>
               ))}
-            </div>
+            </div>}
           </Section></LayoutBox>
 
           <LayoutBox k="s-locs"><Section title="Локации" icon={<MapPin size={14} />}>
+            {empty ? <Empty text="Здесь будут локации и подлокации с количеством сцен" /> :
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.locations.map((l) => {
                 const hasSub = l.sublocations.length > 0
@@ -604,17 +587,18 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   </div>
                 )
               })}
-            </div>
+            </div>}
           </Section></LayoutBox>
         </div>
 
         {/* Темп по сценам — доля диалога vs действия (только «Все серии») */}
-        {stats.tempo.length > 0 && (
+        {activeSeries === 'all' && (
           <LayoutBox k="s-tempo"><Section fill title="Темп по сценам" icon={<MessageSquare size={14} />} right={
             <span className="text-[9px]" style={{ color: textSecondary }}>
               <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
             </span>
           }>
+            {stats.tempo.length === 0 ? <Empty text="Здесь будет темп сцен — баланс диалога и действия" /> :
             <div className="h-full overflow-y-auto pr-1">
               {[...tempoBySeries.entries()].map(([series, items]) => (
                 <div key={series}>
@@ -644,12 +628,13 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   </div>
                 </div>
               ))}
-            </div>
+            </div>}
           </Section></LayoutBox>
         )}
 
         {/* Тепловая карта персонажей — кто в каких сценах */}
         <LayoutBox k="s-heatmap"><Section title="Активность персонажей по сценам" icon={<Users size={14} />}>
+          {empty ? <Empty text="Здесь будет тепловая карта персонажей по сценам — кто где появляется" /> : <>
           <div className="overflow-x-auto pb-1">
             <div className="inline-grid gap-x-[3px] gap-y-[3px]" style={{ gridTemplateColumns: `110px repeat(${filteredScenes.length}, minmax(14px, 1fr))` }}>
               {/* Шапка — номера сцен */}
@@ -695,6 +680,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(249,115,22,0.35)' }} /> в составе</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb' }} /> нет</span>
           </div>
+          </>}
         </Section></LayoutBox>
 
         {/* Алерты */}
@@ -711,7 +697,6 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           <span className="text-[10px]">Статистика обновляется автоматически при наборе текста</span>
         </div>
         </>
-        )}
       </div>
     </div>
   )
