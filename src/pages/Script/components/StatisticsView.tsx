@@ -1,7 +1,8 @@
-import { memo, useState, Fragment, useRef } from 'react'
+import { memo, useState, useEffect, Fragment, useRef } from 'react'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
+  Move, Download,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
 import { useScriptStore } from '../../../store/scriptStore'
@@ -117,23 +118,80 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     delete next[key]
     updateScript(currentScriptId, { actMarkers: next })
   }
-  // Финализированная раскладка пользователя — режим расстановки убран
-  const layout = APPLIED_LAYOUT
+  // Режим расстановки: драг/ресайз блоков + экспорт JSON макета
+  const [layoutMode, setLayoutMode] = useState(false)
+  const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
+      return { ...APPLIED_LAYOUT, ...saved } // свои правки поверх дефолта
+    } catch { return { ...APPLIED_LAYOUT } }
+  })
+  useEffect(() => {
+    localStorage.setItem('statsLayout', JSON.stringify(layout))
+  }, [layout])
   const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
-  // Обёртка блока — применяет сохранённый dx/dy/w/h
+  const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
+    if (!layoutMode) return
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX, startY = e.clientY
+    const s = layout[id] ?? { dx: 0, dy: 0 }
+    const onMove = (ev: PointerEvent) =>
+      setLayout((l) => ({ ...l, [id]: { ...(l[id] ?? s), dx: s.dx + ev.clientX - startX, dy: s.dy + ev.clientY - startY } }))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  const startBlockResize = (id: string) => (e: React.PointerEvent) => {
+    if (!layoutMode) return
+    e.preventDefault()
+    e.stopPropagation()
+    const el = (e.currentTarget as HTMLElement).parentElement
+    const startW = el?.offsetWidth ?? 0, startH = el?.offsetHeight ?? 0
+    const startX = e.clientX, startY = e.clientY
+    const onMove = (ev: PointerEvent) =>
+      setLayout((l) => ({
+        ...l,
+        [id]: { ...(l[id] ?? { dx: 0, dy: 0 }), w: Math.max(200, startW + ev.clientX - startX), h: Math.max(100, startH + ev.clientY - startY) },
+      }))
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  // Обёртка блока — pointerdown на самой обёртке (паттерн HomePage)
   const LayoutBox = ({ k, children }: { k: string; children: React.ReactNode }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
     return (
       <div
+        className={layoutMode ? 'relative outline-2 outline-dashed outline-orange-500/60 rounded-xl' : undefined}
         style={{
           transform: `translate(${s.dx}px, ${s.dy}px)`,
           width: s.w,
           height: s.h,
+          zIndex: layoutMode ? 30 : undefined,
           overflow: 'visible',
+          cursor: layoutMode ? 'grab' : undefined,
+          touchAction: layoutMode ? 'none' : undefined,
         }}
+        onPointerDown={startBlockDrag(k)}
       >
         {children}
+        {layoutMode && (
+          <div
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-orange-500/80 rounded-tl"
+            style={{ zIndex: 40 }}
+            onPointerDown={startBlockResize(k)}
+          />
+        )}
       </div>
     )
   }
@@ -283,6 +341,32 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 ))}
               </div>
             )}
+          </div>
+          <div className="flex items-center gap-2">
+            {layoutMode && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(layout, null, 2))
+                  alert('Макет скопирован в буфер обмена — отправь мне')
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
+              >
+                <Download size={12} /> Экспорт макета
+              </button>
+            )}
+            <button
+              onClick={() => setLayoutMode(!layoutMode)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: layoutMode ? 'rgba(249,115,22,0.2)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f0f0f0'),
+                color: layoutMode ? '#fb923c' : textSecondary,
+                border: `1px solid ${layoutMode ? 'rgba(249,115,22,0.4)' : 'transparent'}`,
+              }}
+              title="Режим расстановки блоков"
+            >
+              <Move size={12} /> {layoutMode ? 'Готово' : 'Расстановка'}
+            </button>
           </div>
         </div>
 
