@@ -4,6 +4,18 @@ import { X, Keyboard, Lightbulb, AlignLeft, Info } from 'lucide-react'
 interface HelpModalProps {
   isDark: boolean
   onClose: () => void
+  /** активная вкладка модуля — помощь только по ней */
+  context?: string
+}
+
+// Какой вкладке принадлежит тег подсказки; остальные теги — редактора ТЕКСТ
+const TAG_PAGES: Record<string, string> = {
+  'Статистика': 'statistics',
+  'Титул': 'title',
+  'Карточки': 'cards',
+}
+const PAGE_LABELS: Record<string, string> = {
+  text: 'Текст', title: 'Титул', statistics: 'Статистика', cards: 'Карточки',
 }
 
 type Tab = 'shortcuts' | 'tips' | 'formatting' | 'about'
@@ -104,6 +116,21 @@ const SHORTCUTS: { group: string; color?: string; items: { keys: string[]; desc:
 ]
 
 const TIPS: { title: string; body: string; tag?: string }[] = [
+  {
+    tag: 'Карточки',
+    title: 'Доска карточек — обзор истории',
+    body: 'Каждая сцена — карточка на доске: номер, шапка, синопсис (автоматически первая ремарка сцены), персонажи, хронометраж и страницы. Карточки сгруппированы по сериям. Поиск ищет по номеру, локации, персонажу и тексту синопсиса; рядом фильтры типа сцены (ИНТ/ЭКСТ/ПАВ) и серий.',
+  },
+  {
+    tag: 'Карточки',
+    title: 'Цвет карточки — правый клик',
+    body: 'Правый клик по карточке открывает палитру — можно пометить сцену цветом (например, ключевые сцены красным). Цвет подсвечивает левый край карточки. Значки у номера: цветная точка — приоритет (красная высокий, жёлтая средний), бейдж — статус съёмки (назначает второй режиссёр).',
+  },
+  {
+    tag: 'Карточки',
+    title: 'Клик по карточке — детали и редактор сцены',
+    body: 'Клик открывает карточку сцены: синопсис и заметки можно править, приоритет менять, видна вся информация. Кнопка «Перейти к сцене» открывает одиночный редактор — только эта сцена на белом листе с полным форматированием сценария. «Сохранить» пишет изменения в сценарий, «Вернуться» (или Ctrl+Z) откатывает действие, «Отменить» закрывает без сохранения.',
+  },
   {
     tag: 'Автоматика',
     title: 'Автоопределение типа блока',
@@ -310,7 +337,11 @@ function KeyBadge({ k }: { k: string }) {
   )
 }
 
-export default function HelpModal({ isDark, onClose }: HelpModalProps) {
+export default function HelpModal({ isDark, onClose, context }: HelpModalProps) {
+  // Подсказки только для открытой вкладки (тег → страница)
+  const visibleTips = context
+    ? TIPS.filter((t) => (TAG_PAGES[t.tag || ''] || 'text') === context)
+    : TIPS
   const [activeTab, setActiveTab] = useState<Tab>('shortcuts')
 
   const bg         = isDark ? '#1e1e2e' : '#ffffff'
@@ -350,7 +381,9 @@ export default function HelpModal({ isDark, onClose }: HelpModalProps) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 0 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: textPrimary }}>Помощь</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: textPrimary }}>
+              Помощь{context && PAGE_LABELS[context] ? ` · ${PAGE_LABELS[context]}` : ''}
+            </span>
           </div>
           <button
             onClick={onClose}
@@ -454,7 +487,7 @@ export default function HelpModal({ isDark, onClose }: HelpModalProps) {
           {/* ── Подсказки ── */}
           {activeTab === 'tips' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {TIPS.map((tip, i) => (
+              {visibleTips.map((tip, i) => (
                 <div
                   key={i}
                   style={{

@@ -662,6 +662,7 @@ export default function ScriptPage() {
       {/* Модальное окно помощи */}
       {showHelpModal && (
         <HelpModal
+          context={activeTab}
           isDark={isDark}
           onClose={() => setShowHelpModal(false)}
         />

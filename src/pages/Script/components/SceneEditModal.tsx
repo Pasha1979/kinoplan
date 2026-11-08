@@ -81,7 +81,7 @@ function sceneNodes(startEl: Element, endEl: Element | null): Node[] {
 }
 
 // Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей
-function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
+export function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
   const headers = blocks.filter((el) => isHeader(el))
