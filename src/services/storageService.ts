@@ -1,19 +1,22 @@
 import PouchDB from 'pouchdb-browser'
-import MemoryAdapter from 'pouchdb-adapter-memory'
 import type { StateStorage } from 'zustand/middleware'
 
-let db: PouchDB.Database | null = null
+let dbPromise: Promise<PouchDB.Database> | null = null
 
-function getDb(): PouchDB.Database {
-  if (!db) {
-    if (typeof indexedDB === 'undefined') {
-      PouchDB.plugin(MemoryAdapter)
-      db = new PouchDB('kinoplan', { adapter: 'memory' })
-    } else {
-      db = new PouchDB('kinoplan')
-    }
+function getDb(): Promise<PouchDB.Database> {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      if (typeof indexedDB === 'undefined') {
+        // Memory-адаптер нужен только в тестах/node — грузим динамически,
+        // чтобы его CJS-цепочка (memdown/levelup) не попадала в браузерный бандл
+        const { default: MemoryAdapter } = await import('pouchdb-adapter-memory')
+        PouchDB.plugin(MemoryAdapter)
+        return new PouchDB('kinoplan', { adapter: 'memory' })
+      }
+      return new PouchDB('kinoplan')
+    })()
   }
-  return db
+  return dbPromise
 }
 
 interface StoreDoc {
@@ -34,7 +37,7 @@ const writeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 async function putDoc(name: string, value: string): Promise<void> {
   const prev = writeQueue.get(name) ?? Promise.resolve()
   const next = prev.catch(() => {}).then(async () => {
-    const d = getDb()
+    const d = await getDb()
     const doc = (await d.get(name).catch(() => null)) as StoreDoc | null
     await d.put({ _id: name, _rev: doc?._rev, value }).catch((e) => console.warn('storage write failed', name, e))
   })
@@ -76,7 +79,7 @@ export const pouchStorage: StateStorage = {
     const pending = pendingWrites.get(name)
     if (pending !== undefined) return pending
     try {
-      const doc = (await getDb().get(name)) as StoreDoc
+      const doc = (await (await getDb()).get(name)) as StoreDoc
       return doc.value
     } catch {
       const legacy = localStorage.getItem(name)
@@ -100,8 +103,8 @@ export const pouchStorage: StateStorage = {
       writeTimers.delete(name)
     }
     try {
-      const doc = (await getDb().get(name)) as StoreDoc
-      if (doc._rev) await getDb().remove(name, doc._rev)
+      const doc = (await (await getDb()).get(name)) as StoreDoc
+      if (doc._rev) await (await getDb()).remove(name, doc._rev)
     } catch {
       // документа нет — удалять нечего
     }

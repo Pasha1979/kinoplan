@@ -6,6 +6,9 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ['pouchdb-browser'],
+  },
   build: {
     outDir: 'dist',
     // Code-splitting: разделение на логические чанки
