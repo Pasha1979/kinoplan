@@ -67,7 +67,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
     return map
   }, [blocks, scenes])
 
-  const syn = (sc: SceneWithEp) => sc.synopsis ?? autoSynopsis.get(sc.id) ?? ''
+  const syn = (sc: SceneWithEp) => sc.synopsis || autoSynopsis.get(sc.id) || ''
 
   // Фильтрация: серия → тип → поиск
   const visible = useMemo(() => {

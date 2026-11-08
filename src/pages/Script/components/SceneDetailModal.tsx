@@ -38,11 +38,11 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
   const cardBg = isDark ? '#1a1a33' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
 
-  const [syn, setSyn] = useState(scene.synopsis ?? synopsis)
+  const [syn, setSyn] = useState(scene.synopsis || synopsis)
   const [notes, setNotes] = useState(scene.productionNotes ?? '')
   const [prio, setPrio] = useState<Scene['priority']>(scene.priority || 'medium')
   useEffect(() => {
-    setSyn(scene.synopsis ?? synopsis)
+    setSyn(scene.synopsis || synopsis)
     setNotes(scene.productionNotes ?? '')
     setPrio(scene.priority || 'medium')
   }, [scene.id])
@@ -91,7 +91,7 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
             <textarea
               value={syn}
               onChange={(e) => setSyn(e.target.value)}
-              onBlur={() => save({ synopsis: syn })}
+              onBlur={() => save({ synopsis: syn.trim() || undefined })}
               rows={3}
               placeholder="Краткое описание сцены…"
               className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none"
