@@ -132,7 +132,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
 
         {/* Карточки метрик */}
@@ -190,12 +190,12 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
         {/* Хронометраж по сценам + топ персонажей + локации */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.sceneTimings.map((s) => (
                 <div
                   key={s.id}
                   onClick={onSceneClick ? () => onSceneClick(s.id) : undefined}
-                  className="flex items-center gap-2 transition-all"
+                  className="flex items-center gap-3 transition-all"
                   style={{ cursor: onSceneClick ? 'pointer' : 'default' }}
                   title="Перейти к сцене"
                 >
@@ -210,7 +210,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
           </Section>
 
           <Section title="Топ персонажей (сцен)" icon={<Users size={14} />}>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.characters.slice(0, 12).map((ch) => (
                 <div key={ch.name} className="flex items-center gap-2">
                   <span className="w-24 text-[11px] truncate" style={{ color: textSecondary }}>{ch.name}</span>
@@ -224,7 +224,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
           </Section>
 
           <Section title="Локации" icon={<MapPin size={14} />}>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.locations.map((l) => {
                 const hasSub = l.sublocations.length > 0
                 const expanded = expandedLocs.has(l.name)
