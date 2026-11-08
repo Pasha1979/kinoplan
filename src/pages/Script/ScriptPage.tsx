@@ -219,6 +219,30 @@ export default function ScriptPage() {
 
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
 
+  // SmartType: подсказки по всем сериям проекта — персонаж/локация из С1
+  // должна подсказываться и в С2 (иначе в каждой серии словарь пустой)
+  const smartTypeCharacters = useMemo(() => {
+    const set = new Set<string>()
+    episodeScripts.forEach((ep) => {
+      ep.characters?.forEach((c) => c.name && set.add(c.name.toUpperCase().trim()))
+      ep.scenes?.forEach((sc) => (sc.cast || []).forEach((n) => {
+        const k = n.toUpperCase().trim()
+        if (k) set.add(k)
+      }))
+    })
+    return [...set]
+  }, [episodeScripts])
+  const smartTypeLocations = useMemo(() => {
+    const set = new Set<string>()
+    episodeScripts.forEach((ep) => ep.scenes?.forEach((sc) => {
+      const loc = (sc.location || '').trim()
+      if (!loc) return
+      const sub = (sc.sublocation || '').trim()
+      set.add(sub ? `${loc}.${sub}` : loc)
+    }))
+    return [...set]
+  }, [episodeScripts])
+
   if (view === 'empty') {
     return (
       <ScriptEmptyState
@@ -407,6 +431,8 @@ export default function ScriptPage() {
                   formatLocked={formatLocked}
                   autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
                   initialContent={currentScript?.content}
+                  smartTypeCharacters={smartTypeCharacters}
+                  smartTypeLocations={smartTypeLocations}
                   onContentChange={handleContentChange}
                   onEditorReady={setEditorInstance}
                   dialogueCharacter={dialogueMode.activeCharacter}
@@ -506,6 +532,8 @@ export default function ScriptPage() {
                       formatLocked={formatLocked}
                       autoExtractCharacters={rightScript?.autoExtractCharacters ?? true}
                       initialContent={rightScript?.content}
+                      smartTypeCharacters={smartTypeCharacters}
+                      smartTypeLocations={smartTypeLocations}
                       onContentChange={(html) => {
                         if (rightScript?.id) {
                           useScriptStore.getState().updateScript(rightScript.id, { content: html })
