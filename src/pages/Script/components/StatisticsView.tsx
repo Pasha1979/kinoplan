@@ -27,17 +27,17 @@ type LayoutEntry = { dx: number; dy: number; w?: number; h?: number }
 
 // Раскладка пользователя из режима «Расстановка» (экспортированный JSON)
 const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
-  's-timings': { dx: 8, dy: 119.2, w: 353, h: 231.2 },
-  's-heatmap': { dx: 9.6, dy: 129.6, w: 1114.4, h: 128.2 },
-  's-chars': { dx: -8, dy: 118.4, w: 368.6, h: 231.6 },
-  's-locs': { dx: -4.8, dy: 116.8, w: 355.6, h: 234.6 },
-  's-intext': { dx: 6.4, dy: 55.2, w: 351.4, h: 124 },
-  's-tod': { dx: -8.8, dy: 54.4 },
-  's-dialog': { dx: -12, dy: 53.6 },
+  's-timings': { dx: 8.8, dy: 40.8, w: 353, h: 231.2 },
+  's-heatmap': { dx: 13.6, dy: 56, w: 1114.4, h: 128.2 },
+  's-chars': { dx: -11.2, dy: 41.6, w: 363.4, h: 228 },
+  's-locs': { dx: -19.2, dy: 40, w: 368, h: 229.4 },
+  's-intext': { dx: 8, dy: 24, w: 351.4, h: 124 },
+  's-tod': { dx: -14.4, dy: 22.4 },
+  's-dialog': { dx: -20.8, dy: 21.6 },
   'm-scenes': { dx: 16.8, dy: 5.6, w: 200, h: 100 },
   'm-pages': { dx: -49.6, dy: 4.8, w: 212.8, h: 100 },
   'm-time': { dx: -108, dy: 5.6, w: 224.8, h: 100 },
-  'm-chars': { dx: -150.4, dy: 4.8, w: 220.8, h: 100 },
+  'm-chars': { dx: -152, dy: 6.4, w: 220.8, h: 100 },
 }
 
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount }: StatisticsViewProps) {
