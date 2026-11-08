@@ -605,7 +605,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
             </span>
           }>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 h-full overflow-y-auto pr-1 content-start">
+            <div className="grid gap-x-5 gap-y-1.5 h-full overflow-y-auto pr-1 content-start"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
               {stats.tempo.map((t) => (
                 <div
                   key={t.id}
