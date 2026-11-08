@@ -1,7 +1,32 @@
 import { memo, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+
+// Клавиши как в основном редакторе: Enter создаёт блок следующего типа
+const EnterFlow = Extension.create({
+  name: 'sceneEnterFlow',
+  addKeyboardShortcuts() {
+    return {
+      Enter: ({ editor }) => {
+        const type = editor.state.selection.$anchor.parent.type.name
+        // шапка → действие; персонаж/реплика → диалог; диалог → действие; переход → действие
+        const next: Record<string, string> = {
+          sceneHeader: 'sceneAction',
+          sceneCast: 'sceneAction',
+          sceneCharacter: 'sceneDialog',
+          sceneParenthetical: 'sceneDialog',
+          sceneDialog: 'sceneAction',
+          sceneTransition: 'sceneHeader',
+        }
+        const nxt = next[type]
+        if (!nxt) return false
+        return editor.chain().focus().splitBlock().setNode(nxt as never).run()
+      },
+    }
+  },
+})
 import { X, Save, Undo2, ArrowLeft } from 'lucide-react'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../../../components/tiptap'
 import type { Scene } from '../../../types/scene'
@@ -19,13 +44,18 @@ interface SceneEditModalProps {
   onSave: (newContent: string) => void
 }
 
-// Извлекает HTML-фрагмент сцены: от её scene_header до следующего
+const isHeader = (el: Element) => {
+  const t = el.getAttribute('data-type')
+  return t === 'scene-header' || t === 'sceneHeader'
+}
+
+// Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей
 function extractSceneHtml(content: string, sceneIndex: number): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
   let start = -1
   blocks.forEach((el, i) => {
-    if (el.getAttribute('data-type') === 'scene-header') {
+    if (isHeader(el)) {
       if (start === -1 && sceneIndex === 0) start = i
       else sceneIndex--
     }
@@ -33,7 +63,7 @@ function extractSceneHtml(content: string, sceneIndex: number): string {
   if (start < 0) return ''
   let end = blocks.length
   for (let i = start + 1; i < blocks.length; i++) {
-    if (blocks[i].getAttribute('data-type') === 'scene-header') { end = i; break }
+    if (isHeader(blocks[i])) { end = i; break }
   }
   return blocks.slice(start, end).map((el) => el.outerHTML).join('')
 }
@@ -46,7 +76,7 @@ export function spliceSceneHtml(content: string, sceneIndex: number, newHtml: st
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
   let start = -1
   blocks.forEach((el, i) => {
-    if (el.getAttribute('data-type') === 'scene-header') {
+    if (isHeader(el)) {
       if (start === -1 && sceneIndex === 0) start = i
       else sceneIndex--
     }
@@ -54,7 +84,7 @@ export function spliceSceneHtml(content: string, sceneIndex: number, newHtml: st
   if (start < 0) return content
   let end = blocks.length
   for (let i = start + 1; i < blocks.length; i++) {
-    if (blocks[i].getAttribute('data-type') === 'scene-header') { end = i; break }
+    if (isHeader(blocks[i])) { end = i; break }
   }
   // удалить старые блоки сцены
   for (let i = start; i < end; i++) blocks[i].remove()
@@ -87,6 +117,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
       }),
       SceneNode, SceneHeader, SceneCast, SceneAction,
       SceneCharacter, SceneDialog, SceneParenthetical, SceneTransition,
+      EnterFlow,
     ],
     content: initialHtml,
     autofocus: 'end',
