@@ -30,24 +30,33 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
   const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
     try { return JSON.parse(localStorage.getItem('statsLayout') || '{}') } catch { return {} }
   })
-  const dragRef = useRef<{ key: string; startX: number; startY: number; mode: 'move' | 'resize' } | null>(null)
-
   useEffect(() => {
     localStorage.setItem('statsLayout', JSON.stringify(layout))
   }, [layout])
 
-  const handleDragMove = (ev: React.PointerEvent, k: string) => {
-    const d = dragRef.current
-    if (!d || d.key !== k) return
-    setLayout((l) => {
-      const s = l[k] ?? { dx: 0, dy: 0 }
-      if (d.mode === 'move') {
-        return { ...l, [k]: { ...s, dx: s.dx + ev.clientX - d.startX, dy: s.dy + ev.clientY - d.startY } }
-      }
-      return { ...l, [k]: { ...s, w: Math.max(220, (s.w ?? 320) + ev.clientX - d.startX), h: Math.max(120, (s.h ?? 200) + ev.clientY - d.startY) } }
-    })
-    d.startX = ev.clientX
-    d.startY = ev.clientY
+  // Старт перетаскивания/ресайза — слушатели на window, снимаются на mouseup
+  const startDrag = (e: React.PointerEvent, k: string, mode: 'move' | 'resize') => {
+    e.preventDefault()
+    e.stopPropagation()
+    let lastX = e.clientX
+    let lastY = e.clientY
+    const move = (ev: PointerEvent) => {
+      setLayout((l) => {
+        const s = l[k] ?? { dx: 0, dy: 0 }
+        if (mode === 'move') {
+          return { ...l, [k]: { ...s, dx: s.dx + ev.clientX - lastX, dy: s.dy + ev.clientY - lastY } }
+        }
+        return { ...l, [k]: { ...s, w: Math.max(220, (s.w ?? 320) + ev.clientX - lastX), h: Math.max(120, (s.h ?? 200) + ev.clientY - lastY) } }
+      })
+      lastX = ev.clientX
+      lastY = ev.clientY
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
 
   // Обёртка блока: перетаскивание + ресайз в режиме расстановки
@@ -67,25 +76,12 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
         {layoutMode && (
           <>
             <div
-              onPointerDown={(e) => {
-                dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'move' }
-                e.currentTarget.setPointerCapture(e.pointerId)
-                e.preventDefault()
-              }}
-              onPointerMove={(e) => handleDragMove(e, k)}
-              onPointerUp={() => { dragRef.current = null }}
+              onPointerDown={(e) => startDrag(e, k, 'move')}
               className="absolute inset-0 rounded-xl"
               style={{ cursor: 'grab', touchAction: 'none', background: 'rgba(249,115,22,0.08)', border: '2px dashed rgba(249,115,22,0.5)', zIndex: 20 }}
             />
             <div
-              onPointerDown={(e) => {
-                dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'resize' }
-                e.currentTarget.setPointerCapture(e.pointerId)
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-              onPointerMove={(e) => handleDragMove(e, k)}
-              onPointerUp={() => { dragRef.current = null }}
+              onPointerDown={(e) => startDrag(e, k, 'resize')}
               className="absolute bottom-1 right-1 w-4 h-4 rounded-sm"
               style={{ cursor: 'nwse-resize', touchAction: 'none', background: 'rgba(249,115,22,0.6)', zIndex: 21 }}
             />
