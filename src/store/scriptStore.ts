@@ -80,6 +80,11 @@ export interface Script {
 
   // Для сериалов: номер серии (1, 2, 3...). Для фильмов — undefined.
   episodeNumber?: number
+
+  // Структурные маркеры (Статистика): ключ → id сцены, перед которой стоит граница.
+  // act2 — вход во 2-й акт, mid — поворот/мидпоинт, climax — кульминация.
+  // Нет значения → показываем ориентир по проценту объёма (25/50/80%).
+  actMarkers?: Record<string, string>
 }
 
 export interface ScriptDraft {

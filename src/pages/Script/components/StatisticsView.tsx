@@ -1,10 +1,11 @@
-import { memo, useState, useEffect } from 'react'
+import { memo, useState, useEffect, useRef } from 'react'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
   Move, Download,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
+import { useScriptStore } from '../../../store/scriptStore'
 import type { Scene } from '../../../types/scene'
 
 interface StatisticsViewProps {
@@ -24,6 +25,13 @@ function fmtDuration(sec: number): string {
 }
 
 type LayoutEntry = { dx: number; dy: number; w?: number; h?: number }
+
+// Структурные маркеры: ориентир по проценту объёма или привязка к сцене (actMarkers)
+const ACT_MARKERS = [
+  { key: 'act2',   label: 'АКТ 2',       frac: 0.25 },
+  { key: 'mid',    label: 'Поворот',     frac: 0.5  },
+  { key: 'climax', label: 'Кульминация', frac: 0.8  },
+] as const
 
 // Раскладка пользователя из режима «Расстановка» (экспортированный JSON)
 const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
@@ -51,6 +59,65 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const emptySeries = isSerial && activeSeries !== 'all' && filteredScenes.length === 0
   const stats = useScriptStats(filteredScenes, blocks, precisePages)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
+
+  // Структурные маркеры: сохранённые привязки (ключ → sceneId) из scriptStore
+  const currentScriptId = useScriptStore((s) => s.currentScriptId)
+  const actMarkers = useScriptStore((s) => s.scripts.find((x) => x.id === s.currentScriptId)?.actMarkers)
+  const updateScript = useScriptStore((s) => s.updateScript)
+  const timingsRef = useRef<HTMLDivElement>(null)
+  const [dragMarker, setDragMarker] = useState<{ key: string; index: number } | null>(null)
+
+  // Позиция маркера = индекс сцены, ПЕРЕД которой стоит граница
+  const markerIndex = new Map<string, number>()
+  const n = stats.sceneTimings.length
+  for (const m of ACT_MARKERS) {
+    const sceneId = actMarkers?.[m.key]
+    const i = sceneId ? stats.sceneTimings.findIndex((s) => s.id === sceneId) : -1
+    markerIndex.set(m.key, i >= 0 ? i : Math.min(n - 1, Math.max(1, Math.round(m.frac * n))))
+  }
+
+  // Драг маркера: потянул чип → линия следует за курсором между строками →
+  // отпустил → привязка к ближайшей сцене. Работает и для ориентира, и для
+  // уже привязанного маркера — повторный драг ничем не отличается.
+  const startMarkerDrag = (key: string) => (e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const indexAt = (clientY: number): number => {
+      const rows = timingsRef.current?.querySelectorAll('[data-scene-row]')
+      if (!rows || rows.length === 0) return markerIndex.get(key) ?? 1
+      for (const row of rows) {
+        const r = (row as HTMLElement).getBoundingClientRect()
+        if (clientY < r.top + r.height / 2) {
+          return Number((row as HTMLElement).dataset.sceneRow)
+        }
+      }
+      return stats.sceneTimings.length - 1
+    }
+
+    const onMove = (ev: PointerEvent) => setDragMarker({ key, index: indexAt(ev.clientY) })
+    const onUp = (ev: PointerEvent) => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      const idx = indexAt(ev.clientY)
+      setDragMarker(null)
+      const sceneId = stats.sceneTimings[idx]?.id
+      if (sceneId && currentScriptId) {
+        updateScript(currentScriptId, { actMarkers: { ...actMarkers, [key]: sceneId } })
+      }
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+    onMove(e.nativeEvent)
+  }
+
+  // Двойной клик — сброс ручной привязки, маркер возвращается к ориентиру
+  const resetMarker = (key: string) => {
+    if (!currentScriptId || !actMarkers?.[key]) return
+    const next = { ...actMarkers }
+    delete next[key]
+    updateScript(currentScriptId, { actMarkers: next })
+  }
   const [layoutMode, setLayoutMode] = useState(false)
   const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
     try {
@@ -373,10 +440,34 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         {/* Хронометраж по сценам + топ персонажей + локации */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <LayoutBox k="s-timings"><Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
-            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
-              {stats.sceneTimings.map((s) => (
+            <div ref={timingsRef} className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+              {stats.sceneTimings.map((s, i) => (
+                <div key={s.id}>
+                  {ACT_MARKERS.filter((m) => (dragMarker?.key === m.key ? dragMarker.index : markerIndex.get(m.key)) === i).map((m) => {
+                    const manual = !!actMarkers?.[m.key]
+                    const isDragging = dragMarker?.key === m.key
+                    return (
+                      <div key={`mk-${m.key}`} className="flex items-center gap-2 py-0.5 select-none">
+                        <div className="h-px flex-1" style={{ background: isDragging ? '#fb923c' : 'rgba(249,115,22,0.35)' }} />
+                        <span
+                          onPointerDown={startMarkerDrag(m.key)}
+                          onDoubleClick={() => resetMarker(m.key)}
+                          className="px-2 py-0.5 rounded-full text-[9px] font-bold cursor-grab active:cursor-grabbing"
+                          style={{
+                            background: manual ? 'rgba(249,115,22,0.28)' : 'rgba(249,115,22,0.12)',
+                            color: '#fb923c',
+                            border: `1px ${manual ? 'solid' : 'dashed'} rgba(249,115,22,0.6)`,
+                          }}
+                          title={manual ? 'Привязан к сцене — потяни чтобы перенести · двойной клик — сбросить' : 'Ориентир по объёму — потяни чтобы привязать к сцене'}
+                        >
+                          {m.label}{manual ? '' : ' ~'}
+                        </span>
+                        <div className="h-px flex-1" style={{ background: isDragging ? '#fb923c' : 'rgba(249,115,22,0.35)' }} />
+                      </div>
+                    )
+                  })}
                 <div
-                  key={s.id}
+                  data-scene-row={i}
                   onClick={onSceneClick ? () => onSceneClick(s.id) : undefined}
                   className="flex items-center gap-3 transition-all"
                   style={{ cursor: onSceneClick ? 'pointer' : 'default' }}
@@ -387,6 +478,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                     <div className="h-full rounded-full" style={{ width: `${(s.durationSec / maxSceneDur) * 100}%`, background: s.durationSec > 180 ? '#f59e0b' : '#818cf8' }} />
                   </div>
                   <span className="w-10 text-right text-[11px] font-medium" style={{ color: textPrimary }}>{fmtDuration(s.durationSec)}</span>
+                </div>
                 </div>
               ))}
             </div>
