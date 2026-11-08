@@ -146,7 +146,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
-      <div className="w-full space-y-6">
+      <div className="w-full space-y-8">
         <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
 
         {/* Карточки метрик */}
