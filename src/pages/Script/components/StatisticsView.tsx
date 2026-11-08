@@ -59,7 +59,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const filteredScenes = activeSeries === 'all' || !isSerial
     ? scenes
     : scenes.filter((sc) => parseInt(sc.number.split('-')[0]) === activeSeries)
-  const stats = useScriptStats(filteredScenes, blocks, precisePages, activeSeries !== 'all')
+  const stats = useScriptStats(filteredScenes, blocks, precisePages, activeSeries !== 'all', scenes)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
 
   // Структурные маркеры: сохранённые привязки (ключ → sceneId) из scriptStore
@@ -326,9 +326,11 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
       })
     : []
 
-  // Темп по сериям: группировка сцен по префиксу номера «1-2» → серия 1
+  // Темп по сериям: группировка сцен по префиксу номера «1-2» → серия 1.
+  // Темп считается по всем сценам — под фильтром показываем только свою серию
   const tempoBySeries = new Map<string, typeof stats.tempo>()
   stats.tempo.forEach((t) => {
+    if (activeSeries !== 'all' && !t.number.startsWith(`${activeSeries}-`)) return
     const m = t.number.match(/^(\d+)-/)
     const key = m ? m[1] : '—'
     const arr = tempoBySeries.get(key) || []
@@ -591,14 +593,14 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           </Section></LayoutBox>
         </div>
 
-        {/* Темп по сценам — доля диалога vs действия (только «Все серии») */}
-        {activeSeries === 'all' && (
+        {/* Темп по сценам — доля диалога vs действия */}
+        {(
           <LayoutBox k="s-tempo"><Section fill title="Темп по сценам" icon={<MessageSquare size={14} />} right={
             <span className="text-[9px]" style={{ color: textSecondary }}>
               <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
             </span>
           }>
-            {stats.tempo.length === 0 ? <Empty text="Здесь будет темп сцен — баланс диалога и действия" /> :
+            {tempoBySeries.size === 0 ? <Empty text="Здесь будет темп сцен — баланс диалога и действия" /> :
             <div className="h-full overflow-y-auto pr-1">
               {[...tempoBySeries.entries()].map(([series, items]) => (
                 <div key={series}>

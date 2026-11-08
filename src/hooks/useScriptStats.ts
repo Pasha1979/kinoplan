@@ -99,6 +99,9 @@ export function useScriptStats(
   /** true когда показываем подмножество сцен (фильтр по серии):
    *  тогда глобальные метрики по блокам документа нечестно отображать как «по серии» */
   isFiltered = false,
+  /** полный список сцен документа — нужен чтобы темп считался по блокам,
+   *  выровненным с полным порядком сцен (фильтрация по серии — в UI) */
+  allScenes?: Scene[],
 ): ScriptStats {
   return useMemo(() => {
     const totalScenes = scenes.length
@@ -216,18 +219,19 @@ export function useScriptStats(
       ? scenes.reduce((s, sc) => s + (sc.pages || 0), 0)
       : precisePages
 
-    // Темп по сценам — только без фильтра: блоки документа идут в том же
-    // порядке что и сцены, при фильтрации соответствие ломается
+    // Темп по сценам — считаем по ПОЛНОМУ списку сцен: блоки документа
+    // идут в том же порядке что и сцены; фильтрация по серии — в UI
     const tempo: SceneTempoStat[] = []
-    if (!isFiltered) {
+    const tempoScenes = allScenes ?? scenes
+    {
       let sceneIdx = -1
       let dlg = 0, act = 0
       const flush = () => {
-        if (sceneIdx >= 0 && scenes[sceneIdx]) {
+        if (sceneIdx >= 0 && tempoScenes[sceneIdx]) {
           const total = dlg + act
           tempo.push({
-            id: scenes[sceneIdx].id,
-            number: scenes[sceneIdx].number,
+            id: tempoScenes[sceneIdx].id,
+            number: tempoScenes[sceneIdx].number,
             dialogChars: dlg,
             actionChars: act,
             ratio: total > 0 ? dlg / total : 0,
@@ -394,5 +398,5 @@ export function useScriptStats(
       tempo,
       alerts,
     }
-  }, [scenes, blocks, precisePages, isFiltered])
+  }, [scenes, blocks, precisePages, isFiltered, allScenes])
 }
