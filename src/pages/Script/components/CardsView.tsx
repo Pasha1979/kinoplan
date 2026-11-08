@@ -49,15 +49,21 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   // берём первый action-блок после шапки что бы ни шло первым)
   const autoSynopsis = useMemo(() => {
     const map = new Map<string, string>()
+    const fallback = new Map<string, string>() // первый текстовый блок любого типа
     let idx = -1
     for (const b of blocks) {
       if (b.type === 'scene_header') { idx++; continue }
       const scene = scenes[idx]
-      if (!scene) continue
-      if (b.type === 'action' && !map.has(scene.id) && b.content.trim()) {
+      if (!scene || !b.content.trim()) continue
+      // Предпочитаем первую ремарку (action) — в т.ч. если сцена открылась диалогом
+      if (b.type === 'action' && !map.has(scene.id)) {
         map.set(scene.id, b.content.trim())
+      } else if (!fallback.has(scene.id)) {
+        fallback.set(scene.id, b.content.trim())
       }
     }
+    // сцены без action — берём первый текст (диалог/параграф)
+    fallback.forEach((v, k) => { if (!map.has(k)) map.set(k, v) })
     return map
   }, [blocks, scenes])
 

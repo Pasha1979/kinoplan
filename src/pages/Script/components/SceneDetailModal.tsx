@@ -151,14 +151,18 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
             </div>
           </div>
 
-          {/* Инфо */}
-          <div className="rounded-lg p-3 space-y-1.5" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa', border: `1px solid ${border}` }}>
-            {info.map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-3 text-[10px]">
-                <span style={{ color: textSecondary }}>{k}</span>
-                <span className="text-right" style={{ color: textPrimary }}>{v}</span>
-              </div>
-            ))}
+          {/* Инфо — читабельная таблица */}
+          <div>
+            <div className="text-[10px] font-bold mb-1.5" style={{ color: textSecondary }}>ИНФОРМАЦИЯ</div>
+            <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${border}` }}>
+              {info.map(([k, v], i) => (
+                <div key={k} className="flex justify-between gap-3 px-3 py-2 text-[11px]"
+                  style={{ background: i % 2 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.03)' : '#fafafa') }}>
+                  <span className="font-medium" style={{ color: textSecondary }}>{k}</span>
+                  <span className="text-right font-semibold" style={{ color: textPrimary }}>{v}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Переход к сцене — одиночный редактор */}
