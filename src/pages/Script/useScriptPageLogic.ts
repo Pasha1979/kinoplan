@@ -25,8 +25,10 @@ export function useScriptPageLogic() {
   const [view, setView] = useState<ScriptView>('empty')
   // scenes — только текущего Script'а (серии/фильма)
   const scenes = useMemo(() => currentScript?.scenes || [], [currentScript?.scenes])
-  // Номер текущей серии из Script.episodeNumber (для фильмов = 1)
-  const currentSeries = currentScript?.episodeNumber || 1
+  // «Все серии» — режим объединённого навигатора (0), не отдельный скрипт
+  const [viewAllSeries, setViewAllSeries] = useState(false)
+  // Номер текущей серии из Script.episodeNumber (для фильмов = 1, 0 = «Все серии»)
+  const currentSeries = viewAllSeries ? 0 : (currentScript?.episodeNumber || 1)
   // Все Script'ы текущего проекта (для сериалов — с episodeNumber, fallback=1 для старых данных)
   const episodeScripts = useMemo(() => {
     if (!project) return []
@@ -293,6 +295,12 @@ export function useScriptPageLogic() {
 
   // Переключение серии: поиск или автосоздание скрипта
   const setCurrentSeries = useCallback((series: number) => {
+    // «Все серии» — только включаем объединённый вид, скрипт не создаём
+    if (series === 0) {
+      setViewAllSeries(true)
+      return
+    }
+    setViewAllSeries(false)
     let script = episodeScripts.find(s => s.episodeNumber === series)
     if (!script && project) {
       const newScript = {
@@ -320,6 +328,12 @@ export function useScriptPageLogic() {
       setCurrentScript(script.id)
     }
   }, [episodeScripts, project, currentScript, addScript, setCurrentScript])
+
+  // Все сцены всех серий — для режима «Все серии» в навигаторе
+  const allScenes = useMemo(
+    () => episodeScripts.flatMap((s) => s.scenes || []),
+    [episodeScripts],
+  )
 
   // Очистка таймаута автосохранения при размонтировании
   useEffect(() => {
@@ -365,6 +379,8 @@ export function useScriptPageLogic() {
     currentSeries,
     setCurrentSeries,
     episodeScripts,
+    viewAllSeries,
+    allScenes,
     targetDuration,
     scriptStats,
     setScriptStats,

@@ -79,6 +79,8 @@ export default function ScriptPage() {
     triggerAutoSave,
     // episode scripts (для сериалов)
     episodeScripts,
+    viewAllSeries,
+    allScenes,
     // scenes
     handleScenesChange,
     handleSceneReorder,
@@ -113,9 +115,17 @@ export default function ScriptPage() {
     if (splitScreen.isActive) {
       splitScreen.navigateToScene(sceneId)
     } else {
+      // Режим «Все серии»: сцена может принадлежать другому скрипту —
+      // сначала переключаемся на него, потом фокусируемся
+      if (viewAllSeries) {
+        const owner = episodeScripts.find((ep) => ep.scenes?.some((sc) => sc.id === sceneId))
+        if (owner && owner.id !== currentScript?.id) {
+          useScriptStore.getState().setCurrentScript(owner.id)
+        }
+      }
       handleSceneClick(sceneId)
     }
-  }, [splitScreen.isActive, splitScreen.navigateToScene, handleSceneClick])
+  }, [splitScreen.isActive, splitScreen.navigateToScene, handleSceneClick, viewAllSeries, episodeScripts, currentScript?.id])
 
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
@@ -195,7 +205,7 @@ export default function ScriptPage() {
   const handleOpenSearch = useCallback(() => search.open(false), [search.open])
 
   // Стабильный массив сцен для SceneNavigator (без нового массива каждый рендер)
-  const navigatorScenes = useMemo(() => scenes.map(s => ({
+  const navigatorScenes = useMemo(() => (viewAllSeries ? allScenes : scenes).map(s => ({
     id: s.id,
     number: s.number,
     type: s.type,
@@ -205,7 +215,7 @@ export default function ScriptPage() {
     pages: s.pages || 0,
     charCount: s.charCount,
     cast: s.cast,
-  })), [scenes])
+  })), [viewAllSeries, allScenes, scenes])
 
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
 

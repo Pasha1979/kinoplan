@@ -231,3 +231,9 @@ status: "✅ ЗАВЕРШЕНА — сессия закрыта пользова
 **Создано:** 26.10.2026
 **Версия:** 1.0 (Auto Session Context)
 **Статус:** Инициализация системы
+
+## 08.11.2026 — Сессия: аудит-спринт + статистика
+- Закрыты 4 пункта аудита: README, PouchDB storageService (events polyfill, dynamic memory adapter, debounce 400ms), autosave, E2E playwright (e2e/script-flow.spec.ts)
+- Статистика: маркеры актов (драг чипов к сценам + dblclick reset, Script.actMarkers), хронометраж у персонажей/локаций/подлокаций, tempo-график (группировка по сериям), сортировка топа, карточка «Готовность серий» (episodeDuration), пустые блоки-заглушки при ненаписанной серии, скрыта правая панель на вкладке stats, layout v7 в APPLIED_LAYOUT, кнопка «Расстановка» возвращена
+- useScriptStats получил параметры isFiltered + allScenes (темп считается по полному списку сцен)
+- ДЕБАГ В РАБОТЕ: пользователь сообщил что в редакторе сломался фильтр серий (SceneNavigator «Все серии»/«Серия N»). Подозрение: setCurrentSeries(0) создаёт фантомный скрипт episodeNumber=0
