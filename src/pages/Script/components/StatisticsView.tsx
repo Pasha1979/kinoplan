@@ -46,6 +46,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const filteredScenes = activeSeries === 'all' || !isSerial
     ? scenes
     : scenes.filter((sc) => parseInt(sc.number.split('-')[0]) === activeSeries)
+  // Серия выбрана, но сцен в ней нет — фильтр и шапка остаются видны
+  const emptySeries = isSerial && activeSeries !== 'all' && filteredScenes.length === 0
   const stats = useScriptStats(filteredScenes, blocks, precisePages)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
   const [layoutMode, setLayoutMode] = useState(false)
@@ -297,6 +299,23 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           </div>
         </div>
 
+        {emptySeries ? (
+          <div className="rounded-xl p-10 flex flex-col items-center justify-center text-center"
+            style={{
+              background: 'rgba(249,115,22,0.08)',
+              border: '1px solid rgba(249,115,22,0.35)',
+              boxShadow: '0 0 30px rgba(249,115,22,0.12)',
+            }}>
+            <Film size={36} style={{ color: '#fb923c', marginBottom: 12 }} />
+            <p className="text-base font-bold" style={{ color: '#fb923c' }}>
+              Серия {activeSeries} не написана
+            </p>
+            <p className="text-xs mt-1" style={{ color: textSecondary }}>
+              В этой серии пока нет сцен — статистика появится после написания
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Карточки метрик */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           <LayoutBox k="m-scenes"><MetricCard icon={<Film size={16} />} label="Сцен" value={stats.totalScenes} sub={`${stats.locations.length} локаций`} /></LayoutBox>
@@ -441,6 +460,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           <AlignLeft size={12} />
           <span className="text-[10px]">Статистика обновляется автоматически при наборе текста</span>
         </div>
+        </>
+        )}
       </div>
     </div>
   )
