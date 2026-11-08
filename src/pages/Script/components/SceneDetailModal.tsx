@@ -40,11 +40,11 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
 
   const [syn, setSyn] = useState(scene.synopsis || synopsis)
   const [notes, setNotes] = useState(scene.productionNotes ?? '')
-  const [prio, setPrio] = useState<Scene['priority']>(scene.priority || 'medium')
+  const [prio, setPrio] = useState<Scene['priority']>(scene.priority || 'low')
   useEffect(() => {
     setSyn(scene.synopsis || synopsis)
     setNotes(scene.productionNotes ?? '')
-    setPrio(scene.priority || 'medium')
+    setPrio(scene.priority || 'low')
   }, [scene.id])
 
   const save = (patch: Partial<Scene>) => onUpdate?.(scene.id, patch)
@@ -127,7 +127,7 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ПРИОРИТЕТ</div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[prio ?? 'medium'] }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[prio ?? 'low'] }} />
                 <select
                   value={prio}
                   onChange={(e) => {

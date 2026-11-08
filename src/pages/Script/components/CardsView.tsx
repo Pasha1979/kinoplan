@@ -206,7 +206,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
-                          {sc.priority && sc.priority !== 'medium' && (
+                          {(sc.priority === 'high' || sc.priority === 'medium') && (
                             <span className="w-1.5 h-1.5 rounded-full" style={{ background: PRIORITY_COLOR[sc.priority] }} title={`Приоритет: ${sc.priority}`} />
                           )}
                           {st && <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: st.color + '26', color: st.color }}>{st.label}</span>}
