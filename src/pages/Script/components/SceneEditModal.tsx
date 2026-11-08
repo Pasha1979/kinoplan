@@ -154,6 +154,10 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
     ],
     content: initialHtml,
     autofocus: 'start',
+    onCreate: ({ editor }) => {
+      // DEBUG: какие узлы реально попали в документ Tiptap
+      console.log('[sceneEditModal] doc:', editor.state.doc.children.map((c) => ({ type: c.type.name, text: c.textContent.slice(0, 30) })))
+    },
   })
 
   const handleSave = () => {
