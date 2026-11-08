@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useNormalizedProjectStore } from './useProjectStore'
 import type { Scene } from './useProjectStore'

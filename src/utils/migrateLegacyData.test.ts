@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
 import { migrateLegacyData } from './migrateLegacyData'
 import { useNormalizedProjectStore } from '../store/useProjectStore'

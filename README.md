@@ -1,57 +1,62 @@
 # 🎬 KinoPlan
 
-**Local-first платформа для сценаристов, режиссёров и продакшн-команд** — от идеи и сценария до календарно-постановочного плана и разбивки на кастинг, локации и реквизит.
+**Local-first инструмент для сценаристов и кинопроизводства** — от сценария до съёмочного плана. Работает оффлайн, данные принадлежат пользователю.
 
-Работает оффлайн. Данные хранятся локально, синхронизация — через PouchDB (планируется). Целевая сборка: **Electron-десктоп**, текущий runtime — веб-приложение на Vite + деплой на Vercel.
+> Демо: [kinoplan.vercel.app](https://kinoplan.vercel.app) (веб-версия, десктоп на Electron — в разработке)
+
+## Модули
+
+| Модуль | Статус | Что внутри |
+|---|---|---|
+| **HomePage** | ✅ | Проекты: вкладки, избранное, теги, dnd-порядок, режим макета |
+| **Сценарий** | 🔨 | Редактор на Tiptap/ProseMirror: SmartType, авто-цепочка заголовок→состав→персонаж→реплика, навигатор сцен, валидация, титульный лист, статистика (метрики, тепловая карта, фильтр по серии) |
+| Остальные (Кастинг, Расписание, Отчёты и др.) | 📋 | Каркас — по плану `_ai_workspace/ПЛАН_РАБОТ.md` |
 
 ## Стек
 
-| Технология | Зачем |
-|---|---|
-| React 19 + TypeScript | UI, строгая типизация |
-| Vite | сборка и dev-server |
-| Tailwind CSS v4 | стилизация, светлая/тёмная тема |
-| Tiptap (ProseMirror) | сценарный редактор: блоки, SmartType, автодетекция |
-| Zustand + persist | состояние; сейчас persist → localStorage, цель — SQLite/PouchDB |
-| @dnd-kit | drag-and-drop (сцены, карточки проектов, макеты) |
-| React Router | навигация между модулями |
-| Vitest + Testing Library | юнит-тесты (16 файлов: сторы, парсеры, экстракторы) |
-| lucide-react | иконки |
+- **React 19 + TypeScript + Vite** — UI
+- **Tiptap / ProseMirror** — сценарный редактор с кастомными типами блоков
+- **Zustand + persist** — состояние и хранение (миграция на PouchDB в процессе)
+- **PouchDB** — local-first персистентность + синхронизация
+- **@dnd-kit** — drag-and-drop
+- **Tailwind CSS v4** — стили
+- **Vitest + Testing Library + Playwright** — тесты
 
 ## Запуск
 
 ```bash
 npm install
 npm run dev        # dev-сервер
-npm run build      # tsc -b && vite build
-npm run test       # vitest run
-npm run lint       # eslint
-```
-
-## Структура
-
-```
-src/
-├── pages/          # модули: Home (проекты), Script (сценарий), и др.
-│   ├── Home/       # дашборд проектов: карточки, теги, dnd, архив
-│   └── Script/     # редактор сценария, статистика, навигатор сцен
-├── store/          # Zustand-сторы: project, script, task, ui
-├── hooks/          # useScriptStats, useScriptEditorLogic и др.
-├── services/       # pageCounter, projectService, wordExport
-└── utils/          # sceneExtractor, scriptParser, sceneTiming
-
-_ai_workspace/      # «мозг» проекта для AI-ассистента:
-                    # SESSION_CONTEXT, ПЛАН_РАБОТ, LESSONS_LEARNED и др.
+npm run build      # продакшн-сборка
+npm test           # юнит-тесты (Vitest)
+npx playwright test  # E2E
 ```
 
 ## Архитектура
 
-- **Local-first**: приложение работает оффлайн; React не обращается к БД напрямую — только через сервисный слой (в Electron — через IPC).
-- **Сценарий** хранится как документ Tiptap; сцены извлекаются через `sceneExtractor` и агрегируются статистикой `useScriptStats`.
-- **AI-workflow**: директория `_ai_workspace/` — память проекта (контекст сессии, план работ, уроки, архитектурный опекун), обновляется автоматически после задач.
+```
+src/
+├── pages/          # HomePage, Script (Сценарий), остальные модули
+│   └── Script/     # ScriptPage + components/ + useScriptPageLogic
+├── components/     # ScriptEditorView (Tiptap), TitlePageEditor, HelpModal…
+├── store/          # Zustand-сторы: scriptStore, projectStore, uiStore, taskStore
+├── hooks/          # useScriptEditorLogic, useScriptStats, useSceneEditorActions…
+├── services/       # pageCounter, projectService (бизнес-логика вне React)
+└── utils/          # sceneExtractor, scriptParser, sceneTiming, wordExport…
+```
 
-## Модули (статус)
+**Принципы:**
+- **Local-first** — приложение работает без интернета; React не трогает БД напрямую (Electron — через IPC, сейчас — через сервисный слой).
+- **Модуль до ума** — доводим подмодуль целиком, потом переходим к следующему.
+- **Скоуп-правило** — меняем только то, над чем работаем, без глобальных правок.
 
-- ✅ **HomePage** — карточки проектов, теги, dnd-сортировка, архив, кастомный макет
-- 🚧 **Сценарий** — редактор (блоки, SmartType, валидация, титульная страница), статистика (метрики, фильтр по серии, тепловая карта), в работе: структурные маркеры актов
-- 📋 **Запланировано**: планирование, разбивка, кастинг, отчёты, экспорт PDF/FDX
+## Документация для ИИ-ассистентов
+
+Вся проектная память живёт в `_ai_workspace/`:
+
+- `🧠_SESSION_CONTEXT.md` — контекст текущей сессии (автосохранение)
+- `🧠_МОЗГ_ПРОЕКТА.md` — видение, история решений
+- `📊_ТЕКУЩИЙ_СТАТУС.md` — что сделано / что дальше
+- `ПЛАН_РАБОТ.md` — дорожная карта по фазам
+- `LESSONS_LEARNED.md` — уроки и типичные ошибки
+- `ARCHITECTURE_GUARDIAN.md` — архитектурные правила

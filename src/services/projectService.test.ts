@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { projectService } from './projectService'
 import { useNormalizedProjectStore } from '../store/useProjectStore'
