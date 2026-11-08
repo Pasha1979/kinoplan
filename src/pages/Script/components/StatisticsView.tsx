@@ -1,7 +1,8 @@
-import { memo, useState } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
+  Move, Download,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
 import type { Scene } from '../../../types/scene'
@@ -20,9 +21,77 @@ function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+type LayoutEntry = { dx: number; dy: number; w?: number; h?: number }
+
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: StatisticsViewProps) {
   const stats = useScriptStats(scenes, blocks, precisePages)
   const [expandedLocs, setExpandedLocs] = useState<Set<string>>(new Set())
+  const [layoutMode, setLayoutMode] = useState(false)
+  const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
+    try { return JSON.parse(localStorage.getItem('statsLayout') || '{}') } catch { return {} }
+  })
+  const dragRef = useRef<{ key: string; startX: number; startY: number; mode: 'move' | 'resize' } | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem('statsLayout', JSON.stringify(layout))
+  }, [layout])
+
+  const onPointerMove = (ev: PointerEvent) => {
+    const d = dragRef.current
+    if (!d) return
+    setLayout((l) => {
+      const s = l[d.key] ?? { dx: 0, dy: 0 }
+      if (d.mode === 'move') {
+        return { ...l, [d.key]: { ...s, dx: s.dx + ev.clientX - d.startX, dy: s.dy + ev.clientY - d.startY } }
+      }
+      return { ...l, [d.key]: { ...s, w: Math.max(220, (s.w ?? 320) + ev.clientX - d.startX), h: Math.max(120, (s.h ?? 200) + ev.clientY - d.startY) } }
+    })
+    d.startX = ev.clientX
+    d.startY = ev.clientY
+  }
+  const onPointerUp = () => { dragRef.current = null }
+  useEffect(() => {
+    if (!layoutMode) return
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+    }
+  })
+
+  // Обёртка блока: перетаскивание + ресайз в режиме расстановки
+  const LayoutBox = ({ k, children, className }: { k: string; children: React.ReactNode; className?: string }) => {
+    const s = layout[k]
+    return (
+      <div
+        className={className}
+        style={{
+          transform: s ? `translate(${s.dx}px, ${s.dy}px)` : undefined,
+          width: s?.w,
+          height: s?.h,
+          position: 'relative',
+          zIndex: layoutMode ? 10 : undefined,
+        }}
+      >
+        {layoutMode && (
+          <>
+            <div
+              onPointerDown={(e) => { dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'move' }; e.preventDefault() }}
+              className="absolute inset-0 rounded-xl"
+              style={{ cursor: 'grab', background: 'rgba(249,115,22,0.08)', border: '2px dashed rgba(249,115,22,0.5)', zIndex: 20 }}
+            />
+            <div
+              onPointerDown={(e) => { dragRef.current = { key: k, startX: e.clientX, startY: e.clientY, mode: 'resize' }; e.preventDefault(); e.stopPropagation() }}
+              className="absolute bottom-1 right-1 w-4 h-4 rounded-sm"
+              style={{ cursor: 'nwse-resize', background: 'rgba(249,115,22,0.6)', zIndex: 21 }}
+            />
+          </>
+        )}
+        {children}
+      </div>
+    )
+  }
 
   const cardBg = isDark ? '#13132a' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
@@ -147,19 +216,47 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       <div className="w-full space-y-8">
-        <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
+          <div className="flex items-center gap-2">
+            {layoutMode && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(layout, null, 2))
+                  alert('Макет скопирован в буфер обмена — отправь мне')
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
+              >
+                <Download size={12} /> Экспорт макета
+              </button>
+            )}
+            <button
+              onClick={() => setLayoutMode(!layoutMode)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: layoutMode ? 'rgba(249,115,22,0.2)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f0f0f0'),
+                color: layoutMode ? '#fb923c' : textSecondary,
+                border: `1px solid ${layoutMode ? 'rgba(249,115,22,0.4)' : 'transparent'}`,
+              }}
+              title="Режим расстановки блоков"
+            >
+              <Move size={12} /> {layoutMode ? 'Готово' : 'Расстановка'}
+            </button>
+          </div>
+        </div>
 
         {/* Карточки метрик */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          <MetricCard icon={<Film size={16} />} label="Сцен" value={stats.totalScenes} sub={`${stats.locations.length} локаций`} />
-          <MetricCard icon={<FileText size={16} />} label="Страниц" value={stats.totalPages.toFixed(1)} sub={`${stats.totalWords.toLocaleString('ru-RU')} слов`} />
-          <MetricCard icon={<Clock size={16} />} label="Хронометраж" value={fmtDuration(stats.totalDurationSec)} sub={`~${fmtDuration(stats.avgDurationSec)} на сцену`} />
-          <MetricCard icon={<Users size={16} />} label="Персонажей" value={stats.totalCharacters} sub={`${stats.speakingCharacters} с репликами`} />
+          <LayoutBox k="m-scenes"><MetricCard icon={<Film size={16} />} label="Сцен" value={stats.totalScenes} sub={`${stats.locations.length} локаций`} /></LayoutBox>
+          <LayoutBox k="m-pages"><MetricCard icon={<FileText size={16} />} label="Страниц" value={stats.totalPages.toFixed(1)} sub={`${stats.totalWords.toLocaleString('ru-RU')} слов`} /></LayoutBox>
+          <LayoutBox k="m-time"><MetricCard icon={<Clock size={16} />} label="Хронометраж" value={fmtDuration(stats.totalDurationSec)} sub={`~${fmtDuration(stats.avgDurationSec)} на сцену`} /></LayoutBox>
+          <LayoutBox k="m-chars"><MetricCard icon={<Users size={16} />} label="Персонажей" value={stats.totalCharacters} sub={`${stats.speakingCharacters} с репликами`} /></LayoutBox>
         </div>
 
         {/* Распределения */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <Section title="ИНТ / ЭКСТ" icon={<Film size={14} />}>
+          <LayoutBox k="s-intext"><Section title="ИНТ / ЭКСТ" icon={<Film size={14} />}>
             <div className="flex items-center gap-4">
               <Donut parts={intExtParts} total={intExtTotal} />
               <div className="space-y-1.5 flex-1">
@@ -174,17 +271,17 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
                 ))}
               </div>
             </div>
-          </Section>
+          </Section></LayoutBox>
 
-          <Section title="Время суток" icon={<Clock size={14} />}>
+          <LayoutBox k="s-tod"><Section title="Время суток" icon={<Clock size={14} />}>
             <div className="space-y-2">
               {stats.timeOfDay.map((t, i) => (
                 <Bar key={t.name} label={t.name} value={t.count} max={maxTod} color={todColors[i % todColors.length]} />
               ))}
             </div>
-          </Section>
+          </Section></LayoutBox>
 
-          <Section title="Диалог / Действие" icon={<MessageSquare size={14} />}>
+          <LayoutBox k="s-dialog"><Section title="Диалог / Действие" icon={<MessageSquare size={14} />}>
             <div className="space-y-2">
               <div className="flex h-4 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                 <div style={{ width: `${stats.dialogRatio * 100}%`, background: '#818cf8' }} />
@@ -198,12 +295,12 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
                 Блоки персонажей и реплик vs блоки действия
               </p>
             </div>
-          </Section>
+          </Section></LayoutBox>
         </div>
 
         {/* Хронометраж по сценам + топ персонажей + локации */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
+          <LayoutBox k="s-timings"><Section title="Хронометраж по сценам" icon={<Clock size={14} />}>
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.sceneTimings.map((s) => (
                 <div
@@ -221,9 +318,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
                 </div>
               ))}
             </div>
-          </Section>
+          </Section></LayoutBox>
 
-          <Section title="Топ персонажей (сцен)" icon={<Users size={14} />}>
+          <LayoutBox k="s-chars"><Section title="Топ персонажей (сцен)" icon={<Users size={14} />}>
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.characters.slice(0, 12).map((ch) => (
                 <div key={ch.name} className="flex items-center gap-2">
@@ -235,9 +332,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
                 </div>
               ))}
             </div>
-          </Section>
+          </Section></LayoutBox>
 
-          <Section title="Локации" icon={<MapPin size={14} />}>
+          <LayoutBox k="s-locs"><Section title="Локации" icon={<MapPin size={14} />}>
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stats.locations.map((l) => {
                 const hasSub = l.sublocations.length > 0
@@ -277,16 +374,16 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick }: 
                 )
               })}
             </div>
-          </Section>
+          </Section></LayoutBox>
         </div>
 
         {/* Алерты */}
         {stats.alerts.length > 0 && (
-          <Section title={`Инсайты и алерты (${stats.alerts.length})`} icon={<AlertTriangle size={14} />}>
+          <LayoutBox k="s-alerts"><Section title={`Инсайты и алерты (${stats.alerts.length})`} icon={<AlertTriangle size={14} />}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {stats.alerts.map((a) => <AlertRow key={a.id} alert={a} />)}
             </div>
-          </Section>
+          </Section></LayoutBox>
         )}
 
         <div className="flex items-center gap-2 px-1" style={{ color: textSecondary }}>
