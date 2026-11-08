@@ -28,6 +28,7 @@ const TYPE_COLOR: Record<string, string> = {
 }
 const TAG_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a78bfa'] as const
 const PRIORITY_COLOR: Record<string, string> = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' }
+const PRIORITY_LABEL: Record<string, string> = { high: 'ВЫСОКИЙ', medium: 'СРЕДНИЙ' }
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   planned: { label: 'Запланирована', color: '#3b82f6' },
   shot: { label: 'Снята', color: '#22c55e' },
@@ -207,7 +208,14 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
                           {(sc.priority === 'high' || sc.priority === 'medium') && (
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: PRIORITY_COLOR[sc.priority] }} title={`Приоритет: ${sc.priority}`} />
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold"
+                              style={{
+                                background: PRIORITY_COLOR[sc.priority] + '26',
+                                color: PRIORITY_COLOR[sc.priority],
+                                border: `1px solid ${PRIORITY_COLOR[sc.priority]}55`,
+                              }}>
+                              {PRIORITY_LABEL[sc.priority]}
+                            </span>
                           )}
                           {st && <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: st.color + '26', color: st.color }}>{st.label}</span>}
                         </div>
