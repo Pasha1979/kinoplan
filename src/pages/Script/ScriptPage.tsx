@@ -10,7 +10,6 @@ import TimingSettingsModal from './components/TimingSettingsModal'
 import TitlePageEditor from '../../components/TitlePageEditor'
 import ScriptRightPanel from './components/ScriptRightPanel'
 import StatisticsView from './components/StatisticsView'
-import CardsView from './components/CardsView'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
@@ -118,9 +117,11 @@ export default function ScriptPage() {
     } else {
       // Режим «Все серии»: сцена может принадлежать другому скрипту —
       // сначала переключаемся на него, потом фокусируемся
-      const owner = episodeScripts.find((ep) => ep.scenes?.some((sc) => sc.id === sceneId))
-      if (owner && owner.id !== currentScript?.id) {
-        useScriptStore.getState().setCurrentScript(owner.id)
+      if (viewAllSeries) {
+        const owner = episodeScripts.find((ep) => ep.scenes?.some((sc) => sc.id === sceneId))
+        if (owner && owner.id !== currentScript?.id) {
+          useScriptStore.getState().setCurrentScript(owner.id)
+        }
       }
       handleSceneClick(sceneId)
     }
@@ -377,17 +378,7 @@ export default function ScriptPage() {
             episodesCount={project?.episodesCount || 8}
             episodeDuration={project?.episodeDuration}
           />
-        ) : activeTab === 'cards' ? (
-          <CardsView
-            isDark={isDark}
-            scenes={allScenes}
-            blocks={allBlocks}
-            currentEpisode={currentScript?.episodeNumber || 1}
-            isSerial={project?.type === 'serial'}
-            onSceneClick={handleSceneClickRouted}
-            onReorder={handleSceneReorder}
-          />
-        ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
+        ) : ['breakdown', 'cards', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
