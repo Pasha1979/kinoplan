@@ -235,21 +235,23 @@ export default function ScriptPage() {
   }, [episodeScripts, updateScript, pushUndo])
 
   // Группы карточек по сериям (фаза 5)
+  // На одну серию может быть несколько скриптов (версии) — объединяем группы,
+  // иначе Object.fromEntries затирает группы более поздними пустыми скриптами
   const sceneGroupsByEp = useMemo(() => {
-    const out = Object.fromEntries(
-      episodeScripts.map((ep) => [ep.episodeNumber ?? 1, ep.sceneGroups || []]),
-    )
-    console.log('[groups] sceneGroupsByEp recompute', out, episodeScripts.map((s) => ({ id: s.id, sg: s.sceneGroups?.length })))
+    const out: Record<number, import('../../types/scene').SceneGroup[]> = {}
+    episodeScripts.forEach((ep) => {
+      const n = ep.episodeNumber ?? 1
+      out[n] = [...(out[n] || []), ...(ep.sceneGroups || [])]
+    })
     return out
   }, [episodeScripts])
   const handleGroupsChange = useCallback((episode: number, groups: import('../../types/scene').SceneGroup[]) => {
-    const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
-    console.log('[groups] handleGroupsChange', { episode, ownerId: owner?.id, groupsCount: groups.length, groups })
+    // Владелец — скрипт серии, которому принадлежат сцены группы (не первый по номеру!)
+    const allIds = new Set(groups.flatMap((g) => g.sceneIds))
+    const owner = episodeScripts.find((ep) =>
+      (ep.episodeNumber ?? 1) === episode && (ep.scenes || []).some((sc) => allIds.has(sc.id)),
+    ) || episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
     if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneGroups: groups }) }
-    queueMicrotask(() => {
-      const after = useScriptStore.getState().scripts.find((s) => s.id === owner?.id)
-      console.log('[groups] after write', { scriptId: owner?.id, sceneGroups: after?.sceneGroups })
-    })
   }, [episodeScripts, updateScript, pushUndo])
 
   const handleSaveScene = useCallback((newContent: string) => {
