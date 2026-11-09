@@ -105,7 +105,8 @@ function useFormatValidation(
       }
 
       if (block.type === 'character') {
-        if (!/^[А-ЯA-Z\s]+$/.test(content)) {
+        // Заглавные + дефисы/тире для двойных фамилий и имён (АННА-МАРИЯ, ИВАН-ЦАРЕВИЧ)
+        if (!/^[А-ЯA-Z\s\-–—]+$/.test(content)) {
           issues.push({
             id: `fmt-${block.id}-case`,
             severity: 'warning',
