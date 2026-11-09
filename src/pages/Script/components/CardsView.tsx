@@ -389,11 +389,18 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       </div>
 
       {/* ── САЙДБАР «ПАПКИ» — контейнеры групп ── */}
-      <div className="w-56 overflow-y-auto px-3 py-4 space-y-3"
-        style={{ borderLeft: `1px solid ${border}`, background: isDark ? '#0d0d1c' : '#fafafa' }}>
-        <div className="flex items-center gap-2 mb-1">
+      <div className="w-60 overflow-y-auto px-3 py-4 space-y-3"
+        style={{
+          borderLeft: `2px solid rgba(249,115,22,0.35)`,
+          background: isDark
+            ? 'linear-gradient(180deg, rgba(249,115,22,0.10) 0%, rgba(20,20,42,0.6) 60px, #0d0d1c 100%)'
+            : 'linear-gradient(180deg, rgba(249,115,22,0.10) 0%, #fdfaf5 60px, #fafafa 100%)',
+          boxShadow: isDark ? 'inset 8px 0 16px -8px rgba(0,0,0,0.5)' : 'inset 8px 0 16px -8px rgba(0,0,0,0.06)',
+        }}>
+        <div className="flex items-center gap-2 mb-2 px-1 py-1.5 rounded-lg"
+          style={{ background: 'rgba(249,115,22,0.12)' }}>
           <Folder size={13} style={{ color: '#fb923c' }} />
-          <span className="text-[11px] font-bold tracking-wider" style={{ color: textSecondary }}>ПАПКИ</span>
+          <span className="text-[11px] font-bold tracking-wider" style={{ color: '#fb923c' }}>ПАПКИ</span>
         </div>
         {groups.filter(([ep]) => series === 'all' || series === ep).length === 0 && (
           <p className="text-[10px]" style={{ color: textSecondary }}>
