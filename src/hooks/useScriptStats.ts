@@ -198,16 +198,33 @@ export function useScriptStats(
       }
       locMap.set(l, entry)
     })
-    const locations: LocationGroup[] = [...locMap.entries()]
-      .map(([name, v]) => ({
-        name,
-        count: v.count,
-        durationSec: v.durationSec,
-        sublocations: [...v.sub.entries()]
-          .map(([n, c]) => ({ name: n, count: c.count, durationSec: c.durationSec }))
-          .sort((a, b) => b.count - a.count),
-      }))
-      .sort((a, b) => b.count - a.count)
+    // Группировка «родственных» локаций: У ШТАБА НАВОВ / ШТАБ НАВОВ,
+    // У КВАРТИРЫ ПЕТИ / КВАРТИРА ПЕТИ — одно место. Ключ — последнее слово
+    // локации (склонение меняет только предлог/первое слово).
+    const lastWord = (name: string) => {
+      const parts = name.trim().split(/\s+/)
+      return (parts[parts.length - 1] || name).toUpperCase()
+    }
+    const rawLocs: LocationGroup[] = [...locMap.entries()].map(([name, v]) => ({
+      name,
+      count: v.count,
+      durationSec: v.durationSec,
+      sublocations: [...v.sub.entries()]
+        .map(([n, c]) => ({ name: n, count: c.count, durationSec: c.durationSec }))
+        .sort((a, b) => b.count - a.count),
+    }))
+    // Группы по последнему слову; порядок групп — по макс. количеству сцен в группе
+    const groupMax = new Map<string, number>()
+    rawLocs.forEach((l) => {
+      const k = lastWord(l.name)
+      groupMax.set(k, Math.max(groupMax.get(k) || 0, l.count))
+    })
+    const locations = rawLocs.sort((a, b) => {
+      const ga = groupMax.get(lastWord(a.name)) || 0
+      const gb = groupMax.get(lastWord(b.name)) || 0
+      if (ga !== gb) return gb - ga        // сначала группа с большим максимумом
+      return b.count - a.count             // внутри группы — по кол-ву сцен
+    })
 
     // Хронометраж по сценам
     const sceneTimings: SceneTimingStat[] = scenes.map((sc) => ({
