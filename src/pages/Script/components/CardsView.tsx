@@ -1,5 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff } from 'lucide-react'
+import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff, ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import type { Scene, SceneGroup, SceneLink } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
 
@@ -226,6 +226,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const boardRef = useRef<HTMLDivElement>(null)
   const linkHandleDown = useRef(false) // pointerdown был на ручке — гасим нативный драг карточки
   const [linkHover, setLinkHover] = useState<string | null>(null) // карточка под курсором при драге связи
+  // Зум доски (фаза 7)
+  const [zoom, setZoom] = useState(1)
+  const zoomRef = useRef(1)
+  useEffect(() => { zoomRef.current = zoom }, [zoom])
   const [linkPaths, setLinkPaths] = useState<Array<{ id: string; d: string; label?: string; mx: number; my: number; from: string; to: string }>>([])
   // Страховка: dragend на window — гасит «зависшую» тусклость, если источник драга размонтировался
   useEffect(() => {
@@ -385,33 +389,36 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
     const board = boardRef.current
     if (!board || !showLinks) { setLinkPaths([]); return }
     const compute = () => {
+      const Z = zoom || 1 // SVG живёт в layout-координатах — экранные px делим на zoom
       const br = board.getBoundingClientRect()
       // Все карточки доски — препятствия для трассировки
       const cards: CardRect[] = [...board.querySelectorAll<HTMLElement>('[data-scene-id]')].map((el) => {
         const r = el.getBoundingClientRect()
-        return { id: el.dataset.sceneId!, x: r.left - br.left, y: r.top - br.top, w: r.width, h: r.height }
+        return { id: el.dataset.sceneId!, x: (r.left - br.left) / Z, y: (r.top - br.top) / Z, w: r.width / Z, h: r.height / Z }
       })
       const out: typeof linkPaths = []
       for (const l of sceneLinks) {
         const ea = board.querySelector(`[data-scene-id="${l.from}"]`)?.getBoundingClientRect()
         const eb = board.querySelector(`[data-scene-id="${l.to}"]`)?.getBoundingClientRect()
         if (!ea || !eb) continue
-        const acx = ea.left + ea.width / 2 - br.left, acy = ea.top + ea.height / 2 - br.top
-        const bcx = eb.left + eb.width / 2 - br.left, bcy = eb.top + eb.height / 2 - br.top
+        const acx = (ea.left + ea.width / 2 - br.left) / Z, acy = (ea.top + ea.height / 2 - br.top) / Z
+        const bcx = (eb.left + eb.width / 2 - br.left) / Z, bcy = (eb.top + eb.height / 2 - br.top) / Z
         const dx = bcx - acx, dy = bcy - acy
         const adx = Math.abs(dx), ady = Math.abs(dy)
+        const ahw = ea.width / 2 / Z + 2, ahh = ea.height / 2 / Z + 2
+        const bhw = eb.width / 2 / Z + 2, bhh = eb.height / 2 / Z + 2
         // Точки на гранях + S-кривая Безье (предпочтительный короткий вариант)
         let sx: number, sy: number, ex: number, ey: number, c1x: number, c1y: number, c2x: number, c2y: number
         if (adx >= ady) {
           const dir = dx >= 0 ? 1 : -1
-          sx = acx + dir * (ea.width / 2 + 2); sy = acy
-          ex = bcx - dir * (eb.width / 2 + 2); ey = bcy
+          sx = acx + dir * ahw; sy = acy
+          ex = bcx - dir * bhw; ey = bcy
           const k = Math.min(Math.max(adx * 0.45, 24), 110)
           c1x = sx + dir * k; c1y = sy; c2x = ex - dir * k; c2y = ey
         } else {
           const dir = dy >= 0 ? 1 : -1
-          sx = acx; sy = acy + dir * (ea.height / 2 + 2)
-          ex = bcx; ey = bcy - dir * (eb.height / 2 + 2)
+          sx = acx; sy = acy + dir * ahh
+          ex = bcx; ey = bcy - dir * bhh
           const k = Math.min(Math.max(ady * 0.45, 24), 110)
           c1x = sx; c1y = sy + dir * k; c2x = ex; c2y = ey - dir * k
         }
@@ -425,7 +432,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         const obsBez = others.map((cd) => inflate(cd, LINK_MARGIN))
         if (bezierHits(sx, sy, c1x, c1y, c2x, c2y, ex, ey, obsBez)) {
           const obsGrid = others.map((cd) => inflate(cd, LINK_MARGIN_GRID))
-          const pts = astar(sx, sy, ex, ey, obsGrid, br.width, br.height)
+          const pts = astar(sx, sy, ex, ey, obsGrid, br.width / Z, br.height / Z)
           if (pts) { const t = tracePath(pts); d = t.d; mx = t.mx; my = t.my }
           else { d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}`; mx = (sx + ex) / 2; my = (sy + ey) / 2 }
         }
@@ -436,7 +443,48 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
     compute()
     window.addEventListener('resize', compute)
     return () => window.removeEventListener('resize', compute)
-  }, [sceneLinks, showLinks, scenes, query, typeFilter, series])
+  }, [sceneLinks, showLinks, scenes, query, typeFilter, series, zoom])
+
+  // ── Зум доски (фаза 7) ──
+  const boardScroller = () => boardRef.current?.parentElement ?? null
+  const applyZoom = (z1: number, keepX?: number, keepY?: number) => {
+    const sc = boardScroller()
+    const z0 = zoomRef.current
+    const nz = Math.min(1.8, Math.max(0.35, +z1.toFixed(3)))
+    if (!sc || nz === z0) { setZoom(nz); return }
+    // Сохраняем точку под курсором (или центр видимой области)
+    const r = sc.getBoundingClientRect()
+    const vx = keepX != null ? keepX - r.left : sc.clientWidth / 2
+    const vy = keepY != null ? keepY - r.top : sc.clientHeight / 2
+    const px = sc.scrollLeft + vx, py = sc.scrollTop + vy
+    setZoom(nz)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      sc.scrollLeft = px * (nz / z0) - vx
+      sc.scrollTop = py * (nz / z0) - vy
+    }))
+  }
+  const zoomBy = (d: number) => applyZoom(zoomRef.current + d)
+  const fitBoard = () => {
+    const el = boardRef.current, sc = boardScroller()
+    if (!el || !sc) return
+    const z = zoomRef.current
+    // scrollWidth/Height — в визуальных px, layout = /z
+    const w = el.scrollWidth / z, h = el.scrollHeight / z
+    if (!w || !h) return
+    applyZoom(Math.min(1, sc.clientWidth / w, sc.clientHeight / h))
+  }
+  // Ctrl + колесо — зум к курсору
+  useEffect(() => {
+    const el = boardRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      applyZoom(zoomRef.current * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX, e.clientY)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   const seriesPills = isSerial ? [0, ...Array.from({ length: episodesCount }, (_, i) => i + 1)] : null
 
@@ -512,13 +560,26 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         >
           {showLinks ? <Eye size={12} /> : <EyeOff size={12} />} Связи
         </button>
+        {/* Зум доски */}
+        <div className="flex items-center gap-0.5 ml-1 px-1 py-0.5 rounded-md"
+          style={{ border: `1px solid ${border}` }}>
+          <button onClick={() => zoomBy(-0.1)} className="p-1 rounded transition-colors"
+            style={{ color: textSecondary }} title="Уменьшить"><ZoomOut size={13} /></button>
+          <span className="text-[10px] w-9 text-center tabular-nums" style={{ color: textSecondary }}>
+            {Math.round(zoom * 100)}%
+          </span>
+          <button onClick={() => zoomBy(0.1)} className="p-1 rounded transition-colors"
+            style={{ color: textSecondary }} title="Увеличить"><ZoomIn size={13} /></button>
+          <button onClick={fitBoard} className="p-1 rounded transition-colors"
+            style={{ color: textSecondary }} title="Вписать всю доску"><Maximize size={13} /></button>
+        </div>
       </div>
       </LayoutBox>
 
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
       <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
-        <div ref={boardRef} className="relative"
+        <div ref={boardRef} className="relative" style={{ zoom }}
           onScroll={() => setCtxMenu(null)}
           onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
         {visible.length === 0 ? (
