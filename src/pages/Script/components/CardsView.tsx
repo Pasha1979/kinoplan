@@ -454,9 +454,11 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 className="rounded-xl overflow-hidden transition-all"
                 style={{
                   border: `1.5px solid ${dropKey === `grp:${key}` ? '#fb923c' : g.color + '55'}`,
-                  background: cardBg,
+                  background: dropKey === `grp:${key}` ? 'rgba(249,115,22,0.15)' : cardBg,
+                  boxShadow: dropKey === `grp:${key}` ? '0 0 0 2px rgba(249,115,22,0.4), 0 4px 12px rgba(249,115,22,0.25)' : 'none',
+                  transform: dropKey === `grp:${key}` ? 'scale(1.02)' : 'none',
                 }}
-                onDragOver={(e) => { e.preventDefault(); setDropKey(`grp:${key}`) }}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDropKey(`grp:${key}`) }}
                 onDragLeave={() => setDropKey((k) => (k === `grp:${key}` ? null : k))}
                 onDrop={(e) => {
                   e.preventDefault()
