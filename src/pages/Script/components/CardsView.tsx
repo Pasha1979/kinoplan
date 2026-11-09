@@ -238,6 +238,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   const st = sc.status && sc.status !== 'not_planned' ? STATUS_LABEL[sc.status] : null
                   const isSel = selected.has(sc.id)
                   const isDrop = dropKey === `${episode}:${i}`
+                  const grp = groupOf(episode, sc.id)
                   // Маркеры актов этой сцены (могут быть несколько)
                   const epMarkers = actMarkers?.[episode] ?? {}
                   const scMarkers = Object.entries(epMarkers).filter(([, sid]) => sid === sc.id)
@@ -360,6 +361,15 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                             </span>
                           ))}
                           {sc.cast.length > 3 && <span className="text-[9px]" style={{ color: textSecondary }}>+{sc.cast.length - 3}</span>}
+                        </div>
+                      )}
+                      {/* Метка сюжетной линии — цвет группы */}
+                      {grp && (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: grp.color }} />
+                          <span className="text-[8px] font-semibold uppercase tracking-wide truncate" style={{ color: grp.color }}>
+                            {grp.name}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -568,7 +578,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.6)' }}
             onClick={() => setGroupModal(null)}>
-            <div className="rounded-2xl p-5 w-full max-w-4xl max-h-[80vh] overflow-y-auto"
+            <div className="rounded-2xl p-6 w-full max-w-7xl h-[90vh] overflow-y-auto"
               style={{ background: isDark ? '#13132a' : '#ffffff', border: `2px solid ${g.color}` }}
               onClick={(e) => e.stopPropagation()}
               // Дроп на фон модала — убрать сцену из группы
