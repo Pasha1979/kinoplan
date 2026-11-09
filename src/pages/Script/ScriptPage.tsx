@@ -713,15 +713,19 @@ export default function ScriptPage() {
             // (lineNumber — 1-based индекс блока = индекс верхнего узла документа)
             if (issue.lineNumber != null && editorInstance) {
               const targetIdx = issue.lineNumber - 1
-              let pos: number | null = null
-              editorInstance.state.doc.forEach((_n, offset, index) => {
-                if (index === targetIdx) pos = offset
+              let from: number | null = null
+              let to: number | null = null
+              editorInstance.state.doc.forEach((node, offset, index) => {
+                if (index === targetIdx) {
+                  from = offset + 1
+                  to = offset + node.nodeSize - 1
+                }
               })
-              if (pos != null) {
+              if (from != null && to != null && to > from) {
                 editorInstance
                   .chain()
                   .focus()
-                  .setNodeSelection(pos)
+                  .setTextSelection({ from, to })
                   .scrollIntoView()
                   .run()
               }
