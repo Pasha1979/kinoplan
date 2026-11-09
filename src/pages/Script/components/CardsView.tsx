@@ -434,6 +434,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
             Нет групп. Правый клик по карточке → «В группу»<br />или перетащите карточку сюда
           </p>
         )}
+        {(() => { console.log('[groups] sidebar render', { groupsEps: groups.map(([e]) => e), groupsByEpisode, series }); return null })()}
         {groups.filter(([ep]) => series === 'all' || series === ep).flatMap(([ep, items]) =>
           (groupsByEpisode[ep] || []).map((g) => {
             const gScenes = items.filter((s) => g.sceneIds.includes(s.id))
