@@ -390,8 +390,26 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
       {/* ── САЙДБАР «ПАПКИ» — контейнеры групп ── */}
       <div className="w-60 overflow-y-auto px-3 py-4 space-y-3"
+        onDragOver={(e) => { e.preventDefault(); setDropKey('sidebar') }}
+        onDragLeave={() => setDropKey((k) => (k === 'sidebar' ? null : k))}
+        onDrop={(e) => {
+          e.preventDefault()
+          if (dragIds.length) {
+            const name = window.prompt('Название новой группы', `Группа ${(Object.values(groupsByEpisode).flat().length) + 1}`)
+            if (name?.trim()) {
+              const colors = ['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444']
+              // кладём в первую отображаемую серию (или в серию первой из переносимых сцен)
+              const ep = series === 'all' ? (scenes.find((s) => s.id === dragIds[0])?._episode ?? 1) : (series as number)
+              updateGroups(ep, (gs) => [...gs, {
+                id: `g-${Date.now()}`, name: name.trim(),
+                color: colors[gs.length % colors.length], sceneIds: [...dragIds],
+              }])
+            }
+          }
+          setDragIds([]); setDropKey(null)
+        }}
         style={{
-          borderLeft: `2px solid rgba(249,115,22,0.35)`,
+          borderLeft: `2px solid ${dropKey === 'sidebar' ? '#fb923c' : 'rgba(249,115,22,0.35)'}`,
           background: isDark
             ? 'linear-gradient(180deg, rgba(249,115,22,0.10) 0%, rgba(20,20,42,0.6) 60px, #0d0d1c 100%)'
             : 'linear-gradient(180deg, rgba(249,115,22,0.10) 0%, #fdfaf5 60px, #fafafa 100%)',
@@ -402,9 +420,15 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           <Folder size={13} style={{ color: '#fb923c' }} />
           <span className="text-[11px] font-bold tracking-wider" style={{ color: '#fb923c' }}>ПАПКИ</span>
         </div>
-        {groups.filter(([ep]) => series === 'all' || series === ep).length === 0 && (
+        {dragIds.length > 0 && (
+          <p className="text-[10px] text-center rounded-lg py-2"
+            style={{ color: '#fb923c', border: '1px dashed rgba(249,115,22,0.5)' }}>
+            Отпустите — создадим новую папку
+          </p>
+        )}
+        {groups.filter(([ep]) => series === 'all' || series === ep).length === 0 && dragIds.length === 0 && (
           <p className="text-[10px]" style={{ color: textSecondary }}>
-            Нет групп. Правый клик по карточке → «В группу»
+            Нет групп. Правый клик по карточке → «В группу»<br />или перетащите карточку сюда
           </p>
         )}
         {groups.filter(([ep]) => series === 'all' || series === ep).flatMap(([ep, items]) =>
@@ -428,6 +452,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                     updateGroups(ep, (gs) => gs.map((x) => x.id === g.id
                       ? { ...x, sceneIds: [...new Set([...x.sceneIds, ...dragIds])] } : x))
                   }
+                  e.stopPropagation()
                   setDragIds([]); setDropKey(null)
                 }}
               >
