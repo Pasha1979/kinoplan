@@ -75,20 +75,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[]; editGid?: string } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [groupCtx, setGroupCtx] = useState<{ x: number; y: number; ep: number; gid: string } | null>(null)
-  // Макет финализирован — позиции из применённой раскладки + сохранённых правок
-  const APPLIED: Record<string, { dx: number; dy: number; w?: number; h?: number }> = {
-    toolbar: { dx: 1, dy: 4, w: 1452, h: 60 },
-    board: { dx: -11, dy: 15 },
-    sidebar: { dx: -13, dy: 17, w: 226 },
-  }
-  const [layout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('cardsLayout') || '{}')
-      const merged = { ...APPLIED }
-      for (const k of Object.keys(saved)) merged[k] = { ...(APPLIED[k] || { dx: 0, dy: 0 }), ...saved[k] }
-      return merged
-    } catch { return { ...APPLIED } }
-  })
+  // Макет в исходном состоянии — все зоны без смещений
+  const [layout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => ({}))
   const LayoutBox = ({ k, children, style }: { k: string; children: React.ReactNode; style?: React.CSSProperties }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
     return (
