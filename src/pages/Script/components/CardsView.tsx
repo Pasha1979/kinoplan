@@ -87,6 +87,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [linkModal, setLinkModal] = useState<{ from: string; to: string } | null>(null)
   const [linkLabel, setLinkLabel] = useState('')
   const boardRef = useRef<HTMLDivElement>(null)
+  const linkHandleDown = useRef(false) // pointerdown был на ручке — гасим нативный драг карточки
+  const [linkHover, setLinkHover] = useState<string | null>(null) // карточка под курсором при драге связи
   const [linkPaths, setLinkPaths] = useState<Array<{ id: string; d: string; label?: string; mx: number; my: number; from: string; to: string }>>([])
   // Страховка: dragend на window — гасит «зависшую» тусклость, если источник драга размонтировался
   useEffect(() => {
@@ -201,6 +203,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   // Ручка связи: тянем от карточки-источника
   const startLinkDrag = (fromId: string, e: React.PointerEvent) => {
     e.preventDefault(); e.stopPropagation()
+    linkHandleDown.current = true
     const el = boardRef.current?.querySelector(`[data-scene-id="${fromId}"]`)
     const r = el?.getBoundingClientRect()
     setLinkDrag({
@@ -215,12 +218,17 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   useEffect(() => {
     if (!linkDrag) return
     const fromId = linkDrag.fromId
-    const move = (e: PointerEvent) => setLinkDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d))
+    const move = (e: PointerEvent) => {
+      setLinkDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d))
+      const card = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-scene-id]') as HTMLElement | null
+      const tid = card?.dataset.sceneId
+      setLinkHover(tid && tid !== fromId && boardRef.current?.contains(card) ? tid : null)
+    }
     const up = (e: PointerEvent) => {
       const card = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-scene-id]') as HTMLElement | null
       const tid = card?.dataset.sceneId
       if (tid && tid !== fromId && boardRef.current?.contains(card)) setLinkModal({ from: fromId, to: tid })
-      setLinkDrag(null)
+      setLinkDrag(null); setLinkHover(null); linkHandleDown.current = false
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
@@ -447,7 +455,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       }}
                       onDragStart={(e) => {
                         // драг за ручку связи — не двигаем карточку
-                        if ((e.target as HTMLElement).closest('[data-link-handle]')) { e.preventDefault(); return }
+                        if (linkHandleDown.current) { linkHandleDown.current = false; e.preventDefault(); return }
                         // тянем все выбранные (порядок в группе) или только эту карточку
                         setDragIds(
                           isSel && selected.size > 1
@@ -484,7 +492,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                         borderLeftWidth: 3,
                         borderLeftColor: isDrop ? '#fb923c' : tagColor,
                         cursor: linkFrom ? 'crosshair' : 'grab',
-                        outline: linkFrom === sc.id ? '2px solid rgba(249,115,22,0.7)' : 'none',
+                        outline: linkFrom === sc.id || linkHover === sc.id ? '2px solid rgba(249,115,22,0.8)' : 'none',
                         outlineOffset: 2,
                         opacity: sc.isOmitted ? 0.55 : dragIds.includes(sc.id) ? 0.4 : 1,
                         boxShadow: isDrop
@@ -786,11 +794,19 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       {/* Временная линия при драге ручки связи */}
       {linkDrag && (
         <svg className="fixed inset-0 pointer-events-none" style={{ zIndex: 60 }}>
-          <line
-            x1={linkDrag.sx} y1={linkDrag.sy} x2={linkDrag.x} y2={linkDrag.y}
-            stroke="#fb923c" strokeWidth="2" strokeDasharray="7 5" opacity="0.85"
-          />
-          <circle cx={linkDrag.x} cy={linkDrag.y} r="5" fill="#fb923c" />
+          <defs>
+            <linearGradient id="link-rubber" gradientUnits="userSpaceOnUse"
+              x1={linkDrag.sx} y1={linkDrag.sy} x2={linkDrag.x} y2={linkDrag.y}>
+              <stop offset="0%" stopColor="#fb923c" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#fdba74" stopOpacity="0.9" />
+            </linearGradient>
+          </defs>
+          <line x1={linkDrag.sx} y1={linkDrag.sy} x2={linkDrag.x} y2={linkDrag.y}
+            stroke="#fb923c" strokeWidth="7" strokeLinecap="round" opacity="0.18" />
+          <line x1={linkDrag.sx} y1={linkDrag.sy} x2={linkDrag.x} y2={linkDrag.y}
+            stroke="url(#link-rubber)" strokeWidth="2" strokeLinecap="round" />
+          <circle cx={linkDrag.sx} cy={linkDrag.sy} r="4" fill="#fb923c" opacity="0.7" />
+          <circle cx={linkDrag.x} cy={linkDrag.y} r="5.5" fill="#fb923c" stroke="#fff" strokeWidth="1.5" />
         </svg>
       )}
 
