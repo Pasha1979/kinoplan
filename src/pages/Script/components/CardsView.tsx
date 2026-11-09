@@ -57,6 +57,142 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
+// ── Обход карточек для связей (стиль нод-редактора) ──
+const LINK_CELL = 14 // размер ячейки сетки маршрутизации
+const LINK_MARGIN = 9 // отступ от карточек-препятствий
+
+interface CardRect { id: string; x: number; y: number; w: number; h: number }
+const inRect = (r: CardRect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
+const inflate = (r: CardRect, m: number): CardRect => ({ ...r, x: r.x - m, y: r.y - m, w: r.w + m * 2, h: r.h + m * 2 })
+
+// Кривая Безье пересекает препятствие?
+function bezierHits(sx: number, sy: number, c1x: number, c1y: number, c2x: number, c2y: number, ex: number, ey: number, obs: CardRect[]): boolean {
+  for (let i = 0; i <= 40; i++) {
+    const t = i / 40, u = 1 - t
+    const x = u * u * u * sx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * ex
+    const y = u * u * u * sy + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * ey
+    for (const o of obs) if (inRect(o, x, y)) return true
+  }
+  return false
+}
+
+// A* по сетке — трасса в обход карточек (8 направлений, без срезания углов)
+function astar(sx: number, sy: number, ex: number, ey: number, obs: CardRect[], W: number, H: number): { x: number; y: number }[] | null {
+  const cols = Math.max(1, Math.ceil(W / LINK_CELL)), rows = Math.max(1, Math.ceil(H / LINK_CELL))
+  const blocked = new Uint8Array(cols * rows)
+  for (const o of obs) {
+    const c0 = Math.max(0, Math.floor(o.x / LINK_CELL)), c1 = Math.min(cols - 1, Math.floor((o.x + o.w) / LINK_CELL))
+    const r0 = Math.max(0, Math.floor(o.y / LINK_CELL)), r1 = Math.min(rows - 1, Math.floor((o.y + o.h) / LINK_CELL))
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) blocked[r * cols + c] = 1
+  }
+  const toCell = (x: number, y: number) => ({
+    c: Math.min(cols - 1, Math.max(0, Math.round(x / LINK_CELL - 0.5))),
+    r: Math.min(rows - 1, Math.max(0, Math.round(y / LINK_CELL - 0.5))),
+  })
+  const freeNear = (c: number, r: number): number => {
+    if (c >= 0 && c < cols && r >= 0 && r < rows && !blocked[r * cols + c]) return r * cols + c
+    for (let rad = 1; rad < 14; rad++) {
+      for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== rad) continue
+        const cc = c + dc, rr = r + dr
+        if (cc >= 0 && cc < cols && rr >= 0 && rr < rows && !blocked[rr * cols + cc]) return rr * cols + cc
+      }
+    }
+    return -1
+  }
+  const s = toCell(sx, sy), g = toCell(ex, ey)
+  const si = freeNear(s.c, s.r), gi = freeNear(g.c, g.r)
+  if (si < 0 || gi < 0) return null
+  const gc = gi % cols, gr = (gi / cols) | 0
+  const N = cols * rows
+  const gs = new Float64Array(N).fill(Infinity)
+  const came = new Int32Array(N).fill(-1)
+  const closed = new Uint8Array(N)
+  const heur = (i: number) => {
+    const dc = Math.abs((i % cols) - gc), dr = Math.abs(((i / cols) | 0) - gr)
+    return LINK_CELL * (Math.min(dc, dr) * Math.SQRT2 + Math.abs(dc - dr))
+  }
+  // бинарная куча [f, idx]
+  const heapF: number[] = [], heapI: number[] = []
+  const hPush = (f: number, i: number) => {
+    heapF.push(f); heapI.push(i)
+    let c = heapF.length - 1
+    while (c > 0) {
+      const p = (c - 1) >> 1
+      if (heapF[p] <= heapF[c]) break
+      ;[heapF[p], heapF[c]] = [heapF[c], heapF[p]]; [heapI[p], heapI[c]] = [heapI[c], heapI[p]]; c = p
+    }
+  }
+  const hPop = (): number => {
+    const top = heapI[0]
+    const lf = heapF.pop()!, li = heapI.pop()!
+    if (heapF.length) {
+      heapF[0] = lf; heapI[0] = li
+      let c = 0
+      for (;;) {
+        const l = c * 2 + 1, r = l + 1
+        let m = c
+        if (l < heapF.length && heapF[l] < heapF[m]) m = l
+        if (r < heapF.length && heapF[r] < heapF[m]) m = r
+        if (m === c) break
+        ;[heapF[m], heapF[c]] = [heapF[c], heapF[m]]; [heapI[m], heapI[c]] = [heapI[c], heapI[m]]; c = m
+      }
+    }
+    return top
+  }
+  gs[si] = 0; hPush(heur(si), si)
+  const DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]]
+  let found = false, guard = 0
+  while (heapF.length && guard++ < N * 4) {
+    const cur = hPop()
+    if (closed[cur]) continue
+    closed[cur] = 1
+    if (cur === gi) { found = true; break }
+    const cc = cur % cols, cr = (cur / cols) | 0
+    for (const [dc, dr, w] of DIRS) {
+      const nc = cc + dc, nr = cr + dr
+      if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) continue
+      const ni = nr * cols + nc
+      if (blocked[ni] || closed[ni]) continue
+      // диагональ — оба orthogonal-соседа должны быть свободны
+      if (dc !== 0 && dr !== 0 && (blocked[cr * cols + nc] || blocked[nr * cols + cc])) continue
+      const ng = gs[cur] + w * LINK_CELL
+      if (ng < gs[ni]) { gs[ni] = ng; came[ni] = cur; hPush(ng + heur(ni), ni) }
+    }
+  }
+  if (!found) return null
+  const cells: number[] = []
+  for (let i = gi; i !== -1; i = came[i]) cells.push(i)
+  cells.reverse()
+  const pts = cells.map((i) => ({ x: ((i % cols) + 0.5) * LINK_CELL, y: (((i / cols) | 0) + 0.5) * LINK_CELL }))
+  pts[0] = { x: sx, y: sy }; pts[pts.length - 1] = { x: ex, y: ey }
+  return pts
+}
+
+// Плавная «дорожка» по точкам: убираем коллинеарные, скругляем углы
+function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my: number } {
+  const p = [pts[0]]
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = p[p.length - 1], b = pts[i], c = pts[i + 1]
+    if (Math.abs((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)) > 0.5) p.push(b)
+  }
+  p.push(pts[pts.length - 1])
+  if (p.length === 2) {
+    return { d: `M ${p[0].x.toFixed(1)} ${p[0].y.toFixed(1)} L ${p[1].x.toFixed(1)} ${p[1].y.toFixed(1)}`, mx: (p[0].x + p[1].x) / 2, my: (p[0].y + p[1].y) / 2 }
+  }
+  let d = `M ${p[0].x.toFixed(1)} ${p[0].y.toFixed(1)}`
+  for (let i = 1; i < p.length - 1; i++) {
+    const prev = p[i - 1], cur = p[i], next = p[i + 1]
+    const m1x = (prev.x + cur.x) / 2, m1y = (prev.y + cur.y) / 2
+    const m2x = (cur.x + next.x) / 2, m2y = (cur.y + next.y) / 2
+    d += ` L ${m1x.toFixed(1)} ${m1y.toFixed(1)} Q ${cur.x.toFixed(1)} ${cur.y.toFixed(1)} ${m2x.toFixed(1)} ${m2y.toFixed(1)}`
+  }
+  const last = p[p.length - 1]
+  d += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`
+  const mid = p[Math.floor(p.length / 2)]
+  return { d, mx: mid.x, my: mid.y - 8 }
+}
+
 function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
@@ -249,39 +385,45 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
     if (!board || !showLinks) { setLinkPaths([]); return }
     const compute = () => {
       const br = board.getBoundingClientRect()
+      // Все карточки доски — препятствия для трассировки
+      const cards: CardRect[] = [...board.querySelectorAll<HTMLElement>('[data-scene-id]')].map((el) => {
+        const r = el.getBoundingClientRect()
+        return { id: el.dataset.sceneId!, x: r.left - br.left, y: r.top - br.top, w: r.width, h: r.height }
+      })
       const out: typeof linkPaths = []
       for (const l of sceneLinks) {
         const ea = board.querySelector(`[data-scene-id="${l.from}"]`)?.getBoundingClientRect()
         const eb = board.querySelector(`[data-scene-id="${l.to}"]`)?.getBoundingClientRect()
         if (!ea || !eb) continue
-        const br2 = { l: br.left, t: br.top }
-        const acx = ea.left + ea.width / 2 - br2.l, acy = ea.top + ea.height / 2 - br2.t
-        const bcx = eb.left + eb.width / 2 - br2.l, bcy = eb.top + eb.height / 2 - br2.t
+        const acx = ea.left + ea.width / 2 - br.left, acy = ea.top + ea.height / 2 - br.top
+        const bcx = eb.left + eb.width / 2 - br.left, bcy = eb.top + eb.height / 2 - br.top
         const dx = bcx - acx, dy = bcy - acy
         const adx = Math.abs(dx), ady = Math.abs(dy)
-        let d: string, mx: number, my: number
+        // Точки на гранях + S-кривая Безье (предпочтительный короткий вариант)
+        let sx: number, sy: number, ex: number, ey: number, c1x: number, c1y: number, c2x: number, c2y: number
         if (adx >= ady) {
-          // Горизонтальная S-кривая: правый/левый край → противоположный край цели
           const dir = dx >= 0 ? 1 : -1
-          const sx = acx + dir * (ea.width / 2 + 2), sy = acy
-          const ex = bcx - dir * (eb.width / 2 + 2), ey = bcy
+          sx = acx + dir * (ea.width / 2 + 2); sy = acy
+          ex = bcx - dir * (eb.width / 2 + 2); ey = bcy
           const k = Math.min(Math.max(adx * 0.45, 24), 110)
-          const c1x = sx + dir * k, c1y = sy
-          const c2x = ex - dir * k, c2y = ey
-          d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)}`
-          mx = (sx + 3 * c1x + 3 * c2x + ex) / 8
-          my = (sy + 3 * c1y + 3 * c2y + ey) / 8
+          c1x = sx + dir * k; c1y = sy; c2x = ex - dir * k; c2y = ey
         } else {
-          // Вертикальная S-кривая (между сериями): нижний/верхний край → противоположный
           const dir = dy >= 0 ? 1 : -1
-          const sx = acx, sy = acy + dir * (ea.height / 2 + 2)
-          const ex = bcx, ey = bcy - dir * (eb.height / 2 + 2)
+          sx = acx; sy = acy + dir * (ea.height / 2 + 2)
+          ex = bcx; ey = bcy - dir * (eb.height / 2 + 2)
           const k = Math.min(Math.max(ady * 0.45, 24), 110)
-          const c1x = sx, c1y = sy + dir * k
-          const c2x = ex, c2y = ey - dir * k
-          d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)}`
-          mx = (sx + 3 * c1x + 3 * c2x + ex) / 8
-          my = (sy + 3 * c1y + 3 * c2y + ey) / 8
+          c1x = sx; c1y = sy + dir * k; c2x = ex; c2y = ey - dir * k
+        }
+        let d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)}`
+        let mx = (sx + 3 * c1x + 3 * c2x + ex) / 8
+        let my = (sy + 3 * c1y + 3 * c2y + ey) / 8
+
+        // Если кривая задевает карточки — трассируем в обход по сетке
+        const obs = cards.filter((cd) => cd.id !== l.from && cd.id !== l.to).map((cd) => inflate(cd, LINK_MARGIN))
+        if (bezierHits(sx, sy, c1x, c1y, c2x, c2y, ex, ey, obs)) {
+          const pts = astar(sx, sy, ex, ey, obs, br.width, br.height)
+          if (pts) { const t = tracePath(pts); d = t.d; mx = t.mx; my = t.my }
+          else { d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}`; mx = (sx + ex) / 2; my = (sy + ey) / 2 }
         }
         out.push({ id: l.id, d, label: l.label, mx, my, from: l.from, to: l.to })
       }
