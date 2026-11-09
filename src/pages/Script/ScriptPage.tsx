@@ -254,6 +254,23 @@ export default function ScriptPage() {
     if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneGroups: groups }) }
   }, [episodeScripts, updateScript, pushUndo])
 
+  // Связи между сценами (фаза 6) — плоский список, может пересекать серии.
+  // Мержим со всех версий скриптов с дедупликацией по id (как группы).
+  const sceneLinks = useMemo(() => {
+    const seen = new Set<string>()
+    return episodeScripts.flatMap((ep) => ep.sceneLinks || []).filter((l) => {
+      if (seen.has(l.id)) return false
+      seen.add(l.id); return true
+    })
+  }, [episodeScripts])
+  const handleLinksChange = useCallback((links: import('../../types/scene').SceneLink[]) => {
+    // Владелец — скрипт, содержащий сцены-связи; иначе первый
+    const ids = new Set(links.flatMap((l) => [l.from, l.to]))
+    const owner = episodeScripts.find((ep) => (ep.scenes || []).some((sc) => ids.has(sc.id)))
+      || episodeScripts[0]
+    if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneLinks: links }) }
+  }, [episodeScripts, updateScript, pushUndo])
+
   const handleSaveScene = useCallback((newContent: string) => {
     if (!editSceneOwner) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
     // 1) пишем в стор — сохранится и в PouchDB, и для закрытых серий
@@ -534,6 +551,8 @@ export default function ScriptPage() {
             onMarkerSet={handleMarkerSet}
             groupsByEpisode={sceneGroupsByEp}
             onGroupsChange={handleGroupsChange}
+            sceneLinks={sceneLinks}
+            onLinksChange={handleLinksChange}
             onUndo={handleUndo}
             undoCount={undoCount}
           />

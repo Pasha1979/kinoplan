@@ -1,6 +1,6 @@
-import { memo, useEffect, useMemo, useState } from 'react'
-import { Film, Clock, Users, Search, X, Undo2, Folder } from 'lucide-react'
-import type { Scene, SceneGroup } from '../../../types/scene'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff } from 'lucide-react'
+import type { Scene, SceneGroup, SceneLink } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
 
 type SceneWithEp = Scene & { _episode?: number }
@@ -28,6 +28,10 @@ interface CardsViewProps {
   /** откат последнего действия на доске */
   onUndo?: () => void
   undoCount?: number
+  /** связи между сценами (фаза 6) */
+  sceneLinks?: SceneLink[]
+  /** запись изменённых связей обратно в скрипт */
+  onLinksChange?: (links: SceneLink[]) => void
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -53,7 +57,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0 }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -76,6 +80,14 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[]; editGid?: string } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [groupCtx, setGroupCtx] = useState<{ x: number; y: number; ep: number; gid: string } | null>(null)
+  // Связи сцен (фаза 6)
+  const [showLinks, setShowLinks] = useState(true)
+  const [linkFrom, setLinkFrom] = useState<string | null>(null) // режим «выбери цель» из контекстного меню
+  const [linkDrag, setLinkDrag] = useState<{ fromId: string; sx: number; sy: number; x: number; y: number } | null>(null)
+  const [linkModal, setLinkModal] = useState<{ from: string; to: string } | null>(null)
+  const [linkLabel, setLinkLabel] = useState('')
+  const boardRef = useRef<HTMLDivElement>(null)
+  const [linkPaths, setLinkPaths] = useState<Array<{ id: string; d: string; label?: string; mx: number; my: number; from: string; to: string }>>([])
   // Страховка: dragend на window — гасит «зависшую» тусклость, если источник драга размонтировался
   useEffect(() => {
     const clear = () => { setDragIds([]); setDropKey(null) }
@@ -170,6 +182,99 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
     return [...g.entries()].sort((a, b) => a[0] - b[0])
   }, [visible])
 
+  // ── Связи сцен (фаза 6) ──
+  const linksOf = (sceneId: string) => sceneLinks.filter((l) => l.from === sceneId || l.to === sceneId)
+  const sceneNum = (id: string) => scenes.find((s) => s.id === id)?.number ?? '…'
+  const updateLinks = (next: SceneLink[]) => onLinksChange?.(next)
+  const deleteLink = (id: string) => updateLinks(sceneLinks.filter((l) => l.id !== id))
+  const createLink = () => {
+    if (!linkModal) return
+    const l: SceneLink = {
+      id: `lnk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      from: linkModal.from, to: linkModal.to,
+      label: linkLabel.trim() || undefined,
+    }
+    updateLinks([...sceneLinks, l])
+    setLinkModal(null); setLinkLabel('')
+  }
+
+  // Ручка связи: тянем от карточки-источника
+  const startLinkDrag = (fromId: string, e: React.PointerEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    const el = boardRef.current?.querySelector(`[data-scene-id="${fromId}"]`)
+    const r = el?.getBoundingClientRect()
+    setLinkDrag({
+      fromId,
+      sx: r ? r.left + r.width / 2 : e.clientX,
+      sy: r ? r.top + r.height / 2 : e.clientY,
+      x: e.clientX, y: e.clientY,
+    })
+  }
+
+  // Движение/отпускание при драге связи
+  useEffect(() => {
+    if (!linkDrag) return
+    const fromId = linkDrag.fromId
+    const move = (e: PointerEvent) => setLinkDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d))
+    const up = (e: PointerEvent) => {
+      const card = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-scene-id]') as HTMLElement | null
+      const tid = card?.dataset.sceneId
+      if (tid && tid !== fromId && boardRef.current?.contains(card)) setLinkModal({ from: fromId, to: tid })
+      setLinkDrag(null)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+  }, [linkDrag?.fromId])
+
+  // Esc отменяет выбор цели связи
+  useEffect(() => {
+    if (!linkFrom) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setLinkFrom(null) }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [linkFrom])
+
+  // Пересчёт SVG-путей связей по реальным позициям карточек
+  useLayoutEffect(() => {
+    const board = boardRef.current
+    if (!board || !showLinks) { setLinkPaths([]); return }
+    const compute = () => {
+      const br = board.getBoundingClientRect()
+      const out: typeof linkPaths = []
+      for (const l of sceneLinks) {
+        const a = board.querySelector(`[data-scene-id="${l.from}"]`)?.getBoundingClientRect()
+        const b = board.querySelector(`[data-scene-id="${l.to}"]`)?.getBoundingClientRect()
+        if (!a || !b) continue
+        const ax = a.left + a.width / 2 - br.left, ay = a.top + a.height / 2 - br.top
+        const bx = b.left + b.width / 2 - br.left, by = b.top + b.height / 2 - br.top
+        const dx = bx - ax, dy = by - ay
+        const dist = Math.hypot(dx, dy) || 1
+        const ux = dx / dist, uy = dy / dist
+        const trim = (cx: number, cy: number, hw: number, hh: number) => {
+          const t = Math.min(
+            Math.abs(ux) > 1e-4 ? hw / Math.abs(ux) : Infinity,
+            Math.abs(uy) > 1e-4 ? hh / Math.abs(uy) : Infinity,
+          )
+          return { x: cx + ux * t, y: cy + uy * t }
+        }
+        const s = trim(ax, ay, a.width / 2 + 3, a.height / 2 + 3)
+        const e = trim(bx, by, b.width / 2 + 3, b.height / 2 + 3)
+        const c = dist * 0.35
+        const c1x = s.x + ux * c, c1y = s.y + uy * c
+        const c2x = e.x - ux * c, c2y = e.y - uy * c
+        const d = `M ${s.x.toFixed(1)} ${s.y.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${e.x.toFixed(1)} ${e.y.toFixed(1)}`
+        const mx = (s.x + 3 * c1x + 3 * c2x + e.x) / 8
+        const my = (s.y + 3 * c1y + 3 * c2y + e.y) / 8
+        out.push({ id: l.id, d, label: l.label, mx, my, from: l.from, to: l.to })
+      }
+      setLinkPaths(out)
+    }
+    compute()
+    window.addEventListener('resize', compute)
+    return () => window.removeEventListener('resize', compute)
+  }, [sceneLinks, showLinks, scenes, query, typeFilter, series])
+
   const seriesPills = isSerial ? [0, ...Array.from({ length: episodesCount }, (_, i) => i + 1)] : null
 
   return (
@@ -232,13 +337,26 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         >
           <Undo2 size={12} /> Отменить
         </button>
+        {/* Показать/скрыть связи между сценами */}
+        <button
+          onClick={() => setShowLinks((v) => !v)}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+          style={{
+            background: showLinks ? 'rgba(249,115,22,0.15)' : 'transparent',
+            color: showLinks ? '#fb923c' : textSecondary,
+          }}
+          title={showLinks ? 'Скрыть связи между сценами' : 'Показать связи между сценами'}
+        >
+          {showLinks ? <Eye size={12} /> : <EyeOff size={12} />} Связи
+        </button>
       </div>
       </LayoutBox>
 
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
       <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
-        <div onScroll={() => setCtxMenu(null)}
+        <div ref={boardRef} className="relative"
+          onScroll={() => setCtxMenu(null)}
           onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -298,7 +416,15 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       })}
                     <div
                       draggable
+                      data-scene-id={sc.id}
                       onClick={(e) => {
+                        // Режим выбора цели связи — клик по карточке = цель
+                        if (linkFrom) {
+                          e.stopPropagation()
+                          if (linkFrom !== sc.id) setLinkModal({ from: linkFrom, to: sc.id })
+                          setLinkFrom(null)
+                          return
+                        }
                         if (e.ctrlKey || e.metaKey) {
                           e.stopPropagation()
                           setSelected((prev) => {
@@ -310,7 +436,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                           setDetail(sc)
                         }
                       }}
-                      onDragStart={() => {
+                      onDragStart={(e) => {
+                        // драг за ручку связи — не двигаем карточку
+                        if ((e.target as HTMLElement).closest('[data-link-handle]')) { e.preventDefault(); return }
                         // тянем все выбранные (порядок в группе) или только эту карточку
                         setDragIds(
                           isSel && selected.size > 1
@@ -346,7 +474,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                         borderColor: isDrop ? '#fb923c' : isSel ? 'rgba(249,115,22,0.7)' : isHover ? 'rgba(249,115,22,0.55)' : border,
                         borderLeftWidth: 3,
                         borderLeftColor: isDrop ? '#fb923c' : tagColor,
-                        cursor: 'grab',
+                        cursor: linkFrom ? 'crosshair' : 'grab',
+                        outline: linkFrom === sc.id ? '2px solid rgba(249,115,22,0.7)' : 'none',
+                        outlineOffset: 2,
                         opacity: sc.isOmitted ? 0.55 : dragIds.includes(sc.id) ? 0.4 : 1,
                         boxShadow: isDrop
                           ? '0 0 0 2px rgba(249,115,22,0.3)'
@@ -372,6 +502,23 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                           }}
                         />
                       )}
+                      {/* Ручка создания связи — тянешь к целевой сцене */}
+                      <span
+                        data-link-handle
+                        onPointerDown={(e) => startLinkDrag(sc.id, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute rounded-full"
+                        style={{
+                          right: 4, top: '50%', transform: 'translateY(-50%)',
+                          width: 9, height: 9,
+                          background: '#fb923c',
+                          border: `2px solid ${cardBg}`,
+                          boxShadow: '0 0 6px rgba(249,115,22,0.7)',
+                          cursor: 'crosshair',
+                          zIndex: 6,
+                        }}
+                        title="Потяни к другой сцене — создать связь"
+                      />
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
@@ -460,6 +607,44 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               )}
             </div>
           ))
+        )}
+        {/* SVG-слой связей поверх доски */}
+        {showLinks && linkPaths.length > 0 && (
+          <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 10, overflow: 'visible' }}>
+            <defs>
+              <marker id="kinoplan-link-arrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 Z" fill="#fb923c" />
+              </marker>
+            </defs>
+            {linkPaths.map((p) => {
+              const hot = hoverId === p.from || hoverId === p.to
+              return (
+                <g key={p.id}>
+                  <path
+                    d={p.d}
+                    fill="none"
+                    stroke="#fb923c"
+                    strokeWidth={hot ? 3 : 1.8}
+                    strokeOpacity={hot ? 1 : 0.5}
+                    markerEnd="url(#kinoplan-link-arrow)"
+                  />
+                  {p.label && (
+                    <text
+                      x={p.mx} y={p.my - 6}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fontWeight="600"
+                      fill="#fb923c"
+                      stroke={isDark ? '#0d0d1c' : '#ffffff'}
+                      strokeWidth="3.5"
+                      paintOrder="stroke"
+                      style={{ pointerEvents: 'none' }}
+                    >{p.label}</text>
+                  )}
+                </g>
+              )
+            })}
+          </svg>
         )}
       </div>
       </LayoutBox>
@@ -575,6 +760,62 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       </LayoutBox>
       </div>
 
+      {/* Режим выбора цели связи — подсказка */}
+      {linkFrom && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-1.5 text-[11px] font-medium"
+          style={{
+            background: isDark ? '#1e1e3a' : '#ffffff',
+            border: '1px solid rgba(249,115,22,0.6)',
+            color: '#fb923c',
+            boxShadow: '0 4px 16px rgba(249,115,22,0.3)',
+          }}>
+          Связь: кликните по целевой сцене · Esc — отмена
+        </div>
+      )}
+
+      {/* Временная линия при драге ручки связи */}
+      {linkDrag && (
+        <svg className="fixed inset-0 pointer-events-none" style={{ zIndex: 60 }}>
+          <line
+            x1={linkDrag.sx} y1={linkDrag.sy} x2={linkDrag.x} y2={linkDrag.y}
+            stroke="#fb923c" strokeWidth="2" strokeDasharray="7 5" opacity="0.85"
+          />
+          <circle cx={linkDrag.x} cy={linkDrag.y} r="5" fill="#fb923c" />
+        </svg>
+      )}
+
+      {/* Модал подписи связи */}
+      {linkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => { setLinkModal(null); setLinkLabel('') }}>
+          <div className="rounded-2xl p-5 w-full max-w-sm"
+            style={{ background: isDark ? '#1e1e3a' : '#ffffff', border: `1px solid ${border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-bold mb-1" style={{ color: textPrimary }}>Новая связь</div>
+            <div className="text-[11px] mb-3" style={{ color: textSecondary }}>
+              {sceneNum(linkModal.from)} → {sceneNum(linkModal.to)}
+            </div>
+            <input
+              autoFocus
+              value={linkLabel}
+              onChange={(e) => setLinkLabel(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') createLink(); if (e.key === 'Escape') { setLinkModal(null); setLinkLabel('') } }}
+              placeholder="Подпись (необязательно): «ответка», «флешбек»…"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none mb-4"
+              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: textPrimary, border: `1px solid ${border}` }}
+            />
+            <div className="flex gap-2 justify-end">
+              <button className="px-3 py-1.5 rounded-lg text-xs"
+                style={{ color: textSecondary }}
+                onClick={() => { setLinkModal(null); setLinkLabel('') }}>Отмена</button>
+              <button className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{ background: '#fb923c', color: '#1a1a2e' }}
+                onClick={createLink}>Создать</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Контекстное меню — цвет карточки */}
       {ctxMenu && (
         <div className="fixed rounded-xl p-2 z-50"
@@ -634,6 +875,30 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   Убрать из группы
                 </button>
               )}
+            </div>
+          </div>
+          {/* Связи сцен */}
+          <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${border}` }}>
+            <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Связи</div>
+            <div className="px-1 pb-1 space-y-0.5">
+              <button
+                className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                style={{ color: '#fb923c' }}
+                onClick={() => { setLinkFrom(ctxMenu.id); setCtxMenu(null) }}>
+                ＋ Связать с…
+              </button>
+              {linksOf(ctxMenu.id).map((l) => {
+                const other = l.from === ctxMenu.id ? l.to : l.from
+                return (
+                  <div key={l.id} className="flex items-center gap-1.5 px-1.5 py-1 rounded text-[11px]"
+                    style={{ color: textPrimary }}>
+                    <span className="flex-1 truncate">→ {sceneNum(other)}{l.label ? ` · ${l.label}` : ''}</span>
+                    <button className="text-[10px] px-1" style={{ color: textSecondary }}
+                      title="Удалить связь"
+                      onClick={() => { deleteLink(l.id); setCtxMenu(null) }}>✕</button>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

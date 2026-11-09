@@ -66,3 +66,14 @@ export interface SceneGroup {
   sceneIds: string[]
   collapsed?: boolean
 }
+
+/** Связь между сценами на доске карточек (фаза 6 «Карточки») */
+export interface SceneLink {
+  id: string
+  /** id сцены-источника */
+  from: string
+  /** id сцены-цели */
+  to: string
+  /** свободная подпись на стрелке */
+  label?: string
+}

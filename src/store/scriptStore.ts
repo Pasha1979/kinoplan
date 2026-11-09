@@ -87,6 +87,8 @@ export interface Script {
   actMarkers?: Record<string, string>
   /** Папки/группы карточек на доске (фаза 5 «Карточки») */
   sceneGroups?: import('../types/scene').SceneGroup[]
+  /** Связи между сценами на доске карточек (фаза 6 «Карточки») */
+  sceneLinks?: import('../types/scene').SceneLink[]
 }
 
 export interface ScriptDraft {
