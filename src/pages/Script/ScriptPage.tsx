@@ -196,6 +196,19 @@ export default function ScriptPage() {
     if (from.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(fromContent)
     if (to.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(toContent)
   }, [episodeScripts, project?.type, currentScript?.id, editorInstance, updateScript])
+  // Маркеры актов по сериям — для линий-разделителей на доске карточек
+  const actMarkersByEp = useMemo(
+    () => Object.fromEntries(
+      episodeScripts.map((ep) => [ep.episodeNumber ?? 1, (ep.actMarkers || {}) as Record<string, string>]),
+    ),
+    [episodeScripts],
+  )
+  const handleMarkerSet = useCallback((key: string, sceneId: string, episode: number) => {
+    const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
+    if (!owner) return
+    updateScript(owner.id, { actMarkers: { ...(owner.actMarkers || {}), [key]: sceneId } })
+  }, [episodeScripts, updateScript])
+
   const handleSaveScene = useCallback((newContent: string) => {
     if (!editSceneOwner) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
     // 1) пишем в стор — сохранится и в PouchDB, и для закрытых серий
@@ -472,6 +485,8 @@ export default function ScriptPage() {
             onUpdateScene={handleUpdateScene}
             onOpenSceneEditor={setEditScene}
             onMoveScenes={handleMoveScenes}
+            actMarkers={actMarkersByEp}
+            onMarkerSet={handleMarkerSet}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>

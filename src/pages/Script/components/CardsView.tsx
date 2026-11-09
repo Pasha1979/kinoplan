@@ -17,6 +17,16 @@ interface CardsViewProps {
   onOpenSceneEditor?: (scene: SceneWithEp) => void
   /** перенос сцен: список id → серия, перед позицией в ней */
   onMoveScenes?: (sceneIds: string[], toEpisode: number, toIndex: number) => void
+  /** маркеры актов по сериям: ep → {act2|mid|climax → sceneId} */
+  actMarkers?: Record<number, Record<string, string | undefined>>
+  /** переназначение маркера на другую сцену */
+  onMarkerSet?: (key: string, sceneId: string, episode: number) => void
+}
+
+const MARKER_META: Record<string, { label: string; color: string }> = {
+  act2: { label: 'АКТ 2', color: '#3b82f6' },
+  mid: { label: 'МИДПОИНТ', color: '#a78bfa' },
+  climax: { label: 'КУЛЬМИНАЦИЯ', color: '#ef4444' },
 }
 
 function fmtDuration(sec: number): string {
@@ -36,7 +46,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -51,6 +61,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dragIds, setDragIds] = useState<string[]>([])
   const [dropKey, setDropKey] = useState<string | null>(null)
+  // Драг маркера акта (не сцены!)
+  const [dragMarker, setDragMarker] = useState<string | null>(null)
 
   // Синопсис: первая ремарка сцены (диалог в начале сцены пропускаем —
   // берём первый action-блок после шапки что бы ни шло первым)
@@ -186,9 +198,32 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   const st = sc.status && sc.status !== 'not_planned' ? STATUS_LABEL[sc.status] : null
                   const isSel = selected.has(sc.id)
                   const isDrop = dropKey === `${episode}:${i}`
+                  // Маркеры актов этой сцены (могут быть несколько)
+                  const epMarkers = actMarkers?.[episode] ?? {}
+                  const scMarkers = Object.entries(epMarkers).filter(([, sid]) => sid === sc.id)
                   return (
+                    <div key={sc.id}>
+                      {scMarkers.map(([key]) => {
+                        const m = MARKER_META[key]
+                        return m ? (
+                          <div
+                            key={key}
+                            draggable
+                            onDragStart={(e) => { e.stopPropagation(); setDragMarker(key) }}
+                            onDragEnd={() => setDragMarker(null)}
+                            className="flex items-center gap-2 mb-1.5 cursor-grab"
+                            title={`${m.label} — перетащи на другую сцену`}
+                          >
+                            <div className="h-px flex-1" style={{ background: m.color, opacity: 0.6 }} />
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                              style={{ background: m.color + '22', color: m.color, border: `1px solid ${m.color}55` }}>
+                              {m.label}
+                            </span>
+                            <div className="h-px flex-1" style={{ background: m.color, opacity: 0.6 }} />
+                          </div>
+                        ) : null
+                      })}
                     <div
-                      key={sc.id}
                       draggable
                       onClick={(e) => {
                         if (e.ctrlKey || e.metaKey) {
@@ -214,7 +249,12 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       onDragLeave={() => setDropKey((k) => (k === `${episode}:${i}` ? null : k))}
                       onDrop={(e) => {
                         e.preventDefault()
-                        if (dragIds.length) onMoveScenes?.(dragIds, episode, i)
+                        if (dragMarker) {
+                          onMarkerSet?.(dragMarker, sc.id, episode)
+                          setDragMarker(null)
+                        } else if (dragIds.length) {
+                          onMoveScenes?.(dragIds, episode, i)
+                        }
                         setDragIds([]); setDropKey(null); setSelected(new Set())
                       }}
                       onDragEnd={() => { setDragIds([]); setDropKey(null) }}
@@ -282,6 +322,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                           {sc.cast.length > 3 && <span className="text-[9px]" style={{ color: textSecondary }}>+{sc.cast.length - 3}</span>}
                         </div>
                       )}
+                    </div>
                     </div>
                   )
                 })}
