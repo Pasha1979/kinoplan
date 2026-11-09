@@ -243,6 +243,7 @@ export default function ScriptPage() {
   )
   const handleGroupsChange = useCallback((episode: number, groups: import('../../types/scene').SceneGroup[]) => {
     const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
+    console.log('[groups] handleGroupsChange', { episode, ownerId: owner?.id, groupsCount: groups.length, groups })
     if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneGroups: groups }) }
   }, [episodeScripts, updateScript, pushUndo])
 

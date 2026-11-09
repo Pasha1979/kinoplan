@@ -73,8 +73,11 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   // Группы: карточка → id группы (по сериям)
   const groupOf = (ep: number, sceneId: string) =>
     (groupsByEpisode[ep] || []).find((g) => g.sceneIds.includes(sceneId))
-  const updateGroups = (ep: number, fn: (gs: SceneGroup[]) => SceneGroup[]) =>
-    onGroupsChange?.(ep, fn(groupsByEpisode[ep] || []))
+  const updateGroups = (ep: number, fn: (gs: SceneGroup[]) => SceneGroup[]) => {
+    const next = fn(groupsByEpisode[ep] || [])
+    console.log('[groups] updateGroups', { ep, before: groupsByEpisode[ep]?.length, after: next.length, next, hasOnChange: !!onGroupsChange })
+    onGroupsChange?.(ep, next)
+  }
 
   // Синопсис: первая ремарка сцены (диалог в начале сцены пропускаем —
   // берём первый action-блок после шапки что бы ни шло первым)
