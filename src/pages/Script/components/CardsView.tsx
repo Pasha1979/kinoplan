@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react'
-import { Film, Clock, Users, Search, X } from 'lucide-react'
+import { Film, Clock, Users, Search, X, Undo2, Folder } from 'lucide-react'
 import type { Scene, SceneGroup } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
 
@@ -25,6 +25,9 @@ interface CardsViewProps {
   groupsByEpisode?: Record<number, SceneGroup[]>
   /** запись изменённых групп обратно в скрипт серии */
   onGroupsChange?: (episode: number, groups: SceneGroup[]) => void
+  /** откат последнего действия на доске */
+  onUndo?: () => void
+  undoCount?: number
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -50,7 +53,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0 }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -174,9 +177,25 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           </div>
         )}
         <span className="text-[10px] ml-1" style={{ color: textSecondary }}>{visible.length} сц</span>
+        {/* Откат последнего действия (драг/группы/маркеры) */}
+        <button
+          onClick={onUndo}
+          disabled={undoCount === 0}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+          style={{
+            background: undoCount ? 'rgba(249,115,22,0.15)' : 'transparent',
+            color: undoCount ? '#fb923c' : textSecondary,
+            opacity: undoCount ? 1 : 0.4,
+            cursor: undoCount ? 'pointer' : 'default',
+          }}
+          title={undoCount ? `Отменить действие (в истории ${undoCount})` : 'Нет действий для отмены'}
+        >
+          <Undo2 size={12} /> Отменить
+        </button>
       </div>
 
-      {/* Доска */}
+      {/* Доска + сайдбар папок */}
+      <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 pb-6" onScroll={() => setCtxMenu(null)}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -200,7 +219,6 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 </div>
               )}
               {(() => {
-                const epGroups = groupsByEpisode[episode] || []
                 const cardEl = (sc: SceneWithEp, i: number) => {
                   const tagColor = sc.colorTag || TYPE_COLOR[sc.type] || '#94a3b8'
                   const dur = sc.manualDuration ?? sc.duration ?? 0
@@ -339,59 +357,6 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 const ungrouped = items.filter((s) => !groupOf(episode, s.id))
                 return (
                   <>
-                    {/* Папки/группы серии */}
-                    {epGroups.map((g) => {
-                      const gScenes = items.filter((s) => g.sceneIds.includes(s.id))
-                      const gDur = gScenes.reduce((s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0), 0)
-                      if (g.collapsed) {
-                        return (
-                          <div
-                            key={g.id}
-                            className="inline-flex items-center gap-2 mb-3 mr-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all"
-                            style={{ background: cardBg, border: `1.5px solid ${g.color}66` }}
-                            onClick={() => updateGroups(episode, (gs) => gs.map((x) => x.id === g.id ? { ...x, collapsed: false } : x))}
-                            title="Развернуть группу"
-                          >
-                            <span className="w-2 h-2 rounded-full" style={{ background: g.color }} />
-                            <span className="text-[11px] font-bold" style={{ color: textPrimary }}>{g.name}</span>
-                            <span className="text-[9px]" style={{ color: textSecondary }}>{gScenes.length} сц · {fmtDuration(gDur)}</span>
-                          </div>
-                        )
-                      }
-                      return (
-                        <div
-                          key={g.id}
-                          className="mb-4 rounded-xl p-3 transition-all"
-                          style={{ border: `1.5px solid ${dropKey === `${episode}:grp:${g.id}` ? '#fb923c' : g.color + '44'}`, background: g.color + '0d' }}
-                          onDragOver={(e) => { e.preventDefault(); setDropKey(`${episode}:grp:${g.id}`) }}
-                          onDragLeave={() => setDropKey((k) => (k === `${episode}:grp:${g.id}` ? null : k))}
-                          onDrop={(e) => {
-                            e.preventDefault()
-                            if (dragIds.length) {
-                              updateGroups(episode, (gs) => gs.map((x) => x.id === g.id
-                                ? { ...x, sceneIds: [...new Set([...x.sceneIds, ...dragIds])] } : x))
-                            }
-                            setDragIds([]); setDropKey(null)
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <button
-                              onClick={() => updateGroups(episode, (gs) => gs.map((x) => x.id === g.id ? { ...x, collapsed: true } : x))}
-                              className="text-[10px]" style={{ color: g.color }}>▾</button>
-                            <span className="w-2 h-2 rounded-full" style={{ background: g.color }} />
-                            <span className="text-[11px] font-bold" style={{ color: textPrimary }}>{g.name}</span>
-                            <span className="text-[9px]" style={{ color: textSecondary }}>{gScenes.length} сц · {fmtDuration(gDur)}</span>
-                            <button
-                              onClick={() => updateGroups(episode, (gs) => gs.filter((x) => x.id !== g.id))}
-                              className="ml-auto text-[10px] px-1 transition-all hover:scale-110"
-                              style={{ color: textSecondary }} title="Удалить группу (сцены останутся)">✕</button>
-                          </div>
-                          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
-                            {gScenes.map((sc) => cardEl(sc, items.indexOf(sc)))}
-                          </div>
-                        </div>
-                      )
-                    })}
                     {/* Карточки без группы */}
                     <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
                       {ungrouped.map((sc) => cardEl(sc, items.indexOf(sc)))}
@@ -421,6 +386,91 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
             </div>
           ))
         )}
+      </div>
+
+      {/* ── САЙДБАР «ПАПКИ» — контейнеры групп ── */}
+      <div className="w-56 overflow-y-auto px-3 py-4 space-y-3"
+        style={{ borderLeft: `1px solid ${border}`, background: isDark ? '#0d0d1c' : '#fafafa' }}>
+        <div className="flex items-center gap-2 mb-1">
+          <Folder size={13} style={{ color: '#fb923c' }} />
+          <span className="text-[11px] font-bold tracking-wider" style={{ color: textSecondary }}>ПАПКИ</span>
+        </div>
+        {groups.filter(([ep]) => series === 'all' || series === ep).length === 0 && (
+          <p className="text-[10px]" style={{ color: textSecondary }}>
+            Нет групп. Правый клик по карточке → «В группу»
+          </p>
+        )}
+        {groups.filter(([ep]) => series === 'all' || series === ep).flatMap(([ep, items]) =>
+          (groupsByEpisode[ep] || []).map((g) => {
+            const gScenes = items.filter((s) => g.sceneIds.includes(s.id))
+            const gDur = gScenes.reduce((s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0), 0)
+            const key = `${ep}:${g.id}`
+            return (
+              <div
+                key={key}
+                className="rounded-xl overflow-hidden transition-all"
+                style={{
+                  border: `1.5px solid ${dropKey === `grp:${key}` ? '#fb923c' : g.color + '55'}`,
+                  background: cardBg,
+                }}
+                onDragOver={(e) => { e.preventDefault(); setDropKey(`grp:${key}`) }}
+                onDragLeave={() => setDropKey((k) => (k === `grp:${key}` ? null : k))}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  if (dragIds.length) {
+                    updateGroups(ep, (gs) => gs.map((x) => x.id === g.id
+                      ? { ...x, sceneIds: [...new Set([...x.sceneIds, ...dragIds])] } : x))
+                  }
+                  setDragIds([]); setDropKey(null)
+                }}
+              >
+                {/* Шапка контейнера — клик разворачивает группу */}
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left transition-all hover:brightness-110"
+                  onClick={() => updateGroups(ep, (gs) => gs.map((x) => x.id === g.id ? { ...x, collapsed: !x.collapsed } : x))}
+                  title={g.collapsed ? 'Развернуть' : 'Свернуть'}
+                >
+                  <span className="text-[9px] transition-transform" style={{ color: g.color, transform: g.collapsed ? 'rotate(-90deg)' : 'none' }}>▼</span>
+                  <span className="w-2 h-2 rounded-full" style={{ background: g.color }} />
+                  <span className="text-[11px] font-bold flex-1 truncate" style={{ color: textPrimary }}>{g.name}</span>
+                  <span className="text-[9px]" style={{ color: textSecondary }}>{gScenes.length}</span>
+                </button>
+                {/* Сцены внутри — видны в развёрнутом виде */}
+                {!g.collapsed && (
+                  <div className="px-2 pb-2 space-y-1">
+                    {gScenes.map((sc) => (
+                      <div
+                        key={sc.id}
+                        onClick={() => setDetail(sc)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition-all"
+                        style={{ background: isDark ? 'rgba(255,255,255,0.04)' : '#f4f4f6' }}
+                        title="Клик — детали сцены"
+                      >
+                        <span className="text-[10px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
+                        <span className="text-[9px] flex-1 truncate" style={{ color: textSecondary }}>
+                          {sc.location}{sc.sublocation ? `.${sc.sublocation}` : ''}
+                        </span>
+                        <span className="text-[8px]" style={{ color: textSecondary }}>{fmtDuration(sc.manualDuration ?? sc.duration ?? 0)}</span>
+                      </div>
+                    ))}
+                    {gScenes.length === 0 && (
+                      <div className="text-[9px] px-2 py-1" style={{ color: textSecondary }}>Пусто — перетащи карточку сюда</div>
+                    )}
+                    <div className="flex items-center justify-between px-1 pt-1">
+                      <span className="text-[8px]" style={{ color: textSecondary }}>{fmtDuration(gDur)}</span>
+                      <button
+                        onClick={() => updateGroups(ep, (gs) => gs.filter((x) => x.id !== g.id))}
+                        className="text-[9px] transition-all hover:scale-110"
+                        style={{ color: textSecondary }}
+                        title="Удалить группу (сцены вернутся на доску)">✕</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          }),
+        )}
+      </div>
       </div>
 
       {/* Контекстное меню — цвет карточки */}

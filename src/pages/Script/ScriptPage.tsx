@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
 import { useScriptStore, type TitlePage } from '../../store/scriptStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
@@ -147,6 +147,29 @@ export default function ScriptPage() {
   const editSceneOwner = editScene ? episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === editScene.id)) : undefined
   const editSceneIndex = editScene && editSceneOwner ? editSceneOwner.scenes!.findIndex((s) => s.id === editScene.id) : -1
 
+  // ── UNDO-стек для операций на доске (драг, группы, маркеры) — 15 действий
+  type ScriptSnapshot = { content: string; scenes: Scene[]; sceneGroups?: import('../../types/scene').SceneGroup[]; actMarkers?: Record<string, string> }
+  const undoStack = useRef<Array<Array<{ scriptId: string; snap: ScriptSnapshot }>>>([])
+  const [undoCount, setUndoCount] = useState(0)
+  const pushUndo = useCallback((scriptIds: string[]) => {
+    const pack = scriptIds.map((id) => {
+      const s = episodeScripts.find((ep) => ep.id === id)
+      return s ? { scriptId: id, snap: { content: s.content || '', scenes: s.scenes || [], sceneGroups: s.sceneGroups, actMarkers: s.actMarkers } } : null
+    }).filter(Boolean) as Array<{ scriptId: string; snap: ScriptSnapshot }>
+    undoStack.current.push(pack)
+    if (undoStack.current.length > 15) undoStack.current.shift()
+    setUndoCount(undoStack.current.length)
+  }, [episodeScripts])
+  const handleUndo = useCallback(() => {
+    const pack = undoStack.current.pop()
+    if (!pack) return
+    pack.forEach(({ scriptId, snap }: { scriptId: string; snap: ScriptSnapshot }) => {
+      updateScript(scriptId, { content: snap.content, scenes: snap.scenes, sceneGroups: snap.sceneGroups, actMarkers: snap.actMarkers })
+      if (scriptId === currentScript?.id && editorInstance) editorInstance.commands.setContent(snap.content)
+    })
+    setUndoCount(undoStack.current.length)
+  }, [episodeScripts, currentScript?.id, editorInstance, updateScript])
+
   // Перенос сцен drag&drop: внутри серии ИЛИ между скриптами-сериями.
   // Вырезает HTML-фрагменты по номерам шапок, вставляет в цель, перенумеровывает.
   const handleMoveScenes = useCallback((sceneIds: string[], toEpisode: number, toIndex: number) => {
@@ -157,6 +180,7 @@ export default function ScriptPage() {
     // все переносимые сцены должны быть из одного скрипта
     if (!sceneIds.every((id) => from.scenes!.some((s) => s.id === id))) return
 
+    pushUndo([from.id, to.id])
     const fromEp = from.episodeNumber ?? 1
     const moving = sceneIds.map((id) => from.scenes!.find((s) => s.id === id)!)
     const frags = moving.map((s) => extractSceneHtml(from.content || '', s.number, 0)).join('')
@@ -206,8 +230,9 @@ export default function ScriptPage() {
   const handleMarkerSet = useCallback((key: string, sceneId: string, episode: number) => {
     const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
     if (!owner) return
+    pushUndo([owner.id])
     updateScript(owner.id, { actMarkers: { ...(owner.actMarkers || {}), [key]: sceneId } })
-  }, [episodeScripts, updateScript])
+  }, [episodeScripts, updateScript, pushUndo])
 
   // Группы карточек по сериям (фаза 5)
   const sceneGroupsByEp = useMemo(
@@ -218,8 +243,8 @@ export default function ScriptPage() {
   )
   const handleGroupsChange = useCallback((episode: number, groups: import('../../types/scene').SceneGroup[]) => {
     const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
-    if (owner) updateScript(owner.id, { sceneGroups: groups })
-  }, [episodeScripts, updateScript])
+    if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneGroups: groups }) }
+  }, [episodeScripts, updateScript, pushUndo])
 
   const handleSaveScene = useCallback((newContent: string) => {
     if (!editSceneOwner) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
@@ -501,6 +526,8 @@ export default function ScriptPage() {
             onMarkerSet={handleMarkerSet}
             groupsByEpisode={sceneGroupsByEp}
             onGroupsChange={handleGroupsChange}
+            onUndo={handleUndo}
+            undoCount={undoCount}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
