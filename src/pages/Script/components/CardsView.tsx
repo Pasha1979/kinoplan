@@ -211,6 +211,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       onClick={() => { setCtxMenu(null); setGroupCtx(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
+      <LayoutBox k="toolbar">
       <div className="flex items-center gap-3 px-6 pt-5 pb-3 flex-wrap">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1 min-w-[200px] max-w-[340px]"
           style={{ background: cardBg, border: `1px solid ${border}` }}>
@@ -285,6 +286,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           </button>
         )}
       </div>
+      </LayoutBox>
 
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
