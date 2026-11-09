@@ -315,8 +315,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       style={{
                         background: cardBg,
                         border: `1px solid ${isDrop ? '#fb923c' : isSel ? 'rgba(249,115,22,0.7)' : border}`,
-                        borderLeft: isDrop ? '4px solid #fb923c' : undefined,
-                        borderLeft: `3px solid ${tagColor}`,
+                        borderLeft: `3px solid ${isDrop ? '#fb923c' : tagColor}`,
                         cursor: 'grab',
                         opacity: sc.isOmitted ? 0.55 : dragIds.includes(sc.id) ? 0.4 : 1,
                         boxShadow: isDrop ? '0 0 0 2px rgba(249,115,22,0.35), -6px 0 0 -2px #fb923c' : isSel ? '0 0 0 1.5px rgba(249,115,22,0.35)' : undefined,
