@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Film, Clock, Users, Search, X, Undo2, Folder } from 'lucide-react'
 import type { Scene, SceneGroup } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
@@ -75,76 +75,33 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[]; editGid?: string } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [groupCtx, setGroupCtx] = useState<{ x: number; y: number; ep: number; gid: string } | null>(null)
-  // Режим «Расстановка» — свободная трансформация зон вкладки
-  const [layoutMode, setLayoutMode] = useState(false)
-  const [layout, setLayout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => {
-    try { return JSON.parse(localStorage.getItem('cardsLayout') || '{}') } catch { return {} }
-  })
-  const dragRef = useRef<{ k: string; startX: number; startY: number; s: { dx: number; dy: number; w?: number; h?: number }; mode: 'move' | 'resize' | 'resizeW' | 'resizeH' } | null>(null)
-  const onBoxDown = (e: React.MouseEvent, k: string, mode: 'move' | 'resize' | 'resizeW' | 'resizeH') => {
-    if (!layoutMode) return
-    e.preventDefault(); e.stopPropagation()
-    dragRef.current = { k, startX: e.clientX, startY: e.clientY, s: { dx: layout[k]?.dx ?? 0, dy: layout[k]?.dy ?? 0, w: layout[k]?.w, h: layout[k]?.h }, mode }
+  // Макет финализирован — позиции из применённой раскладки + сохранённых правок
+  const APPLIED: Record<string, { dx: number; dy: number; w?: number; h?: number }> = {
+    toolbar: { dx: 1, dy: 4, w: 1452, h: 60 },
+    board: { dx: -11, dy: 15 },
+    sidebar: { dx: -13, dy: 17, w: 226 },
   }
-  useEffect(() => {
-    if (!layoutMode) return
-    const SENS = 0.5
-    const onMove = (e: MouseEvent) => {
-      const d = dragRef.current
-      if (!d) return
-      const dx = (e.clientX - d.startX) * SENS
-      const dy = (e.clientY - d.startY) * SENS
-      setLayout((l) => {
-        const cur = { ...l[d.k], ...d.s }
-        if (d.mode === 'move') return { ...l, [d.k]: { ...cur, dx: Math.round(d.s.dx + dx), dy: Math.round(d.s.dy + dy) } }
-        if (d.mode === 'resizeW') return { ...l, [d.k]: { ...cur, w: Math.max(160, Math.round((d.s.w || 200) + dx)) } }
-        if (d.mode === 'resizeH') return { ...l, [d.k]: { ...cur, h: Math.max(60, Math.round((d.s.h || 100) + dy)) } }
-        return { ...l, [d.k]: { ...cur, w: Math.max(160, Math.round((d.s.w || 200) + dx)), h: Math.max(60, Math.round((d.s.h || 100) + dy)) } }
-      })
-    }
-    const onUp = () => { dragRef.current = null; try { localStorage.setItem('cardsLayout', JSON.stringify(layout)) } catch {} }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [layoutMode, layout])
+  const [layout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cardsLayout') || '{}')
+      const merged = { ...APPLIED }
+      for (const k of Object.keys(saved)) merged[k] = { ...(APPLIED[k] || { dx: 0, dy: 0 }), ...saved[k] }
+      return merged
+    } catch { return { ...APPLIED } }
+  })
   const LayoutBox = ({ k, children, style }: { k: string; children: React.ReactNode; style?: React.CSSProperties }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
     return (
       <div
-        onMouseDown={(e) => onBoxDown(e, k, 'move')}
         style={{
           ...style,
           transform: `translate(${s.dx}px, ${s.dy}px)`,
           width: s.w ?? style?.width,
           height: s.h ?? style?.height,
           overflow: s.h ? 'auto' : style?.overflow ?? 'visible',
-          position: 'relative',
-          outline: layoutMode ? '2px dashed rgba(249,115,22,0.7)' : 'none',
-          outlineOffset: 2,
-          cursor: layoutMode ? 'move' : undefined,
-          userSelect: layoutMode ? 'none' : undefined,
         }}
       >
         {children}
-        {layoutMode && (
-          <>
-            {/* Только ширина — правый край */}
-            <div
-              onMouseDown={(e) => onBoxDown(e, k, 'resizeW')}
-              style={{ position: 'absolute', right: -2, top: '30%', width: 6, height: '40%', cursor: 'ew-resize', zIndex: 50, background: '#fb923c', borderRadius: 3 }}
-            />
-            {/* Только высота — нижний край */}
-            <div
-              onMouseDown={(e) => onBoxDown(e, k, 'resizeH')}
-              style={{ position: 'absolute', bottom: -2, left: '30%', height: 6, width: '40%', cursor: 'ns-resize', zIndex: 50, background: '#fb923c', borderRadius: 3 }}
-            />
-            {/* Оба размера — угол */}
-            <div
-              onMouseDown={(e) => onBoxDown(e, k, 'resize')}
-              style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', zIndex: 51, borderRight: '3px solid #fb923c', borderBottom: '3px solid #fb923c', borderBottomRightRadius: 4 }}
-            />
-          </>
-        )}
       </div>
     )
   }
@@ -279,26 +236,6 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         >
           <Undo2 size={12} /> Отменить
         </button>
-        <button
-          onClick={() => setLayoutMode(!layoutMode)}
-          className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
-          style={{
-            background: layoutMode ? 'rgba(249,115,22,0.2)' : 'transparent',
-            color: layoutMode ? '#fb923c' : textSecondary,
-            border: layoutMode ? '1px solid rgba(249,115,22,0.5)' : '1px solid transparent',
-          }}
-        >
-          Расстановка
-        </button>
-        {layoutMode && (
-          <button
-            onClick={() => { navigator.clipboard?.writeText(JSON.stringify(layout, null, 2)); alert('JSON макета скопирован — пришли мне') }}
-            className="px-2.5 py-1 rounded-md text-[11px] font-medium"
-            style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.4)' }}
-          >
-            Экспорт
-          </button>
-        )}
       </div>
       </LayoutBox>
 
