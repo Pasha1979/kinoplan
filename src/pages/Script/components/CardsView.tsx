@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { Film, Clock, Users, Search, X, Undo2, Folder } from 'lucide-react'
 import type { Scene, SceneGroup } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
@@ -76,6 +76,12 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[]; editGid?: string } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [groupCtx, setGroupCtx] = useState<{ x: number; y: number; ep: number; gid: string } | null>(null)
+  // Страховка: dragend на window — гасит «зависшую» тусклость, если источник драга размонтировался
+  useEffect(() => {
+    const clear = () => { setDragIds([]); setDropKey(null) }
+    window.addEventListener('dragend', clear)
+    return () => window.removeEventListener('dragend', clear)
+  }, [])
   // Макет в исходном состоянии — все зоны без смещений
   const [layout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => ({}))
   const LayoutBox = ({ k, children, style }: { k: string; children: React.ReactNode; style?: React.CSSProperties }) => {
@@ -232,7 +238,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
       <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
-        <div onScroll={() => setCtxMenu(null)}>
+        <div onScroll={() => setCtxMenu(null)}
+          onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
