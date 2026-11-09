@@ -170,8 +170,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       onClick={() => { setCtxMenu(null); setGroupCtx(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
-      <LayoutBox k="toolbar">
-      <div className="flex items-center gap-3 px-6 pt-5 pb-3 flex-wrap">
+      <LayoutBox k="toolbar" style={{ padding: '16px 40px 12px' }}>
+      <div className="flex items-center gap-3 px-4 py-3 flex-wrap rounded-xl"
+        style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1 min-w-[200px] max-w-[340px]"
           style={{ background: cardBg, border: `1px solid ${border}` }}>
           <Search size={13} style={{ color: textSecondary }} />
@@ -430,7 +431,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       </LayoutBox>
 
       {/* ── САЙДБАР «ПАПКИ» — контейнеры групп ── */}
-      <LayoutBox k="sidebar" style={{ width: 240, overflowY: 'auto' }}>
+      <LayoutBox k="sidebar" style={{ width: 260, overflowY: 'auto', borderLeft: `1px solid ${border}` }}>
       <div className="px-3 py-4 space-y-3"
         onDragOver={(e) => { e.preventDefault(); setDropKey('sidebar') }}
         onDragLeave={() => setDropKey((k) => (k === 'sidebar' ? null : k))}
@@ -444,11 +445,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           setDragIds([]); setDropKey(null)
         }}
         style={{
-          borderLeft: `2px solid ${dropKey === 'sidebar' ? '#fb923c' : 'rgba(249,115,22,0.35)'}`,
+          borderLeft: dropKey === 'sidebar' ? '2px solid #fb923c' : 'none',
           background: isDark
             ? 'linear-gradient(180deg, rgba(249,115,22,0.10) 0%, rgba(20,20,42,0.6) 60px, #0d0d1c 100%)'
             : 'linear-gradient(180deg, rgba(249,115,22,0.10) 0%, #fdfaf5 60px, #fafafa 100%)',
-          boxShadow: isDark ? 'inset 8px 0 16px -8px rgba(0,0,0,0.5)' : 'inset 8px 0 16px -8px rgba(0,0,0,0.06)',
         }}>
         <div className="flex items-center gap-2 mb-2 px-1 py-1.5 rounded-lg"
           style={{ background: 'rgba(249,115,22,0.12)' }}>
