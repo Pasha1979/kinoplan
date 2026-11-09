@@ -431,7 +431,12 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       </LayoutBox>
 
       {/* ── САЙДБАР «ПАПКИ» — контейнеры групп ── */}
-      <LayoutBox k="sidebar" style={{ width: 260, overflowY: 'auto', borderLeft: `1px solid ${border}` }}>
+      <LayoutBox k="sidebar" style={{
+        width: 268, overflowY: 'auto',
+        borderLeft: `1px solid ${border}`,
+        background: isDark ? 'rgba(249,115,22,0.05)' : 'rgba(249,115,22,0.04)',
+        boxShadow: isDark ? 'inset 6px 0 20px -8px rgba(0,0,0,0.6)' : 'inset 6px 0 20px -8px rgba(249,115,22,0.12)',
+      }}>
       <div className="px-3 py-4 space-y-3"
         onDragOver={(e) => { e.preventDefault(); setDropKey('sidebar') }}
         onDragLeave={() => setDropKey((k) => (k === 'sidebar' ? null : k))}
