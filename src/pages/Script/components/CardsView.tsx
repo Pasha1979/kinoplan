@@ -243,29 +243,38 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       const br = board.getBoundingClientRect()
       const out: typeof linkPaths = []
       for (const l of sceneLinks) {
-        const a = board.querySelector(`[data-scene-id="${l.from}"]`)?.getBoundingClientRect()
-        const b = board.querySelector(`[data-scene-id="${l.to}"]`)?.getBoundingClientRect()
-        if (!a || !b) continue
-        const ax = a.left + a.width / 2 - br.left, ay = a.top + a.height / 2 - br.top
-        const bx = b.left + b.width / 2 - br.left, by = b.top + b.height / 2 - br.top
-        const dx = bx - ax, dy = by - ay
-        const dist = Math.hypot(dx, dy) || 1
-        const ux = dx / dist, uy = dy / dist
-        const trim = (cx: number, cy: number, hw: number, hh: number) => {
-          const t = Math.min(
-            Math.abs(ux) > 1e-4 ? hw / Math.abs(ux) : Infinity,
-            Math.abs(uy) > 1e-4 ? hh / Math.abs(uy) : Infinity,
-          )
-          return { x: cx + ux * t, y: cy + uy * t }
+        const ea = board.querySelector(`[data-scene-id="${l.from}"]`)?.getBoundingClientRect()
+        const eb = board.querySelector(`[data-scene-id="${l.to}"]`)?.getBoundingClientRect()
+        if (!ea || !eb) continue
+        const br2 = { l: br.left, t: br.top }
+        const acx = ea.left + ea.width / 2 - br2.l, acy = ea.top + ea.height / 2 - br2.t
+        const bcx = eb.left + eb.width / 2 - br2.l, bcy = eb.top + eb.height / 2 - br2.t
+        const dx = bcx - acx, dy = bcy - acy
+        const adx = Math.abs(dx), ady = Math.abs(dy)
+        let d: string, mx: number, my: number
+        if (adx >= ady) {
+          // Горизонтальная S-кривая: правый/левый край → противоположный край цели
+          const dir = dx >= 0 ? 1 : -1
+          const sx = acx + dir * (ea.width / 2 + 2), sy = acy
+          const ex = bcx - dir * (eb.width / 2 + 2), ey = bcy
+          const k = Math.min(Math.max(adx * 0.45, 24), 110)
+          const c1x = sx + dir * k, c1y = sy
+          const c2x = ex - dir * k, c2y = ey
+          d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)}`
+          mx = (sx + 3 * c1x + 3 * c2x + ex) / 8
+          my = (sy + 3 * c1y + 3 * c2y + ey) / 8
+        } else {
+          // Вертикальная S-кривая (между сериями): нижний/верхний край → противоположный
+          const dir = dy >= 0 ? 1 : -1
+          const sx = acx, sy = acy + dir * (ea.height / 2 + 2)
+          const ex = bcx, ey = bcy - dir * (eb.height / 2 + 2)
+          const k = Math.min(Math.max(ady * 0.45, 24), 110)
+          const c1x = sx, c1y = sy + dir * k
+          const c2x = ex, c2y = ey - dir * k
+          d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)}`
+          mx = (sx + 3 * c1x + 3 * c2x + ex) / 8
+          my = (sy + 3 * c1y + 3 * c2y + ey) / 8
         }
-        const s = trim(ax, ay, a.width / 2 + 3, a.height / 2 + 3)
-        const e = trim(bx, by, b.width / 2 + 3, b.height / 2 + 3)
-        const c = dist * 0.35
-        const c1x = s.x + ux * c, c1y = s.y + uy * c
-        const c2x = e.x - ux * c, c2y = e.y - uy * c
-        const d = `M ${s.x.toFixed(1)} ${s.y.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${e.x.toFixed(1)} ${e.y.toFixed(1)}`
-        const mx = (s.x + 3 * c1x + 3 * c2x + e.x) / 8
-        const my = (s.y + 3 * c1y + 3 * c2y + e.y) / 8
         out.push({ id: l.id, d, label: l.label, mx, my, from: l.from, to: l.to })
       }
       setLinkPaths(out)
@@ -612,8 +621,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         {showLinks && linkPaths.length > 0 && (
           <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 10, overflow: 'visible' }}>
             <defs>
-              <marker id="kinoplan-link-arrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
-                <path d="M0,0 L9,4.5 L0,9 Z" fill="#fb923c" />
+              <marker id="kinoplan-link-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0.5,0.5 L6.5,3.5 L0.5,6.5 Z" fill="#fb923c" fillOpacity="0.85" />
               </marker>
             </defs>
             {linkPaths.map((p) => {
@@ -624,8 +633,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                     d={p.d}
                     fill="none"
                     stroke="#fb923c"
-                    strokeWidth={hot ? 3 : 1.8}
-                    strokeOpacity={hot ? 1 : 0.5}
+                    strokeWidth={hot ? 2 : 1.1}
+                    strokeOpacity={hot ? 0.95 : 0.45}
+                    strokeLinecap="round"
                     markerEnd="url(#kinoplan-link-arrow)"
                   />
                   {p.label && (
