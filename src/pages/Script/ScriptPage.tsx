@@ -709,6 +709,23 @@ export default function ScriptPage() {
           onIssueClick={(issue) => {
             const s = scenes.find(x => x.id === issue.sceneId) || scenes.find(x => x.number === issue.sceneNumber)
             if (s) handleSceneClickRouted(s.id)
+            // Выделяем конкретный блок, к которому относится предупреждение
+            // (lineNumber — 1-based индекс блока = индекс верхнего узла документа)
+            if (issue.lineNumber != null && editorInstance) {
+              const targetIdx = issue.lineNumber - 1
+              let pos: number | null = null
+              editorInstance.state.doc.forEach((_n, offset, index) => {
+                if (index === targetIdx) pos = offset
+              })
+              if (pos != null) {
+                editorInstance
+                  .chain()
+                  .focus()
+                  .setNodeSelection(pos)
+                  .scrollIntoView()
+                  .run()
+              }
+            }
           }}
         />
       )}
