@@ -634,8 +634,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               onDrop={(e) => {
                 e.preventDefault()
                 if (dragIds.length) {
-                  updateGroups(groupModal.ep, (gs) => gs.map((x) => x.id === g.id
-                    ? { ...x, sceneIds: x.sceneIds.filter((id) => !dragIds.includes(id)) } : x))
+                  updateGroups(groupModal.ep, (gs) => gs
+                    .map((x) => x.id === g.id
+                      ? { ...x, sceneIds: x.sceneIds.filter((id) => !dragIds.includes(id)) } : x)
+                    .filter((x) => x.sceneIds.length > 0)) // пустая группа самоудаляется
                 }
                 setDragIds([])
               }}
@@ -666,6 +668,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                     onDragStart={() => setDragIds([sc.id])}
                     onDragEnd={() => setDragIds([])}
                     onClick={() => setDetail(sc)}
+                    onContextMenu={(e) => {
+                      e.preventDefault(); e.stopPropagation()
+                      setCtxMenu({ x: e.clientX, y: e.clientY, id: sc.id, ep: groupModal.ep })
+                    }}
                     className="rounded-xl p-3 cursor-grab transition-all hover:scale-[1.02]"
                     style={{ background: cardBg, border: `1px solid ${border}`, borderLeft: `3px solid ${g.color}` }}
                   >
