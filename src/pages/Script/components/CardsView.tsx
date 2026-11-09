@@ -58,8 +58,9 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 }
 
 // ── Обход карточек для связей (стиль нод-редактора) ──
-const LINK_CELL = 14 // размер ячейки сетки маршрутизации
-const LINK_MARGIN = 9 // отступ от карточек-препятствий
+const LINK_CELL = 8 // размер ячейки сетки маршрутизации (меньше зазоров между карточками)
+const LINK_MARGIN = 5 // зазор, который Безье должен держать от карточек
+const LINK_MARGIN_GRID = 1 // минимальный отступ для сетки A* — коридоры должны оставаться проходимыми
 
 interface CardRect { id: string; x: number; y: number; w: number; h: number }
 const inRect = (r: CardRect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
@@ -418,10 +419,13 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         let mx = (sx + 3 * c1x + 3 * c2x + ex) / 8
         let my = (sy + 3 * c1y + 3 * c2y + ey) / 8
 
-        // Если кривая задевает карточки — трассируем в обход по сетке
-        const obs = cards.filter((cd) => cd.id !== l.from && cd.id !== l.to).map((cd) => inflate(cd, LINK_MARGIN))
-        if (bezierHits(sx, sy, c1x, c1y, c2x, c2y, ex, ey, obs)) {
-          const pts = astar(sx, sy, ex, ey, obs, br.width, br.height)
+        // Если кривая задевает карточки — трассируем в обход по сетке.
+        // Для сетки отступ минимальный: зазоры между карточками ~10px должны оставаться проходимыми.
+        const others = cards.filter((cd) => cd.id !== l.from && cd.id !== l.to)
+        const obsBez = others.map((cd) => inflate(cd, LINK_MARGIN))
+        if (bezierHits(sx, sy, c1x, c1y, c2x, c2y, ex, ey, obsBez)) {
+          const obsGrid = others.map((cd) => inflate(cd, LINK_MARGIN_GRID))
+          const pts = astar(sx, sy, ex, ey, obsGrid, br.width, br.height)
           if (pts) { const t = tracePath(pts); d = t.d; mx = t.mx; my = t.my }
           else { d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}`; mx = (sx + ex) / 2; my = (sy + ey) / 2 }
         }
