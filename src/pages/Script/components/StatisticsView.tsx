@@ -1,4 +1,4 @@
-import { memo, useState, Fragment, useRef, useMemo, useCallback, useEffect } from 'react'
+import { memo, useState, Fragment, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
@@ -38,7 +38,7 @@ const ACT_MARKERS = [
 // Раскладка пользователя из режима «Расстановка» (экспортированный JSON)
 const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   's-timings': { dx: 13.6, dy: -425.6, w: 348.8, h: 332.8 },
-  's-heatmap': { dx: 12.8, dy: -571.2, w: 1426, h: 142.8 },
+  's-heatmap': { dx: 12.8, dy: -571.2, w: 1420, h: 622 },
   's-chars': { dx: -119.2, dy: -360.8, w: 357.6, h: 267.8 },
   's-locs': { dx: -239.2, dy: -361.6, w: 390, h: 267 },
   's-intext': { dx: 1144.8, dy: -526.4, w: 289.6, h: 123.6 },
@@ -122,9 +122,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     delete next[key]
     updateScript(currentScriptId, { actMarkers: next })
   }
-  // ВРЕМЕННЫЙ режим «Расстановка»: layout редактируемый (драг+ресайз+экспорт)
-  const [layoutMode, setLayoutMode] = useState(false)
-  const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
+  // Макет финализирован — позиции из APPLIED_LAYOUT + сохранённых правок
+  const [layout] = useState<Record<string, LayoutEntry>>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
       // Помержим поключно: w/h из дефолта сохраняются, если в сохранённом их нет
@@ -136,66 +135,19 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   })
   const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
-  // Драг блока в режиме расстановки
-  const dragRef = useRef<{ k: string; startX: number; startY: number; dx: number; dy: number; mode: 'move' | 'resize' } | null>(null)
-  const onBoxDown = (e: React.MouseEvent, k: string, mode: 'move' | 'resize') => {
-    if (!layoutMode) return
-    e.preventDefault(); e.stopPropagation()
-    const s = layout[k] ?? { dx: 0, dy: 0 }
-    dragRef.current = { k, startX: e.clientX, startY: e.clientY, dx: s.dx, dy: s.dy, mode }
-  }
-  // Коэффициент замедления — иначе трансформация слишком резкая для точной настройки
-  const SENSITIVITY = 0.5
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    const d = dragRef.current
-    if (!d) return
-    const s = layout[d.k] ?? { dx: 0, dy: 0 }
-    const dx = (e.clientX - d.startX) * SENSITIVITY
-    const dy = (e.clientY - d.startY) * SENSITIVITY
-    if (d.mode === 'move') {
-      setLayout((l) => ({ ...l, [d.k]: { ...s, dx: Math.round(d.dx + dx), dy: Math.round(d.dy + dy) } }))
-    } else {
-      setLayout((l) => ({ ...l, [d.k]: { ...s, w: Math.max(160, Math.round((s.w || 200) + dx)), h: Math.max(60, Math.round((s.h || 100) + dy)) } }))
-    }
-  }, [layout])
-  const onMouseUp = useCallback(() => { dragRef.current = null; try { localStorage.setItem('statsLayout', JSON.stringify(layout)) } catch {} }, [layout])
-  useEffect(() => {
-    if (!layoutMode) return
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-    return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp) }
-  }, [layoutMode, onMouseMove, onMouseUp])
-
   // Обёртка блока — применяет позицию из макета
   const LayoutBox = ({ k, children }: { k: string; children: React.ReactNode }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
     return (
       <div
-        onMouseDown={(e) => onBoxDown(e, k, 'move')}
         style={{
           transform: `translate(${s.dx}px, ${s.dy}px)`,
           width: s.w,
           height: s.h,
           overflow: s.h ? 'hidden' : 'visible',
-          position: 'relative',
-          outline: layoutMode ? '2px dashed rgba(249,115,22,0.7)' : 'none',
-          outlineOffset: 2,
-          cursor: layoutMode ? 'move' : undefined,
-          userSelect: layoutMode ? 'none' : undefined,
         }}
       >
         {children}
-        {layoutMode && (
-          <div
-            onMouseDown={(e) => onBoxDown(e, k, 'resize')}
-            style={{
-              position: 'absolute', right: 0, bottom: 0, width: 14, height: 14,
-              cursor: 'nwse-resize', zIndex: 50,
-              borderRight: '3px solid #fb923c', borderBottom: '3px solid #fb923c',
-              borderBottomRightRadius: 4,
-            }}
-          />
-        )}
       </div>
     )
   }
@@ -418,32 +370,6 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-          {/* Режим «Расстановка» — временно для настройки макета */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setLayoutMode(!layoutMode)}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-              style={{
-                background: layoutMode ? 'rgba(249,115,22,0.2)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f0f0f0'),
-                color: layoutMode ? '#fb923c' : textSecondary,
-                border: layoutMode ? '1px solid rgba(249,115,22,0.5)' : '1px solid transparent',
-              }}
-            >
-              Расстановка
-            </button>
-            {layoutMode && (
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(JSON.stringify(layout, null, 2))
-                  alert('JSON макета скопирован — пришли мне для применения')
-                }}
-                className="px-3 py-1.5 rounded-lg text-[11px] font-medium"
-                style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.4)' }}
-              >
-                Экспорт JSON
-              </button>
             )}
           </div>
         </div>
