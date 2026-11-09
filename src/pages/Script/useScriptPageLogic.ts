@@ -32,9 +32,11 @@ export function useScriptPageLogic() {
   // Все Script'ы текущего проекта (для сериалов — с episodeNumber, fallback=1 для старых данных)
   const episodeScripts = useMemo(() => {
     if (!project) return []
-    return scripts
+    const out = scripts
       .filter(s => s.projectId === project.id)
       .map(s => ({ ...s, episodeNumber: s.episodeNumber ?? 1 }))
+    console.log('[groups] episodeScripts memo', { scriptsLen: scripts.length, epLen: out.length, sg: out.map(s => s.sceneGroups?.length ?? 0) })
+    return out
   }, [scripts, project])
 
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null)

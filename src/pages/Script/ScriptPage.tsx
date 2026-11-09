@@ -235,12 +235,13 @@ export default function ScriptPage() {
   }, [episodeScripts, updateScript, pushUndo])
 
   // Группы карточек по сериям (фаза 5)
-  const sceneGroupsByEp = useMemo(
-    () => Object.fromEntries(
+  const sceneGroupsByEp = useMemo(() => {
+    const out = Object.fromEntries(
       episodeScripts.map((ep) => [ep.episodeNumber ?? 1, ep.sceneGroups || []]),
-    ),
-    [episodeScripts],
-  )
+    )
+    console.log('[groups] sceneGroupsByEp recompute', out, episodeScripts.map((s) => ({ id: s.id, sg: s.sceneGroups?.length })))
+    return out
+  }, [episodeScripts])
   const handleGroupsChange = useCallback((episode: number, groups: import('../../types/scene').SceneGroup[]) => {
     const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
     console.log('[groups] handleGroupsChange', { episode, ownerId: owner?.id, groupsCount: groups.length, groups })
