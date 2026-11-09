@@ -333,11 +333,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       onMouseLeave={(e) => {
                         if (!isSel && !isDrop) { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none' }
                       }}
-                      className="rounded-xl p-3.5 transition-all hover:-translate-y-0.5 flex flex-col"
+                      className="rounded-xl p-2.5 transition-all hover:-translate-y-0.5 flex flex-col"
                       style={{
                         background: cardBg,
-                        height: 176,
-                        overflow: 'hidden',
                         border: `1px solid ${isDrop ? '#fb923c' : isSel ? 'rgba(249,115,22,0.7)' : border}`,
                         borderLeft: `3px solid ${isDrop ? '#fb923c' : tagColor}`,
                         cursor: 'grab',
@@ -402,7 +400,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   )
                 }
                 return (
-                  <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
+                  <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))' }}>
                     {items.map((sc, i) => cardEl(sc, i))}
                   </div>
                 )
