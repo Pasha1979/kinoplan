@@ -209,7 +209,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-6 pb-6" onScroll={() => setCtxMenu(null)}>
+      <div className="flex-1 overflow-y-auto px-10 pb-6" onScroll={() => setCtxMenu(null)}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
