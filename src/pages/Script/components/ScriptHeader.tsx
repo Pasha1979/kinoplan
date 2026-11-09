@@ -91,12 +91,6 @@ function ScriptHeader({
                 Сц. {selectedScene.number} · {selectedScene.type}. {selectedScene.location} — {selectedScene.time}
               </p>
               <div className="flex items-center gap-3 mt-0.5">
-                {selectedScene.cast.map(c => (
-                  <span key={c} className="text-xs px-2 py-0.5 rounded-md"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textSecondary }}>
-                    {c}
-                  </span>
-                ))}
                 {/* Хронометраж выбранной сцены */}
                 {selectedScene.pages > 0 && (
                   <>
