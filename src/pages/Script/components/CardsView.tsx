@@ -68,6 +68,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dragIds, setDragIds] = useState<string[]>([])
   const [dropKey, setDropKey] = useState<string | null>(null)
+  const [hoverId, setHoverId] = useState<string | null>(null)
   // Драг маркера акта (не сцены!)
   const [dragMarker, setDragMarker] = useState<string | null>(null)
   // Окно-доска открытой группы и модал имени новой группы
@@ -261,6 +262,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   const st = sc.status && sc.status !== 'not_planned' ? STATUS_LABEL[sc.status] : null
                   const isSel = selected.has(sc.id)
                   const isDrop = dropKey === `${episode}:${i}`
+                  const isHover = hoverId === sc.id
                   const grp = groupOf(episode, sc.id)
                   // Маркеры актов этой сцены (могут быть несколько)
                   const epMarkers = actMarkers?.[episode] ?? {}
@@ -326,24 +328,43 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                         e.preventDefault()
                         setCtxMenu({ x: e.clientX, y: e.clientY, id: sc.id, ep: episode })
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(249,115,22,0.55)'
-                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(249,115,22,0.15)'
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSel && !isDrop) { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none' }
-                      }}
+                      onMouseEnter={() => setHoverId(sc.id)}
+                      onMouseLeave={() => setHoverId((h) => (h === sc.id ? null : h))}
                       className="rounded-xl p-2.5 transition-all hover:-translate-y-0.5 flex flex-col"
                       style={{
+                        position: 'relative',
                         background: cardBg,
-                        border: `1px solid ${isDrop ? '#fb923c' : isSel ? 'rgba(249,115,22,0.7)' : border}`,
-                        borderLeft: `3px solid ${isDrop ? '#fb923c' : tagColor}`,
+                        borderWidth: 1,
+                        borderStyle: 'solid',
+                        borderColor: isDrop ? '#fb923c' : isSel ? 'rgba(249,115,22,0.7)' : isHover ? 'rgba(249,115,22,0.55)' : border,
+                        borderLeftWidth: 3,
+                        borderLeftColor: isDrop ? '#fb923c' : tagColor,
                         cursor: 'grab',
                         opacity: sc.isOmitted ? 0.55 : dragIds.includes(sc.id) ? 0.4 : 1,
-                        boxShadow: isDrop ? '0 0 0 2px rgba(249,115,22,0.35), -6px 0 0 -2px #fb923c' : isSel ? '0 0 0 1.5px rgba(249,115,22,0.35)' : undefined,
+                        boxShadow: isDrop
+                          ? '0 0 0 2px rgba(249,115,22,0.3)'
+                          : isSel ? '0 0 0 1.5px rgba(249,115,22,0.35)'
+                          : isHover ? '0 4px 20px rgba(249,115,22,0.18)' : undefined,
+                        transform: isHover && !isDrop ? 'translateY(-2px)' : undefined,
                       }}
                       title="Клик — детали · Ctrl+клик — выбрать · правый клик — цвет · перетащи для перестановки"
                     >
+                      {isDrop && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: -9,
+                            top: -6,
+                            bottom: -6,
+                            width: 4,
+                            borderRadius: 3,
+                            background: 'linear-gradient(180deg, #fdba74 0%, #fb923c 50%, #f97316 100%)',
+                            boxShadow: '0 0 12px 3px rgba(249,115,22,0.7), 0 0 26px 6px rgba(249,115,22,0.3)',
+                            pointerEvents: 'none',
+                            zIndex: 5,
+                          }}
+                        />
+                      )}
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
@@ -410,7 +431,13 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 <div
                   className="mt-2 rounded-lg text-center text-[10px] py-2 transition-all"
                   style={{
-                    border: `1.5px dashed ${dropKey === `${episode}:end` ? '#fb923c' : border}`,
+                    border: dropKey === `${episode}:end`
+                      ? '1px solid rgba(249,115,22,0.6)'
+                      : `1.5px dashed ${border}`,
+                    background: dropKey === `${episode}:end`
+                      ? 'linear-gradient(90deg, transparent, rgba(249,115,22,0.28), transparent)'
+                      : 'transparent',
+                    boxShadow: dropKey === `${episode}:end` ? '0 0 14px rgba(249,115,22,0.4), inset 0 0 14px rgba(249,115,22,0.15)' : 'none',
                     color: dropKey === `${episode}:end` ? '#fb923c' : textSecondary,
                   }}
                   onDragOver={(e) => { e.preventDefault(); setDropKey(`${episode}:end`) }}
