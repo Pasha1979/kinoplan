@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Film, Clock, Users, Search, X, Undo2, Folder } from 'lucide-react'
 import type { Scene, SceneGroup } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
@@ -75,32 +75,6 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[]; editGid?: string } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [groupCtx, setGroupCtx] = useState<{ x: number; y: number; ep: number; gid: string } | null>(null)
-  // Режим расстановки — драг/ресайз доски, экспорт JSON
-  const [layoutMode, setLayoutMode] = useState(false)
-  const [board, setBoard] = useState<{ dx: number; w: number }>(() => {
-    try { return { dx: 0, w: 0, ...JSON.parse(localStorage.getItem('boardLayout') || '{}') } } catch { return { dx: 0, w: 0 } }
-  })
-  const dragRef = useRef<{ startX: number; dx: number; w: number; mode: 'move' | 'resize' } | null>(null)
-  const onBoardDown = (e: React.MouseEvent, mode: 'move' | 'resize') => {
-    if (!layoutMode) return
-    e.preventDefault(); e.stopPropagation()
-    dragRef.current = { startX: e.clientX, dx: board.dx, w: board.w, mode }
-  }
-  useEffect(() => {
-    if (!layoutMode) return
-    const onMove = (e: MouseEvent) => {
-      const d = dragRef.current
-      if (!d) return
-      const dx = (e.clientX - d.startX) * 0.5
-      setBoard((b) => d.mode === 'move'
-        ? { ...b, dx: Math.round(d.dx + dx) }
-        : { ...b, w: Math.max(200, Math.round(d.w + dx)) })
-    }
-    const onUp = () => { dragRef.current = null; try { localStorage.setItem('boardLayout', JSON.stringify(board)) } catch {} }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [layoutMode, board])
   const createGroup = (ep: number, name: string, sceneIds: string[]) => {
     if (!name.trim()) return
     const colors = ['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444']
@@ -231,54 +205,11 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         >
           <Undo2 size={12} /> Отменить
         </button>
-        {/* Режим «Расстановка» — временно для настройки макета доски */}
-        <button
-          onClick={() => setLayoutMode(!layoutMode)}
-          className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
-          style={{
-            background: layoutMode ? 'rgba(249,115,22,0.2)' : 'transparent',
-            color: layoutMode ? '#fb923c' : textSecondary,
-            border: layoutMode ? '1px solid rgba(249,115,22,0.5)' : '1px solid transparent',
-          }}
-        >
-          Расстановка
-        </button>
-        {layoutMode && (
-          <button
-            onClick={() => { navigator.clipboard?.writeText(JSON.stringify(board, null, 2)); alert('JSON макета доски скопирован — пришли мне') }}
-            className="px-2.5 py-1 rounded-md text-[11px] font-medium"
-            style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.4)' }}
-          >
-            Экспорт
-          </button>
-        )}
       </div>
 
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
-      <div
-        className="flex-1 overflow-y-auto px-10 pb-6"
-        onScroll={() => setCtxMenu(null)}
-        onMouseDown={(e) => onBoardDown(e, 'move')}
-        style={{
-          outline: layoutMode ? '2px dashed rgba(249,115,22,0.7)' : 'none',
-          outlineOffset: -2,
-          cursor: layoutMode ? 'move' : undefined,
-          transform: `translateX(${board.dx}px)`,
-          maxWidth: board.w ? `${board.w}px` : undefined,
-          position: 'relative',
-        }}
-      >
-        {layoutMode && (
-          <div
-            onMouseDown={(e) => onBoardDown(e, 'resize')}
-            style={{
-              position: 'absolute', right: 6, top: '50%', width: 10, height: 60,
-              cursor: 'ew-resize', zIndex: 50, borderRadius: 4,
-              background: '#fb923c',
-            }}
-          />
-        )}
+      <div className="flex-1 overflow-y-auto px-10 pb-6" onScroll={() => setCtxMenu(null)}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
