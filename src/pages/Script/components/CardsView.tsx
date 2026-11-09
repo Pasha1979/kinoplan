@@ -473,17 +473,17 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
     if (!w || !h) return
     applyZoom(Math.min(1, sc.clientWidth / w, sc.clientHeight / h))
   }
-  // Ctrl + колесо — зум к курсору
+  // Ctrl + колесо — зум к курсору (capture на window — покрывает всю доску, включая пустые места)
   useEffect(() => {
-    const el = boardRef.current
-    if (!el) return
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return
+      const sc = boardScroller()
+      if (!sc || !sc.contains(e.target as Node)) return
       e.preventDefault()
       applyZoom(zoomRef.current * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX, e.clientY)
     }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    window.addEventListener('wheel', onWheel, { passive: false, capture: true })
+    return () => window.removeEventListener('wheel', onWheel, { capture: true })
   }, [])
 
   const seriesPills = isSerial ? [0, ...Array.from({ length: episodesCount }, (_, i) => i + 1)] : null
