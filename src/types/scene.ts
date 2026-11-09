@@ -57,3 +57,12 @@ export interface Scene {
   isBookmarked?: boolean
   bookmarkColor?: BookmarkColor
 }
+
+/** Папка/группа карточек сцен на доске (фаза 5 «Карточки») */
+export interface SceneGroup {
+  id: string
+  name: string
+  color: string
+  sceneIds: string[]
+  collapsed?: boolean
+}

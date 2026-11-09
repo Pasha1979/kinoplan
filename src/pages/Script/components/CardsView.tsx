@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from 'react'
 import { Film, Clock, Users, Search, X } from 'lucide-react'
-import type { Scene } from '../../../types/scene'
+import type { Scene, SceneGroup } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
 
 type SceneWithEp = Scene & { _episode?: number }
@@ -21,6 +21,10 @@ interface CardsViewProps {
   actMarkers?: Record<number, Record<string, string | undefined>>
   /** переназначение маркера на другую сцену */
   onMarkerSet?: (key: string, sceneId: string, episode: number) => void
+  /** группы карточек по сериям */
+  groupsByEpisode?: Record<number, SceneGroup[]>
+  /** запись изменённых групп обратно в скрипт серии */
+  onGroupsChange?: (episode: number, groups: SceneGroup[]) => void
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -46,7 +50,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -56,13 +60,18 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [typeFilter, setTypeFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [series, setSeries] = useState<number | 'all'>('all')
   const [detail, setDetail] = useState<SceneWithEp | null>(null)
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string } | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string; ep: number } | null>(null)
   // Драг и мультивыбор
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dragIds, setDragIds] = useState<string[]>([])
   const [dropKey, setDropKey] = useState<string | null>(null)
   // Драг маркера акта (не сцены!)
   const [dragMarker, setDragMarker] = useState<string | null>(null)
+  // Группы: карточка → id группы (по сериям)
+  const groupOf = (ep: number, sceneId: string) =>
+    (groupsByEpisode[ep] || []).find((g) => g.sceneIds.includes(sceneId))
+  const updateGroups = (ep: number, fn: (gs: SceneGroup[]) => SceneGroup[]) =>
+    onGroupsChange?.(ep, fn(groupsByEpisode[ep] || []))
 
   // Синопсис: первая ремарка сцены (диалог в начале сцены пропускаем —
   // берём первый action-блок после шапки что бы ни шло первым)
@@ -190,8 +199,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   </span>
                 </div>
               )}
-              <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
-                {items.map((sc, i) => {
+              {(() => {
+                const epGroups = groupsByEpisode[episode] || []
+                const cardEl = (sc: SceneWithEp, i: number) => {
                   const tagColor = sc.colorTag || TYPE_COLOR[sc.type] || '#94a3b8'
                   const dur = sc.manualDuration ?? sc.duration ?? 0
                   const synopsis = syn(sc)
@@ -260,7 +270,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       onDragEnd={() => { setDragIds([]); setDropKey(null) }}
                       onContextMenu={(e) => {
                         e.preventDefault()
-                        setCtxMenu({ x: e.clientX, y: e.clientY, id: sc.id })
+                        setCtxMenu({ x: e.clientX, y: e.clientY, id: sc.id, ep: episode })
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = 'rgba(249,115,22,0.55)'
@@ -325,8 +335,70 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                     </div>
                     </div>
                   )
-                })}
-              </div>
+                }
+                const ungrouped = items.filter((s) => !groupOf(episode, s.id))
+                return (
+                  <>
+                    {/* Папки/группы серии */}
+                    {epGroups.map((g) => {
+                      const gScenes = items.filter((s) => g.sceneIds.includes(s.id))
+                      const gDur = gScenes.reduce((s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0), 0)
+                      if (g.collapsed) {
+                        return (
+                          <div
+                            key={g.id}
+                            className="inline-flex items-center gap-2 mb-3 mr-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all"
+                            style={{ background: cardBg, border: `1.5px solid ${g.color}66` }}
+                            onClick={() => updateGroups(episode, (gs) => gs.map((x) => x.id === g.id ? { ...x, collapsed: false } : x))}
+                            title="Развернуть группу"
+                          >
+                            <span className="w-2 h-2 rounded-full" style={{ background: g.color }} />
+                            <span className="text-[11px] font-bold" style={{ color: textPrimary }}>{g.name}</span>
+                            <span className="text-[9px]" style={{ color: textSecondary }}>{gScenes.length} сц · {fmtDuration(gDur)}</span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div
+                          key={g.id}
+                          className="mb-4 rounded-xl p-3 transition-all"
+                          style={{ border: `1.5px solid ${dropKey === `${episode}:grp:${g.id}` ? '#fb923c' : g.color + '44'}`, background: g.color + '0d' }}
+                          onDragOver={(e) => { e.preventDefault(); setDropKey(`${episode}:grp:${g.id}`) }}
+                          onDragLeave={() => setDropKey((k) => (k === `${episode}:grp:${g.id}` ? null : k))}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            if (dragIds.length) {
+                              updateGroups(episode, (gs) => gs.map((x) => x.id === g.id
+                                ? { ...x, sceneIds: [...new Set([...x.sceneIds, ...dragIds])] } : x))
+                            }
+                            setDragIds([]); setDropKey(null)
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <button
+                              onClick={() => updateGroups(episode, (gs) => gs.map((x) => x.id === g.id ? { ...x, collapsed: true } : x))}
+                              className="text-[10px]" style={{ color: g.color }}>▾</button>
+                            <span className="w-2 h-2 rounded-full" style={{ background: g.color }} />
+                            <span className="text-[11px] font-bold" style={{ color: textPrimary }}>{g.name}</span>
+                            <span className="text-[9px]" style={{ color: textSecondary }}>{gScenes.length} сц · {fmtDuration(gDur)}</span>
+                            <button
+                              onClick={() => updateGroups(episode, (gs) => gs.filter((x) => x.id !== g.id))}
+                              className="ml-auto text-[10px] px-1 transition-all hover:scale-110"
+                              style={{ color: textSecondary }} title="Удалить группу (сцены останутся)">✕</button>
+                          </div>
+                          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
+                            {gScenes.map((sc) => cardEl(sc, items.indexOf(sc)))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {/* Карточки без группы */}
+                    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
+                      {ungrouped.map((sc) => cardEl(sc, items.indexOf(sc)))}
+                    </div>
+                  </>
+                )
+              })()}
               {/* Дроп-зона — перенос в конец серии */}
               {dragIds.length > 0 && (
                 <div
@@ -373,6 +445,48 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb', color: textSecondary }}
               title="Сбросить цвет"
               onClick={() => { onUpdateScene?.(ctxMenu.id, { colorTag: undefined }); setCtxMenu(null) }}>✕</button>
+          </div>
+          {/* Группы */}
+          <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${border}` }}>
+            <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>В группу</div>
+            <div className="px-1 pb-1 space-y-0.5">
+              {(groupsByEpisode[ctxMenu.ep] || []).map((g) => (
+                <button key={g.id}
+                  className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all"
+                  style={{ color: textPrimary, background: isDark ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+                  onClick={() => {
+                    updateGroups(ctxMenu.ep, (gs) => gs.map((x) => x.id === g.id ? { ...x, sceneIds: [...new Set([...x.sceneIds, ctxMenu.id])] } : x))
+                    setCtxMenu(null)
+                  }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: g.color }} />{g.name}
+                </button>
+              ))}
+              <button
+                className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                style={{ color: '#fb923c' }}
+                onClick={() => {
+                  const name = window.prompt('Название группы')
+                  if (name?.trim()) {
+                    const colors = ['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444']
+                    const ng: SceneGroup = { id: `g-${Date.now()}`, name: name.trim(), color: colors[(groupsByEpisode[ctxMenu.ep] || []).length % colors.length], sceneIds: [ctxMenu.id] }
+                    updateGroups(ctxMenu.ep, (gs) => [...gs, ng])
+                  }
+                  setCtxMenu(null)
+                }}>
+                ＋ Новая группа
+              </button>
+              {groupOf(ctxMenu.ep, ctxMenu.id) && (
+                <button
+                  className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                  style={{ color: textSecondary }}
+                  onClick={() => {
+                    updateGroups(ctxMenu.ep, (gs) => gs.map((x) => ({ ...x, sceneIds: x.sceneIds.filter((id) => id !== ctxMenu.id) })).filter((x) => x.sceneIds.length > 0))
+                    setCtxMenu(null)
+                  }}>
+                  Убрать из группы
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

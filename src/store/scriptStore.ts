@@ -85,6 +85,8 @@ export interface Script {
   // act2 — вход во 2-й акт, mid — поворот/мидпоинт, climax — кульминация.
   // Нет значения → показываем ориентир по проценту объёма (25/50/80%).
   actMarkers?: Record<string, string>
+  /** Папки/группы карточек на доске (фаза 5 «Карточки») */
+  sceneGroups?: import('../types/scene').SceneGroup[]
 }
 
 export interface ScriptDraft {
