@@ -245,6 +245,10 @@ export default function ScriptPage() {
     const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
     console.log('[groups] handleGroupsChange', { episode, ownerId: owner?.id, groupsCount: groups.length, groups })
     if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneGroups: groups }) }
+    queueMicrotask(() => {
+      const after = useScriptStore.getState().scripts.find((s) => s.id === owner?.id)
+      console.log('[groups] after write', { scriptId: owner?.id, sceneGroups: after?.sceneGroups })
+    })
   }, [episodeScripts, updateScript, pushUndo])
 
   const handleSaveScene = useCallback((newContent: string) => {
