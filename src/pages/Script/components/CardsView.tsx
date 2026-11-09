@@ -627,22 +627,24 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         const gDur = gScenes.reduce((s, sc) => s + (sc.manualDuration ?? sc.duration ?? 0), 0)
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.6)' }}
-            onClick={() => setGroupModal(null)}>
-            <div className="rounded-2xl p-6 w-full max-w-7xl h-[90vh] overflow-y-auto"
+            onClick={() => setGroupModal(null)}
+            // Дроп на оверлей (за пределами окна) — убрать сцену из группы
+            onDragOver={(e) => { e.preventDefault() }}
+            onDrop={(e) => {
+              e.preventDefault()
+              if (dragIds.length) {
+                updateGroups(groupModal.ep, (gs) => gs
+                  .map((x) => x.id === g.id
+                    ? { ...x, sceneIds: x.sceneIds.filter((id) => !dragIds.includes(id)) } : x)
+                  .filter((x) => x.sceneIds.length > 0)) // пустая группа самоудаляется
+              }
+              setDragIds([])
+            }}>
+            <div className="rounded-2xl p-5 w-full max-w-5xl h-[78vh] overflow-y-auto"
               style={{ background: isDark ? '#13132a' : '#ffffff', border: `2px solid ${g.color}` }}
               onClick={(e) => e.stopPropagation()}
-              // Дроп на фон модала — убрать сцену из группы
-              onDragOver={(e) => { e.preventDefault() }}
-              onDrop={(e) => {
-                e.preventDefault()
-                if (dragIds.length) {
-                  updateGroups(groupModal.ep, (gs) => gs
-                    .map((x) => x.id === g.id
-                      ? { ...x, sceneIds: x.sceneIds.filter((id) => !dragIds.includes(id)) } : x)
-                    .filter((x) => x.sceneIds.length > 0)) // пустая группа самоудаляется
-                }
-                setDragIds([])
-              }}
+              onDragOver={(e) => e.stopPropagation()}
+              onDrop={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-4 pb-3" style={{ borderBottom: `1px solid ${border}` }}>
                 <input
