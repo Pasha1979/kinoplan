@@ -150,12 +150,16 @@ export function useScriptStats(
       : 0
 
     // Персонажи — активность по сценам
+    // Сценарные уточнения в скобках — не часть имени: САНТЬЯГА (з/к) → САНТЬЯГА
+    const normName = (name: string) =>
+      name.replace(/\s*\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase()
+
     const charMap = new Map<string, { scenes: number; dialogScenes: number; durationSec: number; firstSceneId?: string }>()
     scenes.forEach((sc) => {
       const dur = sc.manualDuration ?? sc.duration ?? 0
       const seen = new Set<string>()
       ;(sc.cast || []).forEach((name) => {
-        const key = name.toUpperCase().trim()
+        const key = normName(name)
         if (!key || seen.has(key)) return
         seen.add(key)
         const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0, durationSec: 0 }
@@ -165,7 +169,7 @@ export function useScriptStats(
         charMap.set(key, entry)
       })
       ;(sc.dialogCharacters || []).forEach((name) => {
-        const key = name.toUpperCase().trim()
+        const key = normName(name)
         if (!key) return
         const entry = charMap.get(key) || { scenes: 0, dialogScenes: 0, durationSec: 0 }
         entry.dialogScenes++
