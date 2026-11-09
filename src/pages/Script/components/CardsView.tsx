@@ -72,8 +72,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [dragMarker, setDragMarker] = useState<string | null>(null)
   // Окно-доска открытой группы и модал имени новой группы
   const [groupModal, setGroupModal] = useState<{ ep: number; gid: string } | null>(null)
-  const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[] } | null>(null)
+  const [nameModal, setNameModal] = useState<{ ep: number; sceneIds: string[]; editGid?: string } | null>(null)
   const [nameInput, setNameInput] = useState('')
+  const [groupCtx, setGroupCtx] = useState<{ x: number; y: number; ep: number; gid: string } | null>(null)
   const createGroup = (ep: number, name: string, sceneIds: string[]) => {
     if (!name.trim()) return
     const colors = ['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444']
@@ -148,7 +149,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}
-      onClick={() => { setCtxMenu(null); if (selected.size) setSelected(new Set()) }}>
+      onClick={() => { setCtxMenu(null); setGroupCtx(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-3 flex-wrap">
@@ -466,6 +467,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   e.stopPropagation()
                   setDragIds([]); setDropKey(null)
                 }}
+                onContextMenu={(e) => {
+                  e.preventDefault(); e.stopPropagation()
+                  setGroupCtx({ x: e.clientX, y: e.clientY, ep, gid: g.id })
+                }}
               >
                 {/* Контейнер группы — клик открывает доску группы */}
                 <button
@@ -569,6 +574,49 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         </div>
       )}
 
+      {/* Контекстное меню группы — переименовать / цвет / удалить */}
+      {groupCtx && (
+        <div className="fixed rounded-xl p-2 z-50"
+          style={{
+            left: Math.min(groupCtx.x, window.innerWidth - 200),
+            top: Math.min(groupCtx.y, window.innerHeight - 160),
+            background: isDark ? '#1e1e3a' : '#ffffff',
+            border: `1px solid ${border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          }}
+          onClick={(e) => e.stopPropagation()}>
+          <button className="w-full text-left px-2 py-1.5 rounded text-[11px]"
+            style={{ color: textPrimary }}
+            onClick={() => {
+              const g = (groupsByEpisode[groupCtx.ep] || []).find((x) => x.id === groupCtx.gid)
+              setNameModal({ ep: groupCtx.ep, sceneIds: [], editGid: groupCtx.gid })
+              setNameInput(g?.name || '')
+              setGroupCtx(null)
+            }}>
+            Переименовать
+          </button>
+          <div className="text-[10px] mt-1 mb-1.5 px-1" style={{ color: textSecondary }}>Цвет группы</div>
+          <div className="flex gap-1.5 px-1 pb-1">
+            {['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444'].map((c) => (
+              <button key={c} className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                style={{ background: c, border: `2px solid ${border}` }}
+                onClick={() => {
+                  updateGroups(groupCtx.ep, (gs) => gs.map((x) => x.id === groupCtx.gid ? { ...x, color: c } : x))
+                  setGroupCtx(null)
+                }} />
+            ))}
+          </div>
+          <button className="w-full text-left px-2 py-1.5 rounded text-[11px]"
+            style={{ color: '#ef4444' }}
+            onClick={() => {
+              updateGroups(groupCtx.ep, (gs) => gs.filter((x) => x.id !== groupCtx.gid))
+              setGroupCtx(null)
+            }}>
+            Удалить группу
+          </button>
+        </div>
+      )}
+
       {/* Доска группы — окно со сценами группы, драг наружу убирает из группы */}
       {groupModal && (() => {
         const g = (groupsByEpisode[groupModal.ep] || []).find((x) => x.id === groupModal.gid)
@@ -593,9 +641,21 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               }}
             >
               <div className="flex items-center gap-3 mb-4 pb-3" style={{ borderBottom: `1px solid ${border}` }}>
-                <span className="w-4 h-4 rounded-full" style={{ background: g.color }} />
-                <span className="text-lg font-bold" style={{ color: textPrimary }}>{g.name}</span>
-                <span className="text-sm" style={{ color: textSecondary }}>{gScenes.length} сцен · {fmtDuration(gDur)}</span>
+                <input
+                  value={g.name}
+                  onChange={(e) => updateGroups(groupModal.ep, (gs) => gs.map((x) => x.id === g.id ? { ...x, name: e.target.value } : x))}
+                  className="text-lg font-bold bg-transparent outline-none border-b border-transparent focus:border-orange-400 max-w-xs"
+                  style={{ color: textPrimary }}
+                />
+                {/* Палитра цвета группы */}
+                <div className="flex gap-1.5 ml-2">
+                  {['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444'].map((c) => (
+                    <button key={c} className="w-4 h-4 rounded-full transition-transform hover:scale-125"
+                      style={{ background: c, outline: c === g.color ? '2px solid #fff' : 'none', outlineOffset: 1 }}
+                      onClick={() => updateGroups(groupModal.ep, (gs) => gs.map((x) => x.id === g.id ? { ...x, color: c } : x))} />
+                  ))}
+                </div>
+                <span className="text-sm ml-2" style={{ color: textSecondary }}>{gScenes.length} сцен · {fmtDuration(gDur)}</span>
                 <button onClick={() => setGroupModal(null)} className="ml-auto" style={{ color: textSecondary }}><X size={18} /></button>
               </div>
               <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
@@ -637,13 +697,22 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           <div className="rounded-2xl p-5 w-full max-w-sm"
             style={{ background: isDark ? '#1e1e3a' : '#ffffff', border: `1px solid ${border}` }}
             onClick={(e) => e.stopPropagation()}>
-            <div className="text-sm font-bold mb-3" style={{ color: textPrimary }}>Новая группа</div>
+            <div className="text-sm font-bold mb-3" style={{ color: textPrimary }}>
+              {nameModal.editGid ? 'Переименовать группу' : 'Новая группа'}
+            </div>
             <input
               autoFocus
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') { createGroup(nameModal.ep, nameInput, nameModal.sceneIds); setNameModal(null) }
+                if (e.key === 'Enter') {
+                  if (nameModal.editGid) {
+                    updateGroups(nameModal.ep, (gs) => gs.map((x) => x.id === nameModal.editGid ? { ...x, name: nameInput.trim() } : x))
+                  } else {
+                    createGroup(nameModal.ep, nameInput, nameModal.sceneIds)
+                  }
+                  setNameModal(null)
+                }
                 if (e.key === 'Escape') setNameModal(null)
               }}
               className="w-full px-3 py-2 rounded-lg text-sm mb-4 outline-none"
@@ -655,9 +724,16 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 className="px-4 py-1.5 rounded-lg text-xs"
                 style={{ color: textSecondary }}>Отмена</button>
               <button
-                onClick={() => { createGroup(nameModal.ep, nameInput, nameModal.sceneIds); setNameModal(null) }}
+                onClick={() => {
+                  if (nameModal.editGid) {
+                    updateGroups(nameModal.ep, (gs) => gs.map((x) => x.id === nameModal.editGid ? { ...x, name: nameInput.trim() } : x))
+                  } else {
+                    createGroup(nameModal.ep, nameInput, nameModal.sceneIds)
+                  }
+                  setNameModal(null)
+                }}
                 className="px-4 py-1.5 rounded-lg text-xs font-bold"
-                style={{ background: '#fb923c', color: '#fff' }}>Создать</button>
+                style={{ background: '#fb923c', color: '#fff' }}>{nameModal.editGid ? 'Сохранить' : 'Создать'}</button>
             </div>
           </div>
         </div>
