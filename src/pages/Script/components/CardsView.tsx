@@ -15,6 +15,8 @@ interface CardsViewProps {
   onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
   /** «Перейти к сцене» — открывает одиночный редактор сцены */
   onOpenSceneEditor?: (scene: SceneWithEp) => void
+  /** перенос сцен: список id → серия, перед позицией в ней */
+  onMoveScenes?: (sceneIds: string[], toEpisode: number, toIndex: number) => void
 }
 
 function fmtDuration(sec: number): string {
@@ -34,7 +36,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   shot: { label: 'Снята', color: '#22c55e' },
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -45,6 +47,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [series, setSeries] = useState<number | 'all'>('all')
   const [detail, setDetail] = useState<SceneWithEp | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string } | null>(null)
+  // Драг и мультивыбор
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [dragIds, setDragIds] = useState<string[]>([])
+  const [dropKey, setDropKey] = useState<string | null>(null)
 
   // Синопсис: первая ремарка сцены (диалог в начале сцены пропускаем —
   // берём первый action-блок после шапки что бы ни шло первым)
@@ -173,15 +179,44 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 </div>
               )}
               <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
-                {items.map((sc) => {
+                {items.map((sc, i) => {
                   const tagColor = sc.colorTag || TYPE_COLOR[sc.type] || '#94a3b8'
                   const dur = sc.manualDuration ?? sc.duration ?? 0
                   const synopsis = syn(sc)
                   const st = sc.status && sc.status !== 'not_planned' ? STATUS_LABEL[sc.status] : null
+                  const isSel = selected.has(sc.id)
+                  const isDrop = dropKey === `${episode}:${i}`
                   return (
                     <div
                       key={sc.id}
-                      onClick={() => setDetail(sc)}
+                      draggable
+                      onClick={(e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                          setSelected((prev) => {
+                            const n = new Set(prev)
+                            n.has(sc.id) ? n.delete(sc.id) : n.add(sc.id)
+                            return n
+                          })
+                        } else {
+                          setDetail(sc)
+                        }
+                      }}
+                      onDragStart={() => {
+                        // тянем все выбранные (порядок в группе) или только эту карточку
+                        setDragIds(
+                          isSel && selected.size > 1
+                            ? items.filter((s) => selected.has(s.id)).map((s) => s.id)
+                            : [sc.id],
+                        )
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); setDropKey(`${episode}:${i}`) }}
+                      onDragLeave={() => setDropKey((k) => (k === `${episode}:${i}` ? null : k))}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        if (dragIds.length) onMoveScenes?.(dragIds, episode, i)
+                        setDragIds([]); setDropKey(null); setSelected(new Set())
+                      }}
+                      onDragEnd={() => { setDragIds([]); setDropKey(null) }}
                       onContextMenu={(e) => {
                         e.preventDefault()
                         setCtxMenu({ x: e.clientX, y: e.clientY, id: sc.id })
@@ -191,18 +226,18 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                         e.currentTarget.style.boxShadow = '0 4px 20px rgba(249,115,22,0.15)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = border
-                        e.currentTarget.style.boxShadow = 'none'
+                        if (!isSel && !isDrop) { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none' }
                       }}
                       className="rounded-xl p-3.5 transition-all hover:-translate-y-0.5"
                       style={{
                         background: cardBg,
-                        border: `1px solid ${border}`,
+                        border: `1px solid ${isDrop ? '#fb923c' : isSel ? 'rgba(249,115,22,0.7)' : border}`,
                         borderLeft: `3px solid ${tagColor}`,
-                        cursor: 'pointer',
-                        opacity: sc.isOmitted ? 0.55 : 1,
+                        cursor: 'grab',
+                        opacity: sc.isOmitted ? 0.55 : dragIds.includes(sc.id) ? 0.4 : 1,
+                        boxShadow: isDrop ? '0 0 0 2px rgba(249,115,22,0.35)' : isSel ? '0 0 0 1.5px rgba(249,115,22,0.35)' : undefined,
                       }}
-                      title="Клик — детали сцены · правый клик — цвет"
+                      title="Клик — детали · Ctrl+клик — выбрать · правый клик — цвет · перетащи для перестановки"
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
@@ -250,6 +285,25 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                   )
                 })}
               </div>
+              {/* Дроп-зона — перенос в конец серии */}
+              {dragIds.length > 0 && (
+                <div
+                  className="mt-2 rounded-lg text-center text-[10px] py-2 transition-all"
+                  style={{
+                    border: `1.5px dashed ${dropKey === `${episode}:end` ? '#fb923c' : border}`,
+                    color: dropKey === `${episode}:end` ? '#fb923c' : textSecondary,
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setDropKey(`${episode}:end`) }}
+                  onDragLeave={() => setDropKey((k) => (k === `${episode}:end` ? null : k))}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    onMoveScenes?.(dragIds, episode, items.length)
+                    setDragIds([]); setDropKey(null); setSelected(new Set())
+                  }}
+                >
+                  Перенести в конец серии {episode}
+                </div>
+              )}
             </div>
           ))
         )}

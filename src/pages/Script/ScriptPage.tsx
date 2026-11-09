@@ -12,6 +12,8 @@ import ScriptRightPanel from './components/ScriptRightPanel'
 import StatisticsView from './components/StatisticsView'
 import CardsView from './components/CardsView'
 import SceneEditModal from './components/SceneEditModal'
+import { spliceSceneHtml } from './components/SceneEditModal'
+import { extractSceneHtml, insertSceneHtml, renumberHeaders } from './components/sceneHtmlOps'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
@@ -144,6 +146,56 @@ export default function ScriptPage() {
   const [editScene, setEditScene] = useState<Scene | null>(null)
   const editSceneOwner = editScene ? episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === editScene.id)) : undefined
   const editSceneIndex = editScene && editSceneOwner ? editSceneOwner.scenes!.findIndex((s) => s.id === editScene.id) : -1
+
+  // Перенос сцен drag&drop: внутри серии ИЛИ между скриптами-сериями.
+  // Вырезает HTML-фрагменты по номерам шапок, вставляет в цель, перенумеровывает.
+  const handleMoveScenes = useCallback((sceneIds: string[], toEpisode: number, toIndex: number) => {
+    const isSerial = project?.type === 'serial'
+    const from = episodeScripts.find((ep) => ep.scenes?.some((s) => sceneIds.includes(s.id)))
+    const to = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === toEpisode)
+    if (!from || !to) return
+    // все переносимые сцены должны быть из одного скрипта
+    if (!sceneIds.every((id) => from.scenes!.some((s) => s.id === id))) return
+
+    const fromEp = from.episodeNumber ?? 1
+    const moving = sceneIds.map((id) => from.scenes!.find((s) => s.id === id)!)
+    const frags = moving.map((s) => extractSceneHtml(from.content || '', s.number, 0)).join('')
+    const movedSet = new Set(sceneIds)
+
+    const renum = (arr: typeof from.scenes, ep: number) =>
+      arr!.map((s, i) => ({ ...s, number: isSerial ? `${ep}-${i + 1}` : `${i + 1}`, order: i }))
+
+    if (from.id === to.id) {
+      // тот же скрипт: вырезать → вставить внутрь с поправкой индекса
+      const firstIdx = from.scenes!.findIndex((s) => movedSet.has(s.id))
+      const insertIdx = firstIdx < toIndex ? Math.max(0, toIndex - sceneIds.length) : toIndex
+      let content = from.content || ''
+      moving.forEach((s) => { content = spliceSceneHtml(content, s.number, 0, '') })
+      content = insertSceneHtml(content, frags, insertIdx)
+      content = renumberHeaders(content, toEpisode, isSerial)
+      const arr = from.scenes!.filter((s) => !movedSet.has(s.id))
+      arr.splice(insertIdx, 0, ...moving)
+      updateScript(from.id, { content, scenes: renum(arr, toEpisode) })
+      if (from.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(content)
+      return
+    }
+
+    // разные скрипты: из источника вырезать+перенумеровать, в цель вставить+перенумеровать
+    let fromContent = from.content || ''
+    moving.forEach((s) => { fromContent = spliceSceneHtml(fromContent, s.number, 0, '') })
+    fromContent = renumberHeaders(fromContent, fromEp, isSerial)
+    const toContent = renumberHeaders(insertSceneHtml(to.content || '', frags, toIndex), toEpisode, isSerial)
+
+    const fromScenes = renum(from.scenes!.filter((s) => !movedSet.has(s.id)), fromEp)
+    const toArr = [...(to.scenes || [])]
+    toArr.splice(toIndex, 0, ...moving)
+    const toScenes = renum(toArr, toEpisode)
+
+    updateScript(from.id, { content: fromContent, scenes: fromScenes })
+    updateScript(to.id, { content: toContent, scenes: toScenes })
+    if (from.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(fromContent)
+    if (to.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(toContent)
+  }, [episodeScripts, project?.type, currentScript?.id, editorInstance, updateScript])
   const handleSaveScene = useCallback((newContent: string) => {
     if (!editSceneOwner) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
     // 1) пишем в стор — сохранится и в PouchDB, и для закрытых серий
@@ -419,6 +471,7 @@ export default function ScriptPage() {
             }}
             onUpdateScene={handleUpdateScene}
             onOpenSceneEditor={setEditScene}
+            onMoveScenes={handleMoveScenes}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
