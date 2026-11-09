@@ -130,6 +130,11 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       location = location.slice(0, dotIndex).trim().toUpperCase()
     }
 
+    // Сценарные уточнения в скобках не входят в имя персонажа:
+    // САНТЬЯГА (За кадром), (з/к), (продолжает) → САНТЬЯГА
+    const normalizeCharName = (name: string) =>
+      name.replace(/\s*\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+
     // === CAST: ручной + автоматический из диалогов ===
     // 1. Ручной cast из sceneCast блока
     let manualCast: string[] = []
@@ -137,7 +142,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     if (nextBlock?.type.name === 'sceneCast') {
       const castText = nextBlock.textContent.trim()
       if (castText) {
-        manualCast = castText.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+        manualCast = castText.split(/[,;]+/).map((s: string) => normalizeCharName(s.trim())).filter(Boolean)
       }
     }
 
@@ -157,7 +162,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       }
       // Собираем персонажей из диалогов (case-insensitive, сохраняем порядок первого появления)
       if (n.type.name === 'sceneCharacter') {
-        const charName = n.textContent.trim()
+        const charName = normalizeCharName(n.textContent.trim())
         if (charName) {
           const upper = charName.toUpperCase()
           if (!dialogCharacterSet.has(upper)) {
