@@ -112,7 +112,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}
-      onClick={() => setCtxMenu(null)}>
+      onClick={() => { setCtxMenu(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-3 flex-wrap">
@@ -192,6 +192,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       draggable
                       onClick={(e) => {
                         if (e.ctrlKey || e.metaKey) {
+                          e.stopPropagation()
                           setSelected((prev) => {
                             const n = new Set(prev)
                             n.has(sc.id) ? n.delete(sc.id) : n.add(sc.id)
