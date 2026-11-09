@@ -80,8 +80,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [layout, setLayout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => {
     try { return JSON.parse(localStorage.getItem('cardsLayout') || '{}') } catch { return {} }
   })
-  const dragRef = useRef<{ k: string; startX: number; startY: number; s: { dx: number; dy: number; w?: number; h?: number }; mode: 'move' | 'resize' } | null>(null)
-  const onBoxDown = (e: React.MouseEvent, k: string, mode: 'move' | 'resize') => {
+  const dragRef = useRef<{ k: string; startX: number; startY: number; s: { dx: number; dy: number; w?: number; h?: number }; mode: 'move' | 'resize' | 'resizeW' | 'resizeH' } | null>(null)
+  const onBoxDown = (e: React.MouseEvent, k: string, mode: 'move' | 'resize' | 'resizeW' | 'resizeH') => {
     if (!layoutMode) return
     e.preventDefault(); e.stopPropagation()
     dragRef.current = { k, startX: e.clientX, startY: e.clientY, s: { dx: layout[k]?.dx ?? 0, dy: layout[k]?.dy ?? 0, w: layout[k]?.w, h: layout[k]?.h }, mode }
@@ -94,12 +94,13 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       if (!d) return
       const dx = (e.clientX - d.startX) * SENS
       const dy = (e.clientY - d.startY) * SENS
-      setLayout((l) => ({
-        ...l,
-        [d.k]: d.mode === 'move'
-          ? { ...l[d.k], ...d.s, dx: Math.round(d.s.dx + dx), dy: Math.round(d.s.dy + dy) }
-          : { ...l[d.k], ...d.s, w: Math.max(160, Math.round((d.s.w || 200) + dx)), h: Math.max(60, Math.round((d.s.h || 100) + dy)) },
-      }))
+      setLayout((l) => {
+        const cur = { ...l[d.k], ...d.s }
+        if (d.mode === 'move') return { ...l, [d.k]: { ...cur, dx: Math.round(d.s.dx + dx), dy: Math.round(d.s.dy + dy) } }
+        if (d.mode === 'resizeW') return { ...l, [d.k]: { ...cur, w: Math.max(160, Math.round((d.s.w || 200) + dx)) } }
+        if (d.mode === 'resizeH') return { ...l, [d.k]: { ...cur, h: Math.max(60, Math.round((d.s.h || 100) + dy)) } }
+        return { ...l, [d.k]: { ...cur, w: Math.max(160, Math.round((d.s.w || 200) + dx)), h: Math.max(60, Math.round((d.s.h || 100) + dy)) } }
+      })
     }
     const onUp = () => { dragRef.current = null; try { localStorage.setItem('cardsLayout', JSON.stringify(layout)) } catch {} }
     window.addEventListener('mousemove', onMove)
@@ -126,10 +127,23 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       >
         {children}
         {layoutMode && (
-          <div
-            onMouseDown={(e) => onBoxDown(e, k, 'resize')}
-            style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', zIndex: 50, borderRight: '3px solid #fb923c', borderBottom: '3px solid #fb923c', borderBottomRightRadius: 4 }}
-          />
+          <>
+            {/* Только ширина — правый край */}
+            <div
+              onMouseDown={(e) => onBoxDown(e, k, 'resizeW')}
+              style={{ position: 'absolute', right: -2, top: '30%', width: 6, height: '40%', cursor: 'ew-resize', zIndex: 50, background: '#fb923c', borderRadius: 3 }}
+            />
+            {/* Только высота — нижний край */}
+            <div
+              onMouseDown={(e) => onBoxDown(e, k, 'resizeH')}
+              style={{ position: 'absolute', bottom: -2, left: '30%', height: 6, width: '40%', cursor: 'ns-resize', zIndex: 50, background: '#fb923c', borderRadius: 3 }}
+            />
+            {/* Оба размера — угол */}
+            <div
+              onMouseDown={(e) => onBoxDown(e, k, 'resize')}
+              style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', zIndex: 51, borderRight: '3px solid #fb923c', borderBottom: '3px solid #fb923c', borderBottomRightRadius: 4 }}
+            />
+          </>
         )}
       </div>
     )
