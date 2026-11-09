@@ -360,10 +360,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                         <div
                           style={{
                             position: 'absolute',
-                            left: -9,
+                            left: -8,
                             top: -6,
                             bottom: -6,
-                            width: 4,
+                            width: 2,
                             borderRadius: 3,
                             background: 'linear-gradient(180deg, #fdba74 0%, #fb923c 50%, #f97316 100%)',
                             boxShadow: '0 0 12px 3px rgba(249,115,22,0.7), 0 0 26px 6px rgba(249,115,22,0.3)',
