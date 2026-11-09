@@ -144,14 +144,18 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     const s = layout[k] ?? { dx: 0, dy: 0 }
     dragRef.current = { k, startX: e.clientX, startY: e.clientY, dx: s.dx, dy: s.dy, mode }
   }
+  // Коэффициент замедления — иначе трансформация слишком резкая для точной настройки
+  const SENSITIVITY = 0.5
   const onMouseMove = useCallback((e: MouseEvent) => {
     const d = dragRef.current
     if (!d) return
     const s = layout[d.k] ?? { dx: 0, dy: 0 }
+    const dx = (e.clientX - d.startX) * SENSITIVITY
+    const dy = (e.clientY - d.startY) * SENSITIVITY
     if (d.mode === 'move') {
-      setLayout((l) => ({ ...l, [d.k]: { ...s, dx: Math.round(d.dx + e.clientX - d.startX), dy: Math.round(d.dy + e.clientY - d.startY) } }))
+      setLayout((l) => ({ ...l, [d.k]: { ...s, dx: Math.round(d.dx + dx), dy: Math.round(d.dy + dy) } }))
     } else {
-      setLayout((l) => ({ ...l, [d.k]: { ...s, w: Math.max(160, Math.round((s.w || 200) + e.clientX - d.startX)), h: Math.max(60, Math.round((s.h || 100) + e.clientY - d.startY)) } }))
+      setLayout((l) => ({ ...l, [d.k]: { ...s, w: Math.max(160, Math.round((s.w || 200) + dx)), h: Math.max(60, Math.round((s.h || 100) + dy)) } }))
     }
   }, [layout])
   const onMouseUp = useCallback(() => { dragRef.current = null; try { localStorage.setItem('statsLayout', JSON.stringify(layout)) } catch {} }, [layout])
