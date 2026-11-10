@@ -105,6 +105,8 @@ export interface Project {
   totalMinutes: number         // итоговый хронометраж продукта
   // Smart Alerts — кол-во конфликтов (заполнится из alertStore, Фаза 2)
   conflicts: number
+  /** Разработка: библия персонажей, локации, синопсис (вкладка «Разработка») */
+  development?: import('../types/development').ProjectDevelopment
 }
 
 interface ProjectStore {

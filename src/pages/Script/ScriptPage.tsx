@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useScriptPageLogic } from './useScriptPageLogic'
 import { useScriptStore, type TitlePage } from '../../store/scriptStore'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
 import ScriptHeader from './components/ScriptHeader'
 import ScriptTabs from './components/ScriptTabs'
@@ -11,6 +12,7 @@ import TitlePageEditor from '../../components/TitlePageEditor'
 import ScriptRightPanel, { type ValidationIssue } from './components/ScriptRightPanel'
 import StatisticsView from './components/StatisticsView'
 import CardsView from './components/CardsView'
+import DevelopmentView from './components/DevelopmentView'
 import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
 import { extractSceneHtml, insertSceneHtml, renumberHeaders } from './components/sceneHtmlOps'
@@ -627,7 +629,20 @@ export default function ScriptPage() {
             scriptFormat={scriptFormat}
             onSaveSceneHtml={handleSaveSceneHtml}
           />
-        ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
+        ) : activeTab === 'development' ? (
+          <DevelopmentView
+            isDark={isDark}
+            scenes={allScenes}
+            isSerial={project?.type === 'serial'}
+            episodesCount={project?.episodesCount || 8}
+            development={project?.development}
+            onDevelopmentChange={(dev) => {
+              if (project?.id) {
+                useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })
+              }
+            }}
+          />
+        ) : ['breakdown', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
