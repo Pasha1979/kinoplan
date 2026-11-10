@@ -126,7 +126,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   // Макет финализирован — позиции из APPLIED_LAYOUT + сохранённых правок
   const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
+      const saved = JSON.parse(localStorage.getItem('statsLayout_dev') || '{}')
       // Помержим поключно: w/h из дефолта сохраняются, если в сохранённом их нет
       // (иначе блоки без h теряют высоту → контент выпадает без скролла)
       const merged = { ...APPLIED_LAYOUT }
@@ -135,10 +135,22 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     } catch { return { ...APPLIED_LAYOUT } }
   })
   const [editMode, setEditMode] = useState(false)
-  // Автосохранение макета в localStorage
+  // Автосохранение макета в localStorage (dev-ключ: не перекрывает новый APPLIED_LAYOUT)
   useEffect(() => {
-    try { localStorage.setItem('statsLayout', JSON.stringify(layout)) } catch { /* noop */ }
+    try { localStorage.setItem('statsLayout_dev', JSON.stringify(layout)) } catch { /* noop */ }
   }, [layout])
+
+  // Экспорт текущей раскладки в JSON — для фиксации в APPLIED_LAYOUT
+  const exportLayout = () => {
+    const json = JSON.stringify(layout, null, 2)
+    try { navigator.clipboard.writeText(json) } catch { /* noop */ }
+    const blob = new Blob([json], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'stats-layout.json'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
   const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
   // Обёртка блока — применяет позицию из макета; в editMode — drag/resize
@@ -458,12 +470,20 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             {editMode && (
               <>
                 <button
-                  onClick={() => { setLayout({ ...APPLIED_LAYOUT }); try { localStorage.removeItem('statsLayout') } catch { /* noop */ } }}
+                  onClick={() => { setLayout({ ...APPLIED_LAYOUT }); try { localStorage.removeItem('statsLayout_dev') } catch { /* noop */ } }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
                   style={{ color: textSecondary, border: `1px solid ${border}` }}
                   title="Вернуть стандартную раскладку"
                 >
                   <RotateCcw size={12} /> Сбросить
+                </button>
+                <button
+                  onClick={exportLayout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                  style={{ color: '#fb923c', border: '1px solid rgba(251,146,60,0.4)' }}
+                  title="Скачать текущую раскладку как JSON (для фиксации в коде)"
+                >
+                  <FileText size={12} /> Экспорт
                 </button>
                 <span className="text-[10px] px-2 py-1 rounded-md" style={{ color: '#fb923c', background: 'rgba(251,146,60,0.12)' }}>
                   Тяните за оранжевую точку — перемещение, за синюю — размер
