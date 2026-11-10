@@ -14,6 +14,7 @@ import CardsView from './components/CardsView'
 import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
 import { extractSceneHtml, insertSceneHtml, renumberHeaders } from './components/sceneHtmlOps'
+import { renumberSceneNumbers } from '../../utils/sceneNumbering'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
@@ -186,8 +187,11 @@ export default function ScriptPage() {
     const frags = moving.map((s) => extractSceneHtml(from.content || '', s.number, 0)).join('')
     const movedSet = new Set(sceneIds)
 
-    const renum = (arr: typeof from.scenes, ep: number) =>
-      arr!.map((s, i) => ({ ...s, number: isSerial ? `${ep}-${i + 1}` : `${i + 1}`, order: i }))
+    const renum = (arr: typeof from.scenes, ep: number) => {
+      // Литерные варианты (1-9-А) сохраняют буквы и каскадно перенумеровываются
+      const nums = renumberSceneNumbers((arr || []).map((s) => s.number), isSerial, ep)
+      return arr!.map((s, i) => ({ ...s, number: nums[i], order: i }))
+    }
 
     if (from.id === to.id) {
       // тот же скрипт: вырезать → вставить внутрь с поправкой индекса

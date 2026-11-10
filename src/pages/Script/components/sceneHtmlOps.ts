@@ -1,4 +1,6 @@
 import { extractSceneHtml, spliceSceneHtml } from './SceneEditModal'
+import { SCENE_NUMBER } from '../../../utils/sceneNumber'
+import { renumberSceneNumbers } from '../../../utils/sceneNumbering'
 
 const isHeader = (el: Element) => {
   const t = el.getAttribute('data-type')
@@ -24,13 +26,16 @@ export function insertSceneHtml(content: string, html: string, atIndex: number):
   return doc.body.innerHTML
 }
 
-/** Перенумеровывает все шапки подряд: «ep-N.» для сериала, «N.» для фильма */
+/** Перенумеровывает все шапки: литерные варианты (1-9-А) сохраняют буквы */
 export function renumberHeaders(content: string, episode: number, isSerial: boolean): string {
   const doc = parse(content)
-  headersOf(doc).forEach((h, i) => {
-    const num = isSerial ? `${episode}-${i + 1}` : `${i + 1}`
-    const rest = (h.textContent || '').trim().replace(/^\S+\s*/, '')
-    h.textContent = `${num}. ${rest}`
+  const headers = headersOf(doc)
+  const numRe = new RegExp(`^(${SCENE_NUMBER})\\.`)
+  const nums = headers.map((h) => (h.textContent || '').trim().match(numRe)?.[1] ?? '')
+  const next = renumberSceneNumbers(nums, isSerial, episode)
+  headers.forEach((h, i) => {
+    const rest = (h.textContent || '').trim().replace(new RegExp(`^${SCENE_NUMBER}\\.\\s*`), '')
+    h.textContent = `${next[i]}. ${rest}`
   })
   return doc.body.innerHTML
 }
