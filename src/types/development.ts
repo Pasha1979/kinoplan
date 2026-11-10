@@ -1,6 +1,6 @@
 /** Разработка проекта: персонажи, локации, синопсис — живёт на уровне проекта */
 
-export type DevCharacterType = 'main' | 'secondary' | 'episodic'
+export type DevCharacterType = 'main' | 'secondary' | 'episodic' | 'stock'
 
 export interface DevCharacter {
   id: string

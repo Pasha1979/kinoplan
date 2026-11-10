@@ -9,9 +9,10 @@ import type {
 } from '../../../types/development'
 
 const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
-  main:      { l: 'Главный',        c: '#fb923c' },
-  secondary: { l: 'Второстепенный', c: '#818cf8' },
-  episodic:  { l: 'Эпизодный',      c: '#9ca3af' },
+  main:      { l: 'Главная',        c: '#fb923c' },
+  secondary: { l: 'Второго плана',  c: '#818cf8' },
+  episodic:  { l: 'Эпизодическая',  c: '#9ca3af' },
+  stock:     { l: 'Типаж',          c: '#a78bfa' },
 }
 const FOLDER_COLORS = ['#fb923c', '#818cf8', '#34d399', '#f59e0b', '#a78bfa', '#ef4444'] as const
 
