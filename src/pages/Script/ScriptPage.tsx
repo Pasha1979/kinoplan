@@ -32,7 +32,11 @@ import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
 import FormatModal from './components/FormatModal'
 
 export default function ScriptPage() {
-  const logic = useScriptPageLogic()
+  // Мост к pushUndo: навигатор сцен сообщает о перестановке до её выполнения
+  const beforeSceneReorderRef = useRef<(scriptId: string) => void>(() => {})
+  const logic = useScriptPageLogic({
+    onBeforeSceneReorder: useCallback((id: string) => beforeSceneReorderRef.current(id), []),
+  })
   const formatLocked = useScriptStore((s) => s.formatLocked)
   const toggleFormatLock = useScriptStore((s) => s.toggleFormatLock)
   const {
@@ -155,12 +159,16 @@ export default function ScriptPage() {
   const pushUndo = useCallback((scriptIds: string[]) => {
     const pack = scriptIds.map((id) => {
       const s = episodeScripts.find((ep) => ep.id === id)
-      return s ? { scriptId: id, snap: { content: s.content || '', scenes: s.scenes || [], sceneGroups: s.sceneGroups, actMarkers: s.actMarkers } } : null
+      return s ? { scriptId: id, snap: { content: s.content || '', scenes: structuredClone(s.scenes || []), sceneGroups: s.sceneGroups, actMarkers: s.actMarkers } } : null
     }).filter(Boolean) as Array<{ scriptId: string; snap: ScriptSnapshot }>
     undoStack.current.push(pack)
     if (undoStack.current.length > 15) undoStack.current.shift()
     setUndoCount(undoStack.current.length)
   }, [episodeScripts])
+  // Навигатор сцен → undo-стек доски (снимок «до» перестановки)
+  useEffect(() => {
+    beforeSceneReorderRef.current = (id: string) => pushUndo([id])
+  }, [pushUndo])
   const handleUndo = useCallback(() => {
     const pack = undoStack.current.pop()
     if (!pack) return

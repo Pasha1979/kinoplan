@@ -11,7 +11,7 @@ import type { ScriptFormat, TimingSystem, Scene } from '../../store/scriptStore'
 export type ScriptView = 'empty' | 'editor'
 export type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
 
-export function useScriptPageLogic() {
+export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: string) => void }) {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
@@ -236,6 +236,9 @@ export function useScriptPageLogic() {
     if (fromIndex === toIndex) return
     if (!currentScriptId) return
 
+    // Снимок для кнопки «Отменить» на доске — до любых изменений
+    opts?.onBeforeSceneReorder?.(currentScriptId)
+
     // Переставляем сцены в scriptStore (единый источник истины)
     const reordered = [...(currentScript?.scenes || [])]
     const [movedScene] = reordered.splice(fromIndex, 1)
@@ -265,7 +268,7 @@ export function useScriptPageLogic() {
     if (updateNumbersRef.current) {
       updateNumbersRef.current(renumberedScenes)
     }
-  }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber, project?.type])
+  }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber, project?.type, opts?.onBeforeSceneReorder])
 
   // Клик по сцене в навигаторе → выделение + скролл редактора
   const handleSceneClick = useCallback((sceneId: string) => {
