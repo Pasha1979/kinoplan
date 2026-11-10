@@ -7,6 +7,8 @@ import type { Scene } from '../../../types/scene'
 import type {
   DevCharacter, DevCharacterType, DevLocation, DevSynopsis, ProjectDevelopment,
 } from '../../../types/development'
+import { extractSceneHtml } from './sceneHtmlOps'
+import { SceneTextEditor } from './SceneDetailModal'
 
 const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
   main:      { l: 'Главная',        c: '#fb923c' },
@@ -27,12 +29,16 @@ interface DevelopmentViewProps {
   onDevelopmentChange: (dev: ProjectDevelopment) => void
   /** клик по сцене из выборки — переход в текст */
   onSceneClick?: (sceneId: string) => void
+  /** HTML-контент скриптов по сериям — для редактирования сцен в выборке */
+  contentsByEpisode?: Record<number, string>
+  scriptFormat?: 'russian' | 'hollywood' | 'custom'
+  onSaveSceneHtml?: (scene: Scene, html: string) => void
 }
 
 const uid = () => `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const emptyDev: ProjectDevelopment = { characters: [], locations: [], synopsis: {}, folders: [] }
 
-function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick }: DevelopmentViewProps) {
+function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml }: DevelopmentViewProps) {
   const [tab, setTab] = useState<'chars' | 'locs' | 'synopsis' | 'episodes'>('chars')
   const [editChar, setEditChar] = useState<DevCharacter | 'new' | null>(null)
   const [editLoc, setEditLoc] = useState<DevLocation | 'new' | null>(null)
@@ -359,18 +365,6 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                         </div>
                         {c.description && <p className="text-[11px] leading-snug mb-2 line-clamp-3" style={{ color: textSecondary }}>{c.description}</p>}
                         {c.arc && <p className="text-[10px] italic leading-snug line-clamp-2" style={{ color: '#fb923c' }}>↳ {c.arc}</p>}
-                        {charSceneCount(c) > 0 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setScenesList({ title: c.name, color: t.c, sceneIds: charSceneIds(c) })
-                            }}
-                            className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-semibold transition-all"
-                            style={{ background: `${t.c}18`, color: t.c }}
-                          >
-                            Показать сцены →
-                          </button>
-                        )}
                       </div>
                     )
                   })}
@@ -424,18 +418,6 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                         </div>
                       </div>
                       {l.description && <p className="text-[11px] leading-snug line-clamp-3" style={{ color: textSecondary }}>{l.description}</p>}
-                      {locSceneCount(l) > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setScenesList({ title: l.name, color: '#34d399', sceneIds: locSceneIds(l) })
-                          }}
-                          className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-semibold transition-all"
-                          style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399' }}
-                        >
-                          Показать сцены →
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -569,6 +551,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           sceneList={scenesList.sceneIds
             .map((id) => scenes.find((s) => s.id === id))
             .filter(Boolean) as Array<Scene & { _episode?: number }>}
+          contentsByEpisode={contentsByEpisode}
+          scriptFormat={scriptFormat}
+          onSaveSceneHtml={onSaveSceneHtml}
           onClose={() => setScenesList(null)}
           onSceneClick={onSceneClick}
         />
@@ -595,6 +580,11 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
             setDev({ characters: exists ? dev.characters.map((x) => (x.id === c.id ? c : x)) : [...dev.characters, c] })
             setEditChar(null)
           }}
+          onShowScenes={() => {
+            const c = editChar as DevCharacter
+            setEditChar(null)
+            setScenesList({ title: c.name, color: CHAR_TYPES[c.type].c, sceneIds: charSceneIds(c) })
+          }}
         />
       )}
 
@@ -616,6 +606,11 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
             const exists = dev.locations.some((x) => x.id === l.id)
             setDev({ locations: exists ? dev.locations.map((x) => (x.id === l.id ? l : x)) : [...dev.locations, l] })
             setEditLoc(null)
+          }}
+          onShowScenes={() => {
+            const l = editLoc as DevLocation
+            setEditLoc(null)
+            setScenesList({ title: l.name, color: '#34d399', sceneIds: locSceneIds(l) })
           }}
         />
       )}
@@ -729,11 +724,12 @@ function SynopsisTab({ syn, onChange, isDark, textPrimary, textSecondary, fieldB
 }
 
 /* ── Модал персонажа — расширенная ── */
-function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charSceneIds, onClose, onSave, onDelete }: {
+function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charSceneIds, onClose, onSave, onDelete, onShowScenes }: {
   char: DevCharacter; isNew: boolean; isSerial?: boolean; episodesCount?: number; isDark: boolean
   scenes: Array<Scene & { _episode?: number }>
   charSceneIds: string[]
   onClose: () => void; onSave: (c: DevCharacter) => void; onDelete?: () => void
+  onShowScenes?: () => void
 }) {
   const [name, setName] = useState(char.name)
   const [type, setType] = useState<DevCharacterType>(char.type)
@@ -833,17 +829,15 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
           </F>
 
-          {/* Сцены, где появляется */}
-          {!isNew && charScenes.length > 0 && (
-            <F label={`СЦЕНЫ С УЧАСТИЕМ (${charScenes.length})`}>
-              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-lg" style={{ background: fieldBg, border: `1px solid ${border}` }}>
-                {charScenes.map((s) => (
-                  <span key={s.id} className="text-[10px] px-2 py-0.5 rounded-md font-semibold" style={{ background: 'rgba(249,115,22,0.12)', color: '#fb923c' }}>
-                    С{s._episode ?? 1}-{s.number}
-                  </span>
-                ))}
-              </div>
-            </F>
+          {/* Сцены, где появляется → выборка с редактированием */}
+          {!isNew && charScenes.length > 0 && onShowScenes && (
+            <button
+              onClick={onShowScenes}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all"
+              style={{ background: 'rgba(249,115,22,0.12)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
+            >
+              Показать все сцены ({charScenes.length}) →
+            </button>
           )}
         </div>
 
@@ -871,11 +865,12 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
 }
 
 /* ── Модал локации — расширенная ── */
-function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, onDelete }: {
+function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, onDelete, onShowScenes }: {
   loc: DevLocation; isNew: boolean; isDark: boolean
   scenes: Array<Scene & { _episode?: number }>
   locSceneIds: string[]
   onClose: () => void; onSave: (l: DevLocation) => void; onDelete?: () => void
+  onShowScenes?: () => void
 }) {
   const [name, setName] = useState(loc.name)
   const [desc, setDesc] = useState(loc.description ?? '')
@@ -930,17 +925,14 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
           </div>
 
-          {!isNew && locScenes.length > 0 && (
-            <div>
-              <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>СЦЕНЫ ({locScenes.length})</div>
-              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-lg" style={{ background: fieldBg, border: `1px solid ${border}` }}>
-                {locScenes.map((s) => (
-                  <span key={s.id} className="text-[10px] px-2 py-0.5 rounded-md font-semibold" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
-                    С{s._episode ?? 1}-{s.number}
-                  </span>
-                ))}
-              </div>
-            </div>
+          {!isNew && locScenes.length > 0 && onShowScenes && (
+            <button
+              onClick={onShowScenes}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all"
+              style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}
+            >
+              Показать все сцены ({locScenes.length}) →
+            </button>
           )}
         </div>
 
@@ -967,14 +959,18 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
 }
 
 /* ── Модал выборки сцен — все сцены в порядке сценария ── */
-function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClick }: {
+function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml }: {
   title: string
   color: string
   sceneList: Array<Scene & { _episode?: number }>
   isDark: boolean
   onClose: () => void
   onSceneClick?: (sceneId: string) => void
+  contentsByEpisode?: Record<number, string>
+  scriptFormat?: 'russian' | 'hollywood' | 'custom'
+  onSaveSceneHtml?: (scene: Scene, html: string) => void
 }) {
+  const [openId, setOpenId] = useState<string | null>(null)
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
@@ -998,22 +994,51 @@ function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClic
           {sceneList.length === 0 && (
             <p className="text-xs text-center py-6" style={{ color: textSecondary }}>Сцены не найдены — импортируйте из текста</p>
           )}
-          {sceneList.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => { onSceneClick?.(s.id); onClose() }}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all"
-              style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = `${color}18`)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc')}
-            >
-              <span className="text-xs font-bold shrink-0" style={{ color }}>С{s._episode ?? 1}-{s.number}</span>
-              <span className="flex-1 text-[11px] truncate" style={{ color: textPrimary }}>
-                {s.type || ''} {s.location || ''}{s.sublocation ? `.${s.sublocation}` : ''} — {s.time || ''}
-              </span>
-              <span className="text-[9px] shrink-0" style={{ color: textSecondary }}>{s.pages?.toFixed(1)} стр</span>
-            </button>
-          ))}
+          {sceneList.map((s) => {
+            const ep = s._episode ?? 1
+            const epScenes = sceneList.filter((x) => (x._episode ?? 1) === ep)
+            const epIdx = epScenes.findIndex((x) => x.id === s.id)
+            const html = contentsByEpisode[ep] ? extractSceneHtml(contentsByEpisode[ep], s.number, Math.max(0, epIdx)) : ''
+            return (
+              <div key={s.id}>
+                <button
+                  onClick={() => setOpenId(openId === s.id ? null : s.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = `${color}18`)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc')}
+                >
+                  <span className="text-xs font-bold shrink-0" style={{ color }}>С{ep}-{s.number}</span>
+                  <span className="flex-1 text-[11px] truncate" style={{ color: textPrimary }}>
+                    {s.type || ''} {s.location || ''}{s.sublocation ? `.${s.sublocation}` : ''} — {s.time || ''}
+                  </span>
+                  <span className="text-[9px] shrink-0" style={{ color: textSecondary }}>{s.pages?.toFixed(1)} стр</span>
+                  {onSceneClick && (
+                    <span
+                      role="button"
+                      title="Перейти к сцене в тексте"
+                      onClick={(e) => { e.stopPropagation(); onSceneClick(s.id); onClose() }}
+                      className="text-[10px] px-1 rounded"
+                      style={{ color }}
+                    >→</span>
+                  )}
+                  <span className="text-[9px]" style={{ color }}>{openId === s.id ? '▲' : '▼'}</span>
+                </button>
+                {openId === s.id && html && (
+                  <div className="mt-1 mb-1 px-2 pb-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#fff' }}>
+                    <SceneTextEditor
+                      key={s.id}
+                      initialHtml={html}
+                      sceneNumber={s.number}
+                      scriptFormat={scriptFormat}
+                      isDark={isDark}
+                      onSaveHtml={(h) => onSaveSceneHtml?.(s, h)}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

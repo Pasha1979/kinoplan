@@ -640,6 +640,9 @@ export default function ScriptPage() {
               handleSceneClickRouted(id)
               setActiveTab('text')
             }}
+            contentsByEpisode={contentByEp}
+            scriptFormat={scriptFormat}
+            onSaveSceneHtml={handleSaveSceneHtml}
             onDevelopmentChange={(dev) => {
               if (project?.id) {
                 useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })
