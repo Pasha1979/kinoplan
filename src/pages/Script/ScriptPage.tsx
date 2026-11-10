@@ -8,7 +8,7 @@ import ScriptStatusBar from './components/ScriptStatusBar'
 import FormatSelectModal from './components/FormatSelectModal'
 import TimingSettingsModal from './components/TimingSettingsModal'
 import TitlePageEditor from '../../components/TitlePageEditor'
-import ScriptRightPanel from './components/ScriptRightPanel'
+import ScriptRightPanel, { type ValidationIssue } from './components/ScriptRightPanel'
 import StatisticsView from './components/StatisticsView'
 import CardsView from './components/CardsView'
 import SceneEditModal from './components/SceneEditModal'
@@ -300,6 +300,39 @@ export default function ScriptPage() {
       triggerAutoSave()
     }
   }, [currentScript?.id, updateScript, triggerAutoSave])
+
+  // Применение авто-исправления из панели валидации: заменяем текст ноды блока
+  const handleApplyIssueFix = useCallback((issue: ValidationIssue) => {
+    if (!editorInstance || !issue.suggestion) return
+    const targetIdx = (issue.lineNumber ?? 0) - 1
+    let from: number | null = null
+    let to: number | null = null
+    if (targetIdx >= 0) {
+      editorInstance.state.doc.forEach((node, offset, index) => {
+        if (index === targetIdx) {
+          from = offset + 1
+          to = offset + node.nodeSize - 1
+        }
+      })
+    }
+    // Страховка: если индекс не совпал — ищем ноду с точно таким же текстом
+    if (issue.content) {
+      const want = issue.content.trim()
+      editorInstance.state.doc.forEach((node, offset) => {
+        if ((node.textContent || '').trim() === want) {
+          from = offset + 1
+          to = offset + node.nodeSize - 1
+        }
+      })
+    }
+    if (from == null || to == null) return
+    const textNode = editorInstance.schema.text(issue.suggestion)
+    editorInstance
+      .chain()
+      .focus()
+      .insertContentAt({ from, to: Math.max(to, from) }, textNode)
+      .run()
+  }, [editorInstance])
 
   // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши
   useEffect(() => {
@@ -783,6 +816,7 @@ export default function ScriptPage() {
           blocks={blocks}
           format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
           enableAutoFix={enableAutoFix}
+          onApplyFix={handleApplyIssueFix}
           scenes={scenes}
           characters={scriptCharacters}
           timingSystem={currentScript?.timingSystem || 'page'}

@@ -21,7 +21,7 @@ import { SCENE_NUMBER } from '../../../utils/sceneNumber'
 
 type ErrorSeverity = 'error' | 'warning' | 'info'
 
-interface ValidationIssue {
+export interface ValidationIssue {
   id: string
   severity: ErrorSeverity
   category: 'format' | 'scene' | 'character' | 'timing'
@@ -32,6 +32,8 @@ interface ValidationIssue {
   /** К какой сцене перейти по клику */
   sceneId?: string
   sceneNumber?: string
+  /** Текущий текст блока (для показа «было → станет») */
+  content?: string
 }
 
 interface ScriptRightPanelProps {
@@ -42,7 +44,7 @@ interface ScriptRightPanelProps {
   blocks: Array<{ id: string; type: string; content: string }>
   format: 'russian' | 'hollywood'
   enableAutoFix: boolean
-  onApplyFix?: (blockId: string, suggestion: string) => void
+  onApplyFix?: (issue: ValidationIssue) => void
   /** Клик по ошибке → переход к сцене */
   onIssueClick?: (issue: ValidationIssue) => void
   // Scene & character quality
@@ -79,6 +81,7 @@ function useFormatValidation(
               'Заголовок сцены должен начинаться с номера (1., 2. или 1-1., 1-2.)',
             suggestion: `1. ${content}`,
             autoFixable: true,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -99,6 +102,7 @@ function useFormatValidation(
                 ? 'Формат: НОМЕР. ИНТ/ЭКСТ. ЛОКАЦИЯ — ВРЕМЯ'
                 : 'Format: NUMBER. INT/EXT. LOCATION — TIME',
             autoFixable: false,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -115,6 +119,7 @@ function useFormatValidation(
             message: 'Имя персонажа должно быть ЗАГЛАВНЫМИ буквами',
             suggestion: content.toUpperCase(),
             autoFixable: true,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -126,6 +131,7 @@ function useFormatValidation(
             category: 'format',
             message: 'Имя персонажа не должно содержать цифры',
             autoFixable: false,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -141,6 +147,7 @@ function useFormatValidation(
             message: 'Ремарка должна быть в скобках (текст)',
             suggestion: `(${content.replace(/[()]/g, '')})`,
             autoFixable: true,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -152,6 +159,7 @@ function useFormatValidation(
             category: 'format',
             message: 'Ремарка не должна быть пустой',
             autoFixable: false,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -167,6 +175,7 @@ function useFormatValidation(
             message: 'Переход должен заканчиваться двоеточием',
             suggestion: `${content}:`,
             autoFixable: true,
+            content,
             lineNumber,
             sceneNumber: lastSceneNum,
           })
@@ -320,6 +329,7 @@ function ScriptRightPanel({
   const [activeTab, setActiveTab] = useState<'validation' | 'notes' | 'versions'>(
     'validation'
   )
+  const [fixPopup, setFixPopup] = useState<{ issue: ValidationIssue; x: number; y: number } | null>(null)
 
   /* ── Validation data ── */
   const formatIssues = useFormatValidation(blocks, format)
@@ -454,13 +464,18 @@ function ScriptRightPanel({
     return (
       <div
         onClick={clickable ? () => onIssueClick(issue) : undefined}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setFixPopup({ issue, x: e.clientX, y: e.clientY })
+        }}
         className="flex items-start gap-2 p-2 rounded-lg text-left transition-all"
         style={{
           background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff',
           border: `1px solid ${border}`,
           cursor: clickable ? 'pointer' : 'default',
         }}
-        title={clickable ? 'Перейти к сцене' : undefined}
+        title={clickable ? 'Перейти к сцене · ПКМ — подробности' : 'ПКМ — подробности'}
       >
         {severityIcon(issue.severity)}
         <div className="flex-1 min-w-0">
@@ -479,7 +494,7 @@ function ScriptRightPanel({
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                onApplyFix?.(issue.id, issue.suggestion!)
+                onApplyFix?.(issue)
               }}
               className="mt-1.5 flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all"
               style={{
@@ -708,6 +723,146 @@ function ScriptRightPanel({
           title="Версии сценария"
         />
       )}
+
+      {/* ── Попап «Подробнее об ошибке» (правый клик по проблеме) ── */}
+      {fixPopup && (() => {
+        const { issue, x, y } = fixPopup
+        const canFix = !!(issue.autoFixable && issue.suggestion && onApplyFix)
+        const left = Math.min(x, window.innerWidth - 340)
+        const top = Math.min(y, window.innerHeight - 280)
+        const sevColor = severityColor(issue.severity)
+        const catLabel =
+          issue.category === 'format' ? 'Форматирование'
+          : issue.category === 'scene' ? 'Сцена'
+          : issue.category === 'character' ? 'Персонаж'
+          : 'Хронометраж'
+        return (
+          <>
+            <div
+              className="fixed inset-0 z-[90]"
+              onClick={() => setFixPopup(null)}
+              onContextMenu={(e) => { e.preventDefault(); setFixPopup(null) }}
+            />
+            <div
+              className="fixed z-[95] rounded-2xl overflow-hidden"
+              style={{
+                left: Math.max(8, left),
+                top: Math.max(8, top),
+                width: 320,
+                background: isDark ? '#1b1b30' : '#ffffff',
+                border: `1px solid ${isDark ? 'rgba(251,146,60,0.35)' : 'rgba(234,88,12,0.3)'}`,
+                boxShadow: '0 20px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(251,146,60,0.08)',
+              }}
+            >
+              {/* Шапка */}
+              <div
+                className="flex items-center gap-2 px-4 py-3"
+                style={{
+                  background: `linear-gradient(135deg, ${sevColor}22, transparent)`,
+                  borderBottom: `1px solid ${border}`,
+                }}
+              >
+                {severityIcon(issue.severity)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: sevColor }}>
+                    {catLabel} · {issue.severity === 'error' ? 'Ошибка' : issue.severity === 'warning' ? 'Предупреждение' : 'Заметка'}
+                  </p>
+                  <p className="text-xs font-semibold leading-tight" style={{ color: textPrimary }}>
+                    {issue.message}
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-4 py-3 space-y-2.5">
+                {/* Было */}
+                {issue.content != null && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: textSecondary }}>
+                      Сейчас в тексте
+                    </p>
+                    <div
+                      className="rounded-lg px-2.5 py-2 text-[11px] font-mono leading-snug break-words"
+                      style={{
+                        background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
+                        border: `1px solid ${isDark ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                        color: textPrimary,
+                      }}
+                    >
+                      {issue.content}
+                    </div>
+                  </div>
+                )}
+
+                {/* Станет */}
+                {issue.suggestion && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: textSecondary }}>
+                      После исправления
+                    </p>
+                    <div
+                      className="rounded-lg px-2.5 py-2 text-[11px] font-mono leading-snug break-words"
+                      style={{
+                        background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.07)',
+                        border: `1px solid ${isDark ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.25)'}`,
+                        color: textPrimary,
+                      }}
+                    >
+                      {issue.suggestion}
+                    </div>
+                  </div>
+                )}
+
+                {!issue.suggestion && (
+                  <p className="text-[11px] leading-snug" style={{ color: textSecondary }}>
+                    Автоматического исправления для этого предупреждения нет — поправьте вручную в тексте сценария.
+                  </p>
+                )}
+                {issue.suggestion && !issue.autoFixable && enableAutoFix && (
+                  <p className="text-[11px] leading-snug" style={{ color: textSecondary }}>
+                    Авто-исправление для этого типа недоступно — проверьте предложенный вариант и исправьте вручную.
+                  </p>
+                )}
+
+                {/* Кнопки */}
+                <div className="flex items-center gap-2 pt-1">
+                  {canFix ? (
+                    <button
+                      onClick={() => {
+                        onApplyFix(issue)
+                        setFixPopup(null)
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+                      style={{ background: '#f97316', color: '#fff' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#fb923c')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '#f97316')}
+                    >
+                      <Wand2 size={13} />
+                      Исправить
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setFixPopup(null)}
+                      className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold"
+                      style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9', color: textPrimary }}
+                    >
+                      Понятно
+                    </button>
+                  )}
+                  {canFix && (
+                    <button
+                      onClick={() => setFixPopup(null)}
+                      className="px-3 py-2 rounded-xl text-xs"
+                      style={{ color: textSecondary }}
+                    >
+                      Отмена
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }
