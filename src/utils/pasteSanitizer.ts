@@ -125,6 +125,6 @@ export function sanitizePlainText(text: string): string {
 export function isScreenplayContent(text: string): boolean {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
   return lines.some(l =>
-    new RegExp(`^(?:${SCENE_NUMBER}[\\.\\s]+)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ)[\\.\\s]`, 'i').test(l)
+    new RegExp(`^(?:${SCENE_NUMBER}[\\.\\s]+)?(?:ИНТ|НАТ|ЭКСТ|ИНТ-НАТ|ИНТ-ЭКСТ|НАТ\\/ИНТ)[\\.\\s]`, 'i').test(l)
   )
 }

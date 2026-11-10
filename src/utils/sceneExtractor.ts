@@ -67,7 +67,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
 
     // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ." или "2. ПАВ. Студия A утро."
     // Также поддерживаем FilmToolz: НАТ. (натура = экстерьер), НАТ/ИНТ. (смешанный)
-    const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(ИНТ-ЭКСТ\\.?|ИНТ\\.?|ЭКСТ\\.?|ПАВ\\.?|НАТ\\/ИНТ\\.?|НАТ\\.?)\\s+(.+)$`, 'i'))
+    const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(ИНТ-ЭКСТ\\.?|ИНТ-НАТ\\.?|ИНТ\\.?|ЭКСТ\\.?|ПАВ\\.?|НАТ\\/ИНТ\\.?|ИНТ\\/НАТ\\.?|НАТ\\.?)\\s+(.+)$`, 'i'))
     if (!headerMatch) return
 
     const sceneNumber = headerMatch[1]

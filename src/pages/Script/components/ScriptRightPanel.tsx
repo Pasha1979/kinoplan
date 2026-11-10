@@ -89,19 +89,19 @@ function useFormatValidation(
 
         const scenePattern =
           format === 'russian'
-            ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|ЭКСТ|ИНТ\\.\\/ЭКСТ|ИНТ\\.-ЭКСТ|ИНТ-ЭКСТ)\\.?\\s*.+$`, 'i')
+            ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|НАТ|ИНТ\\.\\/НАТ|ИНТ\\.-НАТ|ИНТ-НАТ)\\.?\\s*.+$`, 'i')
             : new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
 
         if (!scenePattern.test(content)) {
-          // Синонимы типа локации: НАТ = ЭКСТ (натура = экстерьер) и т.п.
-          // Пытаемся собрать авто-исправление, заменяя только токен типа
+          // Синонимы типа локации: ЭКСТ → НАТ (основное обозначение проекта)
           const LOCATION_SYNONYMS: Record<string, string> = {
-            'НАТ': 'ЭКСТ',
-            'НАТ.': 'ЭКСТ.',
-            'НАТУРА': 'ЭКСТ',
-            'НАТУРЫ': 'ЭКСТ',
-            'INT/EXT': 'ИНТ/ЭКСТ',
-            'I/E': 'ИНТ/ЭКСТ',
+            'ЭКСТ': 'НАТ',
+            'ЭКСТ.': 'НАТ.',
+            'ЭКСТЕРЬЕР': 'НАТ',
+            'INT/EXT': 'ИНТ/НАТ',
+            'I/E': 'ИНТ/НАТ',
+            'ИНТ/ЭКСТ': 'ИНТ/НАТ',
+            'ИНТ-ЭКСТ': 'ИНТ-НАТ',
           }
           const headMatch = content.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(\\S+)(.*)$`))
           const rawToken = headMatch?.[2] ?? ''
@@ -113,7 +113,7 @@ function useFormatValidation(
             category: 'format',
             message:
               format === 'russian'
-                ? 'Формат: НОМЕР. ИНТ/ЭКСТ. ЛОКАЦИЯ — ВРЕМЯ'
+                ? 'Формат: НОМЕР. ИНТ/НАТ. ЛОКАЦИЯ — ВРЕМЯ'
                 : 'Format: NUMBER. INT/EXT. LOCATION — TIME',
             suggestion: canAutoFix && headMatch
               ? `${headMatch[1]}. ${canonToken}${headMatch[3]}`

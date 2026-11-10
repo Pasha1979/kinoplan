@@ -64,7 +64,7 @@ function useFormatChecker({
         }
         
         const scenePattern = format === 'russian'
-          ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|ЭКСТ|ИНТ\\.\\/ЭКСТ|ИНТ\\.-ЭКСТ|ИНТ-ЭКСТ)\\.?\\s*.+$`, 'i')
+          ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|НАТ|ИНТ\\.\\/НАТ|ИНТ\\.-НАТ|ИНТ-НАТ)\\.?\\s*.+$`, 'i')
           : new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
           
         if (!scenePattern.test(content)) {
@@ -75,7 +75,7 @@ function useFormatChecker({
             severity: 'warning',
             rule: 'scene_format_invalid',
             message: format === 'russian'
-              ? 'Формат: НОМЕР. ИНТ/ЭКСТ. ЛОКАЦИЯ — ВРЕМЯ'
+              ? 'Формат: НОМЕР. ИНТ/НАТ. ЛОКАЦИЯ — ВРЕМЯ'
               : 'Format: NUMBER. INT/EXT. LOCATION — TIME',
             autoFixable: false,
           })
