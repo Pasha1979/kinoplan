@@ -1,6 +1,11 @@
 import { memo, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ArrowRight } from 'lucide-react'
+import { X, ArrowRight, Bold, Italic, Underline, Strikethrough, Wand2, Save, Undo2 } from 'lucide-react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../../../components/tiptap'
+import { SCENE_NUMBER } from '../../../utils/sceneNumber'
 import type { Scene } from '../../../types/scene'
 
 interface SceneDetailModalProps {
@@ -12,10 +17,12 @@ interface SceneDetailModalProps {
   /** «Перейти к сцене» — открывает одиночный редактор сцены */
   onEditScene?: (scene: Scene & { _episode?: number }) => void
   onUpdate?: (sceneId: string, patch: Partial<Scene>) => void
-  /** HTML-фрагмент текста сцены — встроенный просмотр со скроллом */
+  /** HTML-фрагмент текста сцены — встроенный редактор */
   sceneHtml?: string
   /** формат сценария — для стилистики блоков */
   scriptFormat?: 'russian' | 'hollywood' | 'custom'
+  /** сохранение отредактированного HTML-фрагмента сцены */
+  onSaveSceneHtml?: (html: string) => void
 }
 
 const STATUSES: Record<string, { l: string; c: string }> = {
@@ -36,7 +43,173 @@ function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate, sceneHtml, scriptFormat }: SceneDetailModalProps) {
+// Клавиши как в основном редакторе: Enter создаёт блок следующего типа
+const EnterFlow = Extension.create({
+  name: 'sceneEnterFlow',
+  addKeyboardShortcuts() {
+    return {
+      Enter: ({ editor }) => {
+        const type = editor.state.selection.$anchor.parent.type.name
+        const next: Record<string, string> = {
+          sceneHeader: 'sceneAction',
+          sceneCast: 'sceneAction',
+          sceneCharacter: 'sceneDialog',
+          sceneParenthetical: 'sceneDialog',
+          sceneDialog: 'sceneAction',
+          sceneTransition: 'sceneHeader',
+        }
+        const nxt = next[type]
+        if (!nxt) return false
+        return editor.chain().focus().splitBlock().setNode(nxt as never).run()
+      },
+    }
+  },
+})
+
+// Синонимы типа локации → каноническое НАТ (как в валидации)
+const LOCATION_SYNONYMS: Record<string, string> = {
+  'ЭКСТ': 'НАТ', 'ЭКСТ.': 'НАТ.', 'ЭКСТЕРЬЕР': 'НАТ',
+  'ИНТ/ЭКСТ': 'ИНТ/НАТ', 'ИНТ-ЭКСТ': 'ИНТ-НАТ', 'INT/EXT': 'ИНТ/НАТ', 'I/E': 'ИНТ/НАТ',
+}
+
+interface SceneTextEditorProps {
+  initialHtml: string
+  sceneNumber: string
+  scriptFormat?: 'russian' | 'hollywood' | 'custom'
+  isDark: boolean
+  onSaveHtml?: (html: string) => void
+}
+
+/* Встроенный редактор текста сцены с тулбаром форматирования */
+function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark, onSaveHtml }: SceneTextEditorProps) {
+  const textSecondary = isDark ? '#9ca3af' : '#6b7280'
+  const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+
+  const editor = useEditor({
+    enableInputRules: false,
+    enablePasteRules: false,
+    extensions: [
+      StarterKit.configure({
+        orderedList: false, bulletList: false, listItem: false,
+        codeBlock: false, blockquote: false, horizontalRule: false, hardBreak: false,
+      }),
+      SceneNode, SceneHeader, SceneCast, SceneAction,
+      SceneCharacter, SceneDialog, SceneParenthetical, SceneTransition,
+      EnterFlow,
+    ],
+    content: initialHtml,
+  })
+
+  // Трансформация регистра выделения (или всего документа, если выделения нет)
+  const transformCase = (mode: 'cap' | 'upper' | 'lower') => {
+    if (!editor) return
+    const { from, to, empty } = editor.state.selection
+    const apply = (t: string) =>
+      mode === 'upper' ? t.toUpperCase()
+      : mode === 'lower' ? t.toLowerCase()
+      : t.replace(/(^|[\s\p{P}])(\p{L})/gu, (_m, p1, p2) => p1 + p2.toUpperCase())
+    const tr = editor.state.tr
+    const rangeFrom = empty ? 0 : from
+    const rangeTo = empty ? editor.state.doc.content.size : to
+    editor.state.doc.nodesBetween(rangeFrom, rangeTo, (node, pos) => {
+      if (!node.isText || !node.text) return
+      const s = Math.max(rangeFrom, pos)
+      const e = Math.min(rangeTo, pos + node.text.length)
+      if (e <= s) return
+      tr.insertText(apply(node.text.slice(s - pos, e - pos)), s, e)
+    })
+    editor.view.dispatch(tr)
+  }
+
+  // Авто-исправление форматирования сцены — те же правила, что в валидации
+  const autoFix = () => {
+    if (!editor) return
+    const doc = new DOMParser().parseFromString(editor.getHTML(), 'text/html')
+    doc.querySelectorAll('[data-type]').forEach((el) => {
+      const t = el.getAttribute('data-type') || ''
+      const c = (el.textContent || '').trim()
+      if (t === 'scene-header' || t === 'sceneHeader') {
+        if (!new RegExp(`^${SCENE_NUMBER}\\.`).test(c)) {
+          el.textContent = `${sceneNumber}. ${c}`
+        } else {
+          const m = c.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(\\S+)(.*)$`))
+          const canon = m ? LOCATION_SYNONYMS[m[2]] ?? LOCATION_SYNONYMS[m[2].toUpperCase()] : undefined
+          if (canon && m) el.textContent = `${m[1]}. ${canon}${m[3]}`
+        }
+      }
+      if ((t === 'scene-character' || t === 'sceneCharacter') && /[а-яa-zё]/.test(c)) {
+        el.textContent = c.toUpperCase()
+      }
+      if ((t === 'scene-parenthetical' || t === 'sceneParenthetical') && !/^\(.*\)$/.test(c)) {
+        el.textContent = `(${c.replace(/[()]/g, '')})`
+      }
+      if ((t === 'scene-transition' || t === 'sceneTransition') && !/:$/.test(c)) {
+        el.textContent = `${c}:`
+      }
+    })
+    editor.commands.setContent(doc.body.innerHTML)
+  }
+
+  const save = () => { if (editor) onSaveHtml?.(editor.getHTML()) }
+
+  const TBtn = ({ active, title, onClick, children }: { active?: boolean; title: string; onClick: () => void; children: React.ReactNode }) => (
+    <button
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      title={title}
+      className="flex items-center justify-center rounded-md transition-all"
+      style={{
+        width: 26, height: 26,
+        background: active ? 'rgba(251,146,60,0.25)' : 'transparent',
+        color: active ? '#fb923c' : textSecondary,
+        border: active ? '1px solid rgba(251,146,60,0.4)' : '1px solid transparent',
+      }}
+    >
+      {children}
+    </button>
+  )
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-[10px] font-bold" style={{ color: textSecondary }}>ТЕКСТ СЦЕНЫ</div>
+        <div className="flex items-center gap-0.5">
+          <TBtn title="Жирный" active={editor?.isActive('bold')} onClick={() => editor?.chain().focus().toggleBold().run()}><Bold size={12} /></TBtn>
+          <TBtn title="Курсив" active={editor?.isActive('italic')} onClick={() => editor?.chain().focus().toggleItalic().run()}><Italic size={12} /></TBtn>
+          <TBtn title="Подчёркнутый" active={editor?.isActive('underline')} onClick={() => editor?.chain().focus().toggleUnderline().run()}><Underline size={12} /></TBtn>
+          <TBtn title="Зачёркнутый" active={editor?.isActive('strike')} onClick={() => editor?.chain().focus().toggleStrike().run()}><Strikethrough size={12} /></TBtn>
+          <span style={{ width: 6 }} />
+          <TBtn title="Первая заглавная" onClick={() => transformCase('cap')}><span className="text-[10px] font-bold">Аа</span></TBtn>
+          <TBtn title="ВСЕ ЗАГЛАВНЫЕ" onClick={() => transformCase('upper')}><span className="text-[10px] font-bold">АА</span></TBtn>
+          <TBtn title="все прописные" onClick={() => transformCase('lower')}><span className="text-[10px] font-bold">аа</span></TBtn>
+          <span style={{ width: 6 }} />
+          <TBtn title="Отменить" onClick={() => editor?.commands.undo()}><Undo2 size={12} /></TBtn>
+          <TBtn title="Авто-исправить форматирование" onClick={autoFix}><Wand2 size={12} /></TBtn>
+          <TBtn title="Сохранить сцену" onClick={save}><Save size={12} /></TBtn>
+        </div>
+      </div>
+      <div
+        className="rounded-lg overflow-y-auto"
+        style={{ maxHeight: 300, border: `1px solid ${border}` }}
+      >
+        <div
+          style={{
+            background: '#ffffff', color: '#1a1a1a',
+            fontFamily: '"Courier New", Courier, monospace',
+            fontSize: 12.5, padding: '16px 20px', minHeight: 80,
+          }}
+        >
+          <EditorContent
+            editor={editor}
+            className={`tiptap-editor ${scriptFormat === 'hollywood' ? 'format-hollywood' : 'format-russian'} outline-none`}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate, sceneHtml, scriptFormat, onSaveSceneHtml }: SceneDetailModalProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#1a1a33' : '#ffffff'
@@ -169,23 +342,16 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
             </div>
           </div>
 
-          {/* Текст сцены — встроенный просмотр со скроллом */}
+          {/* Текст сцены — встроенный редактор с тулбаром */}
           {sceneHtml ? (
-            <div>
-              <div className="text-[10px] font-bold mb-1.5" style={{ color: textSecondary }}>ТЕКСТ СЦЕНЫ</div>
-              <div
-                className={`tiptap-editor ${scriptFormat === 'hollywood' ? 'format-hollywood' : 'format-russian'} rounded-lg px-4 py-3 overflow-y-auto`}
-                style={{
-                  maxHeight: 300,
-                  background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
-                  border: `1px solid ${border}`,
-                  color: textPrimary,
-                  fontSize: 12,
-                  lineHeight: 1.6,
-                }}
-                dangerouslySetInnerHTML={{ __html: sceneHtml }}
-              />
-            </div>
+            <SceneTextEditor
+              key={scene.id}
+              initialHtml={sceneHtml}
+              sceneNumber={scene.number}
+              scriptFormat={scriptFormat}
+              isDark={isDark}
+              onSaveHtml={onSaveSceneHtml}
+            />
           ) : (
             <button
               onClick={() => onEditScene?.(scene)}

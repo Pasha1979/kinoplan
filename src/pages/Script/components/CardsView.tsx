@@ -37,6 +37,8 @@ interface CardsViewProps {
   contentsByEpisode?: Record<number, string>
   /** формат сценария — для верстки встроенного просмотра сцены */
   scriptFormat?: 'russian' | 'hollywood' | 'custom'
+  /** сохранение отредактированного текста сцены (HTML-фрагмент) */
+  onSaveSceneHtml?: (scene: SceneWithEp, html: string) => void
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -199,7 +201,7 @@ function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my
   return { d, mx: mid.x, my: mid.y - 8 }
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian' }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -1326,6 +1328,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
             return extractSceneHtml(contentsByEpisode[ep] || '', detail.number, Math.max(0, idx))
           })()}
           scriptFormat={scriptFormat}
+          onSaveSceneHtml={(html) => onSaveSceneHtml?.(detail, html)}
           isDark={isDark}
           onClose={() => setDetail(null)}
           onGoToScene={(id) => { setDetail(null); onSceneClick?.(id) }}

@@ -339,6 +339,16 @@ export default function ScriptPage() {
       .run()
   }, [editorInstance])
 
+  // Сохранение отредактированного текста сцены из модала карточек (встроенный редактор)
+  const handleSaveSceneHtml = useCallback((sc: Scene, html: string) => {
+    const owner = episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === sc.id))
+    if (!owner) return
+    const idx = owner.scenes!.findIndex((s) => s.id === sc.id)
+    const newContent = spliceSceneHtml(owner.content || '', sc.number, Math.max(0, idx), html)
+    updateScript(owner.id, { content: newContent })
+    if (owner.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(newContent)
+  }, [episodeScripts, currentScript?.id, editorInstance, updateScript])
+
   // «Пропустить» проблему валидации — сохраняется в сценарии
   const handleDismissIssue = useCallback((issueId: string) => {
     if (!currentScript?.id) return
@@ -615,6 +625,7 @@ export default function ScriptPage() {
             undoCount={undoCount}
             contentsByEpisode={contentByEp}
             scriptFormat={scriptFormat}
+            onSaveSceneHtml={handleSaveSceneHtml}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
