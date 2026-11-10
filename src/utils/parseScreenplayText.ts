@@ -6,6 +6,8 @@
  * сценарий из Word/Google Docs и получить правильное форматирование.
  */
 
+import { SCENE_NUMBER } from './sceneNumber'
+
 export type ScreenplayBlockType =
   | 'sceneHeader'
   | 'sceneCast'
@@ -20,7 +22,7 @@ export interface ScreenplayBlock {
   content: string
 }
 
-const HEADER_PATTERN = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.|НАТ\.)/i
+const HEADER_PATTERN = new RegExp(`^(${SCENE_NUMBER}\\.\\s*)?(ИНТ\\.|ЭКСТ\\.|ИНТ-ЭКСТ\\.|ПАВ\\.|НАТ\\.)`, 'i')
 
 const TRANSITION_PATTERN = /^(РАССВЕТ|ЗАТЕМНЕНИЕ|ПЕРЕХОД|СМЕНА|CUT TO|FADE IN|FADE OUT|DISSOLVE TO)$/i
 

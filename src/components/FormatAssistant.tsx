@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, Info, ChevronDown, ChevronUp, Wand2 } from 'lucide-react'
+import { SCENE_NUMBER } from '../utils/sceneNumber'
 
 type ErrorSeverity = 'error' | 'warning' | 'info'
 type ErrorRule = 
@@ -48,7 +49,7 @@ function useFormatChecker({
       // Проверка заголовка сцены
       // Поддерживаем обычные (1., 2.) и серийные (1-1., 1-2.) номера
       if (block.type === 'scene_header') {
-        const numberPattern = /^\d+(?:-\d+)?\./
+        const numberPattern = new RegExp(`^${SCENE_NUMBER}\\.`)
         if (!numberPattern.test(content)) {
           foundErrors.push({
             id: `err-${block.id}-num`,
@@ -63,8 +64,8 @@ function useFormatChecker({
         }
         
         const scenePattern = format === 'russian'
-          ? /^\d+(?:-\d+)?\.\s*(ИНТ|ЭКСТ|ИНТ\.\/ЭКСТ|ИНТ\.-ЭКСТ|ИНТ-ЭКСТ)\.?\s*.+$/i
-          : /^\d+(?:-\d+)?\.\s*(INT|EXT|INT\.\/EXT|I\/E)\.?\s*.+$/i
+          ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|ЭКСТ|ИНТ\\.\\/ЭКСТ|ИНТ\\.-ЭКСТ|ИНТ-ЭКСТ)\\.?\\s*.+$`, 'i')
+          : new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
           
         if (!scenePattern.test(content)) {
           foundErrors.push({

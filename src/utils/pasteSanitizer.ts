@@ -1,3 +1,5 @@
+import { SCENE_NUMBER } from './sceneNumber'
+
 /**
  * Sanitize HTML pasted from Word/Google Docs.
  * Removes styles, fonts, colors, classes, ids.
@@ -123,6 +125,6 @@ export function sanitizePlainText(text: string): string {
 export function isScreenplayContent(text: string): boolean {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
   return lines.some(l =>
-    /^(?:\d+(?:-\d+)?[\.\s]+)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ)[\.\s]/i.test(l)
+    new RegExp(`^(?:${SCENE_NUMBER}[\\.\\s]+)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ)[\\.\\s]`, 'i').test(l)
   )
 }

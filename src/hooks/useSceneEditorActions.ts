@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
+import { SCENE_NUMBER } from '../utils/sceneNumber'
 import type { TimingSystem } from '../store/scriptStore'
 
 interface SceneUpdateEntry {
@@ -75,7 +76,7 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
       if (found) return false
       if (node.type.name === 'sceneHeader') {
         const headerText = node.textContent
-        const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\./)
+        const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
         if (headerMatch) {
           const sceneNum = headerMatch[1]
           if (focusSceneId === sceneNum) {
@@ -207,7 +208,7 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
       if (sceneIndex >= scenes.length) return false
 
       const text = node.textContent
-      const headerMatch = text.match(/^(\d+(?:-\d+)?)\./)
+      const headerMatch = text.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
       if (!headerMatch) { sceneIndex++; return }
 
       const oldNumber = headerMatch[1]
@@ -216,7 +217,7 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
 
       if (oldNumber === newNumber) return
 
-      const newText = text.replace(/^(\d+(?:-\d+)?)\./, `${newNumber}.`)
+      const newText = text.replace(new RegExp(`^(${SCENE_NUMBER})\\.`), `${newNumber}.`)
       // pos = начало sceneHeader-узла, +1 = начало текстового содержимого
       changes.push({ from: pos + 1, to: pos + 1 + text.length, newText })
     })

@@ -1,5 +1,6 @@
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { calculateSceneTiming } from './sceneTiming'
+import { SCENE_NUMBER } from './sceneNumber'
 import { CHARS_PER_PAGE, MIN_SCENE_PAGES, MIN_SCENE_CHAR_COUNT } from '../constants/scriptConstants'
 import type { TimingSystem } from '../store/scriptStore'
 
@@ -66,7 +67,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
 
     // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ." или "2. ПАВ. Студия A утро."
     // Также поддерживаем FilmToolz: НАТ. (натура = экстерьер), НАТ/ИНТ. (смешанный)
-    const headerMatch = headerText.match(/^(\d+(?:-\d+)?)\.\s*(ИНТ-ЭКСТ\.?|ИНТ\.?|ЭКСТ\.?|ПАВ\.?|НАТ\/ИНТ\.?|НАТ\.?)\s+(.+)$/i)
+    const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(ИНТ-ЭКСТ\\.?|ИНТ\\.?|ЭКСТ\\.?|ПАВ\\.?|НАТ\\/ИНТ\\.?|НАТ\\.?)\\s+(.+)$`, 'i'))
     if (!headerMatch) return
 
     const sceneNumber = headerMatch[1]

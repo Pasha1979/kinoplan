@@ -22,6 +22,7 @@ import { parseScreenplayText, blocksToHtml } from '../utils/parseScreenplayText'
 import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/pasteSanitizer'
 import { createSearchPlugin } from './useScriptSearch'
 import { useMultiCursor } from './useMultiCursor'
+import { SCENE_NUMBER } from '../utils/sceneNumber'
 
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
@@ -60,7 +61,7 @@ function getNextSceneNumber(doc: PMNode): number {
   doc.descendants((node) => {
     if (node.type.name === 'sceneHeader') {
       const headerText = node.textContent.trim()
-      const match = headerText.match(/^(\d+(?:-\d+)?)\./)
+      const match = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
       if (match) {
         const numPart = match[1]
         const sceneNum = numPart.includes('-')
@@ -230,7 +231,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
     // --- Определение типа: шапка ---
     if (shouldDetectType) {
-      const headerPattern = /^(\d+(?:-\d+)?\.\s*)?(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.|НАТ\.)/i
+      const headerPattern = new RegExp(`^(${SCENE_NUMBER}\\.\\s*)?(ИНТ\\.|ЭКСТ\\.|ИНТ-ЭКСТ\\.|ПАВ\\.|НАТ\\.)`, 'i')
       if (headerPattern.test(textContent) && currentType !== 'sceneHeader') {
         editorInstance.chain().setNode('sceneHeader').command(({ tr }) => { tr.setMeta('addToHistory', false); return true }).run()
         return
@@ -1096,7 +1097,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       if (node.type.name !== 'sceneHeader') continue
 
       const headerText = node.textContent.trim()
-      const numMatch = headerText.match(/^(\d+(?:-\d+)?)\./)
+      const numMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
       const sceneNumber = numMatch ? numMatch[1] : '?'
 
       let castPos = -1

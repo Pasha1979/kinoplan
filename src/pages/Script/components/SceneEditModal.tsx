@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import { SCENE_NUMBER } from '../../../utils/sceneNumber'
 
 // Клавиши как в основном редакторе: Enter создаёт блок следующего типа
 const EnterFlow = Extension.create({
@@ -54,9 +55,11 @@ const isHeader = (el: Element) => {
 function findSceneEls(blocks: Element[], sceneNumber: string, fallbackIndex: number): { startEl: Element | null; endEl: Element | null } {
   const headers = blocks.filter((el) => isHeader(el))
   const num = sceneNumber.replace(/\./g, '').toLowerCase()
+  const numRe = new RegExp(`^(${SCENE_NUMBER})\\.`)
   let startEl: Element | null = null
   for (const el of headers) {
-    const headNum = (el.textContent || '').trim().split(/\s/)[0]?.replace(/\./g, '').toLowerCase()
+    const m = (el.textContent || '').trim().match(numRe)
+    const headNum = m ? m[1].replace(/\./g, '').toLowerCase() : ''
     if (headNum === num) { startEl = el; break }
   }
   if (!startEl && headers[fallbackIndex]) startEl = headers[fallbackIndex]

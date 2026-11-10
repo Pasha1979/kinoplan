@@ -17,6 +17,7 @@ import {
 import type { Scene } from '../../../types/scene'
 import type { Character } from '../../../store/scriptStore'
 import type { TimingSystem } from '../../../types/scene'
+import { SCENE_NUMBER } from '../../../utils/sceneNumber'
 
 type ErrorSeverity = 'error' | 'warning' | 'info'
 
@@ -66,9 +67,9 @@ function useFormatValidation(
       const content = block.content.trim()
 
       if (block.type === 'scene_header') {
-        const numMatch = content.match(/^(\d+(?:-\d+)?)\./)
+        const numMatch = content.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
         if (numMatch) lastSceneNum = numMatch[1]
-        const numberPattern = /^\d+(?:-\d+)?\./
+        const numberPattern = new RegExp(`^${SCENE_NUMBER}\\.`)
         if (!numberPattern.test(content)) {
           issues.push({
             id: `fmt-${block.id}-num`,
@@ -85,8 +86,8 @@ function useFormatValidation(
 
         const scenePattern =
           format === 'russian'
-            ? /^\d+(?:-\d+)?\.\s*(ИНТ|ЭКСТ|ИНТ\.\/ЭКСТ|ИНТ\.-ЭКСТ|ИНТ-ЭКСТ)\.?\s*.+$/i
-            : /^\d+(?:-\d+)?\.\s*(INT|EXT|INT\.\/EXT|I\/E)\.?\s*.+$/i
+            ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|ЭКСТ|ИНТ\\.\\/ЭКСТ|ИНТ\\.-ЭКСТ|ИНТ-ЭКСТ)\\.?\\s*.+$`, 'i')
+            : new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
 
         if (!scenePattern.test(content)) {
           issues.push({

@@ -1,4 +1,5 @@
 import { parseScreenplayText, blocksToHtml } from './parseScreenplayText'
+import { SCENE_NUMBER } from './sceneNumber'
 import type { ScreenplayBlock } from './parseScreenplayText'
 
 const TIME_WORDS = new Set([
@@ -11,7 +12,7 @@ const TRANSITION_WORDS = new Set([
   'CUT TO', 'FADE IN', 'FADE OUT', 'DISSOLVE TO',
 ])
 
-const HEADER_RE = /(\d+(?:-\d+)?\.\s*)?(ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\./i
+const HEADER_RE = new RegExp(`(${SCENE_NUMBER}\\.\\s*)?(ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.`, 'i')
 
 const TIME_WORD_RE = /(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)/i
 
@@ -146,7 +147,7 @@ export function splitMergedText(text: string): string {
   // 1. Перенос перед нумерованными шапками: "текст1. ИНТ." → "текст\n1. ИНТ."
   // И "текст3-2. ИНТ." → "текст\n3-2. ИНТ." (не разбиваем 3-2 на 3- и 2.)
   result = result.replace(
-    /([^\n\d\-])\s*(\d+(?:-\d+)?\.\s*(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\.)/gi,
+    new RegExp(`([^\\n\\d\\-])\\s*(${SCENE_NUMBER}\\.\\s*(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.)`, 'gi'),
     '$1\n$2',
   )
 
@@ -165,7 +166,7 @@ export function splitMergedText(text: string): string {
   // 5. Разделение шапки сцены от последующего контента после time word
   // С пробелом: "1. ИНТ. КВАРТИРА. ДЕНЬ ИВАН" → "1. ИНТ. КВАРТИРА. ДЕНЬ\nИВАН"
   result = result.replace(
-    /^((?:\d+(?:-\d+)?\.\s*)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\.[^\n]*?(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK))\s+([^\n]+)$/gim,
+    new RegExp(`^((?:${SCENE_NUMBER}\\.\\s*)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.[^\\n]*?(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK))\\s+([^\\n]+)$`, 'gim'),
     '$1\n$2',
   )
   // 5b. Без пробела: "ДЕНЬЛЕНА" → "ДЕНЬ\nЛЕНА" (time word слит с контентом)
