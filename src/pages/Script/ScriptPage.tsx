@@ -232,6 +232,11 @@ export default function ScriptPage() {
     if (from.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(fromContent)
     if (to.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(toContent)
   }, [episodeScripts, project?.type, currentScript?.id, editorInstance, updateScript])
+  // Контент скриптов по сериям — для встроенного просмотра сцены в модале карточек
+  const contentByEp = useMemo(
+    () => Object.fromEntries(episodeScripts.map((ep) => [ep.episodeNumber ?? 1, ep.content || ''])),
+    [episodeScripts],
+  )
   // Маркеры актов по сериям — для линий-разделителей на доске карточек
   const actMarkersByEp = useMemo(
     () => Object.fromEntries(
@@ -608,6 +613,8 @@ export default function ScriptPage() {
             onLinksChange={handleLinksChange}
             onUndo={handleUndo}
             undoCount={undoCount}
+            contentsByEpisode={contentByEp}
+            scriptFormat={scriptFormat}
           />
         ) : ['breakdown', 'development', 'plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>

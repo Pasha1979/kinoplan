@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff, ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import type { Scene, SceneGroup, SceneLink } from '../../../types/scene'
 import SceneDetailModal from './SceneDetailModal'
+import { extractSceneHtml } from './sceneHtmlOps'
 
 type SceneWithEp = Scene & { _episode?: number }
 
@@ -32,6 +33,10 @@ interface CardsViewProps {
   sceneLinks?: SceneLink[]
   /** запись изменённых связей обратно в скрипт */
   onLinksChange?: (links: SceneLink[]) => void
+  /** HTML-контент скриптов по сериям — для встроенного просмотра сцены в модале */
+  contentsByEpisode?: Record<number, string>
+  /** формат сценария — для верстки встроенного просмотра сцены */
+  scriptFormat?: 'russian' | 'hollywood' | 'custom'
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -194,7 +199,7 @@ function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my
   return { d, mx: mid.x, my: mid.y - 8 }
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian' }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -1315,6 +1320,12 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         <SceneDetailModal
           scene={detail}
           synopsis={syn(detail)}
+          sceneHtml={(() => {
+            const ep = detail._episode ?? 1
+            const idx = scenes.filter((s) => (s._episode ?? 1) === ep).findIndex((s) => s.id === detail.id)
+            return extractSceneHtml(contentsByEpisode[ep] || '', detail.number, Math.max(0, idx))
+          })()}
+          scriptFormat={scriptFormat}
           isDark={isDark}
           onClose={() => setDetail(null)}
           onGoToScene={(id) => { setDetail(null); onSceneClick?.(id) }}

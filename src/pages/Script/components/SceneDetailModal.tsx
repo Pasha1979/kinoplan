@@ -12,6 +12,10 @@ interface SceneDetailModalProps {
   /** «Перейти к сцене» — открывает одиночный редактор сцены */
   onEditScene?: (scene: Scene & { _episode?: number }) => void
   onUpdate?: (sceneId: string, patch: Partial<Scene>) => void
+  /** HTML-фрагмент текста сцены — встроенный просмотр со скроллом */
+  sceneHtml?: string
+  /** формат сценария — для стилистики блоков */
+  scriptFormat?: 'russian' | 'hollywood' | 'custom'
 }
 
 const STATUSES: Record<string, { l: string; c: string }> = {
@@ -32,7 +36,7 @@ function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate }: SceneDetailModalProps) {
+function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate, sceneHtml, scriptFormat }: SceneDetailModalProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#1a1a33' : '#ffffff'
@@ -165,14 +169,32 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
             </div>
           </div>
 
-          {/* Переход к сцене — одиночный редактор */}
-          <button
-            onClick={() => onEditScene?.(scene)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all"
-            style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
-          >
-            <ArrowRight size={12} /> Перейти к сцене
-          </button>
+          {/* Текст сцены — встроенный просмотр со скроллом */}
+          {sceneHtml ? (
+            <div>
+              <div className="text-[10px] font-bold mb-1.5" style={{ color: textSecondary }}>ТЕКСТ СЦЕНЫ</div>
+              <div
+                className={`tiptap-editor ${scriptFormat === 'hollywood' ? 'format-hollywood' : 'format-russian'} rounded-lg px-4 py-3 overflow-y-auto`}
+                style={{
+                  maxHeight: 300,
+                  background: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
+                  border: `1px solid ${border}`,
+                  color: textPrimary,
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                }}
+                dangerouslySetInnerHTML={{ __html: sceneHtml }}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => onEditScene?.(scene)}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all"
+              style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
+            >
+              <ArrowRight size={12} /> Перейти к сцене
+            </button>
+          )}
         </div>
       </div>
     </div>,
