@@ -13,7 +13,6 @@ const TAG_PAGES: Record<string, string> = {
   'Статистика': 'statistics',
   'Титул': 'title',
   'Карточки': 'cards',
-  'Статистика': 'statistics',
   'Разработка': 'development',
   'Валидация': 'text',
 }
