@@ -25,12 +25,14 @@ interface DevelopmentViewProps {
   episodesCount?: number
   development: ProjectDevelopment | undefined
   onDevelopmentChange: (dev: ProjectDevelopment) => void
+  /** клик по сцене из выборки — переход в текст */
+  onSceneClick?: (sceneId: string) => void
 }
 
 const uid = () => `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const emptyDev: ProjectDevelopment = { characters: [], locations: [], synopsis: {}, folders: [] }
 
-function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange }: DevelopmentViewProps) {
+function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick }: DevelopmentViewProps) {
   const [tab, setTab] = useState<'chars' | 'locs' | 'synopsis' | 'episodes'>('chars')
   const [editChar, setEditChar] = useState<DevCharacter | 'new' | null>(null)
   const [editLoc, setEditLoc] = useState<DevLocation | 'new' | null>(null)
@@ -43,6 +45,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [dragItemId, setDragItemId] = useState<string | null>(null)
+  const [scenesList, setScenesList] = useState<{ title: string; color: string; sceneIds: string[] } | null>(null)
 
   const dev = development ?? emptyDev
   const folders = dev.folders ?? []
@@ -356,6 +359,18 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                         </div>
                         {c.description && <p className="text-[11px] leading-snug mb-2 line-clamp-3" style={{ color: textSecondary }}>{c.description}</p>}
                         {c.arc && <p className="text-[10px] italic leading-snug line-clamp-2" style={{ color: '#fb923c' }}>↳ {c.arc}</p>}
+                        {charSceneCount(c) > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setScenesList({ title: c.name, color: t.c, sceneIds: charSceneIds(c) })
+                            }}
+                            className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-semibold transition-all"
+                            style={{ background: `${t.c}18`, color: t.c }}
+                          >
+                            Показать сцены →
+                          </button>
+                        )}
                       </div>
                     )
                   })}
@@ -409,6 +424,18 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                         </div>
                       </div>
                       {l.description && <p className="text-[11px] leading-snug line-clamp-3" style={{ color: textSecondary }}>{l.description}</p>}
+                      {locSceneCount(l) > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setScenesList({ title: l.name, color: '#34d399', sceneIds: locSceneIds(l) })
+                          }}
+                          className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-semibold transition-all"
+                          style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399' }}
+                        >
+                          Показать сцены →
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -531,6 +558,20 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
             )}
           </div>
         </>
+      )}
+
+      {/* ── Выборка сцен персонажа/локации ── */}
+      {scenesList && (
+        <ScenesListModal
+          title={scenesList.title}
+          color={scenesList.color}
+          isDark={isDark}
+          sceneList={scenesList.sceneIds
+            .map((id) => scenes.find((s) => s.id === id))
+            .filter(Boolean) as Array<Scene & { _episode?: number }>}
+          onClose={() => setScenesList(null)}
+          onSceneClick={onSceneClick}
+        />
       )}
 
       {/* ── Модал персонажа ── */}
@@ -919,6 +960,60 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
           >
             {isNew ? 'Создать' : 'Сохранить'}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Модал выборки сцен — все сцены в порядке сценария ── */
+function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClick }: {
+  title: string
+  color: string
+  sceneList: Array<Scene & { _episode?: number }>
+  isDark: boolean
+  onClose: () => void
+  onSceneClick?: (sceneId: string) => void
+}) {
+  const textPrimary = isDark ? '#e5e7eb' : '#111827'
+  const textSecondary = isDark ? '#9ca3af' : '#6b7280'
+  const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+  const durTotal = sceneList.reduce((a, s) => a + (s.manualDuration ?? s.duration ?? 0), 0)
+
+  return (
+    <div className="fixed inset-0 z-[75] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)' }} onClick={onClose}>
+      <div
+        className="rounded-2xl flex flex-col overflow-hidden"
+        style={{ background: isDark ? '#1a1a33' : '#fff', border: `1px solid ${color}55`, borderTop: `3px solid ${color}`, width: 'min(560px, 94vw)', maxHeight: '85vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${border}` }}>
+          <div>
+            <span className="text-sm font-bold" style={{ color }}>Сцены — {title}</span>
+            <div className="text-[10px]" style={{ color: textSecondary }}>{sceneList.length} сцен · {Math.round(durTotal / 60)} мин</div>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10"><X size={15} style={{ color: textSecondary }} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          {sceneList.length === 0 && (
+            <p className="text-xs text-center py-6" style={{ color: textSecondary }}>Сцены не найдены — импортируйте из текста</p>
+          )}
+          {sceneList.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => { onSceneClick?.(s.id); onClose() }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all"
+              style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = `${color}18`)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc')}
+            >
+              <span className="text-xs font-bold shrink-0" style={{ color }}>С{s._episode ?? 1}-{s.number}</span>
+              <span className="flex-1 text-[11px] truncate" style={{ color: textPrimary }}>
+                {s.type || ''} {s.location || ''}{s.sublocation ? `.${s.sublocation}` : ''} — {s.time || ''}
+              </span>
+              <span className="text-[9px] shrink-0" style={{ color: textSecondary }}>{s.pages?.toFixed(1)} стр</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

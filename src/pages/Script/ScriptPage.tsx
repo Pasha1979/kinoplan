@@ -636,6 +636,10 @@ export default function ScriptPage() {
             isSerial={project?.type === 'serial'}
             episodesCount={project?.episodesCount || 8}
             development={project?.development}
+            onSceneClick={(id) => {
+              handleSceneClickRouted(id)
+              setActiveTab('text')
+            }}
             onDevelopmentChange={(dev) => {
               if (project?.id) {
                 useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })
