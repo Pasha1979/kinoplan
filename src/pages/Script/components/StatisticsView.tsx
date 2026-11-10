@@ -1,8 +1,9 @@
-import { memo, useState, Fragment, useRef, useMemo } from 'react'
+import { memo, useState, Fragment, useRef, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
+  Move, Scaling, Settings2, RotateCcw, Check,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
 import { useScriptStore } from '../../../store/scriptStore'
@@ -123,7 +124,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     updateScript(currentScriptId, { actMarkers: next })
   }
   // Макет финализирован — позиции из APPLIED_LAYOUT + сохранённых правок
-  const [layout] = useState<Record<string, LayoutEntry>>(() => {
+  const [layout, setLayout] = useState<Record<string, LayoutEntry>>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('statsLayout') || '{}')
       // Помержим поключно: w/h из дефолта сохраняются, если в сохранённом их нет
@@ -133,21 +134,102 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
       return merged
     } catch { return { ...APPLIED_LAYOUT } }
   })
+  const [editMode, setEditMode] = useState(false)
+  // Автосохранение макета в localStorage
+  useEffect(() => {
+    try { localStorage.setItem('statsLayout', JSON.stringify(layout)) } catch { /* noop */ }
+  }, [layout])
   const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
-  // Обёртка блока — применяет позицию из макета
+  // Обёртка блока — применяет позицию из макета; в editMode — drag/resize
   const LayoutBox = ({ k, children }: { k: string; children: React.ReactNode }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
+    const boxRef = useRef<HTMLDivElement>(null)
+    const dragRef = useRef<{ mode: 'move' | 'resize'; startX: number; startY: number; orig: LayoutEntry } | null>(null)
+
+    const onHandleDown = (mode: 'move' | 'resize') => (e: React.PointerEvent) => {
+      if (!editMode) return
+      e.preventDefault()
+      e.stopPropagation()
+      const el = boxRef.current
+      const orig: LayoutEntry = {
+        dx: s.dx, dy: s.dy,
+        w: s.w ?? el?.offsetWidth,
+        h: s.h ?? el?.offsetHeight,
+      }
+      dragRef.current = { mode, startX: e.clientX, startY: e.clientY, orig }
+      const onMove = (ev: PointerEvent) => {
+        const d = dragRef.current
+        if (!d) return
+        const ddx = ev.clientX - d.startX
+        const ddy = ev.clientY - d.startY
+        setLayout((prev) => {
+          const cur = prev[k] ?? { dx: 0, dy: 0 }
+          if (d.mode === 'move') {
+            return { ...prev, [k]: { ...cur, dx: d.orig.dx + ddx, dy: d.orig.dy + ddy } }
+          }
+          return {
+            ...prev,
+            [k]: {
+              ...cur,
+              w: Math.max(160, (d.orig.w ?? 200) + ddx),
+              h: Math.max(56, (d.orig.h ?? 120) + ddy),
+            },
+          }
+        })
+      }
+      const onUp = () => {
+        dragRef.current = null
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+    }
+
     return (
       <div
+        ref={boxRef}
         style={{
           transform: `translate(${s.dx}px, ${s.dy}px)`,
           width: s.w,
           height: s.h,
           overflow: s.h ? 'hidden' : 'visible',
+          position: 'relative',
+          zIndex: editMode ? 20 : undefined,
+          outline: editMode ? `1px dashed ${isDark ? 'rgba(251,146,60,0.5)' : 'rgba(234,88,12,0.45)'}` : undefined,
+          borderRadius: 12,
         }}
       >
         {children}
+        {editMode && (
+          <>
+            <button
+              onPointerDown={onHandleDown('move')}
+              title="Переместить блок"
+              className="absolute flex items-center justify-center rounded-md transition-colors"
+              style={{
+                top: 6, right: 6, width: 22, height: 22, zIndex: 30,
+                background: 'rgba(249,115,22,0.9)', color: '#fff', cursor: 'grab',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+              }}
+            >
+              <Move size={12} />
+            </button>
+            <button
+              onPointerDown={onHandleDown('resize')}
+              title="Изменить размер"
+              className="absolute flex items-center justify-center rounded-md transition-colors"
+              style={{
+                bottom: 6, right: 6, width: 22, height: 22, zIndex: 30,
+                background: 'rgba(99,102,241,0.9)', color: '#fff', cursor: 'nwse-resize',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+              }}
+            >
+              <Scaling size={12} />
+            </button>
+          </>
+        )}
       </div>
     )
   }
@@ -371,6 +453,35 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 ))}
               </div>
             )}
+          </div>
+          <div className="flex items-center gap-2">
+            {editMode && (
+              <>
+                <button
+                  onClick={() => { setLayout({ ...APPLIED_LAYOUT }); try { localStorage.removeItem('statsLayout') } catch { /* noop */ } }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                  style={{ color: textSecondary, border: `1px solid ${border}` }}
+                  title="Вернуть стандартную раскладку"
+                >
+                  <RotateCcw size={12} /> Сбросить
+                </button>
+                <span className="text-[10px] px-2 py-1 rounded-md" style={{ color: '#fb923c', background: 'rgba(251,146,60,0.12)' }}>
+                  Тяните за оранжевую точку — перемещение, за синюю — размер
+                </span>
+              </>
+            )}
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+              style={
+                editMode
+                  ? { background: '#f97316', color: '#fff' }
+                  : { color: textSecondary, border: `1px solid ${border}` }
+              }
+            >
+              {editMode ? <Check size={12} /> : <Settings2 size={12} />}
+              {editMode ? 'Готово' : 'Настроить'}
+            </button>
           </div>
         </div>
 
