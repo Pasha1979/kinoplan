@@ -42,7 +42,7 @@ const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   's-heatmap': { dx: 12.8, dy: -734.4, w: 1420, h: 856.4 },
   's-chars': { dx: -123.2, dy: -582.4, w: 372, h: 459.8 },
   's-locs': { dx: -229.6, dy: -583.2, w: 383.6, h: 459 },
-  's-intext': { dx: 1143.2, dy: -513.6, w: 287.2, h: 130 },
+  's-intext': { dx: 1143.2, dy: -524.8, w: 290.4, h: 140.4 },
   's-tod': { dx: 329.6, dy: -523.2, w: 309.4, h: 86.4 },
   's-dialog': { dx: 165.6, dy: 54.4, w: 283, h: 161.6 },
   's-tempo': { dx: 375.2, dy: -752.8, w: 759.6, h: 167.2 },
@@ -50,7 +50,7 @@ const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   'm-pages': { dx: -152, dy: 0.8, w: 180, h: 82.4 },
   'm-time': { dx: -318.4, dy: 1.6, w: 185.6, h: 83.2 },
   'm-chars': { dx: -471.2, dy: 0.8, w: 171.2, h: 86.8 },
-  'm-series': { dx: 1147.2, dy: 40, w: 282.2, h: 415.8 },
+  'm-series': { dx: 1144, dy: 38.4, w: 290.2, h: 415 },
 }
 
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount, episodeDuration }: StatisticsViewProps) {
