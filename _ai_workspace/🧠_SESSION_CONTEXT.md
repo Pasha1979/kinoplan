@@ -1,37 +1,17 @@
-# 🧠 Session Context — 2026-01-19
+# 🧠 Session Context — 2026-01-19 (вечер)
 
-## Что сделано в этой сессии
-- Умная нумерация с литерами (1-9-А → 1-6-А, каскад Б→А): sceneNumbering.ts + tests
-- Навигатор-подтверждение undo + deep-copy снимка + onBeforeSceneReorder мост (pushUndo)
-- Валидация: скобки в имени персонажа (ОРТЕГА (ЗА КАДРОМ)) не ошибка
-- ПКМ по проблеме валидации → попап «было→станет» + Исправить (onApplyFix реально правит)
-- Синонимы локаций: НАТ — КАНОНИЧЕСКОЕ обозначение; ЭКСТ → авто-фикс в НАТ; обновлены все паттерны (sceneExtractor, smartFormat, parseScreenplayText, pasteSanitizer, FormatAssistant, ScriptRightPanel)
-- «Исправить все (N)» кнопка в валидации
-- «Пропустить» проблему: X на строке + кнопка в попапе, persisted в script.dismissedIssues
-- Статистика: режим «Настроить» — свободное перемещение/resize блоков (LayoutBox handles), persist localStorage 'statsLayout_dev', кнопка «Экспорт» JSON → APPLIED_LAYOUT дефолт. Две итерации применены.
-- Карточки: модал деталя — встроенный просмотр сцены → потом встроенный РЕДАКТОР (Tiptap, тулбар B/I/U/S, Аа/АА/аа, авто-формат wand, save) + onSaveSceneHtml splice в контент скрипта
+## Главное достижение сессии: вкладка «РАЗРАБОТКА» (каркас + полировка)
+- types/development.ts: DevCharacter, DevLocation, DevSynopsis, DevFolder, DevRelationship
+- Project.development — данные на уровне проекта (updateProject)
+- DevelopmentView.tsx: 4 под-вкладки (Персонажи/Локации/Синопсис/Посерийник-заглушка)
+- Персонажи: типы Главная/Второго плана/Эпизодическая/Типаж, биография, драматургия (желание/страх/секрет/конфликт), отношения, метрики
+- Локации: описание/атмосфера/реквизит
+- Импорт из текста (cast+реплики, шапки), папки-сайдбар (ПКМ «В папку»), фильтры, сортировки (6 видов + драг)
+- «Показать все сцены» в модалах → аккордеон-выборка с встроенным SceneTextEditor (экспортирован из SceneDetailModal)
+- DevSelect — фирменный dropdown, dev-modal CSS hover-глоу в index.css
+- Помощь: раздел «Разработка» (9 tips), маппинг TAG_PAGES
 
-## Активная задача
-Вкладка «Разработка» — обсуждаем макет:
-- 4 под-вкладки: Персонажи (Библия), Локации, Синопсис, Посерийник (заглушка — отдельный заход)
-- Данные на уровне ПРОЕКТА (персонаж общий на сериал); персонажи «на серию» — возможно тег episode
-- Ручной ввод + авто-импорт из текста (cast/dialogCharacters, локации из шапок)
-- Фирменный стиль: тёмные карточки + оранжевые акценты, мини-вкладки как в правой панели
-- Сейчас вкладка — заглушка «В разработке» в ScriptPage (~line 612)
+## Сегодня также (ранее): валидация ПКМ-попап, НАТ канон, пропуск проблем (dismissedIssues), литерная нумерация 1-9-А, undo навигатора, статистика «Настроить» (dev-tool!), встроенный редактор сцены в карточках
 
-## Файлы
-- src/store/scriptStore.ts — Character{id,projectId,name,description?,sceneCount} + characters на Script; Script.dismissedIssues добавлено
-- src/pages/Script/components/SceneDetailModal.tsx — встроенный SceneTextEditor (тулбар + autoFix + save)
-- src/pages/Script/components/ScriptRightPanel.tsx — попап fix, dismiss, fix-all, LOCATION_SYNONYMS (ЭКСТ→НАТ)
-- src/pages/Script/components/StatisticsView.tsx — editMode LayoutBox + exportLayout + APPLIED_LAYOUT v2
-- src/pages/Script/components/CardsView.tsx — contentsByEpisode, onSaveSceneHtml props
-- src/pages/Script/ScriptPage.tsx — handleSaveSceneHtml, handleDismissIssue, contentByEp
-
-## Сервера
-- dev: http://localhost:5173 · prod: https://kinoplan.vercel.app
-- git push → GitHub auto-deploy
-
-## Уроки
-- useMemo/hooks НЕЛЬЗЯ в JSX-ternary — выносить наверх
-- structuredClone для снимков undo (не ссылки)
-- Навигатор-reorder раньше обходил undo-стек — теперь onBeforeSceneReorder мост
+## Статус: всё закоммичено и запушено (последний a36e89b)
+## Завтра: продолжить «Разработку» или новая вкладка — решит пользователь
