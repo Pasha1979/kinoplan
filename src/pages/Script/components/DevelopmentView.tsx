@@ -715,7 +715,7 @@ function SynopsisTab({ syn, onChange, isDark, textPrimary, textSecondary, fieldB
         onChange={(e) => onChange({ ...syn, [field]: e.target.value })}
         rows={rows}
         placeholder={hint}
-        className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none"
+        className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none"
         style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }}
       />
     </div>
@@ -767,8 +767,14 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
 
   const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
-      <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>{label}</div>
+      <div className="text-[11px] font-semibold mb-1.5" style={{ color: textSecondary }}>{label}</div>
       {children}
+    </div>
+  )
+  const S = ({ l }: { l: string }) => (
+    <div className="flex items-center gap-2 pt-1">
+      <span className="text-[10px] font-bold tracking-widest" style={{ color: '#fb923c' }}>{l}</span>
+      <div className="flex-1 h-px" style={{ background: 'rgba(249,115,22,0.25)' }} />
     </div>
   )
 
@@ -785,9 +791,9 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10"><X size={15} style={{ color: textSecondary }} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Имя + тип + серия */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             <F label="ИМЯ">
               <input value={name} onChange={(e) => setName(e.target.value.toUpperCase())} placeholder="ИВАН"
                 className="w-full rounded-lg px-3 py-2 text-sm outline-none font-bold"
@@ -835,61 +841,64 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
           )}
 
           {/* Биография */}
-          <div className="grid grid-cols-2 gap-3">
+          <S l="БИОГРАФИЯ" />
+          <div className="grid grid-cols-2 gap-4">
             <F label="ВОЗРАСТ">
               <input value={age} onChange={(e) => setAge(e.target.value)} placeholder="35"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="ПРОФЕССИЯ">
               <input value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Следователь"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="ВНЕШНОСТЬ">
               <input value={appearance} onChange={(e) => setAppearance(e.target.value)} placeholder="Высокий, шрам…"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="ХАРАКТЕР">
               <input value={temperament} onChange={(e) => setTemperament(e.target.value)} placeholder="Вспыльчивый, циничный…"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
           </div>
           <F label="ПРОТОТИП / РЕФЕРЕНС">
             <input value={prototype} onChange={(e) => setPrototype(e.target.value)} placeholder="Реальный человек или актёр на взгляд…"
-              className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+              className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
           </F>
 
           <F label="ОПИСАНИЕ">
             <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Кто он, драматическая функция, характер…"
-              className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+              className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
           </F>
 
           {/* Драматургия */}
-          <div className="grid grid-cols-2 gap-3">
+          <S l="ДРАМАТУРГИЯ" />
+          <div className="grid grid-cols-2 gap-4">
             <F label="ЖЕЛАНИЕ / ЦЕЛЬ">
               <textarea value={desire} onChange={(e) => setDesire(e.target.value)} rows={2} placeholder="Чего хочет…"
-                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
                 style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="СТРАХ / СЛАБОСТЬ">
               <textarea value={fear} onChange={(e) => setFear(e.target.value)} rows={2} placeholder="Что мешает…"
-                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
                 style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="СЕКРЕТ">
               <textarea value={secret} onChange={(e) => setSecret(e.target.value)} rows={2} placeholder="Что скрывает…"
-                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
                 style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="КОНФЛИКТ">
               <textarea value={conflict} onChange={(e) => setConflict(e.target.value)} rows={2} placeholder="С кем/с чем борется…"
-                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
                 style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
           </div>
 
           {/* Отношения с другими персонажами */}
-          <F label="ОТНОШЕНИЯ">
+          <S l="ОТНОШЕНИЯ" />
+          <div>
             <div className="space-y-2">
               {rels.map((r) => (
                 <div key={r.id} className="flex items-center gap-2">
@@ -921,11 +930,11 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
                 <Plus size={11} /> Добавить связь
               </button>
             </div>
-          </F>
+          </div>
 
           <F label="АРКА (откуда → куда)">
             <textarea value={arc} onChange={(e) => setArc(e.target.value)} rows={3} placeholder="Из труса — в героя…"
-              className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+              className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
           </F>
 
@@ -1023,7 +1032,7 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
           <div>
             <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ОПИСАНИЕ</div>
             <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Характер, особенности…"
-              className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+              className="w-full rounded-lg px-3 py-2.5 text-[13px] resize-none outline-none leading-relaxed"
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
           </div>
 
@@ -1031,12 +1040,12 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>АТМОСФЕРА / ТОН</div>
               <input value={atmosphere} onChange={(e) => setAtmosphere(e.target.value)} placeholder="Мрачная, уютная…"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </div>
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>КЛЮЧЕВОЙ РЕКВИЗИТ</div>
               <input value={props_} onChange={(e) => setProps_(e.target.value)} placeholder="Письменный стол, портрет…"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </div>
           </div>
 
