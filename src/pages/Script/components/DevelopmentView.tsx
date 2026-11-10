@@ -990,7 +990,7 @@ function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClic
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10"><X size={15} style={{ color: textSecondary }} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 flex flex-col">
           {sceneList.length === 0 && (
             <p className="text-xs text-center py-6" style={{ color: textSecondary }}>Сцены не найдены — импортируйте из текста</p>
           )}
@@ -1000,7 +1000,7 @@ function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClic
             const epIdx = epScenes.findIndex((x) => x.id === s.id)
             const html = contentsByEpisode[ep] ? extractSceneHtml(contentsByEpisode[ep], s.number, Math.max(0, epIdx)) : ''
             return (
-              <div key={s.id}>
+              <div key={s.id} className={openId === s.id ? 'flex-1 flex flex-col min-h-[400px]' : ''}>
                 <button
                   onClick={() => setOpenId(openId === s.id ? null : s.id)}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all"
@@ -1025,13 +1025,14 @@ function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClic
                   <span className="text-[9px]" style={{ color }}>{openId === s.id ? '▲' : '▼'}</span>
                 </button>
                 {openId === s.id && html && (
-                  <div className="mt-1 mb-1 px-2 pb-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#fff' }}>
+                  <div className="mt-1 flex-1 overflow-y-auto px-2 pb-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#fff' }}>
                     <SceneTextEditor
                       key={s.id}
                       initialHtml={html}
                       sceneNumber={s.number}
                       scriptFormat={scriptFormat}
                       isDark={isDark}
+                      maxHeight={2000}
                       onSaveHtml={(h) => onSaveSceneHtml?.(s, h)}
                     />
                   </div>

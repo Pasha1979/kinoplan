@@ -78,10 +78,11 @@ interface SceneTextEditorProps {
   scriptFormat?: 'russian' | 'hollywood' | 'custom'
   isDark: boolean
   onSaveHtml?: (html: string) => void
+  maxHeight?: number
 }
 
 /* Встроенный редактор текста сцены с тулбаром форматирования */
-export function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark, onSaveHtml }: SceneTextEditorProps) {
+export function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark, onSaveHtml, maxHeight }: SceneTextEditorProps) {
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
 
@@ -190,7 +191,7 @@ export function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark
       </div>
       <div
         className="rounded-lg overflow-y-auto"
-        style={{ maxHeight: 300, border: `1px solid ${border}` }}
+        style={{ maxHeight: maxHeight ?? 300, border: `1px solid ${border}` }}
       >
         <div
           style={{
