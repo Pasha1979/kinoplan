@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   Wand2,
+  X,
 } from 'lucide-react'
 import type { Scene } from '../../../types/scene'
 import type { Character } from '../../../store/scriptStore'
@@ -47,6 +48,10 @@ interface ScriptRightPanelProps {
   onApplyFix?: (issue: ValidationIssue) => void
   /** Клик по ошибке → переход к сцене */
   onIssueClick?: (issue: ValidationIssue) => void
+  /** ID пропущенных автором проблем валидации */
+  dismissedIssueIds?: string[]
+  /** Пропустить проблему (скрыть осознанно) */
+  onDismissIssue?: (issueId: string) => void
   // Scene & character quality
   scenes: Scene[]
   characters: Character[]
@@ -342,6 +347,8 @@ function ScriptRightPanel({
   characters,
   timingSystem,
   onIssueClick,
+  dismissedIssueIds = [],
+  onDismissIssue,
 }: ScriptRightPanelProps) {
   const [activeTab, setActiveTab] = useState<'validation' | 'notes' | 'versions'>(
     'validation'
@@ -354,12 +361,13 @@ function ScriptRightPanel({
   const characterIssues = useCharacterValidation(characters)
   const timingIssues = useTimingValidation(scenes, timingSystem)
 
+  const dismissedSet = useMemo(() => new Set(dismissedIssueIds), [dismissedIssueIds])
   const allIssues = [
     ...formatIssues,
     ...sceneIssues,
     ...characterIssues,
     ...timingIssues,
-  ]
+  ].filter((i) => !dismissedSet.has(i.id))
 
   const errorCount = allIssues.filter((i) => i.severity === 'error').length
   const warningCount = allIssues.filter((i) => i.severity === 'warning').length
@@ -525,6 +533,21 @@ function ScriptRightPanel({
             </button>
           )}
         </div>
+        {onDismissIssue && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDismissIssue(issue.id)
+            }}
+            title="Пропустить — скрыть эту проблему"
+            className="shrink-0 p-1 rounded-md transition-all"
+            style={{ color: textSecondary }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#fb923c'; e.currentTarget.style.background = 'rgba(251,146,60,0.12)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = textSecondary; e.currentTarget.style.background = 'transparent' }}
+          >
+            <X size={12} />
+          </button>
+        )}
       </div>
     )
   }
@@ -703,9 +726,9 @@ function ScriptRightPanel({
           <Section
             icon={<FileText size={14} />}
             title="Форматирование"
-            count={formatIssues.length}
+            count={formatIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {formatIssues.map((issue) => (
+            {formatIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
               <IssueRow key={issue.id} issue={issue} />
             ))}
           </Section>
@@ -713,9 +736,9 @@ function ScriptRightPanel({
           <Section
             icon={<Film size={14} />}
             title="Сцены"
-            count={sceneIssues.length}
+            count={sceneIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {sceneIssues.map((issue) => (
+            {sceneIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
               <IssueRow key={issue.id} issue={issue} />
             ))}
           </Section>
@@ -723,9 +746,9 @@ function ScriptRightPanel({
           <Section
             icon={<Users size={14} />}
             title="Персонажи"
-            count={characterIssues.length}
+            count={characterIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {characterIssues.map((issue) => (
+            {characterIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
               <IssueRow key={issue.id} issue={issue} />
             ))}
           </Section>
@@ -733,9 +756,9 @@ function ScriptRightPanel({
           <Section
             icon={<Clock size={14} />}
             title="Хронометраж"
-            count={timingIssues.length}
+            count={timingIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {timingIssues.map((issue) => (
+            {timingIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
               <IssueRow key={issue.id} issue={issue} />
             ))}
           </Section>
@@ -859,7 +882,7 @@ function ScriptRightPanel({
 
                 {/* Кнопки */}
                 <div className="flex items-center gap-2 pt-1">
-                  {canFix ? (
+                  {canFix && (
                     <button
                       onClick={() => {
                         onApplyFix(issue)
@@ -873,7 +896,8 @@ function ScriptRightPanel({
                       <Wand2 size={13} />
                       Исправить
                     </button>
-                  ) : (
+                  )}
+                  {!canFix && (
                     <button
                       onClick={() => setFixPopup(null)}
                       className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold"
@@ -892,6 +916,20 @@ function ScriptRightPanel({
                     </button>
                   )}
                 </div>
+                {onDismissIssue && (
+                  <button
+                    onClick={() => {
+                      onDismissIssue(issue.id)
+                      setFixPopup(null)
+                    }}
+                    className="w-full mt-1.5 py-1.5 rounded-xl text-[11px] transition-all"
+                    style={{ color: textSecondary }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#fb923c'; e.currentTarget.style.background = 'rgba(251,146,60,0.08)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = textSecondary; e.currentTarget.style.background = 'transparent' }}
+                  >
+                    Пропустить — больше не показывать
+                  </button>
+                )}
               </div>
             </div>
           </>

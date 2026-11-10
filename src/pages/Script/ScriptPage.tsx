@@ -334,6 +334,14 @@ export default function ScriptPage() {
       .run()
   }, [editorInstance])
 
+  // «Пропустить» проблему валидации — сохраняется в сценарии
+  const handleDismissIssue = useCallback((issueId: string) => {
+    if (!currentScript?.id) return
+    const cur = currentScript.dismissedIssues || []
+    if (cur.includes(issueId)) return
+    updateScript(currentScript.id, { dismissedIssues: [...cur, issueId] })
+  }, [currentScript?.id, currentScript?.dismissedIssues, updateScript])
+
   // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -817,6 +825,8 @@ export default function ScriptPage() {
           format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
           enableAutoFix={enableAutoFix}
           onApplyFix={handleApplyIssueFix}
+          dismissedIssueIds={currentScript?.dismissedIssues || []}
+          onDismissIssue={handleDismissIssue}
           scenes={scenes}
           characters={scriptCharacters}
           timingSystem={currentScript?.timingSystem || 'page'}

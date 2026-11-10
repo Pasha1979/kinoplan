@@ -89,6 +89,8 @@ export interface Script {
   sceneGroups?: import('../types/scene').SceneGroup[]
   /** Связи между сценами на доске карточек (фаза 6 «Карточки») */
   sceneLinks?: import('../types/scene').SceneLink[]
+  /** ID проблем валидации, которые автор сознательно пропустил */
+  dismissedIssues?: string[]
 }
 
 export interface ScriptDraft {
