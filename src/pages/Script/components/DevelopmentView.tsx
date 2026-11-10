@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import type { Scene } from '../../../types/scene'
 import type {
-  DevCharacter, DevCharacterType, DevLocation, DevSynopsis, ProjectDevelopment,
+  DevCharacter, DevCharacterType, DevLocation, DevRelationship, DevRelationType, DevSynopsis, ProjectDevelopment,
 } from '../../../types/development'
 import { extractSceneHtml } from './sceneHtmlOps'
 import { SceneTextEditor } from './SceneDetailModal'
@@ -17,6 +17,11 @@ const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
   stock:     { l: 'Типаж',          c: '#a78bfa' },
 }
 const FOLDER_COLORS = ['#fb923c', '#818cf8', '#34d399', '#f59e0b', '#a78bfa', '#ef4444'] as const
+const REL_TYPES: Record<DevRelationType, string> = {
+  ally: 'Союзник', antagonist: 'Антагонист', family: 'Семья', love: 'Любовь',
+  friend: 'Друг', enemy: 'Враг', colleague: 'Коллега', boss: 'Начальник/подчинённый',
+  mentor: 'Наставник/ученик', rival: 'Соперник', other: 'Другое',
+}
 
 type SortBy = 'manual' | 'alpha' | 'appearance' | 'scenes' | 'duration' | 'type'
 
@@ -569,6 +574,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           isDark={isDark}
           scenes={scenes}
           charSceneIds={editChar === 'new' ? [] : charSceneIds(editChar)}
+          allCharacters={dev.characters}
           onClose={() => setEditChar(null)}
           onDelete={editChar === 'new' ? undefined : () => {
             const cid = (editChar as DevCharacter).id
@@ -724,10 +730,11 @@ function SynopsisTab({ syn, onChange, isDark, textPrimary, textSecondary, fieldB
 }
 
 /* ── Модал персонажа — расширенная ── */
-function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charSceneIds, onClose, onSave, onDelete, onShowScenes }: {
+function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charSceneIds, allCharacters, onClose, onSave, onDelete, onShowScenes }: {
   char: DevCharacter; isNew: boolean; isSerial?: boolean; episodesCount?: number; isDark: boolean
   scenes: Array<Scene & { _episode?: number }>
   charSceneIds: string[]
+  allCharacters: DevCharacter[]
   onClose: () => void; onSave: (c: DevCharacter) => void; onDelete?: () => void
   onShowScenes?: () => void
 }) {
@@ -736,6 +743,16 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
   const [desc, setDesc] = useState(char.description ?? '')
   const [arc, setArc] = useState(char.arc ?? '')
   const [ep, setEp] = useState<number | ''>(char.episodeTag ?? '')
+  const [age, setAge] = useState(char.age ?? '')
+  const [profession, setProfession] = useState(char.profession ?? '')
+  const [appearance, setAppearance] = useState(char.appearance ?? '')
+  const [temperament, setTemperament] = useState(char.temperament ?? '')
+  const [prototype, setPrototype] = useState(char.prototype ?? '')
+  const [desire, setDesire] = useState(char.desire ?? '')
+  const [fear, setFear] = useState(char.fear ?? '')
+  const [secret, setSecret] = useState(char.secret ?? '')
+  const [conflict, setConflict] = useState(char.conflict ?? '')
+  const [rels, setRels] = useState<DevRelationship[]>(char.relationships ?? [])
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
@@ -817,10 +834,93 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
             </div>
           )}
 
+          {/* Биография */}
+          <div className="grid grid-cols-2 gap-3">
+            <F label="ВОЗРАСТ">
+              <input value={age} onChange={(e) => setAge(e.target.value)} placeholder="35"
+                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+            <F label="ПРОФЕССИЯ">
+              <input value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Следователь"
+                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+            <F label="ВНЕШНОСТЬ">
+              <input value={appearance} onChange={(e) => setAppearance(e.target.value)} placeholder="Высокий, шрам…"
+                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+            <F label="ХАРАКТЕР">
+              <input value={temperament} onChange={(e) => setTemperament(e.target.value)} placeholder="Вспыльчивый, циничный…"
+                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+          </div>
+          <F label="ПРОТОТИП / РЕФЕРЕНС">
+            <input value={prototype} onChange={(e) => setPrototype(e.target.value)} placeholder="Реальный человек или актёр на взгляд…"
+              className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+          </F>
+
           <F label="ОПИСАНИЕ">
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={4} placeholder="Кто он, драматическая функция, характер…"
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Кто он, драматическая функция, характер…"
               className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+          </F>
+
+          {/* Драматургия */}
+          <div className="grid grid-cols-2 gap-3">
+            <F label="ЖЕЛАНИЕ / ЦЕЛЬ">
+              <textarea value={desire} onChange={(e) => setDesire(e.target.value)} rows={2} placeholder="Чего хочет…"
+                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+            <F label="СТРАХ / СЛАБОСТЬ">
+              <textarea value={fear} onChange={(e) => setFear(e.target.value)} rows={2} placeholder="Что мешает…"
+                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+            <F label="СЕКРЕТ">
+              <textarea value={secret} onChange={(e) => setSecret(e.target.value)} rows={2} placeholder="Что скрывает…"
+                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+            <F label="КОНФЛИКТ">
+              <textarea value={conflict} onChange={(e) => setConflict(e.target.value)} rows={2} placeholder="С кем/с чем борется…"
+                className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
+                style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </F>
+          </div>
+
+          {/* Отношения с другими персонажами */}
+          <F label="ОТНОШЕНИЯ">
+            <div className="space-y-2">
+              {rels.map((r) => (
+                <div key={r.id} className="flex items-center gap-2">
+                  <DevSelect
+                    value={r.type}
+                    onChange={(v) => setRels(rels.map((x) => x.id === r.id ? { ...x, type: v as DevRelationType } : x))}
+                    isDark={isDark}
+                    width={170}
+                    options={Object.entries(REL_TYPES).map(([v, l]) => ({ v, l }))}
+                  />
+                  <DevSelect
+                    value={r.targetId}
+                    onChange={(v) => setRels(rels.map((x) => x.id === r.id ? { ...x, targetId: v } : x))}
+                    isDark={isDark}
+                    placeholder="Персонаж…"
+                    options={allCharacters.filter((c) => c.id !== char.id).map((c) => ({ v: c.id, l: c.name }))}
+                  />
+                  <button onClick={() => setRels(rels.filter((x) => x.id !== r.id))} title="Удалить связь"
+                    className="p-1.5 rounded-lg transition-all hover:bg-white/10" style={{ color: textSecondary }}>
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setRels([...rels, { id: uid(), type: 'ally', targetId: allCharacters.find((c) => c.id !== char.id)?.id ?? '' }])}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium"
+                style={{ background: 'rgba(249,115,22,0.1)', color: '#fb923c', border: '1px dashed rgba(249,115,22,0.35)' }}
+              >
+                <Plus size={11} /> Добавить связь
+              </button>
+            </div>
           </F>
 
           <F label="АРКА (откуда → куда)">
@@ -851,7 +951,7 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
             )}
           </div>
           <button
-            onClick={() => { if (!name.trim()) return; onSave({ ...char, name: name.trim(), type, description: desc, arc, episodeTag: ep === '' ? undefined : ep }) }}
+            onClick={() => { if (!name.trim()) return; onSave({ ...char, name: name.trim(), type, description: desc, arc, episodeTag: ep === '' ? undefined : ep, age, profession, appearance, temperament, prototype, desire, fear, secret, conflict, relationships: rels }) }}
             className="px-5 py-2 rounded-lg text-xs font-bold"
             style={{ background: '#fb923c', color: '#fff', opacity: name.trim() ? 1 : 0.5 }}
             disabled={!name.trim()}
@@ -874,6 +974,8 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
 }) {
   const [name, setName] = useState(loc.name)
   const [desc, setDesc] = useState(loc.description ?? '')
+  const [atmosphere, setAtmosphere] = useState(loc.atmosphere ?? '')
+  const [props_, setProps_] = useState(loc.props ?? '')
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
@@ -920,9 +1022,22 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
 
           <div>
             <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ОПИСАНИЕ</div>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={4} placeholder="Характер, особенности, реквизит…"
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Характер, особенности…"
               className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none leading-relaxed"
               style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>АТМОСФЕРА / ТОН</div>
+              <input value={atmosphere} onChange={(e) => setAtmosphere(e.target.value)} placeholder="Мрачная, уютная…"
+                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>КЛЮЧЕВОЙ РЕКВИЗИТ</div>
+              <input value={props_} onChange={(e) => setProps_(e.target.value)} placeholder="Письменный стол, портрет…"
+                className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
+            </div>
           </div>
 
           {!isNew && locScenes.length > 0 && onShowScenes && (
@@ -945,7 +1060,7 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
             )}
           </div>
           <button
-            onClick={() => { if (!name.trim()) return; onSave({ ...loc, name: name.trim(), description: desc }) }}
+            onClick={() => { if (!name.trim()) return; onSave({ ...loc, name: name.trim(), description: desc, atmosphere, props: props_ }) }}
             className="px-5 py-2 rounded-lg text-xs font-bold"
             style={{ background: '#34d399', color: '#fff', opacity: name.trim() ? 1 : 0.5 }}
             disabled={!name.trim()}

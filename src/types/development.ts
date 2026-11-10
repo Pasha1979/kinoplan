@@ -2,6 +2,19 @@
 
 export type DevCharacterType = 'main' | 'secondary' | 'episodic' | 'stock'
 
+/** Тип отношения между персонажами */
+export type DevRelationType = 'ally' | 'antagonist' | 'family' | 'love' | 'friend' | 'enemy' | 'colleague' | 'boss' | 'mentor' | 'rival' | 'other'
+
+/** Отношение персонажа к другому персонажу библии */
+export interface DevRelationship {
+  id: string
+  type: DevRelationType
+  /** id целевого персонажа из библии */
+  targetId: string
+  /** комментарий к связи (например «старший брат») */
+  note?: string
+}
+
 export interface DevCharacter {
   id: string
   /** Имя персонажа — капслок, как в тексте (ИВАН, АННА-МАРИЯ) */
@@ -18,6 +31,26 @@ export interface DevCharacter {
   sceneIds?: string[]
   /** Ручной порядок при сортировке «драг» */
   order?: number
+  /** Возраст персонажа */
+  age?: string
+  /** Профессия/род занятий */
+  profession?: string
+  /** Внешность — для кастинга */
+  appearance?: string
+  /** Характер/темперамент */
+  temperament?: string
+  /** Прототип / референс (реальный человек, актёр) */
+  prototype?: string
+  /** Желание/цель персонажа */
+  desire?: string
+  /** Страх/слабость */
+  fear?: string
+  /** Секрет — что скрывает */
+  secret?: string
+  /** Центральный конфликт персонажа */
+  conflict?: string
+  /** Отношения с другими персонажами библии */
+  relationships?: DevRelationship[]
 }
 
 export interface DevLocation {
@@ -30,6 +63,10 @@ export interface DevLocation {
   sceneIds?: string[]
   /** Ручной порядок при сортировке «драг» */
   order?: number
+  /** Атмосфера/тон локации */
+  atmosphere?: string
+  /** Ключевой реквизит в сценах */
+  props?: string
 }
 
 export interface DevSynopsis {
