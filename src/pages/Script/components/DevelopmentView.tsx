@@ -781,7 +781,7 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)' }} onClick={onClose}>
       <div
-        className="rounded-2xl flex flex-col overflow-hidden"
+        className="dev-modal rounded-2xl flex flex-col overflow-hidden"
         style={{ background: isDark ? '#1a1a33' : '#fff', border: `1px solid rgba(249,115,22,0.35)`, borderTop: '3px solid #fb923c', width: 'min(680px, 94vw)', maxHeight: '88vh' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -999,7 +999,7 @@ function LocModal({ loc, isNew, isDark, scenes, locSceneIds, onClose, onSave, on
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)' }} onClick={onClose}>
       <div
-        className="rounded-2xl flex flex-col overflow-hidden"
+        className="dev-modal rounded-2xl flex flex-col overflow-hidden"
         style={{ background: isDark ? '#1a1a33' : '#fff', border: `1px solid rgba(52,211,153,0.35)`, borderTop: '3px solid #34d399', width: 'min(600px, 94vw)', maxHeight: '85vh' }}
         onClick={(e) => e.stopPropagation()}
       >

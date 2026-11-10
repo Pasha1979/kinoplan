@@ -513,3 +513,17 @@ body {
     display: none !important;
   }
 }
+
+/* Мягкое фирменное выделение полей во вкладке «Разработка» */
+.dev-modal input, .dev-modal textarea {
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.dev-modal input:hover, .dev-modal textarea:hover {
+  border-color: rgba(251,146,60,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(251,146,60,0.07);
+}
+.dev-modal input:focus, .dev-modal textarea:focus {
+  border-color: rgba(251,146,60,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(251,146,60,0.12);
+  outline: none;
+}
