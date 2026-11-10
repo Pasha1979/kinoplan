@@ -16,7 +16,7 @@ const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
 }
 const FOLDER_COLORS = ['#fb923c', '#818cf8', '#34d399', '#f59e0b', '#a78bfa', '#ef4444'] as const
 
-type SortBy = 'manual' | 'alpha' | 'appearance' | 'scenes' | 'duration'
+type SortBy = 'manual' | 'alpha' | 'appearance' | 'scenes' | 'duration' | 'type'
 
 interface DevelopmentViewProps {
   isDark: boolean
@@ -153,6 +153,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
       appearance: (a: DevCharacter, b: DevCharacter) => firstAppearance(charSceneIds(a)) - firstAppearance(charSceneIds(b)),
       scenes: (a: DevCharacter, b: DevCharacter) => charSceneCount(b) - charSceneCount(a),
       duration: (a: DevCharacter, b: DevCharacter) => durOf(charSceneIds(b)) - durOf(charSceneIds(a)),
+      type: (a: DevCharacter, b: DevCharacter) =>
+        (Object.keys(CHAR_TYPES).indexOf(a.type)) - (Object.keys(CHAR_TYPES).indexOf(b.type))
+        || a.name.localeCompare(b.name, 'ru'),
     }[sortBy]
     return [...list].sort(by)
   }, [dev.characters, search, typeFilter, epFilter, sortBy, folderFilter, charNamesInText, scenes, folders])
@@ -167,6 +170,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
       appearance: (a: DevLocation, b: DevLocation) => firstAppearance(locSceneIds(a)) - firstAppearance(locSceneIds(b)),
       scenes: (a: DevLocation, b: DevLocation) => locSceneCount(b) - locSceneCount(a),
       duration: (a: DevLocation, b: DevLocation) => durOf(locSceneIds(b)) - durOf(locSceneIds(a)),
+      type: (a: DevLocation, b: DevLocation) => a.name.localeCompare(b.name, 'ru'),
     }[sortBy]
     return [...list].sort(by)
   }, [dev.locations, search, sortBy, folderFilter, locNamesInText, scenes, folders])
@@ -265,6 +269,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                   { v: 'alpha', l: 'По алфавиту' },
                   { v: 'scenes', l: 'Больше сцен' },
                   { v: 'duration', l: 'Больше времени' },
+                  ...(tab === 'chars' ? [{ v: 'type', l: 'По типу роли' }] : []),
                   { v: 'manual', l: 'Вручную (драг)' },
                 ]}
               />
