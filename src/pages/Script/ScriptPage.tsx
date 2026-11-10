@@ -849,7 +849,7 @@ export default function ScriptPage() {
       </div>
 
       {/* Правая панель: валидация, заметки, версии — на статистике не нужна */}
-      {rightPanelOpen && !focusMode.isFocused && !['statistics', 'cards'].includes(activeTab) && (
+      {rightPanelOpen && !focusMode.isFocused && !['statistics', 'cards', 'development'].includes(activeTab) && (
         <ScriptRightPanel
           isDark={isDark}
           textPrimary={textPrimary}

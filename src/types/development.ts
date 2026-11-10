@@ -16,6 +16,8 @@ export interface DevCharacter {
   episodeTag?: number
   /** ID сцен, где персонаж реально появляется (авто-привязка из текста) */
   sceneIds?: string[]
+  /** Ручной порядок при сортировке «драг» */
+  order?: number
 }
 
 export interface DevLocation {
@@ -26,6 +28,8 @@ export interface DevLocation {
   description?: string
   /** ID сцен, где локация встречается (авто-привязка) */
   sceneIds?: string[]
+  /** Ручной порядок при сортировке «драг» */
+  order?: number
 }
 
 export interface DevSynopsis {
@@ -37,8 +41,22 @@ export interface DevSynopsis {
   notes?: string
 }
 
+/** Папка-контейнер для группировки персонажей/локаций (как группы в «Карточках») */
+export interface DevFolder {
+  id: string
+  name: string
+  color: string
+  /** 'chars' | 'locs' — для какой под-вкладки папка */
+  kind: 'chars' | 'locs'
+  /** ID элементов внутри папки */
+  itemIds: string[]
+  collapsed?: boolean
+}
+
 export interface ProjectDevelopment {
   characters: DevCharacter[]
   locations: DevLocation[]
   synopsis: DevSynopsis
+  /** Папки персонажей и локаций */
+  folders?: DevFolder[]
 }
