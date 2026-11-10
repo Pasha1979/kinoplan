@@ -980,7 +980,7 @@ function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClic
     <div className="fixed inset-0 z-[75] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)' }} onClick={onClose}>
       <div
         className="rounded-2xl flex flex-col overflow-hidden"
-        style={{ background: isDark ? '#1a1a33' : '#fff', border: `1px solid ${color}55`, borderTop: `3px solid ${color}`, width: 'min(560px, 94vw)', maxHeight: '85vh' }}
+        style={{ background: isDark ? '#1a1a33' : '#fff', border: `1px solid ${color}55`, borderTop: `3px solid ${color}`, width: 'min(860px, 95vw)', maxHeight: '92vh', height: 'min(860px, 92vh)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${border}` }}>
