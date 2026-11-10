@@ -93,6 +93,20 @@ function useFormatValidation(
             : new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
 
         if (!scenePattern.test(content)) {
+          // Синонимы типа локации: НАТ = ЭКСТ (натура = экстерьер) и т.п.
+          // Пытаемся собрать авто-исправление, заменяя только токен типа
+          const LOCATION_SYNONYMS: Record<string, string> = {
+            'НАТ': 'ЭКСТ',
+            'НАТ.': 'ЭКСТ.',
+            'НАТУРА': 'ЭКСТ',
+            'НАТУРЫ': 'ЭКСТ',
+            'INT/EXT': 'ИНТ/ЭКСТ',
+            'I/E': 'ИНТ/ЭКСТ',
+          }
+          const headMatch = content.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(\\S+)(.*)$`))
+          const rawToken = headMatch?.[2] ?? ''
+          const canonToken = LOCATION_SYNONYMS[rawToken] ?? LOCATION_SYNONYMS[rawToken.toUpperCase()]
+          const canAutoFix = format === 'russian' && !!canonToken
           issues.push({
             id: `fmt-${block.id}-fmt`,
             severity: 'warning',
@@ -101,7 +115,10 @@ function useFormatValidation(
               format === 'russian'
                 ? 'Формат: НОМЕР. ИНТ/ЭКСТ. ЛОКАЦИЯ — ВРЕМЯ'
                 : 'Format: NUMBER. INT/EXT. LOCATION — TIME',
-            autoFixable: false,
+            suggestion: canAutoFix && headMatch
+              ? `${headMatch[1]}. ${canonToken}${headMatch[3]}`
+              : undefined,
+            autoFixable: !!canAutoFix,
             content,
             lineNumber,
             sceneNumber: lastSceneNum,
@@ -347,6 +364,7 @@ function ScriptRightPanel({
   const errorCount = allIssues.filter((i) => i.severity === 'error').length
   const warningCount = allIssues.filter((i) => i.severity === 'warning').length
   const totalCount = allIssues.length
+  const fixableIssues = allIssues.filter((i) => i.autoFixable && i.suggestion && onApplyFix)
 
   /* ── Health score ── */
   const maxPossible = 20 // условный потолок
@@ -664,6 +682,22 @@ function ScriptRightPanel({
               )}
             </div>
           </div>
+
+          {/* Исправить всё */}
+          {fixableIssues.length > 0 && (
+            <button
+              onClick={() => fixableIssues.forEach((issue) => onApplyFix!(issue))}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(249,115,22,0.2), rgba(251,146,60,0.12))',
+                border: '1px solid rgba(249,115,22,0.4)',
+                color: '#fb923c',
+              }}
+            >
+              <Wand2 size={13} />
+              Исправить все ({fixableIssues.length})
+            </button>
+          )}
 
           {/* Sections */}
           <Section
