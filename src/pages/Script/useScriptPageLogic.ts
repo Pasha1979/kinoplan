@@ -4,6 +4,7 @@ import { useUiStore } from '../../store/uiStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
+import { renumberSceneNumbers } from '../../utils/sceneNumbering'
 import { useToastStore } from '../../store/toastStore'
 import type { ScriptFormat, TimingSystem, Scene } from '../../store/scriptStore'
 
@@ -240,14 +241,15 @@ export function useScriptPageLogic() {
     const [movedScene] = reordered.splice(fromIndex, 1)
     reordered.splice(toIndex, 0, movedScene)
 
-    // Перенумеровываем (номер серии берём из Script'а,
-    // а если его нет — из формата самих номеров «1-2», «1-3» → префикс «1»)
-    const seriesPrefix =
-      currentScript?.episodeNumber ??
-      reordered.find((s) => /^\d+-/.test(s.number))?.number.match(/^(\d+)-/)?.[1]
+    // Перенумеровываем с сохранением литерных суффиксов (1-9-А → 1-6-А и т.п.)
+    const newNumbers = renumberSceneNumbers(
+      reordered.map((s) => s.number),
+      project?.type === 'serial',
+      currentScript?.episodeNumber ?? 1,
+    )
     const renumberedScenes = reordered.map((scene, index) => ({
       ...scene,
-      number: seriesPrefix ? `${seriesPrefix}-${index + 1}` : (index + 1).toString(),
+      number: newNumbers[index],
       order: index,
     }))
 
@@ -263,7 +265,7 @@ export function useScriptPageLogic() {
     if (updateNumbersRef.current) {
       updateNumbersRef.current(renumberedScenes)
     }
-  }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber])
+  }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber, project?.type])
 
   // Клик по сцене в навигаторе → выделение + скролл редактора
   const handleSceneClick = useCallback((sceneId: string) => {
