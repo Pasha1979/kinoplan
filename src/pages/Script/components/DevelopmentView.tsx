@@ -1,7 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import {
   Users, MapPin, FileText, ListTree, Plus, Trash2, Sparkles, X,
-  Search, FolderPlus, Folder, ArrowUpDown,
+  Search, FolderPlus, Folder, ArrowUpDown, ChevronDown,
 } from 'lucide-react'
 import type { Scene } from '../../../types/scene'
 import type {
@@ -253,42 +253,43 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                 />
                 {search && <button onClick={() => setSearch('')}><X size={11} style={{ color: textSecondary }} /></button>}
               </div>
-              <div className="flex items-center gap-1 rounded-lg px-2 py-1" style={{ background: fieldBg, border: `1px solid ${border}` }}>
-                <ArrowUpDown size={11} style={{ color: textSecondary }} />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortBy)}
-                  className="bg-transparent outline-none text-xs"
-                  style={{ color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}
-                >
-                  <option value="appearance">По появлению</option>
-                  <option value="alpha">По алфавиту</option>
-                  <option value="scenes">Больше сцен</option>
-                  <option value="duration">Больше времени</option>
-                  <option value="manual">Вручную (драг)</option>
-                </select>
-              </div>
+              <DevSelect
+                value={sortBy}
+                onChange={(v) => setSortBy(v as SortBy)}
+                isDark={isDark}
+                width={170}
+                icon={<ArrowUpDown size={11} style={{ color: textSecondary }} />}
+                options={[
+                  { v: 'appearance', l: 'По появлению' },
+                  { v: 'alpha', l: 'По алфавиту' },
+                  { v: 'scenes', l: 'Больше сцен' },
+                  { v: 'duration', l: 'Больше времени' },
+                  { v: 'manual', l: 'Вручную (драг)' },
+                ]}
+              />
               {tab === 'chars' && (
-                <select
+                <DevSelect
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as DevCharacterType | 'all')}
-                  className="rounded-lg px-2.5 py-1.5 text-xs outline-none"
-                  style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}
-                >
-                  <option value="all">Все типы</option>
-                  {Object.entries(CHAR_TYPES).map(([v, t]) => <option key={v} value={v}>{t.l}</option>)}
-                </select>
+                  onChange={(v) => setTypeFilter(v as DevCharacterType | 'all')}
+                  isDark={isDark}
+                  width={150}
+                  options={[
+                    { v: 'all', l: 'Все типы' },
+                    ...Object.entries(CHAR_TYPES).map(([v, t]) => ({ v, l: t.l })),
+                  ]}
+                />
               )}
               {tab === 'chars' && isSerial && (
-                <select
-                  value={epFilter}
-                  onChange={(e) => setEpFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                  className="rounded-lg px-2.5 py-1.5 text-xs outline-none"
-                  style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}
-                >
-                  <option value="all">Все серии</option>
-                  {Array.from({ length: episodesCount || 8 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>Серия {n}</option>)}
-                </select>
+                <DevSelect
+                  value={String(epFilter)}
+                  onChange={(v) => setEpFilter(v === 'all' ? 'all' : Number(v))}
+                  isDark={isDark}
+                  width={130}
+                  options={[
+                    { v: 'all', l: 'Все серии' },
+                    ...Array.from({ length: episodesCount || 8 }, (_, i) => ({ v: String(i + 1), l: `Серия ${i + 1}` })),
+                  ]}
+                />
               )}
             </div>
           )}
@@ -575,6 +576,72 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   )
 }
 
+/* ── Фирменный выпадающий список ── */
+function DevSelect({ value, options, onChange, isDark, icon, width, placeholder }: {
+  value: string
+  options: Array<{ v: string; l: string }>
+  onChange: (v: string) => void
+  isDark: boolean
+  icon?: React.ReactNode
+  width?: number | string
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const textPrimary = isDark ? '#f1f5f9' : '#111827'
+  const textSecondary = isDark ? '#9ca3af' : '#6b7280'
+  const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+  const fieldBg = isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5'
+  const cur = options.find((o) => o.v === value)
+  return (
+    <div className="relative" style={{ width: width ?? '100%' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-left transition-all"
+        style={{
+          background: fieldBg,
+          border: `1px solid ${open ? 'rgba(251,146,60,0.5)' : border}`,
+          color: cur ? textPrimary : textSecondary,
+        }}
+      >
+        {icon}
+        <span className="flex-1 truncate">{cur ? cur.l : (placeholder ?? '—')}</span>
+        <ChevronDown size={11} style={{ color: textSecondary, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[80]" onClick={() => setOpen(false)} />
+          <div
+            className="absolute z-[85] mt-1 w-full rounded-xl py-1 overflow-hidden"
+            style={{
+              background: isDark ? '#1b1b30' : '#fff',
+              border: `1px solid ${isDark ? 'rgba(251,146,60,0.3)' : 'rgba(234,88,12,0.25)'}`,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
+              maxHeight: 240, overflowY: 'auto',
+            }}
+          >
+            {options.map((o) => (
+              <button
+                key={o.v}
+                onClick={() => { onChange(o.v); setOpen(false) }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left transition-all"
+                style={{
+                  color: o.v === value ? '#fb923c' : textPrimary,
+                  background: o.v === value ? 'rgba(251,146,60,0.12)' : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (o.v !== value) e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = o.v === value ? 'rgba(251,146,60,0.12)' : 'transparent' }}
+              >
+                <span className="flex-1 truncate">{o.l}</span>
+                {o.v === value && <span style={{ color: '#fb923c' }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 /* ── Пустое состояние ── */
 function Empty({ text, isDark }: { text: string; isDark: boolean }) {
   return (
@@ -667,20 +734,24 @@ function CharModal({ char, isNew, isSerial, episodesCount, isDark, scenes, charS
                 style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }} />
             </F>
             <F label="ТИП">
-              <select value={type} onChange={(e) => setType(e.target.value as DevCharacterType)}
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-                style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}>
-                {Object.entries(CHAR_TYPES).map(([v, t]) => <option key={v} value={v}>{t.l}</option>)}
-              </select>
+              <DevSelect
+                value={type}
+                onChange={(v) => setType(v as DevCharacterType)}
+                isDark={isDark}
+                options={Object.entries(CHAR_TYPES).map(([v, t]) => ({ v, l: t.l }))}
+              />
             </F>
             {isSerial ? (
               <F label="СЕРИЯ">
-                <select value={ep === '' ? '' : ep} onChange={(e) => setEp(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-                  style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}>
-                  <option value="">Весь проект</option>
-                  {Array.from({ length: episodesCount || 8 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>Серия {n}</option>)}
-                </select>
+                <DevSelect
+                  value={ep === '' ? '' : String(ep)}
+                  onChange={(v) => setEp(v === '' ? '' : Number(v))}
+                  isDark={isDark}
+                  options={[
+                    { v: '', l: 'Весь проект' },
+                    ...Array.from({ length: episodesCount || 8 }, (_, i) => ({ v: String(i + 1), l: `Серия ${i + 1}` })),
+                  ]}
+                />
               </F>
             ) : <div />}
           </div>
