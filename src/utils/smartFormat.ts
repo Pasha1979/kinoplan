@@ -12,6 +12,15 @@ const TRANSITION_WORDS = new Set([
   'CUT TO', 'FADE IN', 'FADE OUT', 'DISSOLVE TO',
 ])
 
+// CAPS-слова — акценты действия/звука, НЕ имена персонажей.
+// Без стоп-листа «ВЗРЫВ» на отдельной строке превращался в героя.
+const NON_CHARACTER_WORDS = new Set([
+  'ВЗРЫВ', 'ВЫСТРЕЛ', 'ВЫСТРЕЛЫ', 'КРИК', 'КРИКИ', 'СМЕХ', 'ГРОХОТ', 'ГРОМ',
+  'ЗВОНОК', 'СИРЕНА', 'ТИШИНА', 'ТИТР', 'ТИТРЫ', 'ОГОНЬ', 'ДЫМ',
+  'УДАР', 'УДАРЫ', 'ШУМ', 'ГУЛ', 'СКРИП', 'ГУДОК', 'СТУК', 'ЗВУК',
+  'BOOM', 'CRASH', 'BANG', 'SOUND', 'SILENCE',
+])
+
 const HEADER_RE = new RegExp(`(${SCENE_NUMBER}\\.\\s*)?(ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.`, 'i')
 
 const TIME_WORD_RE = /(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)/i
@@ -54,6 +63,7 @@ function tryMatchCharacter(words: string[], startIdx: number): { name: string; e
   if (name.length < 2 || name.length > 30) return null
   if (TIME_WORDS.has(name.toUpperCase())) return null
   if (TRANSITION_WORDS.has(name.toUpperCase())) return null
+  if (NON_CHARACTER_WORDS.has(name.toUpperCase())) return null
 
   // Должен быть текст после имени
   if (endIdx + 1 >= words.length) return null
@@ -101,6 +111,7 @@ function tryMatchCharacterLoose(words: string[], startIdx: number): { name: stri
   if (name.length < 2 || name.length > 30) return null
   if (TIME_WORDS.has(name.toUpperCase())) return null
   if (TRANSITION_WORDS.has(name.toUpperCase())) return null
+  if (NON_CHARACTER_WORDS.has(name.toUpperCase())) return null
 
   return { name, endIdx }
 }
@@ -258,7 +269,8 @@ export function splitMergedText(text: string): string {
       withoutExt.length >= 2 && withoutExt.length <= 30 &&
       /^[А-ЯЁA-Z\s\-']+$/.test(withoutExt) &&
       !TIME_WORDS.has(trimmed.toUpperCase()) &&
-      !TRANSITION_WORDS.has(trimmed.toUpperCase())
+      !TRANSITION_WORDS.has(trimmed.toUpperCase()) &&
+      !NON_CHARACTER_WORDS.has(withoutExt.toUpperCase())
     ) {
       // Персонаж — без пустой строки после (диалог идёт сразу)
       // Но добавляем пустую строку перед если предыдущая не пустая
