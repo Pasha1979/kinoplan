@@ -310,7 +310,7 @@ export default function HomePage() {
   }
 
   const handleDelete = async (id: string) => {
-    await projectService.deleteProject(id)
+    await projectService.deleteProjectWithUndo(id)
   }
 
   const handleDuplicate = async (project: Project) => {

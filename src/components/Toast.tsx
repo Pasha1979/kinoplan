@@ -27,6 +27,14 @@ export default function Toast() {
         >
           {TOAST_ICONS[toast.type]}
           <span className="text-sm text-white">{toast.message}</span>
+          {toast.action && (
+            <button
+              onClick={() => { toast.action!.onClick(); removeToast(toast.id) }}
+              className="ml-1 px-2 py-0.5 text-xs font-medium rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              {toast.action.label}
+            </button>
+          )}
           <button
             onClick={() => removeToast(toast.id)}
             className="ml-2 text-gray-400 hover:text-white transition-colors"

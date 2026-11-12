@@ -290,6 +290,51 @@ export const projectService = {
     }
   },
 
+  // Удаление с возможностью отмены: снапшот → удаление → тост «Отменить» (10 сек)
+  async deleteProjectWithUndo(projectId: string, signal?: AbortSignal): Promise<void> {
+    const proj = useNormalizedProjectStore.getState().projects[projectId]
+    const normScenes = useNormalizedProjectStore.getState().scenes
+    const scenesSnapshot = Object.values(normScenes).filter((s) => s.projectId === projectId)
+    const scriptState = useScriptStore.getState()
+    const scriptsSnapshot = scriptState.scripts.filter((s) => s.projectId === projectId)
+    const prevScriptId = scriptState.currentScriptId
+
+    // Снапшот черновиков редактора из localStorage
+    const draftSnapshot: Record<string, string> = {}
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(`kinoplan_draft_${projectId}`)) {
+          const v = localStorage.getItem(key)
+          if (v !== null) draftSnapshot[key] = v
+        }
+      }
+    }
+
+    await this.deleteProject(projectId, signal)
+
+    useToastStore.getState().showToast(`Проект «${proj?.name ?? ''}» удалён`, 'info', 10000, {
+      label: 'Отменить',
+      onClick: () => {
+        if (proj) {
+          useNormalizedProjectStore.setState((state) => ({
+            projects: { ...state.projects, [proj.id]: proj },
+            scenes: {
+              ...state.scenes,
+              ...Object.fromEntries(scenesSnapshot.map((s) => [s.id, s])),
+            },
+          }))
+        }
+        scriptsSnapshot.forEach((s) => useScriptStore.getState().addScript(s))
+        if (prevScriptId) useScriptStore.setState({ currentScriptId: prevScriptId })
+        Object.entries(draftSnapshot).forEach(([k, v]) => {
+          try { localStorage.setItem(k, v) } catch { /* quota */ }
+        })
+        useToastStore.getState().showToast('Проект восстановлен', 'success')
+      },
+    })
+  },
+
   async updateScene(sceneId: string, updates: Partial<Scene>, signal?: AbortSignal): Promise<void> {
     try {
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)
