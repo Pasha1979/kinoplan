@@ -1,76 +1,14 @@
-# ФАЗА 1 — прогресс (resume state)
-Ветка: docs/brain-v4 | Снапшот: _archive/v3_snapshot/ | Реестры: _extracted/*.md
-ID-счётчики: I-54, R-79, T-22, D-40, Q-3, L-62
-Прочитано: 53/69. ОСТАЛОСЬ: ПЛАН_РАБОТ(85K), ОБСУЖДЕНИЕ_СЦЕНАРИЙ(140K), LESSONS_LEARNED(43K), ТЕКУЩИЙ_СТАТУС(38K), _archive/DASHBOARD(39K) + git-log маркер-проход + exemplars(код-эталоны)
-Осталось: файлы ниже + git log (756) + код TODO/FIXME + референсы png (2, не читать)
+# 📍 PROGRESS — Фаза 1 ЗАВЕРШЕНА (12.11.2026)
 
-## ФАЙЛЫ (69 шт)
-- [x] ./.windsurf/workflows/ai-brain.md
-- [x] ./.windsurf/workflows/deep-analysis.md
-- [x] ./.windsurf/workflows/start-session.md
-- [x] ./.windsurf/workflows/update-brain.md
-- [x] ./.windsurf/workflows/update-docs.md
-- [x] ./README.md
-- [x] ./_ai_workspace/ARCHITECTURE.md
-- [x] ./_ai_workspace/ARCHITECTURE_GUARDIAN.md
-- [x] ./_ai_workspace/DEEP_ANALYSIS_SYSTEM.md
-- [x] ./_ai_workspace/FORMAT_ASSISTANT_ПРАВИЛА.md
-- [x] ./_ai_workspace/LESSONS_LEARNED.md
-- [x] ./_ai_workspace/MY_COLLABORATION_GUIDE.md
-- [x] ./_ai_workspace/PROMPT.md
-- [x] ./_ai_workspace/ROADMAP/02-IMPLEMENTATION_PLAN.md
-- [x] ./_ai_workspace/_AI_WORKSPACE_GUIDE.md
-- [x] ./_ai_workspace/_archive/DASHBOARD_АРХИТЕКТУРА.md
-- [x] ./_ai_workspace/_archive/АУДИТ_ДОКУМЕНТАЦИИ_29.05.2026.md
-- [x] ./_ai_workspace/_archive/ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md
-- [x] ./_ai_workspace/_archive/💡_ЗАДЕЛЫ_И_ИДЕИ.md
-- [x] ./_ai_workspace/_archive/📋_AUDIT_REPORT.md
-- [x] ./_ai_workspace/АЛГОРИТМ_ПЛАНИРОВАНИЯ.md
-- [x] ./_ai_workspace/ВАРИАНТЫ_ИНТЕГРАЦИИ_РАЗБИВКИ.md
-- [x] ./_ai_workspace/ИДЕИ_МОДУЛЬ_СЦЕНАРИЙ.md
-- [x] ./_ai_workspace/ОБЩЕНИЕ.md
-- [x] ./_ai_workspace/ПЛАН_РАБОТ.md
-- [x] ./_ai_workspace/ПРАВИЛА_АРХИТЕКТУРЫ.md
-- [x] ./_ai_workspace/ПРИНЦИПЫ_ПОДМОДУЛЯ_СЦЕНАРИСТ.md
-- [x] ./_ai_workspace/РАБОЧИЙ_ПРОЦЕСС.md
-- [x] ./_ai_workspace/РЕЕСТРЫ_КОНТРОЛЯ.md
-- [x] ./_ai_workspace/РОССИЙСКИЙ_ФОРМАТ_СЦЕНАРИЯ.md
-- [x] ./_ai_workspace/СТРУКТУРА_ПЛАНИРОВАНИЯ.md
-- [x] ./_ai_workspace/СТРУКТУРА_СЦЕНАРИЯ.md
-- [x] ./_ai_workspace/УКАЗАНИЯ_И_НАПОМИНАНИЯ.md
-- [x] ./_ai_workspace/✅_PLAN_VALIDATION.md
-- [x] ./_ai_workspace/✅_ЧЕКЛИСТЫ.md
-- [x] ./_ai_workspace/🌟_PROJECT_EVOLUTION.md
-- [x] ./_ai_workspace/🎨_ДИЗАЙН_СИСТЕМА.md
-- [x] ./_ai_workspace/🏆_ЖУРНАЛ_УСПЕХОВ.md
-- [x] ./_ai_workspace/💡_IDEA_MANAGER.md
-- [x] ./_ai_workspace/💡_ЗАДЕЛЫ_ИДЕИ.md
-- [x] ./_ai_workspace/📈_МЕТРИКИ_ПРОГРЕССА.md
-- [x] ./_ai_workspace/📊_CONTEXT_LIMIT_TRACKER.md
-- [x] ./_ai_workspace/📊_ERROR_PREDICTION.md
-- [x] ./_ai_workspace/📊_METRICS.md
-- [x] ./_ai_workspace/📊_ТЕКУЩИЙ_СТАТУС.md
-- [x] ./_ai_workspace/📋_ОТЧЕТ_АУДИТА.md
-- [x] ./_ai_workspace/📋_РУКОВОДСТВА.md
-- [x] ./_ai_workspace/📐_UX_RESHENIYA.md
-- [x] ./_ai_workspace/📚_КАТАЛОГ_ФАЙЛОВ.md
-- [x] ./_ai_workspace/📜_ИСТОРИЯ_РЕФАКТОРИНГА.md
-- [x] ./_ai_workspace/📝_AUTO_DOCS.md
-- [x] ./_ai_workspace/📝_DIALOG_HISTORY.md
-- [x] ./_ai_workspace/📝_ЗАМЕЧАНИЯ_ПОЛЬЗОВАТЕЛЯ.md
-- [x] ./_ai_workspace/🔄_CONTEXT_SNAPSHOT.md
-- [x] ./_ai_workspace/🔍_LESSON_MATCHING.md
-- [x] ./_ai_workspace/🔍_АУДИТ_11.11.2026.md
-- [x] ./_ai_workspace/🔐_TOKEN_STORAGE.md
-- [x] ./_ai_workspace/🔔_CONTEXT_LOSS_DETECTION.md
-- [x] ./_ai_workspace/🔔_NOTIFICATIONS.md
-- [x] ./_ai_workspace/🔗_LINK_VALIDATOR.md
-- [x] ./_ai_workspace/🔗_НЕЙРОННЫЕ_СВЯЗИ.md
-- [x] ./_ai_workspace/🔬_АНАЛИЗ_КОНКУРЕНТОВ.md
-- [x] ./_ai_workspace/🤖_AUTO_FIX.md
-- [x] ./_ai_workspace/🤖_АКТИВНЫЙ_АССИСТЕНТ.md
-- [x] ./_ai_workspace/🧠_SESSION_CONTEXT.md
-- [x] ./_ai_workspace/🧠_SMART_PRIORITIES.md
-- [x] ./_ai_workspace/🧠_МОЗГ_ПРОЕКТА.md
-- [x] ./КАК_ПОЛЬЗОВАТЬСЯ_ПАМЯТЬЮ.md
-- [x] ./🔬_АНАЛИЗ_КОНКУРЕНТОВ_РЕДАКТОР.md
+**Статус:** 69/69 md-файлов + git log (756 комм., маркер-проход) + код (TODO/FIXME/заглушки) покрыты.
+**Дальше:** ФАЗА 2 — второй независимый проход по маркерам + выборочный аудит + сверка счётчиков. Ждёт «ок» пользователя.
+
+## Счётчики реестров
+- I: 86 (ideas.md) | R: 80 (rules.md) | T: 33 (tasks.md) | D: 51 (decisions.md) | Q: 4 (questions.md) | L: 61 (lessons.md)
+- PNG референсы (2): не прочитаны по протоколу — «содержимое не выдумывать»
+
+## Покрытие
+- [x] Все 69 md (см. coverage-log.md)
+- [x] git log: полный проход по маркерам (идея|help|правил|defer|отлож|отклон|vercel|report)
+- [x] Код: TODO/FIXME/HACK + заглушки/ComingSoon → T-33, R-80, D-51
+- [x] 2 png — помечены «не читать»
