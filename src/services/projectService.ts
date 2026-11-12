@@ -347,7 +347,10 @@ export const projectService = {
       if (validatedScripts && validatedScripts.length > 0) {
         const { addScript } = useScriptStore.getState()
         validatedScripts.forEach((s) => {
-          addScript({ ...s, id: crypto.randomUUID(), projectId: importedProject.id })
+          // data-scene-id в HTML — стабильные UUID сцен; регенерируем,
+          // чтобы не пересечься со сценами исходного проекта
+          const content = s.content?.replace(/data-scene-id="[^"]*"/g, () => `data-scene-id="${crypto.randomUUID()}"`)
+          addScript({ ...s, content, id: crypto.randomUUID(), projectId: importedProject.id })
         })
       }
 

@@ -1,4 +1,5 @@
 import { useEditor, type Editor } from '@tiptap/react'
+import { Plugin, PluginKey, type Transaction, type EditorState } from 'prosemirror-state'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -438,6 +439,30 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         name: 'multiCursorPlugin',
         addProseMirrorPlugins() {
           return [multiCursor.plugin]
+        },
+      }),
+      // Присваивает стабильный sceneId каждой шапке без него —
+      // при загрузке, вставке и создании новых сцен
+      Extension.create({
+        name: 'sceneIdAssign',
+        addProseMirrorPlugins() {
+          return [new Plugin({
+            key: new PluginKey('sceneIdAssign'),
+            appendTransaction: (transactions: readonly Transaction[], _oldState: EditorState, newState: EditorState) => {
+              if (!transactions.some((t) => t.docChanged)) return null
+              const tr = newState.tr
+              let touched = false
+              newState.doc.descendants((node, pos) => {
+                if (node.type.name === 'sceneHeader' && !node.attrs.sceneId) {
+                  tr.setNodeMarkup(pos, undefined, { ...node.attrs, sceneId: crypto.randomUUID() })
+                  touched = true
+                }
+              })
+              if (!touched) return null
+              tr.setMeta('addToHistory', false)
+              return tr
+            },
+          })]
         },
       }),
       StarterKit.configure({

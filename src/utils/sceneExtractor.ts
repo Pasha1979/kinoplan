@@ -58,6 +58,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     charCount: number
     dialogLines: number
     manualDuration?: number
+    sceneId?: string
   }> = []
 
   blockNodes.forEach((node, index) => {
@@ -71,6 +72,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     if (!headerMatch) return
 
     const sceneNumber = headerMatch[1]
+    const sceneId = (node.attrs.sceneId as string | null) ?? undefined
     const rawType = headerMatch[2].toUpperCase()
     let locationAndTime = headerMatch[3]
 
@@ -194,7 +196,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       }
     })
 
-    rawScenes.push({ sceneNumber, sceneType, location, sublocation, time, cast, dialogCharacters, charCount, dialogLines, manualDuration })
+    rawScenes.push({ sceneNumber, sceneId, sceneType, location, sublocation, time, cast, dialogCharacters, charCount, dialogLines, manualDuration })
   })
 
   // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
@@ -218,7 +220,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     const duration = raw.manualDuration ?? calculated.duration
 
     return {
-      id: `scene-${raw.sceneNumber}`,
+      id: raw.sceneId ?? `scene-${raw.sceneNumber}`,
       number: raw.sceneNumber,
       type: raw.sceneType,
       location: raw.location,

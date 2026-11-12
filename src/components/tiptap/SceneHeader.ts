@@ -7,6 +7,20 @@ export const SceneHeader = Node.create({
   content: 'inline*',
   defining: true,
   
+  addAttributes() {
+    return {
+      /** Стабильный UUID сцены — метаданные (синопсис, цвет, метки) ключуются им, а не номером */
+      sceneId: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-scene-id'),
+        renderHTML: (attributes) => {
+          if (!attributes.sceneId) return {}
+          return { 'data-scene-id': attributes.sceneId }
+        },
+      },
+    }
+  },
+
   parseHTML() {
     return [
       { tag: 'div[data-type="scene-header"]' },
