@@ -1,11 +1,11 @@
 # 🧠 Session Context — 11.11.2026
 
 ## Что было: закончили вкладку «Разработка» (библия персонажей/локаций/синопсис)
-## ⭐ Аудит-спринт: ПАКЕТ 1 ЗАКРЫТ ✅
-- UUID сцен: sceneId/data-scene-id на sceneHeader, плагин sceneIdAssign, экстрактор читает его, импорт регенерирует data-scene-id
-- Честный saveStatus: storageService.flushWrites + тост при ошибке записи
-- ДАЛЕЕ: Пакет 2 (event.code хоткеи, Ё, ДЕНЬ↔DAY, undo, caps-эвристика)
-- План: _ai_workspace/🔍_АУДИТ_11.11.2026.md
+## ⭐ Аудит-спринт: ПАКЕТЫ 1-3 ЗАКРЫТЫ ✅
+- П1: утечка проектов, полный экспорт, каскад, UUID сцен (sceneId/data-scene-id), честный saveStatus
+- П2: хоткеи event.code, Ё, ДЕНЬ↔DAY (wordBoundary), caps-стоп-лист, formatRules.ts канон
+- П3: честная пагинация без 0.77, scene-parenthetical в SCRIPT_STYLES, keep-with-next разрывы
+- ОСТАЛОСЬ: (ПРОДОЛЖЕНИЕ) на разрывах, A4-вид/Courier Prime — идеи, не фиксы
 
 ### Порядок на завтра:
 - ПАКЕТ 1 (критично): утечка currentScriptId → полный экспорт .kinoplan → каскадное удаление → UUID сцен → честный saveStatus
