@@ -189,3 +189,80 @@ describe('projectService.importProjectFromJSON', () => {
     ).rejects.toThrow('некорректный тип')
   })
 })
+
+describe('projectService round-trip: экспорт → импорт', () => {
+  const baseProject = (id: string): Project => ({
+    id, name: 'Сериал Тест', type: 'serial', status: 'preproduction',
+    dailyOutput: 3, shootingGroups: 1, plannedShootingDays: 30, cloudStorage: 'none',
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    scriptProgress: 50, castingProgress: 10, locationsProgress: 20, scheduleProgress: 0,
+    shotDays: 0, scheduledDays: 0, callSheetsSent: 0, callSheetsConfirmed: 0,
+    shootingDays: [], locationsTotal: 5, locationsApproved: 2, locationsInScout: 1,
+    shotMinutes: 0, totalMinutes: 0, conflicts: 0,
+  })
+
+  it('проект без скриптов: сцены идентичны, id регенерированы', async () => {
+    const proj = baseProject('p-rt')
+    const scene: Scene = {
+      id: 'sc-1', projectId: 'p-rt', number: '1', type: 'ИНТ',
+      location: 'КВАРТИРА', time: 'НОЧЬ', cast: ['ИВАН'], pages: 1.5,
+    } as Scene
+    useNormalizedProjectStore.setState({
+      projects: { 'p-rt': proj },
+      scenes: { 'sc-1': scene },
+    })
+
+    const json = await projectService.exportProjectToJSON('p-rt')
+    const imported = await projectService.importProjectFromJSON(json)
+
+    expect(imported.id).not.toBe('p-rt')
+    expect(imported.name).toBe('Сериал Тест')
+    expect(imported.type).toBe('serial')
+
+    const scenes = Object.values(useNormalizedProjectStore.getState().scenes)
+    const imp = scenes.find((x) => x.projectId === imported.id)
+    expect(imp).toBeDefined()
+    expect(imp!.number).toBe('1')
+    expect(imp!.location).toBe('КВАРТИРА')
+    expect(imp!.cast).toEqual(['ИВАН'])
+    expect(imp!.id).not.toBe('sc-1')
+    // Оригинал не затронут
+    expect(useNormalizedProjectStore.getState().scenes['sc-1']).toBeDefined()
+  })
+
+  it('проект с 3 сериями: скрипты и content идентичны, id новые, чужой проект не затирается', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    const proj = baseProject('p-rt2')
+    const other = baseProject('p-other')
+    other.name = 'Чужой проект'
+    useNormalizedProjectStore.setState({
+      projects: { 'p-rt2': proj, 'p-other': other },
+      scenes: {},
+    })
+
+    const mkScript = (n: number) => ({
+      id: `script-${n}`, projectId: 'p-rt2', title: `Серия ${n}`,
+      content: `<div data-scene-id="uuid-${n}">Текст серии ${n}</div>`,
+      scenes: [], format: 'russian', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    useScriptStore.setState({ scripts: [mkScript(1), mkScript(2), mkScript(3)] as never })
+
+    const json = await projectService.exportProjectToJSON('p-rt2')
+    const imported = await projectService.importProjectFromJSON(json)
+
+    const impScripts = useScriptStore.getState().scripts.filter((x) => x.projectId === imported.id)
+    expect(impScripts).toHaveLength(3)
+    impScripts.forEach((s, i) => {
+      expect(s.title).toBe(`Серия ${i + 1}`)
+      expect(s.id).not.toMatch(/^script-/)
+      // content идентичен с точностью до регенерированных data-scene-id
+      expect(s.content.replace(/data-scene-id="[^"]*"/g, 'X'))
+        .toBe('<div X>Текст серии ' + (i + 1) + '</div>')
+    })
+    // Чужой проект нетронут
+    const { projects } = useNormalizedProjectStore.getState()
+    expect(projects['p-other'].name).toBe('Чужой проект')
+    expect(projects['p-rt2'].name).toBe('Сериал Тест')
+    useScriptStore.setState({ scripts: [] })
+  })
+})
