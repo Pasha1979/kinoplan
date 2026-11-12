@@ -1,7 +1,11 @@
 # 🧠 Session Context — 11.11.2026
 
 ## Что было: закончили вкладку «Разработка» (библия персонажей/локаций/синопсис)
-## ⭐ ЗАВТРА: аудит-спринт! План: _ai_workspace/🔍_АУДИТ_11.11.2026.md
+## ⭐ Аудит-спринт: ПАКЕТ 1 ЗАКРЫТ ✅
+- UUID сцен: sceneId/data-scene-id на sceneHeader, плагин sceneIdAssign, экстрактор читает его, импорт регенерирует data-scene-id
+- Честный saveStatus: storageService.flushWrites + тост при ошибке записи
+- ДАЛЕЕ: Пакет 2 (event.code хоткеи, Ё, ДЕНЬ↔DAY, undo, caps-эвристика)
+- План: _ai_workspace/🔍_АУДИТ_11.11.2026.md
 
 ### Порядок на завтра:
 - ПАКЕТ 1 (критично): утечка currentScriptId → полный экспорт .kinoplan → каскадное удаление → UUID сцен → честный saveStatus
