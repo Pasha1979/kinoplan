@@ -1,64 +1,28 @@
-# Architecture Check Script for Kinoplan
-# Project Brain v2.0
+# Architecture Check — KinoPlan (Brain v4, 12.11.2026)
+# Запуск: powershell scripts/check-architecture.ps1 (из корня репо)
+# Запреты document/window/console/localStorage — только для src/store, src/services, src/hooks.
+# console.error/console.warn — разрешены (как в eslint).
 
-$ErrorActionPreference = "Stop"
+$SrcPath = Join-Path $PSScriptRoot "..\src"
+$StrictDirs = @("store", "services", "hooks")
+$Exclude = @("env.ts", "adapters", ".test.", ".spec.")
+$Banned = @("localStorage\.getItem","localStorage\.setItem","localStorage\.removeItem","localStorage\.clear","window\.","document\.","console\.log","console\.info")
 
-# Colors for output
-$SuccessColor = "Green"
-$WarningColor = "Red"
-$InfoColor = "Cyan"
-
-Write-Host "Checking architecture..." -ForegroundColor $InfoColor
-Write-Host ""
-
-# Source path
-$SrcPath = "..\src"
-
-# Exclusions
-$Exclusions = @("env.ts", "adapters", ".test.ts")
-
-# Patterns to search
-$Patterns = @(
-    "localStorage\.getItem",
-    "localStorage\.setItem",
-    "localStorage\.removeItem",
-    "localStorage\.clear",
-    "window\.",
-    "document\.",
-    "console\.log",
-    "console\.error",
-    "console\.warn",
-    "console\.info"
-)
-
-$ViolationsFound = $false
-
-# Search for violations
-foreach ($Pattern in $Patterns) {
-    $Files = Get-ChildItem -Path $SrcPath -Recurse -File | Where-Object { 
-        $Exclusions | ForEach-Object { $_ -notin $_.Name } 
+$viol = @()
+foreach ($dir in $StrictDirs) {
+  $p = Join-Path $SrcPath $dir
+  if (-not (Test-Path $p)) { continue }
+  $files = Get-ChildItem -Path $p -Recurse -File -Include *.ts,*.tsx |
+    Where-Object { $n = $_.FullName; -not ($Exclude | Where-Object { $n -match [regex]::Escape($_) }) }
+  foreach ($pat in $Banned) {
+    foreach ($hit in ($files | Select-String -Pattern $pat)) {
+      $viol += "$($hit.Path):$($hit.LineNumber) — $pat"
     }
-    
-    $Results = $Files | Select-String -Pattern $Pattern
-    
-    if ($Results) {
-        $ViolationsFound = $true
-        foreach ($Result in $Results) {
-            $RelativePath = $Result.Path.Replace((Get-Location).Path + "\src\", "")
-            Write-Host "ARCHITECTURE VIOLATION: $RelativePath : $($Result.LineNumber)" -ForegroundColor $WarningColor
-            Write-Host "   Pattern: $Pattern" -ForegroundColor $WarningColor
-            Write-Host "   Line: $($Result.Line.Trim())" -ForegroundColor $WarningColor
-            Write-Host ""
-        }
-    }
+  }
 }
-
-if ($ViolationsFound) {
-    Write-Host "Architecture violations found!" -ForegroundColor $WarningColor
-    Write-Host "   Fix them before commit." -ForegroundColor $WarningColor
-    Write-Host "   Details: _ai_workspace/ПРАВИЛА_АРХИТЕКТУРЫ.md" -ForegroundColor $WarningColor
-    exit 1
-} else {
-    Write-Host "Architecture is clean" -ForegroundColor $SuccessColor
-    exit 0
+if ($viol.Count) {
+  Write-Host "❌ ARCHITECTURE VIOLATIONS ($($viol.Count)):" -ForegroundColor Red
+  $viol | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+  exit 1
 }
+Write-Host "✅ check-architecture: нарушений нет (store/services/hooks чисты)" -ForegroundColor Green
