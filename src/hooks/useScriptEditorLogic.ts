@@ -646,21 +646,21 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   // eslint-disable-next-line react-hooks/refs
   handleKeyDownRef.current = (view, event) => {
-    // Ctrl+Z / Cmd+Z — Undo
-    if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+    // Ctrl+Z / Cmd+Z — Undo (event.code — не зависит от раскладки)
+    if ((event.ctrlKey || event.metaKey) && event.code === 'KeyZ' && !event.shiftKey) {
       event.preventDefault()
       editor?.chain().undo().run()
       return true
     }
     // Ctrl+Y / Cmd+Shift+Z — Redo
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+    if ((event.ctrlKey || event.metaKey) && (event.code === 'KeyY' || (event.code === 'KeyZ' && event.shiftKey))) {
       event.preventDefault()
       editor?.chain().redo().run()
       return true
     }
 
     // Ctrl+D — Multi-cursor: выделить слово / добавить следующее совпадение
-    if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+    if ((event.ctrlKey || event.metaKey) && event.code === 'KeyD') {
       event.preventDefault()
       if (editor) {
         multiCursorRef.current.addNextMatch(editor)
@@ -788,7 +788,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
 
     // Ctrl+Shift+S (Cmd+Shift+S на Mac) — новая сцена
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'S') {
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === 'KeyS') {
       event.preventDefault()
 
       const nextNumber = getNextSceneNumber(view.state.doc)
@@ -1066,7 +1066,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   // Перехватываем Ctrl+D на уровне window, чтобы браузер не открывал диалог закладок
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyD') {
         e.preventDefault()
         if (editor) {
           multiCursorRef.current.addNextMatch(editor)
@@ -1363,12 +1363,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
               [/ЭКСТ\./gi, 'EXT.'],
               [/ПАВ\./gi, 'PAV.'],
               [/—/g, '-'],
-              [/\bДЕНЬ\b/gi, 'DAY'],
-              [/\bНОЧЬ\b/gi, 'NIGHT'],
-              [/\bУТРО\b/gi, 'MORNING'],
-              [/\bВЕЧЕР\b/gi, 'EVENING'],
-              [/\bРАССВЕТ\b/gi, 'DAWN'],
-              [/\bЗАКАТ\b/gi, 'DUSK'],
+              // \b не работает с кириллицей — граница слова через lookaround
+              [/(?<![А-ЯЁA-Z])ДЕНЬ(?![А-ЯЁA-Z])/gi, 'DAY'],
+              [/(?<![А-ЯЁA-Z])НОЧЬ(?![А-ЯЁA-Z])/gi, 'NIGHT'],
+              [/(?<![А-ЯЁA-Z])УТРО(?![А-ЯЁA-Z])/gi, 'MORNING'],
+              [/(?<![А-ЯЁA-Z])ВЕЧЕР(?![А-ЯЁA-Z])/gi, 'EVENING'],
+              [/(?<![А-ЯЁA-Z])РАССВЕТ(?![А-ЯЁA-Z])/gi, 'DAWN'],
+              [/(?<![А-ЯЁA-Z])ЗАКАТ(?![А-ЯЁA-Z])/gi, 'DUSK'],
             ]
           : [
               [/INT\/EXT\./gi, 'ИНТ-ЭКСТ.'],

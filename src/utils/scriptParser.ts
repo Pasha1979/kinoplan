@@ -145,7 +145,7 @@ export function parseActionForProps(content: string): Array<{ name: string; cont
   
   // Ищем слова в КАПСЛОКЕ (без русских букв, только латиница для обозначения капслока)
   // В русском тексте ищем слова, которые выглядят как акцентированные
-  const capsPattern = /[А-Я][А-Я\s]+[А-Я]/g
+  const capsPattern = /[А-ЯЁ][А-ЯЁ\s]+[А-ЯЁ]/g
   const capsMatches = content.match(capsPattern) || []
   
   capsMatches.forEach((match: string) => {

@@ -362,15 +362,15 @@ export default function ScriptPage() {
   // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
         e.preventDefault()
         handleSave()
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyF') {
         e.preventDefault()
         search.open(false)
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyH') {
         e.preventDefault()
         search.open(true)
       }

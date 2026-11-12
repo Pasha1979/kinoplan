@@ -84,7 +84,7 @@ function useFormatChecker({
 
       // Проверка имени персонажа
       if (block.type === 'character') {
-        if (!/^[А-ЯA-Z\s\-–—]+(?:\s*\([^)]*\))?$/.test(content)) {
+        if (!/^[А-ЯЁA-Z\s\-–—]+(?:\s*\([^)]*\))?$/.test(content)) {
           foundErrors.push({
             id: `err-${block.id}-case`,
             blockId: block.id,
