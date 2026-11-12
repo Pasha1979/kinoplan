@@ -292,7 +292,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         editorInstance
           .chain()
           .deleteRange({ from: nodeStart, to: nodeEnd })
-          .insertContent(upperText)
+          .command(({ tr }) => { tr.insertText(upperText); return true })
           .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
           .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
           .run()
@@ -318,7 +318,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           editorInstance
             .chain()
             .deleteRange({ from: nodeStart, to: nodeEnd })
-            .insertContent(newText)
+            .command(({ tr }) => { tr.insertText(newText); return true })
             .setTextSelection(nodeStart + newText.length)
             .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
             .run()
@@ -344,7 +344,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           editorInstance
             .chain()
             .deleteRange({ from: nodeStart, to: nodeEnd })
-            .insertContent(newText)
+            .command(({ tr }) => { tr.insertText(newText); return true })
             .setTextSelection(nodeStart + newText.length)
             .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
             .run()
@@ -367,7 +367,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         editorInstance
           .chain()
           .deleteRange({ from: nodeStart, to: nodeEnd })
-          .insertContent(upperText)
+          .command(({ tr }) => { tr.insertText(upperText); return true })
           .setTextSelection(nodeStart + Math.min(cursorOffset, upperText.length))
           .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
           .run()
@@ -718,7 +718,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
             .chain()
             .focus()
             .deleteRange({ from: wordStartPos, to: wordEndPos })
-            .insertContent(textToInsert)
+            .command(({ tr }) => { tr.insertText(textToInsert); return true })
             .run()
 
           st.recordUsage(suggestion)
@@ -801,7 +801,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       editor?.chain()
         .splitBlock()
         .setNode('sceneHeader')
-        .insertContent(headerText)
+        .command(({ tr }) => { tr.insertText(headerText); return true })
         .run()
       return true
     }
@@ -892,7 +892,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           editor?.chain()
             .splitBlock()
             .setNode('sceneHeader')
-            .insertContent(headerText)
+            .command(({ tr }) => { tr.insertText(headerText); return true })
             .run()
           return true
         } else {
@@ -918,7 +918,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           editor?.chain()
             .splitBlock()
             .setNode('sceneHeader')
-            .insertContent(headerText)
+            .command(({ tr }) => { tr.insertText(headerText); return true })
             .run()
           return true
         }
@@ -958,7 +958,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     if (currentType === 'sceneHeader' || currentType === 'sceneCharacter' || currentType === 'sceneDialog' || currentType === 'sceneTransition') {
       if (plainText) {
         event.preventDefault()
-        editor?.chain().insertContent(plainText).run()
+        editor?.chain().command(({ tr }) => { tr.insertText(plainText); return true }).run()
         maybeUpdateCast()
         return true
       }
@@ -978,7 +978,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // 5. Fallback: если есть plain text → вставляем его (уже sanitized)
     if (plainText && plainText.length > 0) {
       event.preventDefault()
-      editor?.chain().insertContent(plainText).run()
+      editor?.chain().command(({ tr }) => { tr.insertText(plainText); return true }).run()
       maybeUpdateCast()
       return true
     }
