@@ -255,6 +255,14 @@ export const projectService = {
       await delayWithSignal(API_MOCK_DELAY_MS, signal)
       useNormalizedProjectStore.getState().deleteProject(projectId)
 
+      // Каскад: удаляем все сценарии проекта (самый тяжёлый контент — HTML)
+      const { scripts, currentScriptId } = useScriptStore.getState()
+      const orphanIds = scripts.filter((s) => s.projectId === projectId).map((s) => s.id)
+      orphanIds.forEach((id) => useScriptStore.getState().deleteScript(id))
+      if (currentScriptId && orphanIds.includes(currentScriptId)) {
+        useScriptStore.setState({ currentScriptId: null })
+      }
+
       // Удаляем черновики редактора из localStorage
       safeRemoveLocalStorage(`kinoplan_draft_${projectId}`)
       if (typeof window !== 'undefined') {
