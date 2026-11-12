@@ -315,7 +315,17 @@ export const projectService = {
 
   async updateScene(sceneId: string, updates: Partial<Scene>, signal?: AbortSignal): Promise<void> {
     try {
-      useNormalizedProjectStore.getState().updateScene(sceneId, updates)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      // SSoT: источник — scriptStore (script.scenes), normalized — проекция.
+      // Сначала пишем в источник, иначе следующая синхронизация редактора затрёт правку.
+      const scriptStore = useScriptStore.getState()
+      const owner = scriptStore.scripts.find((s) => s.scenes?.some((sc) => sc.id === sceneId))
+      if (owner?.scenes) {
+        scriptStore.updateScript(owner.id, {
+          scenes: owner.scenes.map((sc) => (sc.id === sceneId ? { ...sc, ...updates } : sc)),
+        })
+      }
+      useNormalizedProjectStore.getState().updateScene(sceneId, updates)
+      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().revertScene(sceneId)
