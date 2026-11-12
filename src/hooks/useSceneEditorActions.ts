@@ -231,8 +231,8 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
       tr.insertText(newText, from, to)
     }
 
-    // Помечаем как не-история (объединяем с предыдущей транзакцией перестановки)
-    tr.setMeta('addToHistory', false)
+    // Присоединяем к предыдущей транзакции (перестановке): один Ctrl+Z отменяет и порядок, и номера
+    tr.setMeta('appendedTransaction', true)
     editor.view.dispatch(tr)
   }, [editor])
 
