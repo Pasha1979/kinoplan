@@ -4,13 +4,19 @@ import { pouchStorage } from '../services/storageService'
 
 type Theme = 'dark' | 'light'
 
+export type EnterPreset = 'kinoplan' | 'kit' | 'fd'
+
 interface UiStore {
   theme: Theme
   sidebarExpanded: boolean
   a4Mode: boolean
+  /** Пресет клавиатуры: kinoplan — двойной Enter → действие, сцена по Ctrl+Shift+S;
+   *  kit — двойной Enter → новая сцена (как в KIT); fd — как Final Draft (Enter → действие) */
+  enterPreset: EnterPreset
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
+  setEnterPreset: (p: EnterPreset) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -19,6 +25,7 @@ export const useUiStore = create<UiStore>()(
       theme: 'dark',
       sidebarExpanded: true,
       a4Mode: true,
+      enterPreset: 'kinoplan',
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -28,6 +35,9 @@ export const useUiStore = create<UiStore>()(
 
       toggleA4Mode: () =>
         set((state) => ({ a4Mode: !state.a4Mode })),
+
+      setEnterPreset: (p) =>
+        set({ enterPreset: p }),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

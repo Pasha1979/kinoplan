@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2 } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
+import { useUiStore, type EnterPreset } from '../../../store/uiStore'
 
 interface ScriptHeaderProps {
   isDark: boolean
@@ -57,9 +58,12 @@ function ScriptHeader({
   onToggleSplitScreen,
   dialogueActiveCharacter,
   onToggleDialoguePicker,
+
   onFormat,
 }: ScriptHeaderProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
+  const enterPreset = useUiStore((s) => s.enterPreset)
+  const setEnterPreset = useUiStore((s) => s.setEnterPreset)
 
   return (
     <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b"
@@ -219,6 +223,23 @@ function ScriptHeader({
         >
           <Search size={15} />
         </button>
+        {/* Пресет клавиатуры: двойной Enter → действие / сцена */}
+        <select
+          value={enterPreset}
+          onChange={(e) => setEnterPreset(e.target.value as EnterPreset)}
+          className="h-8 px-1.5 rounded-lg text-[11px] cursor-pointer"
+          style={{
+            color: textSecondary,
+            background: 'transparent',
+            border: `1px solid ${colors.border}`,
+            outline: 'none',
+          }}
+          title="Пресет клавиатуры: KinoPlan/FD — Enter→действие, сцена Ctrl+Shift+S · КИТ — Enter→сцена"
+        >
+          <option value="kinoplan">KinoPlan</option>
+          <option value="fd">Final Draft</option>
+          <option value="kit">КИТ</option>
+        </select>
         {/* Кнопка Настройки — открывает модальное окно */}
         <button
           onClick={onOpenSettings}

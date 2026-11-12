@@ -13,6 +13,7 @@ import { DialogueHighlightExtension, pluginKey as dialogueHighlightPluginKey } f
 import { PovFilterExtension, pluginKey as povFilterPluginKey } from '../components/tiptap/PovFilterExtension'
 import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
+import { useUiStore } from '../store/uiStore'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 
@@ -143,6 +144,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const currentSeriesRef = useRef(currentSeries)
   const projectTypeRef = useRef(projectType)
   const autoExtractCharactersRef = useRef(autoExtractCharacters)
+  const enterPreset = useUiStore((s) => s.enterPreset)
+  const enterPresetRef = useRef(enterPreset)
 
   // Обновляем refs в useEffect во избежание мутаций во время рендера
   useEffect(() => {
@@ -153,7 +156,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     currentSeriesRef.current = currentSeries
     projectTypeRef.current = projectType
     autoExtractCharactersRef.current = autoExtractCharacters
-  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters])
+    enterPresetRef.current = enterPreset
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters, enterPreset])
 
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
@@ -889,19 +893,23 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       if (currentType === 'sceneAction') {
         const textContent = currentNode?.textContent?.trim() || ''
         if (textContent === '') {
-          // Двойной Enter на пустом → новая сцена (sceneHeader)
           event.preventDefault()
-          const nextNumber = getNextSceneNumber(view.state.doc)
-          const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
-          const headerText = isSerial
-            ? `${currentSeriesRef.current}-${nextNumber}. `
-            : `${nextNumber}. `
-
-          editor?.chain()
-            .splitBlock()
-            .setNode('sceneHeader')
-            .command(({ tr }) => { tr.insertText(headerText); return true })
-            .run()
+          if (enterPresetRef.current === 'kit') {
+            // KIT: двойной Enter на пустом → новая сцена
+            const nextNumber = getNextSceneNumber(view.state.doc)
+            const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
+            const headerText = isSerial
+              ? `${currentSeriesRef.current}-${nextNumber}. `
+              : `${nextNumber}. `
+            editor?.chain()
+              .splitBlock()
+              .setNode('sceneHeader')
+              .command(({ tr }) => { tr.insertText(headerText); return true })
+              .run()
+          } else {
+            // KinoPlan / Final Draft: двойной Enter → действие, сцена только по Ctrl+Shift+S
+            editor?.chain().splitBlock().setNode('paragraph').run()
+          }
           return true
         } else {
           // Первый Enter в sceneAction (с текстом) → paragraph, autoDetect решит
@@ -911,11 +919,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
       }
 
-      // Двойной Enter на пустом paragraph → новая сцена (sceneHeader)
+      // Двойной Enter на пустом paragraph → новая сцена (только пресет KIT)
       // Иначе цепочка обрывается после sceneAction→paragraph
       if (currentType === 'paragraph') {
         const textContent = currentNode?.textContent?.trim() || ''
-        if (textContent === '') {
+        if (textContent === '' && enterPresetRef.current === 'kit') {
           event.preventDefault()
           const nextNumber = getNextSceneNumber(view.state.doc)
           const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
@@ -931,6 +939,22 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           return true
         }
       }
+    }
+
+    // Ctrl+Shift+S — новая сцена во всех пресетах
+    if (event.key === 's' && event.ctrlKey && event.shiftKey) {
+      event.preventDefault()
+      const nextNumber = getNextSceneNumber(view.state.doc)
+      const isSerial = projectTypeRef.current === 'serial' && currentSeriesRef.current > 0
+      const headerText = isSerial
+        ? `${currentSeriesRef.current}-${nextNumber}. `
+        : `${nextNumber}. `
+      editor?.chain()
+        .splitBlock()
+        .setNode('sceneHeader')
+        .command(({ tr }) => { tr.insertText(headerText); return true })
+        .run()
+      return true
     }
     
     return false
