@@ -819,7 +819,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         addCharacterToSceneCast(editor!)
       }
 
-      const blockTypes = ['sceneHeader', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
+      const blockTypes = ['sceneHeader', 'sceneCast', 'sceneAction', 'sceneCharacter', 'sceneDialog', 'sceneParenthetical', 'sceneTransition']
       const idx = blockTypes.indexOf(currentType)
       if (idx !== -1) {
         event.preventDefault()
@@ -1147,11 +1147,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         }
 
         // Персонажи из диалогов ТОЛЬКО внутри этой сцены
+        // Скобочные уточнения снимаем: «ИВАН (З/К)» → «ИВАН»
         if (childNode.type.name === 'sceneCharacter') {
-          const charName = childNode.textContent.trim().toUpperCase()
+          const cleanName = childNode.textContent.replace(/\s*\([^)]*\)/g, '').trim()
+          const charName = cleanName.toUpperCase()
           if (charName && !seenChars.has(charName)) {
             seenChars.add(charName)
-            dialogChars.push(childNode.textContent.trim())
+            dialogChars.push(cleanName)
           }
         }
       }
