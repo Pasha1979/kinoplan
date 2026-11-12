@@ -4,6 +4,12 @@ export interface FormatBlock {
   content: string
 }
 
+function contentHash(s: string): string {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return h ? h.toString(36) : ''
+}
+
 const TYPE_MAP: Record<string, string> = {
   'scene-header': 'scene_header',
   'scene-character': 'character',
@@ -34,10 +40,14 @@ export function extractBlocksFromHtml(html: string): FormatBlock[] {
     elements.forEach((el, index) => {
       const dataType = el.getAttribute('data-type') || ''
       const type = TYPE_MAP[dataType] || dataType
+      // Стабильный id: sceneId сцены или хеш контента — вставка блока выше
+      // не должна воскрешать пропущенные предупреждения
+      const content = el.textContent || ''
+      const sceneId = el.getAttribute('data-scene-id')
       blocks.push({
-        id: `${type}-${index}`,
+        id: sceneId ? `${type}-${sceneId}` : `${type}-${contentHash(content) || index}`,
         type,
-        content: el.textContent || '',
+        content,
       })
     })
 

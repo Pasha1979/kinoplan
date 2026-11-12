@@ -842,7 +842,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       
       if (currentType === 'sceneHeader') {
         event.preventDefault()
-        editor?.chain().splitBlock().setNode('sceneCast').run()
+        // Если следующий блок уже sceneCast — переходим в него, а не плодим дубли
+        const parent = $from.node(-1)
+        const nextNode = parent?.child($from.index(-1) + 1)
+        if (nextNode?.type.name === 'sceneCast') {
+          editor?.chain().setTextSelection($from.after() + 1).run()
+        } else {
+          editor?.chain().splitBlock().setNode('sceneCast').run()
+        }
         return true
       }
       

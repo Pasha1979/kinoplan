@@ -12,7 +12,7 @@
 
 const LETTERS = 'АБВГДЕЖЗИКЛМНПРСТУФХЦЧШЩЭЮЯ'
 const NOTE_RE = /\s*\(([^)]*)\)\s*$/
-const VARIANT_RE = /-([А-ЯA-ZЁ])$/
+const VARIANT_RE = /-([А-ЯA-ZЁ]+\d*)$/
 
 interface NumInfo {
   isVariant: boolean
