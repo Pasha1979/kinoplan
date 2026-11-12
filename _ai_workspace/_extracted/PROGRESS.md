@@ -1,6 +1,6 @@
 # ФАЗА 1 — прогресс (resume state)
 Ветка: docs/brain-v4 | Снапшот: _archive/v3_snapshot/ | Реестры: _extracted/*.md
-ID-счётчики: I-34, R-25, T-6, D-11, Q-0, L-0
+ID-счётчики: I-35, R-38, T-12, D-23, Q-2, L-0
 Осталось: файлы ниже + git log (756) + код TODO/FIXME + референсы png (2, не читать)
 
 ## ФАЙЛЫ (69 шт)
@@ -11,9 +11,9 @@ ID-счётчики: I-34, R-25, T-6, D-11, Q-0, L-0
 - [ ] ./.windsurf/workflows/update-docs.md
 - [ ] ./README.md
 - [ ] ./_ai_workspace/ARCHITECTURE.md
-- [ ] ./_ai_workspace/ARCHITECTURE_GUARDIAN.md
+- [x] ./_ai_workspace/ARCHITECTURE_GUARDIAN.md
 - [ ] ./_ai_workspace/DEEP_ANALYSIS_SYSTEM.md
-- [ ] ./_ai_workspace/FORMAT_ASSISTANT_ПРАВИЛА.md
+- [x] ./_ai_workspace/FORMAT_ASSISTANT_ПРАВИЛА.md
 - [ ] ./_ai_workspace/LESSONS_LEARNED.md
 - [x] ./_ai_workspace/MY_COLLABORATION_GUIDE.md
 - [ ] ./_ai_workspace/PROMPT.md
@@ -24,18 +24,18 @@ ID-счётчики: I-34, R-25, T-6, D-11, Q-0, L-0
 - [ ] ./_ai_workspace/_archive/ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md
 - [ ] ./_ai_workspace/_archive/💡_ЗАДЕЛЫ_И_ИДЕИ.md
 - [ ] ./_ai_workspace/_archive/📋_AUDIT_REPORT.md
-- [ ] ./_ai_workspace/АЛГОРИТМ_ПЛАНИРОВАНИЯ.md
-- [ ] ./_ai_workspace/ВАРИАНТЫ_ИНТЕГРАЦИИ_РАЗБИВКИ.md
+- [x] ./_ai_workspace/АЛГОРИТМ_ПЛАНИРОВАНИЯ.md
+- [x] ./_ai_workspace/ВАРИАНТЫ_ИНТЕГРАЦИИ_РАЗБИВКИ.md
 - [x] ./_ai_workspace/ИДЕИ_МОДУЛЬ_СЦЕНАРИЙ.md
 - [x] ./_ai_workspace/ОБЩЕНИЕ.md
 - [ ] ./_ai_workspace/ПЛАН_РАБОТ.md
-- [ ] ./_ai_workspace/ПРАВИЛА_АРХИТЕКТУРЫ.md
-- [ ] ./_ai_workspace/ПРИНЦИПЫ_ПОДМОДУЛЯ_СЦЕНАРИСТ.md
+- [x] ./_ai_workspace/ПРАВИЛА_АРХИТЕКТУРЫ.md
+- [x] ./_ai_workspace/ПРИНЦИПЫ_ПОДМОДУЛЯ_СЦЕНАРИСТ.md
 - [ ] ./_ai_workspace/РАБОЧИЙ_ПРОЦЕСС.md
 - [ ] ./_ai_workspace/РЕЕСТРЫ_КОНТРОЛЯ.md
-- [ ] ./_ai_workspace/РОССИЙСКИЙ_ФОРМАТ_СЦЕНАРИЯ.md
-- [ ] ./_ai_workspace/СТРУКТУРА_ПЛАНИРОВАНИЯ.md
-- [ ] ./_ai_workspace/СТРУКТУРА_СЦЕНАРИЯ.md
+- [x] ./_ai_workspace/РОССИЙСКИЙ_ФОРМАТ_СЦЕНАРИЯ.md
+- [x] ./_ai_workspace/СТРУКТУРА_ПЛАНИРОВАНИЯ.md
+- [x] ./_ai_workspace/СТРУКТУРА_СЦЕНАРИЯ.md
 - [x] ./_ai_workspace/УКАЗАНИЯ_И_НАПОМИНАНИЯ.md
 - [ ] ./_ai_workspace/✅_PLAN_VALIDATION.md
 - [ ] ./_ai_workspace/✅_ЧЕКЛИСТЫ.md
