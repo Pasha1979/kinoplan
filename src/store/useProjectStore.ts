@@ -100,10 +100,14 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
 
       setScenesBatch: (scenes) =>
         set((state) => {
-          state.scenes = scenes.reduce<Record<string, Scene>>((acc, s) => {
-            acc[s.id] = s
-            return acc
-          }, {})
+          // Удаляем только сцены тех же проектов — сцены чужих проектов не трогаем
+          const projectIds = new Set(scenes.map((s) => s.projectId))
+          Object.keys(state.scenes).forEach((id) => {
+            if (projectIds.has(state.scenes[id].projectId)) {
+              delete state.scenes[id]
+            }
+          })
+          scenes.forEach((s) => { state.scenes[s.id] = s })
         }),
 
       updateScene: (sceneId, updates) =>

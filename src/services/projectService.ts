@@ -1,4 +1,5 @@
 import { useNormalizedProjectStore } from '../store/useProjectStore'
+import { useScriptStore, type Script } from '../store/scriptStore'
 import { useToastStore } from '../store/toastStore'
 import type { Project } from '../store/projectStore'
 import type { Scene } from '../types/scene'
@@ -27,12 +28,15 @@ async function delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> 
 }
 
 interface ImportProjectPayload {
+  schemaVersion?: number
   project?: {
     id?: unknown
     name?: unknown
     type?: unknown
     [key: string]: unknown
   }
+  /** v2: полные скрипты с content/titlePage/development */
+  scripts?: Array<Record<string, unknown>>
   scenes?: Array<{
     id?: unknown
     number?: unknown
@@ -44,7 +48,7 @@ interface ImportProjectPayload {
   }>
 }
 
-function validateImportedData(raw: unknown): { project: Partial<Project>; scenes?: Scene[] } {
+function validateImportedData(raw: unknown): { project: Partial<Project>; scenes?: Scene[]; scripts?: Script[] } {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Некорректный формат JSON: ожидался объект')
   }
@@ -61,8 +65,9 @@ function validateImportedData(raw: unknown): { project: Partial<Project>; scenes
     throw new Error('Поле project.name обязательно и должно быть непустой строкой')
   }
 
-  if (proj.type !== 'film' && proj.type !== 'serial') {
-    throw new Error('Поле project.type должно иметь значение "film" или "serial"')
+  const VALID_TYPES: Project['type'][] = ['film', 'serial', 'ad', 'clip', 'other']
+  if (!VALID_TYPES.includes(proj.type as Project['type'])) {
+    throw new Error(`Поле project.type должно быть одним из: ${VALID_TYPES.join(', ')}`)
   }
 
   const restOfProj = { ...proj }
@@ -70,7 +75,7 @@ function validateImportedData(raw: unknown): { project: Partial<Project>; scenes
   const validatedProject: Partial<Project> = {
     ...(restOfProj as Partial<Project>),
     name: proj.name.trim(),
-    type: proj.type as 'film' | 'serial',
+    type: proj.type as Project['type'],
   }
 
   // 2. Валидация сцен (если есть)
@@ -144,7 +149,23 @@ function validateImportedData(raw: unknown): { project: Partial<Project>; scenes
     })
   }
 
-  return { project: validatedProject, scenes: validatedScenes }
+  // 3. Скрипты (v2) — сами скрипты с текстом сценария
+  let validatedScripts: Script[] | undefined
+  if (Array.isArray(parsed.scripts) && parsed.scripts.length > 0) {
+    validatedScripts = parsed.scripts.map((raw, idx) => {
+      const s = raw as Partial<Script>
+      if (!s || typeof s !== 'object' || typeof s.title !== 'string') {
+        throw new Error(`Скрипт под индексом ${idx} некорректен`)
+      }
+      return {
+        ...s,
+        id: '', // будет перегенерирован при импорте — чужие id не сохраняем
+        projectId: '',
+      } as Script
+    })
+  }
+
+  return { project: validatedProject, scenes: validatedScenes, scripts: validatedScripts }
 }
 
 export const projectService = {
@@ -274,8 +295,11 @@ export const projectService = {
         throw new Error('Проект не найден')
       }
       const projectScenes = Object.values(scenes).filter((s) => s.projectId === projectId)
+      const projectScripts = useScriptStore.getState().scripts.filter((s) => s.projectId === projectId)
       const exportData = {
+        schemaVersion: 2,
         project,
+        scripts: projectScripts,
         scenes: projectScenes,
         exportedAt: new Date().toISOString(),
       }
@@ -293,9 +317,15 @@ export const projectService = {
       await delayWithSignal(API_MOCK_DELAY_MS, signal)
 
       const parsed = JSON.parse(jsonString)
-      const { project: validatedProj, scenes: validatedScenes } = validateImportedData(parsed)
+      const { project: validatedProj, scenes: validatedScenes, scripts: validatedScripts } = validateImportedData(parsed)
 
       const importedProject: Project = {
+        // Дефолты обязательных полей — защита от минимального JSON (краш Dashboard на shootingDays)
+        dailyOutput: 0, shootingGroups: 1, plannedShootingDays: 0,
+        scriptProgress: 0, castingProgress: 0, locationsProgress: 0, scheduleProgress: 0,
+        shotDays: 0, scheduledDays: 0, callSheetsSent: 0, callSheetsConfirmed: 0,
+        shootingDays: [], locationsTotal: 0, locationsApproved: 0, locationsInScout: 0,
+        shotMinutes: 0, totalMinutes: 0, conflicts: 0, cloudStorage: 'none',
         ...validatedProj,
         id: `proj-${Date.now()}`,
         createdAt: validatedProj.createdAt || new Date().toISOString(),
@@ -305,9 +335,20 @@ export const projectService = {
       const existing = Object.values(useNormalizedProjectStore.getState().projects)
       useNormalizedProjectStore.getState().setProjects([...existing, importedProject])
 
-      if (validatedScenes && validatedScenes.length > 0) {
+      // Скрипты импортируем с новыми id — они несут текст сценария
+      if (validatedScripts && validatedScripts.length > 0) {
+        const { addScript } = useScriptStore.getState()
+        validatedScripts.forEach((s) => {
+          addScript({ ...s, id: crypto.randomUUID(), projectId: importedProject.id })
+        })
+      }
+
+      // Нормализованные сцены — только если скриптов нет (они регенерируются при открытии)
+      if ((!validatedScripts || validatedScripts.length === 0) && validatedScenes && validatedScenes.length > 0) {
         const importedScenes = validatedScenes.map((s) => ({
           ...s,
+          // Уникальные id — scene-1 из файла не должна перезаписать scene-1 другого проекта
+          id: `${s.id}-imp-${importedProject.id}`,
           projectId: importedProject.id,
         }))
         const { scenes: existingScenes } = useNormalizedProjectStore.getState()
