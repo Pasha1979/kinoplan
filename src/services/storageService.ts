@@ -39,13 +39,20 @@ async function putDoc(name: string, value: string): Promise<void> {
   const prev = writeQueue.get(name) ?? Promise.resolve()
   const next = prev.catch(() => {}).then(async () => {
     const d = await getDb()
-    const doc = (await d.get(name).catch(() => null)) as StoreDoc | null
-    try {
-      await d.put({ _id: name, _rev: doc?._rev, value })
-    } catch (e) {
-      console.warn('storage write failed', name, e)
-      useToastStore.getState().showToast('Ошибка записи на диск — изменения могут не сохраниться', 'error')
-      throw e
+    const MAX_RETRIES = 3
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const doc = (await d.get(name).catch(() => null)) as StoreDoc | null
+        await d.put({ _id: name, _rev: doc?._rev, value })
+        return
+      } catch (e) {
+        if (attempt === MAX_RETRIES) {
+          console.warn('storage write failed after retries', name, e)
+          useToastStore.getState().showToast('Ошибка записи на диск — изменения могут не сохраниться', 'error')
+          throw e
+        }
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
+      }
     }
   })
   writeQueue.set(name, next)
@@ -65,18 +72,25 @@ function scheduleWrite(name: string): void {
   }, WRITE_DEBOUNCE_MS))
 }
 
-// Flush при закрытии вкладки — не теряем последние символы
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    for (const [name, timer] of writeTimers) {
-      clearTimeout(timer)
-      const value = pendingWrites.get(name)
-      if (value !== undefined) {
-        pendingWrites.delete(name)
-        void putDoc(name, value)
-      }
+// Форсировать все отложенные записи — при сворачивании/закрытии вкладки
+function flushPendingWrites(): void {
+  for (const [name, timer] of writeTimers) {
+    clearTimeout(timer)
+    const value = pendingWrites.get(name)
+    if (value !== undefined) {
+      pendingWrites.delete(name)
+      void putDoc(name, value)
     }
-    writeTimers.clear()
+  }
+  writeTimers.clear()
+}
+
+if (typeof window !== 'undefined') {
+  // Закрытие вкладки — не теряем последние символы
+  window.addEventListener('beforeunload', flushPendingWrites)
+  // Сворачивание/переключение вкладки — beforeunload может не случиться (мобильные браузеры, фон)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingWrites()
   })
 }
 
