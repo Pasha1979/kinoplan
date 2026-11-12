@@ -7,6 +7,17 @@ import { useScriptStore } from '../../store/scriptStore'
 import { renumberSceneNumbers } from '../../utils/sceneNumbering'
 import { useToastStore } from '../../store/toastStore'
 import type { ScriptFormat, TimingSystem, Scene } from '../../store/scriptStore'
+import type { TimeOfDay } from '../../types/scene'
+
+// Время суток сцены из слова в шапке («НОЧЬ»→NIGHT, «УТРО»→DAWN и т.д.)
+const todFromTime = (t: string): TimeOfDay => {
+  const u = t.toUpperCase()
+  if (/НОЧЬ|NIGHT/.test(u)) return 'NIGHT'
+  if (/РАССВЕТ|DAWN|УТРО|MORNING/.test(u)) return 'DAWN'
+  if (/ЗАКАТ|ВЕЧЕР|DUSK|EVENING/.test(u)) return 'DUSK'
+  if (/НЕПРЕРЫВН|CONTINUOUS/.test(u)) return 'CONTINUOUS'
+  return 'DAY'
+}
 
 export type ScriptView = 'empty' | 'editor'
 export type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
@@ -101,7 +112,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         type: s.type,
         location: s.location,
         sublocation: s.sublocation,
-        timeOfDay: existing?.timeOfDay || 'DAY',
+        timeOfDay: s.time ? todFromTime(s.time) : (existing?.timeOfDay || 'DAY'),
         time: s.time,
         charCount: s.charCount,
         duration: s.duration,
