@@ -29,7 +29,7 @@ ID-счётчики: I-54, R-79, T-22, D-40, Q-3, L-62
 - [x] ./_ai_workspace/ВАРИАНТЫ_ИНТЕГРАЦИИ_РАЗБИВКИ.md
 - [x] ./_ai_workspace/ИДЕИ_МОДУЛЬ_СЦЕНАРИЙ.md
 - [x] ./_ai_workspace/ОБЩЕНИЕ.md
-- [ ] ./_ai_workspace/ПЛАН_РАБОТ.md
+- [x] ./_ai_workspace/ПЛАН_РАБОТ.md
 - [x] ./_ai_workspace/ПРАВИЛА_АРХИТЕКТУРЫ.md
 - [x] ./_ai_workspace/ПРИНЦИПЫ_ПОДМОДУЛЯ_СЦЕНАРИСТ.md
 - [x] ./_ai_workspace/РАБОЧИЙ_ПРОЦЕСС.md
