@@ -1,6 +1,6 @@
 # ФАЗА 1 — прогресс (resume state)
 Ветка: docs/brain-v4 | Снапшот: _archive/v3_snapshot/ | Реестры: _extracted/*.md
-ID-счётчики: I-34, R-19, T-6, D-11, Q-0, L-0
+ID-счётчики: I-34, R-25, T-6, D-11, Q-0, L-0
 Осталось: файлы ниже + git log (756) + код TODO/FIXME + референсы png (2, не читать)
 
 ## ФАЙЛЫ (69 шт)
@@ -15,7 +15,7 @@ ID-счётчики: I-34, R-19, T-6, D-11, Q-0, L-0
 - [ ] ./_ai_workspace/DEEP_ANALYSIS_SYSTEM.md
 - [ ] ./_ai_workspace/FORMAT_ASSISTANT_ПРАВИЛА.md
 - [ ] ./_ai_workspace/LESSONS_LEARNED.md
-- [ ] ./_ai_workspace/MY_COLLABORATION_GUIDE.md
+- [x] ./_ai_workspace/MY_COLLABORATION_GUIDE.md
 - [ ] ./_ai_workspace/PROMPT.md
 - [ ] ./_ai_workspace/ROADMAP/02-IMPLEMENTATION_PLAN.md
 - [ ] ./_ai_workspace/_AI_WORKSPACE_GUIDE.md
