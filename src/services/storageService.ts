@@ -1,5 +1,6 @@
 import PouchDB from 'pouchdb-browser'
 import type { StateStorage } from 'zustand/middleware'
+import { useToastStore } from '../store/toastStore'
 
 let dbPromise: Promise<PouchDB.Database> | null = null
 
@@ -39,7 +40,13 @@ async function putDoc(name: string, value: string): Promise<void> {
   const next = prev.catch(() => {}).then(async () => {
     const d = await getDb()
     const doc = (await d.get(name).catch(() => null)) as StoreDoc | null
-    await d.put({ _id: name, _rev: doc?._rev, value }).catch((e) => console.warn('storage write failed', name, e))
+    try {
+      await d.put({ _id: name, _rev: doc?._rev, value })
+    } catch (e) {
+      console.warn('storage write failed', name, e)
+      useToastStore.getState().showToast('Ошибка записи на диск — изменения могут не сохраниться', 'error')
+      throw e
+    }
   })
   writeQueue.set(name, next)
   return next
@@ -71,6 +78,25 @@ if (typeof window !== 'undefined') {
     }
     writeTimers.clear()
   })
+}
+
+/**
+ * Дождаться реальной записи документа на диск — для честного статуса «Сохранено».
+ * Форсирует отложенную debounce-запись и ждёт очередь.
+ */
+export async function flushWrites(name: string): Promise<void> {
+  const timer = writeTimers.get(name)
+  if (timer) {
+    clearTimeout(timer)
+    writeTimers.delete(name)
+    const value = pendingWrites.get(name)
+    if (value !== undefined) {
+      pendingWrites.delete(name)
+      await putDoc(name, value)
+      return
+    }
+  }
+  await (writeQueue.get(name) ?? Promise.resolve())
 }
 
 export const pouchStorage: StateStorage = {

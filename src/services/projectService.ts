@@ -240,6 +240,13 @@ export const projectService = {
       await delayWithSignal(API_MOCK_DELAY_MS, signal)
       const scopedScenes = scenes.map((s) => ({ ...s, projectId }))
       useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
+      // Честный статус «Сохранено»: ждём реальной записи на диск,
+      // иначе UI показывал бы «Сохранено» до фактической записи
+      const { flushWrites } = await import('./storageService')
+      await Promise.all([
+        flushWrites('kinoplan-normalized-projects'),
+        flushWrites('kinoplan-scripts'),
+      ])
     } catch (error) {
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцены')
       useToastStore.getState().showToast('Не удалось сохранить сцены', 'error')
