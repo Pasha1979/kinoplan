@@ -50,10 +50,5 @@ export const PAGE_MARGIN_TOP_BOTTOM_MM = 20
 export const PAGE_MARGIN_LEFT_MM = 30
 export const PAGE_MARGIN_RIGHT_MM = 20
 
-/** Калибровочный коэффициент для виртуального PageCounter.
- *  Подгоняет рендеринг под реальный размер шрифта Word (0.77 ≈ 12pt Courier).
- */
-export const WORD_RENDER_CALIBRATION = 0.77
-
 /** Имитационная задержка API-запросов, мс (для dev-режима). */
 export const API_MOCK_DELAY_MS = 100

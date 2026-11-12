@@ -7,7 +7,11 @@
  */
 
 import { SCRIPT_STYLES } from '../constants/scriptStyles'
-import { A4_WIDTH_MM, A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM, WORD_RENDER_CALIBRATION, MIN_SCENE_PAGES } from '../constants/scriptConstants'
+import { A4_WIDTH_MM, A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM, MIN_SCENE_PAGES } from '../constants/scriptConstants'
+
+// Блоки, которые нельзя оставлять последними на странице —
+// переносятся на следующую вместе со следующим блоком
+const KEEP_WITH_NEXT_TYPES = new Set(['scene-header', 'scene-cast', 'scene-character', 'scene-parenthetical'])
 
 /**
  * Применяет inline-стили к HTML для точного рендеринга.
@@ -62,10 +66,6 @@ export interface PageResult {
 export class PageCounter {
   private container: HTMLDivElement | null = null
   private mmToPx = 3.7795 // 1 mm ≈ 3.7795 px при 96 dpi
-  // Калибровочный коэффициент: браузер рендерит шрифт крупнее, чем Word.
-  // Калибровка совпадает с константой WORD_RENDER_CALIBRATION.
-  // Без калибровки показывает на ~30% больше страниц, чем Word.
-  private wordCalibration = WORD_RENDER_CALIBRATION
 
   constructor() {
     this.createContainer()
@@ -108,9 +108,10 @@ export class PageCounter {
     const contentHeightPx = this.container!.scrollHeight
     const contentHeightMm = contentHeightPx / this.mmToPx
     const usablePageHeightMm = A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2
+    // Честный подсчёт: страницы в нашей канонической вёрстке (SCRIPT_STYLES),
+    // теми же стилями что и экспорт — без подгоночного коэффициента под Word
     const rawPages = contentHeightMm / usablePageHeightMm
-    const pages = rawPages * this.wordCalibration
-    const totalPages = Math.max(MIN_SCENE_PAGES, parseFloat(pages.toFixed(1)))
+    const totalPages = Math.max(MIN_SCENE_PAGES, parseFloat(rawPages.toFixed(1)))
 
     // --- page breaks (via per-element offsetHeight) ---
     // styledHtml is wrapped in <div>, so container.children returns only 1 element.
@@ -127,15 +128,29 @@ export class PageCounter {
       const style = window.getComputedStyle(child)
       const marginTopPx = parseFloat(style.marginTop) || 0
       const marginBottomPx = parseFloat(style.marginBottom) || 0
-      // Применяем калибровку к каждому элементу (браузерный шрифт крупнее Word)
-      const heightMm = ((heightPx + marginTopPx + marginBottomPx) / this.mmToPx) * this.wordCalibration
+      const heightMm = (heightPx + marginTopPx + marginBottomPx) / this.mmToPx
       accumulatedMm += heightMm
 
       if (accumulatedMm > usablePageHeightMm && pageStartIndex < index) {
+        // Keep-with-next: шапка сцены и имя персонажа не остаются
+        // последними на странице — переносим на следующую вместе с контентом
+        let breakIndex = index
+        while (
+          breakIndex > pageStartIndex &&
+          KEEP_WITH_NEXT_TYPES.has(children[breakIndex - 1]?.getAttribute('data-type') ?? '')
+        ) {
+          breakIndex--
+        }
         breaks.push({ page, startIndex: pageStartIndex })
         page++
-        pageStartIndex = index
-        accumulatedMm = heightMm
+        pageStartIndex = breakIndex
+        // Пересчитываем накопленную высоту с позиции разрыва
+        accumulatedMm = 0
+        for (let j = breakIndex; j <= index; j++) {
+          const el = children[j]
+          const st = window.getComputedStyle(el)
+          accumulatedMm += (el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0)) / this.mmToPx
+        }
       }
     })
 
