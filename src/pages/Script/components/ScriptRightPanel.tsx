@@ -19,6 +19,7 @@ import type { Scene } from '../../../types/scene'
 import type { Character } from '../../../store/scriptStore'
 import type { TimingSystem } from '../../../types/scene'
 import { SCENE_NUMBER } from '../../../utils/sceneNumber'
+import { SCENE_HEADER_RE_RU, SCENE_HEADER_RE_EN, LOCATION_SYNONYMS } from '../../../utils/formatRules'
 
 type ErrorSeverity = 'error' | 'warning' | 'info'
 
@@ -92,22 +93,9 @@ function useFormatValidation(
           })
         }
 
-        const scenePattern =
-          format === 'russian'
-            ? new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|НАТ|ИНТ\\.\\/НАТ|ИНТ\\.-НАТ|ИНТ-НАТ)\\.?\\s*.+$`, 'i')
-            : new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
+        const scenePattern = format === 'russian' ? SCENE_HEADER_RE_RU : SCENE_HEADER_RE_EN
 
         if (!scenePattern.test(content)) {
-          // Синонимы типа локации: ЭКСТ → НАТ (основное обозначение проекта)
-          const LOCATION_SYNONYMS: Record<string, string> = {
-            'ЭКСТ': 'НАТ',
-            'ЭКСТ.': 'НАТ.',
-            'ЭКСТЕРЬЕР': 'НАТ',
-            'INT/EXT': 'ИНТ/НАТ',
-            'I/E': 'ИНТ/НАТ',
-            'ИНТ/ЭКСТ': 'ИНТ/НАТ',
-            'ИНТ-ЭКСТ': 'ИНТ-НАТ',
-          }
           const headMatch = content.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(\\S+)(.*)$`))
           const rawToken = headMatch?.[2] ?? ''
           const canonToken = LOCATION_SYNONYMS[rawToken] ?? LOCATION_SYNONYMS[rawToken.toUpperCase()]

@@ -27,6 +27,18 @@ export const NON_CHARACTER_WORDS = new Set([
 
 export const HEADER_RE = new RegExp(`(${SCENE_NUMBER}\\.\\s*)?(ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.`, 'i')
 
+/** Анкорованная проверка полной шапки сцены (для валидатора). Канон: ИНТ/ЭКСТ/ПАВ/НАТ. */
+export const SCENE_HEADER_RE_RU = new RegExp(`^${SCENE_NUMBER}\\.\\s*(ИНТ|ЭКСТ|ПАВ|НАТ|ИНТ[.\\/-]?(?:ЭКСТ|НАТ))\\.?\\s*.+$`, 'i')
+export const SCENE_HEADER_RE_EN = new RegExp(`^${SCENE_NUMBER}\\.\\s*(INT|EXT|INT\\.\\/EXT|I\\/E)\\.?\\s*.+$`, 'i')
+
+/** Неканоничные → каноничные токены локации (для автозамены валидатора). */
+export const LOCATION_SYNONYMS: Record<string, string> = {
+  'ЭКСТЕРЬЕР': 'ЭКСТ.',
+  'INT/EXT': 'ИНТ-ЭКСТ.',
+  'I/E': 'ИНТ-ЭКСТ.',
+  'ИНТ/ЭКСТ': 'ИНТ-ЭКСТ.',
+}
+
 export const TIME_WORD_RE = /(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)/i
 
 /**
