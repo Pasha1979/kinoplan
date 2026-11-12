@@ -12,6 +12,17 @@ interface LegacyStorage {
 }
 
 export function migrateLegacyData(): void {
+  // Ждём гидрации PouchDB: иначе на пустом синхронном сторе примем
+  // «пусто» за «нет проектов» и заложим legacy поверх реальных данных
+  const persistApi = useNormalizedProjectStore.persist
+  if (persistApi.hasHydrated()) {
+    runMigration()
+  } else {
+    persistApi.onFinishHydration(runMigration)
+  }
+}
+
+function runMigration(): void {
   if (safeGetLocalStorage(MIGRATED_FLAG) === 'true') return
 
   const normalizedProjects = useNormalizedProjectStore.getState().projects

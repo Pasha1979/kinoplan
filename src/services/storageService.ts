@@ -128,11 +128,18 @@ export const pouchStorage: StateStorage = {
       clearTimeout(timer)
       writeTimers.delete(name)
     }
-    try {
-      const doc = (await (await getDb()).get(name)) as StoreDoc
-      if (doc._rev) await (await getDb()).remove(name, doc._rev)
-    } catch {
-      // документа нет — удалять нечего
-    }
+    // Удаление ставим в ту же очередь, что и записи: in-flight putDoc
+    // должен завершиться ДО удаления, иначе документ «воскреснет»
+    const prev = writeQueue.get(name) ?? Promise.resolve()
+    const next = prev.catch(() => {}).then(async () => {
+      try {
+        const doc = (await (await getDb()).get(name)) as StoreDoc
+        if (doc._rev) await (await getDb()).remove(name, doc._rev)
+      } catch {
+        // документа нет — удалять нечего
+      }
+    })
+    writeQueue.set(name, next)
+    return next
   },
 }

@@ -24,7 +24,9 @@ if (typeof globalThis.localStorage === 'undefined') {
 }
 
 describe('migrateLegacyData', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Ждём гидрации — миграция запускается только после неё
+    await useNormalizedProjectStore.persist.rehydrate()
     localStorage.clear()
     useNormalizedProjectStore.setState({
       projects: {},
