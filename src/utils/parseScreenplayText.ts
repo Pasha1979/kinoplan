@@ -75,6 +75,11 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
   const blocks: ScreenplayBlock[] = []
   let currentActionLines: string[] = []
   let prevType: ScreenplayBlockType | null = null
+  // Тип последнего значимого блока — НЕ сбрасывается пустой строкой.
+  // Word разделяет персонажа и диалог пустой строкой; отступы строк —
+  // главный сигнал, что сдвинутый текст всё ещё диалог
+  let lastSigType: ScreenplayBlockType | null = null
+  const DIALOG_INDENT = 8
 
   const flushAction = () => {
     if (currentActionLines.length > 0) {
@@ -83,6 +88,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
         content: currentActionLines.join('\n'),
       })
       currentActionLines = []
+      lastSigType = 'sceneAction'
     }
   }
 
@@ -102,6 +108,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
       flushAction()
       blocks.push({ type: 'sceneHeader', content: trimmed.toUpperCase() })
       prevType = 'sceneHeader'
+      lastSigType = 'sceneHeader'
       continue
     }
 
@@ -131,6 +138,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
       flushAction()
       blocks.push({ type: 'sceneCast', content: trimmed.toUpperCase() })
       prevType = 'sceneCast'
+      lastSigType = 'sceneCast'
       continue
     }
 
@@ -152,6 +160,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
       flushAction()
       blocks.push({ type: 'sceneTransition', content: trimmed })
       prevType = 'sceneTransition'
+      lastSigType = 'sceneTransition'
       continue
     }
 
@@ -162,6 +171,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
         flushAction()
         blocks.push({ type: 'sceneParenthetical', content: trimmed })
         prevType = 'sceneParenthetical'
+        lastSigType = 'sceneParenthetical'
         continue
       }
       // Если ремарка вне контекста — считаем действием
@@ -175,6 +185,7 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
       flushAction()
       blocks.push({ type: 'sceneCharacter', content: trimmed.toUpperCase() })
       prevType = 'sceneCharacter'
+      lastSigType = 'sceneCharacter'
       continue
     }
 
@@ -198,6 +209,23 @@ export function parseScreenplayText(text: string): ScreenplayBlock[] {
       // Если строка короткая и заканчивается многоточием или тире — вероятно, продолжение
       blocks.push({ type: 'sceneDialog', content: trimmed })
       prevType = 'sceneDialog'
+      lastSigType = 'sceneDialog'
+      continue
+    }
+
+    // Диалог по Word-отступу: строка сдвинута вправо, а последним значимым
+    // блоком был персонаж/ремарка/диалог (пустая строка между ними в Word)
+    const indent = line.match(/^[ \t]*/)![0].replace(/\t/g, '    ').length
+    if (
+      indent >= DIALOG_INDENT &&
+      (lastSigType === 'sceneCharacter' ||
+        lastSigType === 'sceneParenthetical' ||
+        lastSigType === 'sceneDialog')
+    ) {
+      flushAction()
+      blocks.push({ type: 'sceneDialog', content: trimmed })
+      prevType = 'sceneDialog'
+      lastSigType = 'sceneDialog'
       continue
     }
 

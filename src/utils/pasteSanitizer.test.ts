@@ -142,4 +142,8 @@ describe('isScreenplayContent', () => {
     expect(isScreenplayContent('инт. квартира — день')).toBe(true)
     expect(isScreenplayContent('экст. улица — ночь')).toBe(true)
   })
+
+    it('рекурсия: <strong><span style> не оставляет атрибутов', () => {
+      expect(sanitizeHtml('<strong><span style="color:red" class="x">текст</span></strong>')).toBe('<b>текст</b>')
+    })
 })

@@ -23,36 +23,39 @@ export function sanitizeHtml(html: string): string {
       const el = node as HTMLElement
       const tag = el.tagName.toLowerCase()
 
-      // Convert semantic tags
+      // Convert semantic tags — и рекурсируем внутрь замены,
+      // иначе вложенные span/атрибуты выживают в конвертированном теге
       if (tag === 'strong') {
         const b = doc.createElement('b')
         while (el.firstChild) b.appendChild(el.firstChild)
         el.parentNode?.replaceChild(b, el)
+        walk(b)
         return
       }
       if (tag === 'em') {
         const i = doc.createElement('i')
         while (el.firstChild) i.appendChild(el.firstChild)
         el.parentNode?.replaceChild(i, el)
+        walk(i)
         return
       }
       if (tag === 'div') {
         const p = doc.createElement('p')
         while (el.firstChild) p.appendChild(el.firstChild)
         el.parentNode?.replaceChild(p, el)
+        walk(p)
         return
       }
-      if (tag === 'span') {
-        // Unwrap span — keep children
+      if (tag === 'span' || tag === 'font') {
+        // Unwrap — keep children, и обходим их (могли притащить атрибуты)
         const parent = el.parentNode
-        while (el.firstChild) parent?.insertBefore(el.firstChild, el)
+        const moved: Node[] = []
+        while (el.firstChild) {
+          moved.push(el.firstChild)
+          parent?.insertBefore(el.firstChild, el)
+        }
         parent?.removeChild(el)
-        return
-      }
-      if (tag === 'font') {
-        const parent = el.parentNode
-        while (el.firstChild) parent?.insertBefore(el.firstChild, el)
-        parent?.removeChild(el)
+        moved.forEach((c) => walk(c))
         return
       }
 

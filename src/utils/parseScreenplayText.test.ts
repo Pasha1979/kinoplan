@@ -115,4 +115,14 @@ describe('blocksToHtml', () => {
     const html = blocksToHtml(blocks)
     expect(html).toContain('&lt;b&gt;Hello&lt;/b&gt;')
   })
+
+
+    it('Word-отступы: диалог через пустую строку после персонажа', () => {
+      const text = 'ИНТ. ДОМ - ДЕНЬ' + '\n\n' + 'Описание действия.' + '\n\n' + '                    ИВАН' + '\n\n' + '          Привет, как дела?' + '\n\n' + 'Ещё действие слева.'
+      const blocks = parseScreenplayText(text)
+      expect(blocks[0].type).toBe('sceneHeader')
+      expect(blocks.find(b => b.content === 'ИВАН')?.type).toBe('sceneCharacter')
+      expect(blocks.find(b => b.content === 'Привет, как дела?')?.type).toBe('sceneDialog')
+      expect(blocks.find(b => b.content === 'Ещё действие слева.')?.type).toBe('sceneAction')
+    })
 })
