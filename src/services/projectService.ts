@@ -3,29 +3,8 @@ import { useScriptStore, type Script } from '../store/scriptStore'
 import { useToastStore } from '../store/toastStore'
 import type { Project } from '../store/projectStore'
 import type { Scene } from '../types/scene'
-import { API_MOCK_DELAY_MS } from '../constants/scriptConstants'
 import { safeRemoveLocalStorage } from '../utils/env'
 
-async function delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'))
-      return
-    }
-
-    const timeoutId = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-
-    const onAbort = () => {
-      clearTimeout(timeoutId)
-      reject(new DOMException('Aborted', 'AbortError'))
-    }
-
-    signal?.addEventListener('abort', onAbort, { once: true })
-  })
-}
 
 interface ImportProjectPayload {
   schemaVersion?: number
@@ -171,8 +150,7 @@ function validateImportedData(raw: unknown): { project: Partial<Project>; scenes
 export const projectService = {
   async getProjects(signal?: AbortSignal): Promise<Project[]> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)
-      await delayWithSignal(API_MOCK_DELAY_MS, signal)
+      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
       const { projects } = useNormalizedProjectStore.getState()
       return Object.values(projects)
     } catch (error) {
@@ -189,8 +167,7 @@ export const projectService = {
 
   async createProject(data: Partial<Project>, signal?: AbortSignal): Promise<Project> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)
-      await delayWithSignal(API_MOCK_DELAY_MS, signal)
+      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
 
       const newProject: Project = {
         id: `proj-${Date.now()}`,
@@ -236,8 +213,7 @@ export const projectService = {
 
   async saveScenesBatch(projectId: string, scenes: Scene[], signal?: AbortSignal): Promise<void> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)
-      await delayWithSignal(API_MOCK_DELAY_MS, signal)
+      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
       const scopedScenes = scenes.map((s) => ({ ...s, projectId }))
       useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
       // Честный статус «Сохранено»: ждём реальной записи на диск,
@@ -258,8 +234,7 @@ export const projectService = {
 
   async deleteProject(projectId: string, signal?: AbortSignal): Promise<void> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)
-      await delayWithSignal(API_MOCK_DELAY_MS, signal)
+      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
       useNormalizedProjectStore.getState().deleteProject(projectId)
 
       // Каскад: удаляем все сценарии проекта (самый тяжёлый контент — HTML)
@@ -337,8 +312,7 @@ export const projectService = {
 
   async updateScene(sceneId: string, updates: Partial<Scene>, signal?: AbortSignal): Promise<void> {
     try {
-      useNormalizedProjectStore.getState().updateScene(sceneId, updates)
-      await delayWithSignal(API_MOCK_DELAY_MS, signal)
+      useNormalizedProjectStore.getState().updateScene(sceneId, updates)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
     } catch (error) {
       useNormalizedProjectStore.getState().revertScene(sceneId)
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцену')
@@ -373,8 +347,7 @@ export const projectService = {
 
   async importProjectFromJSON(jsonString: string, signal?: AbortSignal): Promise<Project> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)
-      await delayWithSignal(API_MOCK_DELAY_MS, signal)
+      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
 
       const parsed = JSON.parse(jsonString)
       const { project: validatedProj, scenes: validatedScenes, scripts: validatedScripts } = validateImportedData(parsed)
