@@ -22,7 +22,7 @@ ID-счётчики: I-54, R-79, T-22, D-40, Q-3, L-62
 - [x] ./_ai_workspace/_AI_WORKSPACE_GUIDE.md
 - [x] ./_ai_workspace/_archive/DASHBOARD_АРХИТЕКТУРА.md
 - [x] ./_ai_workspace/_archive/АУДИТ_ДОКУМЕНТАЦИИ_29.05.2026.md
-- [ ] ./_ai_workspace/_archive/ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md
+- [x] ./_ai_workspace/_archive/ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md
 - [x] ./_ai_workspace/_archive/💡_ЗАДЕЛЫ_И_ИДЕИ.md
 - [x] ./_ai_workspace/_archive/📋_AUDIT_REPORT.md
 - [x] ./_ai_workspace/АЛГОРИТМ_ПЛАНИРОВАНИЯ.md
