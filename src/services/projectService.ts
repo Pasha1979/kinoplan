@@ -203,6 +203,7 @@ export const projectService = {
 
       return newProject
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().setError('Не удалось создать проект')
       useToastStore.getState().showToast('Не удалось создать проект', 'error')
       throw error
@@ -224,6 +225,7 @@ export const projectService = {
         flushWrites('kinoplan-scripts'),
       ])
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцены')
       useToastStore.getState().showToast('Не удалось сохранить сцены', 'error')
       throw error
@@ -257,6 +259,7 @@ export const projectService = {
         }
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().setError('Не удалось удалить проект')
       useToastStore.getState().showToast('Не удалось удалить проект', 'error')
       throw error
@@ -314,6 +317,7 @@ export const projectService = {
     try {
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().revertScene(sceneId)
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцену')
       useToastStore.getState().showToast('Не удалось сохранить сцену', 'error')
@@ -339,6 +343,7 @@ export const projectService = {
       }
       return JSON.stringify(exportData, null, 2)
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().setError('Не удалось экспортировать проект')
       useToastStore.getState().showToast('Не удалось экспортировать проект', 'error')
       throw error
@@ -396,6 +401,7 @@ export const projectService = {
 
       return importedProject
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') { throw error }
       useNormalizedProjectStore.getState().setError('Не удалось импортировать проект')
       useToastStore.getState().showToast('Не удалось импортировать проект', 'error')
       throw error

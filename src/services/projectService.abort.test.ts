@@ -8,8 +8,8 @@ describe('projectService AbortController', () => {
     const controller = new AbortController()
     
     // Запускаем запрос и сразу отменяем его
-    const requestPromise = projectService.saveScenesBatch('test-proj', [], controller.signal)
     controller.abort()
+    const requestPromise = projectService.saveScenesBatch('test-proj', [], controller.signal)
     
     await expect(requestPromise).rejects.toThrow('Aborted')
   })
@@ -17,8 +17,8 @@ describe('projectService AbortController', () => {
   it('should abort createProject request', async () => {
     const controller = new AbortController()
     
-    const requestPromise = projectService.createProject({ name: 'Test' }, controller.signal)
     controller.abort()
+    const requestPromise = projectService.createProject({ name: 'Test' }, controller.signal)
     
     await expect(requestPromise).rejects.toThrow('Aborted')
   })
@@ -26,8 +26,8 @@ describe('projectService AbortController', () => {
   it('should abort getProjects request', async () => {
     const controller = new AbortController()
     
-    const requestPromise = projectService.getProjects(controller.signal)
     controller.abort()
+    const requestPromise = projectService.getProjects(controller.signal)
     
     await expect(requestPromise).rejects.toThrow('Aborted')
   })
@@ -37,8 +37,8 @@ describe('projectService AbortController', () => {
     const controller = new AbortController()
     
     try {
-      await projectService.saveScenesBatch('test-proj', [], controller.signal)
       controller.abort()
+      await projectService.saveScenesBatch('test-proj', [], controller.signal)
     } catch {
       // Ошибка AbortError ожидается
     }
