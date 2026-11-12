@@ -1,0 +1,75 @@
+# ФАЗА 1 — прогресс (resume state)
+Ветка: docs/brain-v4 | Снапшот: _archive/v3_snapshot/ | Реестры: _extracted/*.md
+ID-счётчики: I-34, R-19, T-6, D-11, Q-0, L-0
+Осталось: файлы ниже + git log (756) + код TODO/FIXME + референсы png (2, не читать)
+
+## ФАЙЛЫ (69 шт)
+- [ ] ./.windsurf/workflows/ai-brain.md
+- [ ] ./.windsurf/workflows/deep-analysis.md
+- [ ] ./.windsurf/workflows/start-session.md
+- [ ] ./.windsurf/workflows/update-brain.md
+- [ ] ./.windsurf/workflows/update-docs.md
+- [ ] ./README.md
+- [ ] ./_ai_workspace/ARCHITECTURE.md
+- [ ] ./_ai_workspace/ARCHITECTURE_GUARDIAN.md
+- [ ] ./_ai_workspace/DEEP_ANALYSIS_SYSTEM.md
+- [ ] ./_ai_workspace/FORMAT_ASSISTANT_ПРАВИЛА.md
+- [ ] ./_ai_workspace/LESSONS_LEARNED.md
+- [ ] ./_ai_workspace/MY_COLLABORATION_GUIDE.md
+- [ ] ./_ai_workspace/PROMPT.md
+- [ ] ./_ai_workspace/ROADMAP/02-IMPLEMENTATION_PLAN.md
+- [ ] ./_ai_workspace/_AI_WORKSPACE_GUIDE.md
+- [ ] ./_ai_workspace/_archive/DASHBOARD_АРХИТЕКТУРА.md
+- [ ] ./_ai_workspace/_archive/АУДИТ_ДОКУМЕНТАЦИИ_29.05.2026.md
+- [ ] ./_ai_workspace/_archive/ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md
+- [ ] ./_ai_workspace/_archive/💡_ЗАДЕЛЫ_И_ИДЕИ.md
+- [ ] ./_ai_workspace/_archive/📋_AUDIT_REPORT.md
+- [ ] ./_ai_workspace/АЛГОРИТМ_ПЛАНИРОВАНИЯ.md
+- [ ] ./_ai_workspace/ВАРИАНТЫ_ИНТЕГРАЦИИ_РАЗБИВКИ.md
+- [x] ./_ai_workspace/ИДЕИ_МОДУЛЬ_СЦЕНАРИЙ.md
+- [x] ./_ai_workspace/ОБЩЕНИЕ.md
+- [ ] ./_ai_workspace/ПЛАН_РАБОТ.md
+- [ ] ./_ai_workspace/ПРАВИЛА_АРХИТЕКТУРЫ.md
+- [ ] ./_ai_workspace/ПРИНЦИПЫ_ПОДМОДУЛЯ_СЦЕНАРИСТ.md
+- [ ] ./_ai_workspace/РАБОЧИЙ_ПРОЦЕСС.md
+- [ ] ./_ai_workspace/РЕЕСТРЫ_КОНТРОЛЯ.md
+- [ ] ./_ai_workspace/РОССИЙСКИЙ_ФОРМАТ_СЦЕНАРИЯ.md
+- [ ] ./_ai_workspace/СТРУКТУРА_ПЛАНИРОВАНИЯ.md
+- [ ] ./_ai_workspace/СТРУКТУРА_СЦЕНАРИЯ.md
+- [x] ./_ai_workspace/УКАЗАНИЯ_И_НАПОМИНАНИЯ.md
+- [ ] ./_ai_workspace/✅_PLAN_VALIDATION.md
+- [ ] ./_ai_workspace/✅_ЧЕКЛИСТЫ.md
+- [ ] ./_ai_workspace/🌟_PROJECT_EVOLUTION.md
+- [ ] ./_ai_workspace/🎨_ДИЗАЙН_СИСТЕМА.md
+- [ ] ./_ai_workspace/🏆_ЖУРНАЛ_УСПЕХОВ.md
+- [ ] ./_ai_workspace/💡_IDEA_MANAGER.md
+- [x] ./_ai_workspace/💡_ЗАДЕЛЫ_ИДЕИ.md
+- [ ] ./_ai_workspace/📈_МЕТРИКИ_ПРОГРЕССА.md
+- [ ] ./_ai_workspace/📊_CONTEXT_LIMIT_TRACKER.md
+- [ ] ./_ai_workspace/📊_ERROR_PREDICTION.md
+- [ ] ./_ai_workspace/📊_METRICS.md
+- [ ] ./_ai_workspace/📊_ТЕКУЩИЙ_СТАТУС.md
+- [ ] ./_ai_workspace/📋_ОТЧЕТ_АУДИТА.md
+- [ ] ./_ai_workspace/📋_РУКОВОДСТВА.md
+- [ ] ./_ai_workspace/📐_UX_RESHENIYA.md
+- [ ] ./_ai_workspace/📚_КАТАЛОГ_ФАЙЛОВ.md
+- [ ] ./_ai_workspace/📜_ИСТОРИЯ_РЕФАКТОРИНГА.md
+- [ ] ./_ai_workspace/📝_AUTO_DOCS.md
+- [ ] ./_ai_workspace/📝_DIALOG_HISTORY.md
+- [ ] ./_ai_workspace/📝_ЗАМЕЧАНИЯ_ПОЛЬЗОВАТЕЛЯ.md
+- [ ] ./_ai_workspace/🔄_CONTEXT_SNAPSHOT.md
+- [ ] ./_ai_workspace/🔍_LESSON_MATCHING.md
+- [ ] ./_ai_workspace/🔍_АУДИТ_11.11.2026.md
+- [ ] ./_ai_workspace/🔐_TOKEN_STORAGE.md
+- [ ] ./_ai_workspace/🔔_CONTEXT_LOSS_DETECTION.md
+- [ ] ./_ai_workspace/🔔_NOTIFICATIONS.md
+- [ ] ./_ai_workspace/🔗_LINK_VALIDATOR.md
+- [ ] ./_ai_workspace/🔗_НЕЙРОННЫЕ_СВЯЗИ.md
+- [ ] ./_ai_workspace/🔬_АНАЛИЗ_КОНКУРЕНТОВ.md
+- [ ] ./_ai_workspace/🤖_AUTO_FIX.md
+- [ ] ./_ai_workspace/🤖_АКТИВНЫЙ_АССИСТЕНТ.md
+- [ ] ./_ai_workspace/🧠_SESSION_CONTEXT.md
+- [ ] ./_ai_workspace/🧠_SMART_PRIORITIES.md
+- [x] ./_ai_workspace/🧠_МОЗГ_ПРОЕКТА.md
+- [ ] ./КАК_ПОЛЬЗОВАТЬСЯ_ПАМЯТЬЮ.md
+- [ ] ./🔬_АНАЛИЗ_КОНКУРЕНТОВ_РЕДАКТОР.md
