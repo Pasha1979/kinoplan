@@ -20,7 +20,7 @@ ID-счётчики: I-54, R-79, T-22, D-40, Q-3, L-62
 - [x] ./_ai_workspace/PROMPT.md
 - [x] ./_ai_workspace/ROADMAP/02-IMPLEMENTATION_PLAN.md
 - [x] ./_ai_workspace/_AI_WORKSPACE_GUIDE.md
-- [ ] ./_ai_workspace/_archive/DASHBOARD_АРХИТЕКТУРА.md
+- [x] ./_ai_workspace/_archive/DASHBOARD_АРХИТЕКТУРА.md
 - [x] ./_ai_workspace/_archive/АУДИТ_ДОКУМЕНТАЦИИ_29.05.2026.md
 - [ ] ./_ai_workspace/_archive/ОБСУЖДЕНИЕ_СЦЕНАРИЙ.md
 - [x] ./_ai_workspace/_archive/💡_ЗАДЕЛЫ_И_ИДЕИ.md
@@ -49,7 +49,7 @@ ID-счётчики: I-54, R-79, T-22, D-40, Q-3, L-62
 - [x] ./_ai_workspace/📊_CONTEXT_LIMIT_TRACKER.md
 - [x] ./_ai_workspace/📊_ERROR_PREDICTION.md
 - [x] ./_ai_workspace/📊_METRICS.md
-- [ ] ./_ai_workspace/📊_ТЕКУЩИЙ_СТАТУС.md
+- [x] ./_ai_workspace/📊_ТЕКУЩИЙ_СТАТУС.md
 - [x] ./_ai_workspace/📋_ОТЧЕТ_АУДИТА.md
 - [x] ./_ai_workspace/📋_РУКОВОДСТВА.md
 - [x] ./_ai_workspace/📐_UX_RESHENIYA.md
