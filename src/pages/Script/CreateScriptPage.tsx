@@ -9,7 +9,7 @@ import { safeGetDocument } from '../../utils/env'
 
 export default function CreateScriptPage() {
   const navigate = useNavigate()
-  const { addScript } = useScriptStore()
+  const { addScript, setCurrentScript } = useScriptStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
   const { theme } = useUiStore()
   const { showToast } = useToastStore()
@@ -88,6 +88,7 @@ export default function CreateScriptPage() {
     if (project.type === 'serial') {
       // Сериал: создаём отдельный Script на каждую серию
       const episodesCount = project.episodesCount || 8
+      let firstEpisodeId = ''
       for (let ep = 1; ep <= episodesCount; ep++) {
         const episodeScript = {
           id: crypto.randomUUID(),
@@ -107,7 +108,9 @@ export default function CreateScriptPage() {
           autoExtractCharacters: true,
         }
         addScript(episodeScript)
+        if (ep === 1) firstEpisodeId = episodeScript.id
       }
+      if (firstEpisodeId) setCurrentScript(firstEpisodeId)
     } else {
       // Фильм: один Script
       const newScript = {
@@ -127,6 +130,7 @@ export default function CreateScriptPage() {
         autoExtractCharacters: true,
       }
       addScript(newScript)
+      setCurrentScript(newScript.id)
     }
 
     navigate(`/project/${project.id}/script`)

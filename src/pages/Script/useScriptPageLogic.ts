@@ -170,9 +170,10 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         if (script.format) {
           prevFormatRef.current = script.format
         }
-        // Устанавливаем currentScriptId если не установлен
-        // Для сериалов — выбираем первую серию (episodeNumber=1)
-        if (!currentScriptId) {
+        // Выбираем скрипт текущего проекта если не выбран или выбран чужой
+        // (currentScriptId глобален и мог остаться от другого проекта)
+        const belongsToProject = currentScriptId && projectScripts.some(s => s.id === currentScriptId)
+        if (!belongsToProject) {
           const firstEpisode = projectScripts.find(s => s.episodeNumber === 1) || projectScripts[0]
           setCurrentScript(firstEpisode.id)
         }
