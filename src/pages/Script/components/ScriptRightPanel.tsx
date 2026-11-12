@@ -133,7 +133,7 @@ function useFormatValidation(
 
       if (block.type === 'character') {
         // Заглавные + дефисы/тире для двойных фамилий (АННА-МАРИЯ) + скобка-пометка (ЗА КАДРОМ, В РАКУРСЕ)
-        if (!/^[А-ЯA-Z\s\-–—]+(?:\s*\([^)]*\))?$/.test(content)) {
+        if (!/^[А-ЯЁA-Z\s\-–—]+(?:\s*\([^)]*\))?$/.test(content)) {
           issues.push({
             id: `fmt-${block.id}-case`,
             severity: 'warning',
