@@ -177,9 +177,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const isReApplyingRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
-  if (pageCounterRef.current == null) {
-    pageCounterRef.current = new PageCounter()
-  }
+  // Создаём лениво в точке использования — PageCounter создаёт DOM-контейнер,
+  // создание в теле рендера опасно в StrictMode
   // Ref для _format чтобы не добавлять его в deps useEffect (избегаем перезагрузки draft при смене формата)
   const _formatRef = useRef(_format)
   // eslint-disable-next-line react-hooks/refs
@@ -329,15 +328,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       }
 
       if (projectType === 'serial' && currentSeries > 0) {
-        const needsSeriesPattern = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)$/i
-        const alreadyHasSeriesPattern = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)$/i
-        const match = upperText.match(needsSeriesPattern)
-        const alreadyHasSeries = alreadyHasSeriesPattern.test(upperText)
-
-        if (match && !alreadyHasSeries) {
-          const sceneNumber = match[1]
-          const extType = match[2]
-          const newText = `${currentSeries}-${sceneNumber}. ${extType}`
+        const alreadyHasSeries = /^\d+-\d+\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i.test(upperText)
+        if (!alreadyHasSeries) {
+          const numbered = /^(\d+)\.\s*(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i.test(upperText)
+          const bare = /^(ИНТ\.|ЭКСТ\.|ИНТ-ЭКСТ\.|ПАВ\.)/i.test(upperText)
+          // «5. ИНТ. …» → «S-5. ИНТ. …»; голое «ИНТ. …» → «S-N. ИНТ. …» (как в фильме + серия)
+          const newText = numbered
+            ? `${currentSeries}-${upperText}`
+            : bare
+              ? `${currentSeries}-${getNextSceneNumber(editorInstance.state.doc)}. ${upperText}`
+              : null
+          if (newText) {
           isReplacingRef.current = true
           const nodeStart = $from.start()
           const nodeEnd = $from.end()
@@ -1298,7 +1299,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   // Хелпер: расчёт статистики и отправка в коллбэки (используется в onUpdate и при загрузке)
   const calculateAndReportStats = useCallback((editorInstance: Editor) => {
     const html = editorInstance.getHTML()
-    const result = pageCounterRef.current!.calculatePagesWithBreaks(
+    const result = (pageCounterRef.current ??= new PageCounter()).calculatePagesWithBreaks(
       html,
       (_formatRef.current as 'russian' | 'hollywood') || 'russian'
     )
