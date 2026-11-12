@@ -14,7 +14,7 @@ const EnterFlow = Extension.create({
         const type = editor.state.selection.$anchor.parent.type.name
         // шапка → действие; персонаж/реплика → диалог; диалог → действие; переход → действие
         const next: Record<string, string> = {
-          sceneHeader: 'sceneAction',
+          sceneHeader: 'sceneCast',
           sceneCast: 'sceneAction',
           sceneCharacter: 'sceneDialog',
           sceneParenthetical: 'sceneDialog',
@@ -88,15 +88,6 @@ export function extractSceneHtml(content: string, sceneNumber: string, fallbackI
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
   const headers = blocks.filter((el) => isHeader(el))
-  // DEBUG: что парсер реально видит
-  console.log('[sceneExtract]', {
-    sceneNumber,
-    fallbackIndex,
-    headersFound: headers.length,
-    headerTexts: headers.slice(0, 12).map((h) => h.textContent?.trim().slice(0, 40)),
-    totalBlocks: blocks.length,
-    contentLen: content?.length,
-  })
   const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
   if (!startEl) {
     console.warn('[sceneExtract] ШАПКА НЕ НАЙДЕНА для сцены', sceneNumber)
@@ -106,12 +97,6 @@ export function extractSceneHtml(content: string, sceneNumber: string, fallbackI
   const frag = nodes
     .map((n) => (n.nodeType === 1 ? (n as Element).outerHTML : n.textContent || ''))
     .join('')
-  console.log('[sceneExtract]', {
-    startHTML: startEl.outerHTML.slice(0, 120),
-    nodesInScene: nodes.length,
-    fragLen: frag.length,
-    fragStart: frag.slice(0, 200),
-  })
   return frag
 }
 
@@ -139,9 +124,8 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
 
   const initialHtml = useMemo(
     () => extractSceneHtml(script.content || '', scene.number, sceneIndex),
-    [script.id, scene.id],
+    [script.id, script.content, scene.id, scene.number, sceneIndex],
   )
-  console.log('[sceneEditModal]', { sceneNum: scene.number, scriptId: script.id, sceneIndex, initialHtmlLen: initialHtml.length, initialHtmlStart: initialHtml.slice(0, 300) })
 
   const editor = useEditor({
     enableInputRules: false,
@@ -157,21 +141,12 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
     ],
     content: initialHtml,
     autofocus: 'start',
-    onCreate: ({ editor }) => {
-      // DEBUG: какие узлы реально попали в документ Tiptap
-      console.log('[sceneEditModal] doc:', editor.state.doc.children.map((c) => ({ type: c.type.name, text: c.textContent.slice(0, 30) })))
-    },
   })
 
   const handleSave = () => {
     if (!editor) return
     try {
       const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML())
-      console.log('[sceneSave]', {
-        changed: newContent !== script.content,
-        oldLen: script.content?.length,
-        newLen: newContent.length,
-      })
       onSave(newContent)
     } catch (e) {
       console.error('[sceneSave] ОШИБКА сохранения:', e)
