@@ -24,6 +24,7 @@ import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/p
 import { createSearchPlugin } from './useScriptSearch'
 import { useMultiCursor } from './useMultiCursor'
 import { SCENE_NUMBER } from '../utils/sceneNumber'
+import { RU_TO_EN_REPLACEMENTS, EN_TO_RU_REPLACEMENTS } from '../utils/formatRules'
 
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
@@ -1354,36 +1355,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const convertFormat = (from: ScriptFormat, to: ScriptFormat) => {
       if (from === to) return
 
-      // Словари замен: применяются только внутри sceneHeader
+      // Словари замен: применяются только внутри sceneHeader.
+      // Канонические таблицы — formatRules.ts (границы слов совместимы с кириллицей)
       const replacements: [RegExp, string][] =
         from === 'russian' && to === 'hollywood'
-          ? [
-              [/ИНТ-ЭКСТ\./gi, 'INT/EXT.'],
-              [/ИНТ\./gi, 'INT.'],
-              [/ЭКСТ\./gi, 'EXT.'],
-              [/ПАВ\./gi, 'PAV.'],
-              [/—/g, '-'],
-              // \b не работает с кириллицей — граница слова через lookaround
-              [/(?<![А-ЯЁA-Z])ДЕНЬ(?![А-ЯЁA-Z])/gi, 'DAY'],
-              [/(?<![А-ЯЁA-Z])НОЧЬ(?![А-ЯЁA-Z])/gi, 'NIGHT'],
-              [/(?<![А-ЯЁA-Z])УТРО(?![А-ЯЁA-Z])/gi, 'MORNING'],
-              [/(?<![А-ЯЁA-Z])ВЕЧЕР(?![А-ЯЁA-Z])/gi, 'EVENING'],
-              [/(?<![А-ЯЁA-Z])РАССВЕТ(?![А-ЯЁA-Z])/gi, 'DAWN'],
-              [/(?<![А-ЯЁA-Z])ЗАКАТ(?![А-ЯЁA-Z])/gi, 'DUSK'],
-            ]
-          : [
-              [/INT\/EXT\./gi, 'ИНТ-ЭКСТ.'],
-              [/INT\./gi, 'ИНТ.'],
-              [/EXT\./gi, 'ЭКСТ.'],
-              [/PAV\./gi, 'ПАВ.'],
-              [/ - /g, ' — '],
-              [/\bDAY\b/gi, 'ДЕНЬ'],
-              [/\bNIGHT\b/gi, 'НОЧЬ'],
-              [/\bMORNING\b/gi, 'УТРО'],
-              [/\bEVENING\b/gi, 'ВЕЧЕР'],
-              [/\bDAWN\b/gi, 'РАССВЕТ'],
-              [/\bDUSK\b/gi, 'ЗАКАТ'],
-            ]
+          ? RU_TO_EN_REPLACEMENTS.map(([re, rep]) => [new RegExp(re.source, re.flags), rep])
+          : EN_TO_RU_REPLACEMENTS.map(([re, rep]) => [new RegExp(re.source, re.flags), rep])
 
       const tr = editor.state.tr
       const changes: Array<{ from: number; to: number; text: string }> = []
@@ -1395,8 +1372,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           let changed = false
 
           for (const [regex, replacement] of replacements) {
-            if (regex.test(text)) {
-              text = text.replace(regex, replacement)
+            // replace + сравнение вместо .test() — глобальный regex хранит
+            // lastIndex между вызовами и пропускал бы совпадения
+            const next = text.replace(regex, replacement)
+            if (next !== text) {
+              text = next
               changed = true
             }
           }

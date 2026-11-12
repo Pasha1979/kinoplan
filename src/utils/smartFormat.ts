@@ -2,28 +2,9 @@ import { parseScreenplayText, blocksToHtml } from './parseScreenplayText'
 import { SCENE_NUMBER } from './sceneNumber'
 import type { ScreenplayBlock } from './parseScreenplayText'
 
-const TIME_WORDS = new Set([
-  'ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ',
-  'DAY', 'NIGHT', 'MORNING', 'EVENING', 'DAWN', 'DUSK',
-])
-
-const TRANSITION_WORDS = new Set([
-  'РАССВЕТ', 'ЗАТЕМНЕНИЕ', 'ПЕРЕХОД', 'СМЕНА',
-  'CUT TO', 'FADE IN', 'FADE OUT', 'DISSOLVE TO',
-])
-
-// CAPS-слова — акценты действия/звука, НЕ имена персонажей.
-// Без стоп-листа «ВЗРЫВ» на отдельной строке превращался в героя.
-const NON_CHARACTER_WORDS = new Set([
-  'ВЗРЫВ', 'ВЫСТРЕЛ', 'ВЫСТРЕЛЫ', 'КРИК', 'КРИКИ', 'СМЕХ', 'ГРОХОТ', 'ГРОМ',
-  'ЗВОНОК', 'СИРЕНА', 'ТИШИНА', 'ТИТР', 'ТИТРЫ', 'ОГОНЬ', 'ДЫМ',
-  'УДАР', 'УДАРЫ', 'ШУМ', 'ГУЛ', 'СКРИП', 'ГУДОК', 'СТУК', 'ЗВУК',
-  'BOOM', 'CRASH', 'BANG', 'SOUND', 'SILENCE',
-])
-
-const HEADER_RE = new RegExp(`(${SCENE_NUMBER}\\.\\s*)?(ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.`, 'i')
-
-const TIME_WORD_RE = /(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)/i
+import {
+  TIME_WORDS, TRANSITION_WORDS, NON_CHARACTER_WORDS, HEADER_RE, TIME_WORD_RE,
+} from './formatRules'
 
 // Союзы и предлоги в нижнем регистре — признак текста действия, не реплики
 const LOWERCASE_CONJUNCTIONS = new Set([
