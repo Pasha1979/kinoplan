@@ -1,7 +1,3 @@
-import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import { pouchStorage } from '../services/storageService'
-
 export type ProjectType = 'serial' | 'film' | 'ad' | 'clip' | 'other'
 export type ProjectStatus = 'preproduction' | 'shooting' | 'postproduction' | 'completed'
 
@@ -106,38 +102,5 @@ export interface Project {
   // Smart Alerts — кол-во конфликтов (заполнится из alertStore, Фаза 2)
   conflicts: number
   /** Разработка: библия персонажей, локации, синопсис (вкладка «Разработка») */
-  development?: import('../types/development').ProjectDevelopment
+  development?: import('./development').ProjectDevelopment
 }
-
-interface ProjectStore {
-  projects: Project[]
-  currentProjectId: string | null
-  addProject: (project: Project) => void
-  deleteProject: (id: string) => void
-  setCurrentProject: (id: string) => void
-  getCurrentProject: () => Project | null
-}
-
-export const useProjectStore = create<ProjectStore>()(
-  persist(
-    (set, get) => ({
-  projects: [],
-  currentProjectId: null,
-
-  addProject: (project) =>
-    set((state) => ({ projects: [...state.projects, project] })),
-
-  deleteProject: (id) =>
-    set((state) => ({ projects: state.projects.filter((p) => p.id !== id) })),
-
-  setCurrentProject: (id) =>
-    set({ currentProjectId: id }),
-
-  getCurrentProject: () => {
-    const { projects, currentProjectId } = get()
-    return projects.find((p) => p.id === currentProjectId) ?? null
-  },
-  }),
-  { name: 'kinoplan-projects', storage: createJSONStorage(() => pouchStorage) }
-)
-)

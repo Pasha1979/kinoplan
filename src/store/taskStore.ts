@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { pouchStorage } from '../services/storageService'
-import type { Task, ActivityEvent } from './projectStore'
+import type { Task, ActivityEvent } from '../types/project'
 
 interface TaskStore {
   tasks: Task[]

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, FileText, ClipboardList, Users, TrendingUp, AlertCircle, CheckCircle2, Circle, Clock, Zap, ChevronDown, Info } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
-import type { ShootingDayType } from '../../store/projectStore'
+import type { ShootingDayType } from '../../types/project'
 import { useUiStore } from '../../store/uiStore'
 import { useTaskStore } from '../../store/taskStore'
 import { computeAlerts } from '../../store/alertStore'
@@ -154,7 +154,7 @@ const TODAY_TYPE_CONFIG: Record<TodayEvent['type'], { color: string; bg: string;
 }
 
 function TodayWidget({ shootingDays, isDark }: {
-  shootingDays: import('../../store/projectStore').ShootingDay[]
+  shootingDays: import('../../types/project').ShootingDay[]
   isDark: boolean
 }) {
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -486,7 +486,7 @@ const DAY_TYPE_CONFIG: Record<ShootingDayType, { label: string; color: string; b
 }
 
 function WeekAtAGlance({ shootingDays, isDark }: {
-  shootingDays: import('../../store/projectStore').ShootingDay[]
+  shootingDays: import('../../types/project').ShootingDay[]
   isDark: boolean
 }) {
   const today = new Date()

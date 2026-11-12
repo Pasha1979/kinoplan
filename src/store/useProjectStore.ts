@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { pouchStorage } from '../services/storageService'
 import { immer } from 'zustand/middleware/immer'
-import type { Project } from './projectStore'
+import type { Project } from '../types/project'
 import type { Scene } from '../types/scene'
 export type { Scene }
 

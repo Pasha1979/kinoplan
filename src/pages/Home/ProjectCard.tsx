@@ -1,5 +1,5 @@
 import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download, Star } from 'lucide-react'
-import type { Project } from '../../store/projectStore'
+import type { Project } from '../../types/project'
 import { formatRelativeTime } from '../../utils/relativeTime'
 
 export const TYPE_LABELS: Record<Project['type'], string> = {

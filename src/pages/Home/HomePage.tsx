@@ -16,7 +16,7 @@ import ContextMenu from './ContextMenu'
 import TagEditor from './TagEditor'
 import HomeHelpModal from './HomeHelpModal'
 import CreateProjectModal from './CreateProjectModal'
-import type { Project } from '../../store/projectStore'
+import type { Project } from '../../types/project'
 
 type TabKey = 'all' | 'favorites' | 'recent' | 'archive'
 type SortBy = 'updated' | 'name' | 'created' | 'progress' | 'manual'

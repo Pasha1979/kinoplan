@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
-import type { ProjectType } from '../store/projectStore'
+import type { ProjectType } from '../types/project'
 import { useScriptEditorLogic } from '../hooks/useScriptEditorLogic'
 import { MemoizedScriptEditorView } from './ScriptEditorView'
 

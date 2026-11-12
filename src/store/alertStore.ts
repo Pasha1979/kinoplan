@@ -1,4 +1,4 @@
-import type { Project } from './projectStore'
+import type { Project } from '../types/project'
 
 export type AlertLevel = 'critical' | 'warning' | 'info'
 

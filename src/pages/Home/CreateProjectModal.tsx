@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X, Film, Tv, Megaphone, Music, Folder, Sparkles, ChevronDown } from 'lucide-react'
-import type { Project, ProjectType } from '../../store/projectStore'
+import type { Project, ProjectType } from '../../types/project'
 
 interface CreateProjectModalProps {
   onClose: () => void

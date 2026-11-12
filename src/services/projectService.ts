@@ -1,7 +1,7 @@
 import { useNormalizedProjectStore } from '../store/useProjectStore'
 import { useScriptStore, type Script } from '../store/scriptStore'
 import { useToastStore } from '../store/toastStore'
-import type { Project } from '../store/projectStore'
+import type { Project } from '../types/project'
 import type { Scene } from '../types/scene'
 import { safeRemoveLocalStorage } from '../utils/env'
 

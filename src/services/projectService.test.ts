@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { projectService } from './projectService'
 import { useNormalizedProjectStore } from '../store/useProjectStore'
 import type { Scene } from '../store/useProjectStore'
-import type { Project } from '../store/projectStore'
+import type { Project } from '../types/project'
 
 beforeEach(() => {
   useNormalizedProjectStore.setState({
