@@ -9,7 +9,7 @@ const stubs=[],todos=[];
 (function walk(d){for(const f of readdirSync(d)){const p=join(d,f);
  if(statSync(p).isDirectory())walk(p);else if(/\.(ts|tsx)$/.test(f)){
   const t=readFileSync(p,'utf8');
-  if(/ComingSoonPage|Функция в разработке/.test(t))stubs.push(p);
+  if(/ComingSoonPage|Функция в разработке|>Скоро</.test(t))stubs.push(p);
   for(const [i,l] of t.split('\n').entries())if(/TODO|FIXME|HACK/.test(l))todos.push(`${p}:${i+1}`)}}})('src');
 const date=new Date().toISOString().slice(0,10);
 writeFileSync('_ai_workspace/v4/02_СТАТУС.md',`# 02 · СТАТУС (автогенерируемый — НЕ редактировать руками)
