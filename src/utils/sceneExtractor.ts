@@ -72,7 +72,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     if (!headerMatch) return
 
     const sceneNumber = headerMatch[1]
-    const sceneId = (node.attrs.sceneId as string | null) ?? undefined
+    const sceneId = (node.attrs?.sceneId as string | null) ?? undefined
     const rawType = headerMatch[2].toUpperCase()
     let locationAndTime = headerMatch[3]
 
