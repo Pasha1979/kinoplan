@@ -397,11 +397,49 @@ export const projectService = {
       // Скрипты импортируем с новыми id — они несут текст сценария
       if (validatedScripts && validatedScripts.length > 0) {
         const { addScript } = useScriptStore.getState()
-        validatedScripts.forEach((s) => {
-          // data-scene-id в HTML — стабильные UUID сцен; регенерируем,
-          // чтобы не пересечься со сценами исходного проекта
-          const content = s.content?.replace(/data-scene-id="[^"]*"/g, () => `data-scene-id="${crypto.randomUUID()}"`)
-          addScript({ ...s, content, id: crypto.randomUUID(), projectId: importedProject.id })
+
+        // T-96: регенерируем data-scene-id с КАРТОЙ old→new (глобальной на все
+        // скрипты — sceneLinks могут пересекать серии), затем ремапим ссылки:
+        // scenes[].id, actMarkers, sceneGroups, sceneLinks
+        const sceneIdMap = new Map<string, string>()
+        const contentsWithNewIds = validatedScripts.map((s) =>
+          s.content?.replace(/data-scene-id="([^"]*)"/g, (_m, oldId: string) => {
+            if (!sceneIdMap.has(oldId)) sceneIdMap.set(oldId, crypto.randomUUID())
+            return `data-scene-id="${sceneIdMap.get(oldId)}"`
+          }),
+        )
+        const remapId = (id: string) => sceneIdMap.get(id) ?? `${id}-imp-${importedProject.id}`
+
+        validatedScripts.forEach((s, i) => {
+          const scenes = s.scenes?.map((sc) => ({
+            ...sc,
+            id: remapId(sc.id),
+            projectId: importedProject.id,
+          }))
+          const actMarkers = s.actMarkers
+            ? Object.fromEntries(Object.entries(s.actMarkers).map(([k, v]) => [k, remapId(v)]))
+            : s.actMarkers
+          const sceneGroups = s.sceneGroups?.map((g) => ({
+            ...g,
+            id: crypto.randomUUID(),
+            sceneIds: g.sceneIds.map(remapId).filter((id) => scenes?.some((sc) => sc.id === id) ?? true),
+          }))
+          const sceneLinks = s.sceneLinks?.map((l) => ({
+            ...l,
+            id: crypto.randomUUID(),
+            from: remapId(l.from),
+            to: remapId(l.to),
+          }))
+          addScript({
+            ...s,
+            content: contentsWithNewIds[i],
+            scenes,
+            actMarkers,
+            sceneGroups,
+            sceneLinks,
+            id: crypto.randomUUID(),
+            projectId: importedProject.id,
+          })
         })
       }
 

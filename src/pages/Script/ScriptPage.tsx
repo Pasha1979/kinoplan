@@ -101,7 +101,6 @@ export default function ScriptPage() {
     // refs
     convertFormatRef,
     reorderEditorRef,
-    updateNumbersRef,
     formatEditorRef,
   } = logic
 
@@ -203,7 +202,7 @@ export default function ScriptPage() {
     pushUndo([from.id, to.id])
     const fromEp = from.episodeNumber ?? 1
     const moving = sceneIds.map((id) => from.scenes!.find((s) => s.id === id)!)
-    const frags = moving.map((s) => extractSceneHtml(from.content || '', s.number, 0)).join('')
+    const frags = moving.map((s) => extractSceneHtml(from.content || '', s.number, 0, s.id)).join('')
     const movedSet = new Set(sceneIds)
 
     const renum = (arr: typeof from.scenes, ep: number) => {
@@ -217,7 +216,7 @@ export default function ScriptPage() {
       const firstIdx = from.scenes!.findIndex((s) => movedSet.has(s.id))
       const insertIdx = firstIdx < toIndex ? Math.max(0, toIndex - sceneIds.length) : toIndex
       let content = from.content || ''
-      moving.forEach((s) => { content = spliceSceneHtml(content, s.number, 0, '') })
+      moving.forEach((s) => { content = spliceSceneHtml(content, s.number, 0, '', s.id) })
       content = insertSceneHtml(content, frags, insertIdx)
       content = renumberHeaders(content, toEpisode, isSerial)
       const arr = from.scenes!.filter((s) => !movedSet.has(s.id))
@@ -229,7 +228,7 @@ export default function ScriptPage() {
 
     // разные скрипты: из источника вырезать+перенумеровать, в цель вставить+перенумеровать
     let fromContent = from.content || ''
-    moving.forEach((s) => { fromContent = spliceSceneHtml(fromContent, s.number, 0, '') })
+    moving.forEach((s) => { fromContent = spliceSceneHtml(fromContent, s.number, 0, '', s.id) })
     fromContent = renumberHeaders(fromContent, fromEp, isSerial)
     const toContent = renumberHeaders(insertSceneHtml(to.content || '', frags, toIndex), toEpisode, isSerial)
 
@@ -354,7 +353,7 @@ export default function ScriptPage() {
     const owner = episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === sc.id))
     if (!owner) return
     const idx = owner.scenes!.findIndex((s) => s.id === sc.id)
-    const newContent = spliceSceneHtml(owner.content || '', sc.number, Math.max(0, idx), html)
+    const newContent = spliceSceneHtml(owner.content || '', sc.number, Math.max(0, idx), html, sc.id)
     updateScript(owner.id, { content: newContent })
     if (owner.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(newContent)
   }, [episodeScripts, currentScript?.id, editorInstance, updateScript])
@@ -732,7 +731,6 @@ export default function ScriptPage() {
                   focusSceneId={splitScreen.isActive ? splitScreen.leftFocusSceneId : focusSceneId}
                   onConvertReady={(fn) => { convertFormatRef.current = fn }}
                   onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
-                  onUpdateNumbersReady={(updateFn) => { updateNumbersRef.current = updateFn }}
                   onFormatReady={(formatFn) => { formatEditorRef.current = formatFn }}
                   formatLocked={formatLocked}
                   autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}

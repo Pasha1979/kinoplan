@@ -18,7 +18,7 @@ export function buildScenesExportHtml(
   const format = (script.format as 'russian' | 'hollywood') || 'russian'
   const parts = scenes
     .map((s, idx) => (selectedIds === null || selectedIds.has(s.id)
-      ? extractSceneHtml(content, s.number, idx)
+      ? extractSceneHtml(content, s.number, idx, s.id)
       : ''))
     .filter(Boolean)
   return convertToWordCompatibleHtml(parts.join(''), format)

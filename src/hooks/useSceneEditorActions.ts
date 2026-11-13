@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { SCENE_NUMBER } from '../utils/sceneNumber'
@@ -12,8 +12,7 @@ interface SceneUpdateEntry {
 interface UseSceneEditorActionsOptions {
   editor: Editor | null
   focusSceneId: string | undefined
-  onReorderReady: ((fn: (fromIndex: number, toIndex: number) => void) => void) | undefined
-  onUpdateNumbersReady: ((fn: (scenes: SceneUpdateEntry[]) => void) => void) | undefined
+  onReorderReady: ((fn: (fromIndex: number, toIndex: number, newNumbers?: SceneUpdateEntry[]) => void) => void) | undefined
   precisePagesRef: React.MutableRefObject<number>
   timingSystem: TimingSystem
   genreCoefficient: number
@@ -32,7 +31,6 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
     editor,
     focusSceneId,
     onReorderReady,
-    onUpdateNumbersReady,
     precisePagesRef,
     timingSystem,
     genreCoefficient,
@@ -109,7 +107,7 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
   useEffect(() => {
     if (!editor || !onReorderReady) return
 
-    const handleReorder = (fromIndex: number, toIndex: number) => {
+    const handleReorder = (fromIndex: number, toIndex: number, newNumbers?: SceneUpdateEntry[]) => {
       if (!editor) return
       if (fromIndex < 0 || toIndex < 0) return
       if (fromIndex === toIndex) return
@@ -168,7 +166,29 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
       // 4. Вставляем сцену на новое место
       tr.insert(insertPos, slice.content)
 
-      // 5. Применяем как единое действие (сохраняется в undo-истории)
+      // 5. Перенумерация — В ТОЙ ЖЕ транзакции (T-43): один dispatch, один undo-шаг.
+      // Позиции считаем по tr.doc (после перестановки), применяем в обратном порядке.
+      if (newNumbers?.length) {
+        const changes: { from: number; to: number; newText: string }[] = []
+        let sceneIndex = 0
+        tr.doc.descendants((node, pos) => {
+          if (node.type.name !== 'sceneHeader' || sceneIndex >= newNumbers.length) return
+          const text = node.textContent
+          const headerMatch = text.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
+          if (!headerMatch) { sceneIndex++; return }
+          const newNumber = newNumbers[sceneIndex].number
+          sceneIndex++
+          if (headerMatch[1] === newNumber) return
+          const newText = text.replace(new RegExp(`^(${SCENE_NUMBER})\\.`), `${newNumber}.`)
+          changes.push({ from: pos + 1, to: pos + 1 + text.length, newText })
+        })
+        for (let i = changes.length - 1; i >= 0; i--) {
+          const { from, to, newText } = changes[i]
+          tr.insertText(newText, from, to)
+        }
+      }
+
+      // 6. Применяем как единое действие (сохраняется в undo-истории)
       editor.view.dispatch(tr)
 
       if (reorderTimeoutRef.current) clearTimeout(reorderTimeoutRef.current)
@@ -190,60 +210,7 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
     onReorderReady(handleReorder)
   }, [editor, onReorderReady, precisePagesRef, timingSystem, genreCoefficient])
 
-  // 3. Обновление номеров сцен — через ProseMirror транзакции (не setContent, чтобы undo работал)
-  const updateSceneNumbers = useCallback((scenes: SceneUpdateEntry[]) => {
-    if (!editor) return
-    if (!scenes || scenes.length === 0) return
-
-    const { state } = editor
-    const { doc } = state
-
-    // Сначала собираем все изменения (позиции + новый текст)
-    type Change = { from: number; to: number; newText: string }
-    const changes: Change[] = []
-    let sceneIndex = 0
-
-    doc.descendants((node, pos) => {
-      if (node.type.name !== 'sceneHeader') return
-      if (sceneIndex >= scenes.length) return false
-
-      const text = node.textContent
-      const headerMatch = text.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
-      if (!headerMatch) { sceneIndex++; return }
-
-      const oldNumber = headerMatch[1]
-      const newNumber = scenes[sceneIndex].number
-      sceneIndex++
-
-      if (oldNumber === newNumber) return
-
-      const newText = text.replace(new RegExp(`^(${SCENE_NUMBER})\\.`), `${newNumber}.`)
-      // pos = начало sceneHeader-узла, +1 = начало текстового содержимого
-      changes.push({ from: pos + 1, to: pos + 1 + text.length, newText })
-    })
-
-    if (changes.length === 0) return
-
-    // Применяем изменения в ОБРАТНОМ порядке чтобы позиции не сдвигались
-    const tr = state.tr
-    for (let i = changes.length - 1; i >= 0; i--) {
-      const { from, to, newText } = changes[i]
-      tr.insertText(newText, from, to)
-    }
-
-    // Присоединяем к предыдущей транзакции (перестановке): один Ctrl+Z отменяет и порядок, и номера.
-    // prosemirror-history ждёт объект транзакции, не boolean — иначе падает с «getMeta is not a function»
-    tr.setMeta('appendedTransaction', tr)
-    editor.view.dispatch(tr)
-  }, [editor])
-
-  const updateSceneNumbersRef = useRef(updateSceneNumbers)
-  // eslint-disable-next-line react-hooks/refs
-  updateSceneNumbersRef.current = updateSceneNumbers
-
-  // Регистрация updateSceneNumbers для вызова извне
-  useEffect(() => {
-    if (!editor || !onUpdateNumbersReady) return
-    onUpdateNumbersReady((scenes) => updateSceneNumbersRef.current(scenes))
-  }, [editor, onUpdateNumbersReady])
+  // T-43: отдельной транзакции перенумерации больше нет — номера применяются
+  // внутри транзакции перестановки (handleReorder, шаг 5). appendedTransaction
+  // удалён полностью: один Ctrl+Z атомарно отменяет порядок и номера.
 }

@@ -97,3 +97,45 @@ describe('spliceSceneHtml', () => {
     expect(back).not.toContain('сцены 3')
   })
 })
+
+// T-95: хирургия по стабильному UUID (data-scene-id), номер — только fallback
+describe('UUID-хирургия (T-95)', () => {
+  // Дублирующие номера (черновики/литеры) — по номеру сцена неотличима,
+  // различает только data-scene-id
+  const DUP_DOC = `
+<div data-type="scene-header" data-scene-id="uuid-a">5. ИНТ. ДОМ — ДЕНЬ.</div>
+<div data-type="scene-action">Сцена A.</div>
+<div data-type="scene-header" data-scene-id="uuid-b">5. ИНТ. ДОМ — ДЕНЬ.</div>
+<div data-type="scene-action">Сцена B.</div>
+<div data-type="scene-header" data-scene-id="uuid-c">6. ЭКСТ. ЛЕС — НОЧЬ.</div>
+<div data-type="scene-action">Сцена C.</div>
+`
+
+  it('извлекает именно ту сцену, у которой совпал data-scene-id', () => {
+    const html = extractSceneHtml(DUP_DOC, '5', 0, 'uuid-b')
+    expect(html).toContain('Сцена B.')
+    expect(html).not.toContain('Сцена A.')
+    expect(html).not.toContain('Сцена C.')
+  })
+
+  it('splice по UUID заменяет нужный дубль и не трогает одноимённых соседей', () => {
+    const newHtml = `<div data-type="scene-header" data-scene-id="uuid-b">5. ИНТ. ДОМ — ДЕНЬ.</div><div data-type="scene-action">B-НОВАЯ</div>`
+    const out = spliceSceneHtml(DUP_DOC, '5', 0, newHtml, 'uuid-b')
+    expect(out).toContain('B-НОВАЯ')
+    expect(out).toContain('Сцена A.')
+    expect(out).toContain('Сцена C.')
+    // data-scene-id сохраняется — идентичность сцены переживает правку
+    expect(out).toContain('data-scene-id="uuid-b"')
+    expect(out).toContain('data-scene-id="uuid-a"')
+  })
+
+  it('UUID важнее номера: при неверном номере берётся шапка по id', () => {
+    const html = extractSceneHtml(DUP_DOC, '99', 0, 'uuid-c')
+    expect(html).toContain('Сцена C.')
+  })
+
+  it('шапки без data-scene-id — старое поведение (номер → индекс)', () => {
+    const html = extractSceneHtml(DOC, '2', 1, 'uuid-несуществующий')
+    expect(html).toContain('Ремарка сцены 2.')
+  })
+})

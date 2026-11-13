@@ -1325,7 +1325,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           sceneHtml={(() => {
             const ep = detail._episode ?? 1
             const idx = scenes.filter((s) => (s._episode ?? 1) === ep).findIndex((s) => s.id === detail.id)
-            return extractSceneHtml(contentsByEpisode[ep] || '', detail.number, Math.max(0, idx))
+            return extractSceneHtml(contentsByEpisode[ep] || '', detail.number, Math.max(0, idx), detail.id)
           })()}
           scriptFormat={scriptFormat}
           onSaveSceneHtml={(html) => onSaveSceneHtml?.(detail, html)}

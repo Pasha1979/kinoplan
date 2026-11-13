@@ -52,15 +52,21 @@ const isHeader = (el: Element) => {
 
 // Ищет элементы-границы сцены по НОМЕРУ в тексте шапки
 // (порядок в массиве scenes может расходиться с документом)
-function findSceneEls(blocks: Element[], sceneNumber: string, fallbackIndex: number): { startEl: Element | null; endEl: Element | null } {
+function findSceneEls(blocks: Element[], sceneNumber: string, fallbackIndex: number, sceneId?: string): { startEl: Element | null; endEl: Element | null } {
   const headers = blocks.filter((el) => isHeader(el))
   const num = sceneNumber.replace(/\./g, '').toLowerCase()
   const numRe = new RegExp(`^(${SCENE_NUMBER})\\.`)
   let startEl: Element | null = null
-  for (const el of headers) {
-    const m = (el.textContent || '').trim().match(numRe)
-    const headNum = m ? m[1].replace(/\./g, '').toLowerCase() : ''
-    if (headNum === num) { startEl = el; break }
+  // T-95: сначала по стабильному data-scene-id (UUID) — номера текучие (литеры, перенумерация)
+  if (sceneId) {
+    startEl = headers.find((el) => el.getAttribute('data-scene-id') === sceneId) ?? null
+  }
+  if (!startEl) {
+    for (const el of headers) {
+      const m = (el.textContent || '').trim().match(numRe)
+      const headNum = m ? m[1].replace(/\./g, '').toLowerCase() : ''
+      if (headNum === num) { startEl = el; break }
+    }
   }
   if (!startEl && headers[fallbackIndex]) startEl = headers[fallbackIndex]
   if (!startEl) return { startEl: null, endEl: null }
@@ -83,11 +89,12 @@ function sceneNodes(startEl: Element, endEl: Element | null): Node[] {
   return nodes
 }
 
-// Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей
-export function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
+// Извлекает HTML-фрагмент сцены: от её шапки (включительно) до следующей.
+// sceneId — стабильный UUID (data-scene-id), номер остаётся fallback
+export function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number, sceneId?: string): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
-  const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
+  const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex, sceneId)
   if (!startEl) {
     console.warn('[sceneExtract] ШАПКА НЕ НАЙДЕНА для сцены', sceneNumber)
     return ''
@@ -99,13 +106,14 @@ export function extractSceneHtml(content: string, sceneNumber: string, fallbackI
   return frag
 }
 
-// Вставляет фрагмент обратно: заменяет блоки сцены на новые из html
-export function spliceSceneHtml(content: string, sceneNumber: string, fallbackIndex: number, newHtml: string): string {
+// Вставляет фрагмент обратно: заменяет блоки сцены на новые из html.
+// sceneId — стабильный UUID (data-scene-id), номер остаётся fallback
+export function spliceSceneHtml(content: string, sceneNumber: string, fallbackIndex: number, newHtml: string, sceneId?: string): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const frag = new DOMParser().parseFromString(newHtml, 'text/html')
   const newBlocks = [...frag.body.children]
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
-  const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
+  const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex, sceneId)
   if (!startEl) return content
   const parent = startEl.parentNode ?? doc.body
   sceneNodes(startEl, endEl).forEach((n) => n.parentNode?.removeChild(n))
@@ -122,7 +130,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
   const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
 
   const initialHtml = useMemo(
-    () => extractSceneHtml(script.content || '', scene.number, sceneIndex),
+    () => extractSceneHtml(script.content || '', scene.number, sceneIndex, scene.id),
     [script.id, script.content, scene.id, scene.number, sceneIndex],
   )
 
@@ -145,7 +153,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
   const handleSave = () => {
     if (!editor) return
     try {
-      const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML())
+      const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML(), scene.id)
       onSave(newContent)
     } catch (e) {
       console.error('[sceneSave] ОШИБКА сохранения:', e)

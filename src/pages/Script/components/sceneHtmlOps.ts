@@ -10,8 +10,8 @@ const parse = (content: string) => new DOMParser().parseFromString(content || ''
 const headersOf = (doc: Document) => [...doc.body.querySelectorAll('[data-type]')].filter(isHeader)
 
 /** Удаляет сцену из документа (диапазон от шапки до следующей) */
-export function removeSceneHtml(content: string, sceneNumber: string): string {
-  return spliceSceneHtml(content, sceneNumber, 0, '')
+export function removeSceneHtml(content: string, sceneNumber: string, sceneId?: string): string {
+  return spliceSceneHtml(content, sceneNumber, 0, '', sceneId)
 }
 
 /** Вставляет html перед шапкой №atIndex; индекс >= кол-ва сцен → в конец */
