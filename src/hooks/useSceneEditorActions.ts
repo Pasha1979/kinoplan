@@ -231,8 +231,9 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
       tr.insertText(newText, from, to)
     }
 
-    // Присоединяем к предыдущей транзакции (перестановке): один Ctrl+Z отменяет и порядок, и номера
-    tr.setMeta('appendedTransaction', true)
+    // Присоединяем к предыдущей транзакции (перестановке): один Ctrl+Z отменяет и порядок, и номера.
+    // prosemirror-history ждёт объект транзакции, не boolean — иначе падает с «getMeta is not a function»
+    tr.setMeta('appendedTransaction', tr)
     editor.view.dispatch(tr)
   }, [editor])
 

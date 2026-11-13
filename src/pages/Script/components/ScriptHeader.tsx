@@ -66,6 +66,8 @@ function ScriptHeader({
   const { sidebarBg, border, textPrimary, textSecondary } = colors
   const enterPreset = useUiStore((s) => s.enterPreset)
   const setEnterPreset = useUiStore((s) => s.setEnterPreset)
+  const autoTypography = useUiStore((s) => s.autoTypography)
+  const toggleAutoTypography = useUiStore((s) => s.toggleAutoTypography)
 
   return (
     <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b"
@@ -242,6 +244,19 @@ function ScriptHeader({
           <option value="fd">Final Draft</option>
           <option value="kit">КИТ</option>
         </select>
+        {/* T-72: авто-типографика при наборе */}
+        <button
+          onClick={toggleAutoTypography}
+          className="h-8 px-2 rounded-lg text-[11px] cursor-pointer"
+          style={{
+            color: autoTypography ? '#a5b4fc' : textSecondary,
+            background: autoTypography ? 'rgba(99,102,241,0.15)' : 'transparent',
+            border: `1px solid ${autoTypography ? 'rgba(99,102,241,0.5)' : colors.border}`,
+          }}
+          title='Авто-типографика при наборе: --→— · "→«» · (з/к)→(З/К)'
+        >
+          «»
+        </button>
         {/* Экспорт выбранных сцен в .doc */}
         {onExport && (
           <button

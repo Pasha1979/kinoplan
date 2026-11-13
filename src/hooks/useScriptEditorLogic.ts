@@ -14,6 +14,7 @@ import { PovFilterExtension, pluginKey as povFilterPluginKey } from '../componen
 import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 import { useUiStore } from '../store/uiStore'
+import { typographyTransform } from '../utils/autoTypography'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 
@@ -546,10 +547,20 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       },
       handleKeyDown: (view, event) => handleKeyDownRef.current?.(view, event) ?? false,
       handlePaste: (view, event) => handlePasteRef.current?.(view, event) ?? false,
-      handleTextInput: (_view, _from, _to, text) => {
+      handleTextInput: (view, from, to, text) => {
         if (isMultiSelectingRef.current && multiCursorRef.current.rangesRef.current.length > 1) {
           multiCursorRef.current.applyTextToRanges(editor!, text)
           return true
+        }
+        // T-72: авто-типографика при наборе (одиночный символ)
+        if (text.length === 1 && useUiStore.getState().autoTypography) {
+          const $from = view.state.doc.resolve(from)
+          const before = $from.parent.textBetween(0, $from.parentOffset, '', '')
+          const fix = typographyTransform(before, text)
+          if (fix) {
+            view.dispatch(view.state.tr.insertText(fix.insert, from - fix.back, to))
+            return true
+          }
         }
         return false
       },

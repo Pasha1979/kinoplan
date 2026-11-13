@@ -13,10 +13,13 @@ interface UiStore {
   /** Пресет клавиатуры: kinoplan — двойной Enter → действие, сцена по Ctrl+Shift+S;
    *  kit — двойной Enter → новая сцена (как в KIT); fd — как Final Draft (Enter → действие) */
   enterPreset: EnterPreset
+  /** T-72: авто-типографика при наборе (--→—, "→«», (з/к)→(З/К)) */
+  autoTypography: boolean
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
   setEnterPreset: (p: EnterPreset) => void
+  toggleAutoTypography: () => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -26,6 +29,7 @@ export const useUiStore = create<UiStore>()(
       sidebarExpanded: true,
       a4Mode: true,
       enterPreset: 'kinoplan',
+      autoTypography: true,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -38,6 +42,9 @@ export const useUiStore = create<UiStore>()(
 
       setEnterPreset: (p) =>
         set({ enterPreset: p }),
+
+      toggleAutoTypography: () =>
+        set((state) => ({ autoTypography: !state.autoTypography })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

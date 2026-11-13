@@ -180,8 +180,8 @@ export function ScriptEditorView({
           borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb',
         }}
       >
-        <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
-          {editor.getText().length} симв.
+        <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }} title="Знаков с пробелами (как в редакциях: без служебных разрывов)">
+          {editor.getText({ blockSeparator: '' }).length.toLocaleString('ru-RU')} зн. с пр.
         </span>
         <span style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
           {precisePages.toFixed(1)} стр.

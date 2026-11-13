@@ -51,11 +51,11 @@ test('изоляция: сценарий проекта A не просачив�
   await expect(page.locator('body')).not.toContainText(marker)
 })
 
-// T-91: drag сцены → Ctrl+Z → порядок И номера восстановлены
+// T-91: drag сцены в навигаторе → Ctrl+Z → порядок И номера восстановлены
 test('undo: перетаскивание сцены отменяется атомарно', async ({ page }) => {
   const editor = await openFreshEditor(page, `E2E Undo ${Date.now()}`)
   await editor.click()
-  // Две сцены одной вставкой — paste проходит через parseScreenplayText
+  // Две сцены одной вставкой — paste проходит через parseScreenplayText (flat-блоки)
   await page.evaluate(() => {
     const el = document.querySelector('.ProseMirror[contenteditable="true"]')
     const dt = new DataTransfer()
@@ -64,19 +64,36 @@ test('undo: перетаскивание сцены отменяется ато�
   })
   await page.waitForTimeout(1200)
 
-  const scenes = page.locator('div[data-type="scene"]')
-  const count = await scenes.count()
-  test.skip(count < 2, 'вторая сцена не создалась — механика Enter-флоу отличается')
+  // Стабильный селектор сцены — scene-header (модель редактора — flat-блоки, не scene-ноды).
+  // Скоуп по editor: на странице может быть split-view с дублирующим DOM.
+  const headers = editor.locator('div[data-type="scene-header"]')
+  await expect(headers).toHaveCount(2, { timeout: 5000 })
 
-  // Перетаскиваем вторую сцену выше первой
-  await scenes.nth(1).dragTo(scenes.nth(0))
-  await page.waitForTimeout(600)
+  // Карточки сцен в навигаторе — по тексту локации
+  const cardDom = page.locator('.group.rounded-xl', { hasText: 'ДОМ' }).first()
+  const cardStreet = page.locator('.group.rounded-xl', { hasText: 'УЛИЦА' }).first()
+  await expect(cardDom).toBeVisible()
+  await expect(cardStreet).toBeVisible()
 
-  // Ctrl+Z — порядок и номера должны вернуться
+  // dnd-kit PointerSensor (distance: 8) — перетаскиваем сцену 2 над сценой 1 мышью
+  const src = await cardStreet.boundingBox()
+  const dst = await cardDom.boundingBox()
+  expect(src && dst).toBeTruthy()
+  await page.mouse.move(src!.x + src!.width / 2, src!.y + src!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(src!.x + src!.width / 2, src!.y + src!.height / 2 - 15, { steps: 3 })
+  await page.mouse.move(dst!.x + dst!.width / 2, dst!.y + 4, { steps: 12 })
+  await page.mouse.up()
+  await page.waitForTimeout(800)
+
+  // После переноса первая шапка — ЭКСТ. УЛИЦА (перенумерована в 1)
+  await expect(headers.first()).toContainText('ЭКСТ. УЛИЦА')
+
+  // Ctrl+Z — порядок и номера должны вернуться атомарно
   await editor.click()
   await page.keyboard.press('Control+z')
-  await page.waitForTimeout(400)
+  await page.waitForTimeout(500)
 
-  const first = await page.locator('div[data-type="scene"]').first().innerText()
-  expect(first).toContain('1. ИНТ. ДОМ - ДЕНЬ')
+  await expect(headers.first()).toContainText('1. ИНТ. ДОМ - ДЕНЬ')
+  await expect(headers.nth(1)).toContainText('ЭКСТ. УЛИЦА')
 })
