@@ -8,10 +8,7 @@
 
 import { SCRIPT_STYLES } from '../constants/scriptStyles'
 import { A4_WIDTH_MM, A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM, MIN_SCENE_PAGES } from '../constants/scriptConstants'
-
-// Блоки, которые нельзя оставлять последними на странице —
-// переносятся на следующую вместе со следующим блоком
-const KEEP_WITH_NEXT_TYPES = new Set(['scene-header', 'scene-cast', 'scene-character', 'scene-parenthetical'])
+import { paginateBlocks, type MeasuredBlock, type PageBreakInfo } from './pagination'
 
 /**
  * Применяет inline-стили к HTML для точного рендеринга.
@@ -57,14 +54,13 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
   return wrapper.outerHTML
 }
 
-export interface PageBreak {
-  page: number
-  startIndex: number // индекс первого child-элемента на этой странице
-}
+export type PageBreak = PageBreakInfo
 
 export interface PageResult {
   totalPages: number
-  breaks: PageBreak[]
+  breaks: PageBreakInfo[]
+  /** Замеренные блоки (высоты/отступы) — нужны печати для точки разрыва текста */
+  blocks: MeasuredBlock[]
 }
 
 export class PageCounter {
@@ -117,53 +113,29 @@ export class PageCounter {
     const rawPages = contentHeightMm / usablePageHeightMm
     const totalPages = Math.max(MIN_SCENE_PAGES, parseFloat(rawPages.toFixed(1)))
 
-    // --- page breaks (via per-element offsetHeight) ---
+    // --- page breaks ---
+    // Замеряем блоки DOM, математика пагинации — в чистой paginateBlocks (T-94).
     // styledHtml is wrapped in <div>, so container.children returns only 1 element.
     // We need the wrapper's children to iterate actual content blocks.
     const wrapper = this.container!.children[0] as HTMLElement
     const children = wrapper ? Array.from(wrapper.children) as HTMLElement[] : []
-    let accumulatedMm = 0
-    const breaks: PageBreak[] = []
-    let page = 1
-    let pageStartIndex = 0
 
-    children.forEach((child, index) => {
-      const heightPx = child.offsetHeight
+    const measured: MeasuredBlock[] = children.map(child => {
       const style = window.getComputedStyle(child)
-      const marginTopPx = parseFloat(style.marginTop) || 0
-      const marginBottomPx = parseFloat(style.marginBottom) || 0
-      const heightMm = (heightPx + marginTopPx + marginBottomPx) / this.mmToPx
-      accumulatedMm += heightMm
-
-      if (accumulatedMm > usablePageHeightMm && pageStartIndex < index) {
-        // Keep-with-next: шапка сцены и имя персонажа не остаются
-        // последними на странице — переносим на следующую вместе с контентом
-        let breakIndex = index
-        while (
-          breakIndex > pageStartIndex &&
-          KEEP_WITH_NEXT_TYPES.has(children[breakIndex - 1]?.getAttribute('data-type') ?? '')
-        ) {
-          breakIndex--
-        }
-        breaks.push({ page, startIndex: pageStartIndex })
-        page++
-        pageStartIndex = breakIndex
-        // Пересчитываем накопленную высоту с позиции разрыва
-        accumulatedMm = 0
-        for (let j = breakIndex; j <= index; j++) {
-          const el = children[j]
-          const st = window.getComputedStyle(el)
-          accumulatedMm += (el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0)) / this.mmToPx
-        }
+      return {
+        heightPx: child.offsetHeight,
+        marginTopPx: parseFloat(style.marginTop) || 0,
+        marginBottomPx: parseFloat(style.marginBottom) || 0,
+        dataType: child.getAttribute('data-type'),
       }
     })
+    const lineHeightPx = children[0]
+      ? parseFloat(window.getComputedStyle(children[0]).lineHeight) || 24
+      : 24
+    const usablePageHeightPx = usablePageHeightMm * this.mmToPx
+    const { breaks } = paginateBlocks(measured, usablePageHeightPx, lineHeightPx)
 
-    // last page
-    if (children.length > 0) {
-      breaks.push({ page, startIndex: pageStartIndex })
-    }
-
-    return { totalPages, breaks }
+    return { totalPages, breaks, blocks: measured }
   }
 
   /**

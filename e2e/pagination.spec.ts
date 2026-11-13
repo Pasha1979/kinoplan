@@ -77,6 +77,20 @@ test('эталон: 120 ремарок в двух сценах → 9.0 стр.'
   expect(pages).toBeLessThan(9.3)
 })
 
+test('T-16: длинная реплика разрывается с маркером (ПРОДОЛЖЕНИЕ)', async ({ page }) => {
+  await openFreshEditor(page, `E2E Contd ${Date.now()}`)
+  // ~2000 символов в узкой колонке реплики ≈ 45+ строк — пересекает границу A4
+  const longSpeech = 'Я не пойду туда и останусь здесь, '.repeat(60).trim()
+  await pasteScript(page, `1. ИНТ. ДОМ - ДЕНЬ\n\nИВАН\n${longSpeech}`)
+  const contd = page.locator('.tiptap-editor [data-continued]').first()
+  await expect(contd).toBeVisible({ timeout: 15000 })
+  await expect(contd).toHaveAttribute('data-continued', '(ПРОДОЛЖЕНИЕ)')
+  await expect(contd).toHaveAttribute('data-type', 'scene-dialog')
+  // Маркер — декорация: в контенте редактора текста маркера быть не должно
+  const bodyText = await page.locator('.tiptap-editor').first().innerText()
+  expect(bodyText.split('(ПРОДОЛЖЕНИЕ)').length - 1).toBe(0)
+})
+
 test('эталон: 12 диалоговых пар → 2.3 стр.', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages D ${Date.now()}`)
   await pasteScript(page, `1. ИНТ. КАБИНЕТ - ДЕНЬ\n\n${Array.from({ length: 12 }, () => DIALOGUE).join('\n\n')}`)

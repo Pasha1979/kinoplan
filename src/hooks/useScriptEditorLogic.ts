@@ -17,6 +17,8 @@ import { useUiStore } from '../store/uiStore'
 import { typographyTransform } from '../utils/autoTypography'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
+import { type PageBreakInfo } from '../services/pagination'
+import { PageBreaksExtension, pageBreaksPluginKey } from '../components/tiptap/PageBreaksExtension'
 
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
@@ -175,11 +177,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
   const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Сохраняем page breaks для повторного применения после ProseMirror рендера
-  const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
+  const pageBreaksRef = useRef<PageBreakInfo[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Флаг чтобы предотвратить бесконечный цикл при повторном применении
-  const isReApplyingRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   // Создаём лениво в точке использования — PageCounter создаёт DOM-контейнер,
@@ -472,6 +472,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           })]
         },
       }),
+      PageBreaksExtension,
       StarterKit.configure({
         orderedList: false,
         bulletList: false,
@@ -605,41 +606,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
-  // Применяем page-start и отступы на основе точных данных из pageCounter
-  // Используем pageBreaksRef (вычисленный через виртуальный A4-рендеринг)
+  // Применяем разрывы страниц через PM-декорации (T-16/T-94): meta-транзакция
+  // обновляет DecorationSet — PM сам держит атрибуты на нодах при ререндерах.
+  // Документ не меняется → в сохранённый HTML и undo маркеры не попадают.
   const applyPageBreaks = useCallback(() => {
-    if (!editor) return
-    const editorDom = editor.view.dom as HTMLElement
-    const children = Array.from(editorDom.children) as HTMLElement[]
-    children.forEach(child => {
-      child.removeAttribute('data-page-break')
-      child.removeAttribute('data-page')
-      child.classList.remove('page-start', 'page-break-marker')
+    if (!editor || editor.isDestroyed) return
+    const tr = editor.state.tr.setMeta(pageBreaksPluginKey, {
+      breaks: pageBreaksRef.current,
+      format: (_formatRef.current as 'russian' | 'hollywood') || 'russian',
     })
-    if (children.length === 0 || pageBreaksRef.current.length === 0) return
-
-    // Маркер разрыва через data-атрибут — он переживает рендеры ProseMirror
-    // (PM затирает class/style узлов при перерисовке, data-* не трогает).
-    // Пунктирная линия рисуется через CSS ::before, без отступов-хаков.
-    pageBreaksRef.current.forEach((breakInfo) => {
-      const { page, startIndex } = breakInfo
-      if (startIndex >= children.length) return
-      children[startIndex].setAttribute('data-page-break', `Страница ${page}`)
-    })
-
-    // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
-    // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
-    if (!isReApplyingRef.current) {
-      if (pageBreakApplyTimeoutRef.current) {
-        clearTimeout(pageBreakApplyTimeoutRef.current)
-      }
-      pageBreakApplyTimeoutRef.current = setTimeout(() => {
-        isReApplyingRef.current = true
-        applyPageBreaks()
-        isReApplyingRef.current = false
-        pageBreakApplyTimeoutRef.current = null
-      }, 300)
-    }
+    tr.setMeta('addToHistory', false)
+    editor.view.dispatch(tr)
   }, [editor])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
@@ -1106,6 +1083,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     editor.on('update', handler)
     return () => { editor.off('update', handler) }
   }, [editor])
+
+  // Декорации разрывов управляются плагином PageBreaksExtension —
+  // PM пересоздаёт их при ререндерах автоматически, наблюдать не нужно.
 
   // Перехватываем Ctrl+D на уровне window, чтобы браузер не открывал диалог закладок
   useEffect(() => {
