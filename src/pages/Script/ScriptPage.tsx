@@ -718,7 +718,7 @@ export default function ScriptPage() {
                   projectType={project?.type || 'film'}
                   projectId={project?.id}
                   currentSeries={currentSeries}
-                  fontFamily="Courier New"
+                  fontFamily="'Courier Prime', 'Courier New', monospace"
                   fontSize={12}
                   isDark={isDark}
                   genreCoefficient={currentScript?.genreCoefficient || 1.0}
@@ -830,7 +830,7 @@ export default function ScriptPage() {
                       projectType={project?.type || 'film'}
                       projectId={project?.id}
                       currentSeries={splitScreen.rightSeries}
-                      fontFamily="Courier New"
+                      fontFamily="'Courier Prime', 'Courier New', monospace"
                       fontSize={12}
                       isDark={isDark}
                       genreCoefficient={rightScript?.genreCoefficient || 1.0}

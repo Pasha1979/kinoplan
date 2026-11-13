@@ -45,7 +45,7 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
   const wrapper = document.createElement('div')
   wrapper.innerHTML = doc.body.innerHTML
   wrapper.setAttribute('style',
-    'font-family: "Courier New", Courier, monospace; ' +
+    'font-family: "Courier Prime", "Courier New", Courier, monospace; ' +
     'font-size: 12pt; ' +
     'line-height: 1.5;'
   )
@@ -82,7 +82,7 @@ export class PageCounter {
       width: ${A4_WIDTH_MM}mm;
       padding: 2cm 2cm 2cm 3cm;
       box-sizing: border-box;
-      font-family: "Courier New", Courier, monospace;
+      font-family: "Courier Prime", "Courier New", Courier, monospace;
       font-size: 12pt;
       line-height: 1.5;
       opacity: 0;
@@ -177,7 +177,7 @@ export class PageCounter {
     const wrapper = document.createElement('div')
     wrapper.innerHTML = styledHtml
     wrapper.setAttribute('style',
-      'font-family: "Courier New", Courier, monospace; ' +
+      'font-family: "Courier Prime", "Courier New", Courier, monospace; ' +
       'font-size: 12pt; ' +
       'line-height: 1.5; ' +
       'max-width: 21cm; ' +
