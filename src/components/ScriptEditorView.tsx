@@ -3,6 +3,7 @@ import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
 import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2 } from 'lucide-react'
 import { SmartTypePopup } from './SmartTypePopup'
+import { useUiStore } from '../store/uiStore'
 import type { ScriptFormat } from '../store/scriptStore'
 
 
@@ -45,6 +46,7 @@ export function ScriptEditorView({
   multiCursorCount = 0,
 }: ScriptEditorViewProps) {
   const editorContentRef = useRef<HTMLDivElement | null>(null)
+  const a4Mode = useUiStore((s) => s.a4Mode)
 
   // Подсветка диалогов выбранного персонажа теперь реализована через
   // ProseMirror Decoration-плагин в DialogueHighlightExtension
@@ -137,10 +139,21 @@ export function ScriptEditorView({
       >
         <div
           className="mx-auto"
-          style={{
+          style={a4Mode ? {
+            // T-59: «лист A4» — белая бумага на холсте, геометрия как у PageCounter
             width: '210mm',
             minHeight: '297mm',
             padding: '2cm 2cm 2cm 3cm',
+            background: '#ffffff',
+            color: '#1a1a1a',
+            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.12)',
+            borderRadius: '2px',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+          } : {
+            // Линейный режим — текст на всю ширину холста
+            width: '100%',
+            padding: '0 16px',
             wordWrap: 'break-word',
             overflowWrap: 'break-word',
           }}
