@@ -72,8 +72,8 @@ body {
 /* CSS Variables for format switching */
 :root {
   /* T-58: значения метрик форматов НЕ дублируются здесь — единый источник
-     src/constants/scriptLayout.ts, переменные --russian-*/--hollywood-*
-     выставляет applyScriptLayoutVars() при старте приложения. */
+     src/constants/scriptLayout.ts; переменные russian/hollywood выставляет
+     applyScriptLayoutVars() при старте приложения. */
 }
 
 /* Russian format mode */

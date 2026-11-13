@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
-import { X, Download } from 'lucide-react'
+import { X, Download, FileText } from 'lucide-react'
 import type { Script } from '../../../store/scriptStore'
-import { convertToWordCompatibleHtml } from '../../../utils/wordExport'
-import { extractSceneHtml } from './SceneEditModal'
+import { buildPrintableHtml, buildScenesExportHtml, printHtmlAsPdf, wrapAsWordDoc } from '../../../utils/exportScenes'
 import { browserFS } from '../../../adapters/BrowserFS'
 import { useToastStore } from '../../../store/toastStore'
 
@@ -50,6 +49,7 @@ export default function ExportModal({ script, isDark, onClose }: ExportModalProp
     try {
       const body = buildScenesExportHtml(script, scenes, selected)
       const doc = wrapAsWordDoc(body, script.title || 'Сценарий')
+      const filename = `${(script.title || 'Сценарий').replace(/[\\/:*?"<>|]/g, '').trim() || 'scenariy'}.doc`
       await browserFS.downloadFile(filename, doc, 'application/msword')
       useToastStore.getState().showToast(`Экспортировано сцен: ${selected.size}`, 'success')
       onClose()
@@ -116,6 +116,18 @@ export default function ExportModal({ script, isDark, onClose }: ExportModalProp
             style={{ color: textSecondary, border: `1px solid ${border}` }}
           >
             Отмена
+          </button>
+          <button
+            onClick={handlePrintPdf}
+            disabled={selected.size === 0}
+            className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5"
+            style={{
+              color: selected.size === 0 ? textSecondary : textPrimary,
+              border: `1px solid ${border}`,
+            }}
+          >
+            <FileText size={13} />
+            PDF
           </button>
           <button
             onClick={handleExport}

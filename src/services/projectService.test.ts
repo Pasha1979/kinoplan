@@ -256,7 +256,7 @@ describe('projectService round-trip: экспорт → импорт', () => {
       expect(s.title).toBe(`Серия ${i + 1}`)
       expect(s.id).not.toMatch(/^script-/)
       // content идентичен с точностью до регенерированных data-scene-id
-      expect(s.content.replace(/data-scene-id="[^"]*"/g, 'X'))
+      expect(s.content?.replace(/data-scene-id="[^"]*"/g, 'X'))
         .toBe('<div X>Текст серии ' + (i + 1) + '</div>')
     })
     // Чужой проект нетронут

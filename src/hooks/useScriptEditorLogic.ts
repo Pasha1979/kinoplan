@@ -358,7 +358,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           return
         }
       }
-
+      }
     }
 
     // --- Автокапс для персонажа (всегда) ---

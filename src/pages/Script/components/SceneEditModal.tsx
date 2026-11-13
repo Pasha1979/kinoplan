@@ -87,7 +87,6 @@ function sceneNodes(startEl: Element, endEl: Element | null): Node[] {
 export function extractSceneHtml(content: string, sceneNumber: string, fallbackIndex: number): string {
   const doc = new DOMParser().parseFromString(content || '', 'text/html')
   const blocks = [...doc.body.querySelectorAll('[data-type]')]
-  const headers = blocks.filter((el) => isHeader(el))
   const { startEl, endEl } = findSceneEls(blocks, sceneNumber, fallbackIndex)
   if (!startEl) {
     console.warn('[sceneExtract] ШАПКА НЕ НАЙДЕНА для сцены', sceneNumber)
