@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { pouchStorage } from '../services/storageService'
+import { pouchStorage, saveScriptContent, loadScriptContent, removeScriptContent } from '../services/storageService'
 import type {
   ScriptFormat,
   TimingSystem,
@@ -159,6 +159,9 @@ interface ScriptStore {
   toggleFormatLock: () => void
   setFormatLocked: (locked: boolean) => void
 
+  /** T-35: ленивая подгрузка контента из отдельного документа script-content:{id} */
+  ensureContentLoaded: (scriptId: string) => Promise<void>
+
   // Подсказки-placeholder в пустых блоках
   showPlaceholders: boolean
   toggleShowPlaceholders: () => void
@@ -176,21 +179,27 @@ export const useScriptStore = create<ScriptStore>()(
       showPlaceholders: true,
       
       // Script CRUD
-      addScript: (script) =>
-        set((state) => ({ scripts: [...state.scripts, script] })),
+      addScript: (script) => {
+        if (script.content !== undefined) saveScriptContent(script.id, script.content)
+        set((state) => ({ scripts: [...state.scripts, script] }))
+      },
       
-      updateScript: (id, updates) =>
+      updateScript: (id, updates) => {
+        if (updates.content !== undefined) saveScriptContent(id, updates.content)
         set((state) => ({
           scripts: state.scripts.map((s) =>
             s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
           ),
-        })),
+        }))
+      },
       
-      deleteScript: (id) =>
+      deleteScript: (id) => {
+        removeScriptContent(id)
         set((state) => ({
           scripts: state.scripts.filter((s) => s.id !== id),
           currentScriptId: state.currentScriptId === id ? null : state.currentScriptId,
-        })),
+        }))
+      },
       
       setCurrentScript: (id) =>
         set({ currentScriptId: id }),
@@ -328,7 +337,38 @@ export const useScriptStore = create<ScriptStore>()(
 
       toggleShowPlaceholders: () =>
         set((state) => ({ showPlaceholders: !state.showPlaceholders })),
+
+      ensureContentLoaded: async (scriptId) => {
+        const existing = get().scripts.find((x) => x.id === scriptId)
+        if (!existing || existing.content !== undefined) return
+        const html = await loadScriptContent(scriptId)
+        if (get().scripts.find((x) => x.id === scriptId)?.content !== undefined) return
+        set((state) => ({
+          scripts: state.scripts.map((x) =>
+            x.id === scriptId ? { ...x, content: html ?? '' } : x
+          ),
+        }))
+      },
     }),
-    { name: 'kinoplan-scripts', storage: createJSONStorage(() => pouchStorage) }
+    {
+      name: 'kinoplan-scripts',
+      storage: createJSONStorage(() => pouchStorage),
+      // T-35: контент не сериализуем в общий документ — он в script-content:{id}
+      partialize: (state) => ({
+        ...state,
+        scripts: state.scripts.map((script) => {
+          const { content: _content, ...rest } = script
+          return rest
+        }),
+      }),
+      // Миграция старого формата: контент был внутри — выносим в отдельные документы
+      onRehydrateStorage: () => (state) => {
+        state?.scripts.forEach((script) => {
+          if (typeof script.content === 'string' && script.content.length > 0) {
+            saveScriptContent(script.id, script.content)
+          }
+        })
+      },
+    }
   )
 )

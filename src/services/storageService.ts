@@ -113,6 +113,32 @@ export async function flushWrites(name: string): Promise<void> {
   await (writeQueue.get(name) ?? Promise.resolve())
 }
 
+/**
+ * T-35: контент сценария (тяжёлый HTML) живёт отдельными документами
+ * script-content:{id}, чтобы persist не сериализовал мегабайты на каждый
+ * keystroke. Пишется через тот же debounce/очередь, что и сторы.
+ */
+const scriptContentKey = (id: string) => `script-content:${id}`
+
+export function saveScriptContent(id: string, html: string): void {
+  void pouchStorage.setItem(scriptContentKey(id), JSON.stringify({ html }))
+}
+
+export async function loadScriptContent(id: string): Promise<string | null> {
+  const raw = await pouchStorage.getItem(scriptContentKey(id))
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as { html?: unknown }
+    return typeof parsed.html === 'string' ? parsed.html : null
+  } catch {
+    return raw
+  }
+}
+
+export function removeScriptContent(id: string): void {
+  void pouchStorage.removeItem(scriptContentKey(id))
+}
+
 export const pouchStorage: StateStorage = {
   getItem: async (name) => {
     // Незаписанные изменения важнее диска — read-after-write consistency

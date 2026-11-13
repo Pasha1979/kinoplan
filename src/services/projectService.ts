@@ -150,7 +150,8 @@ function validateImportedData(raw: unknown): { project: Partial<Project>; scenes
 export const projectService = {
   async getProjects(signal?: AbortSignal): Promise<Project[]> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      useNormalizedProjectStore.getState().setLoading(true)
+      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
       const { projects } = useNormalizedProjectStore.getState()
       return Object.values(projects)
     } catch (error) {
@@ -167,7 +168,8 @@ export const projectService = {
 
   async createProject(data: Partial<Project>, signal?: AbortSignal): Promise<Project> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      useNormalizedProjectStore.getState().setLoading(true)
+      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
 
       const newProject: Project = {
         id: `proj-${Date.now()}`,
@@ -214,7 +216,8 @@ export const projectService = {
 
   async saveScenesBatch(projectId: string, scenes: Scene[], signal?: AbortSignal): Promise<void> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      useNormalizedProjectStore.getState().setLoading(true)
+      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
       const scopedScenes = scenes.map((s) => ({ ...s, projectId }))
       useNormalizedProjectStore.getState().setScenesBatch(scopedScenes)
       // Честный статус «Сохранено»: ждём реальной записи на диск,
@@ -236,7 +239,8 @@ export const projectService = {
 
   async deleteProject(projectId: string, signal?: AbortSignal): Promise<void> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      useNormalizedProjectStore.getState().setLoading(true)
+      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
       useNormalizedProjectStore.getState().deleteProject(projectId)
 
       // Каскад: удаляем все сценарии проекта (самый тяжёлый контент — HTML)
@@ -343,6 +347,12 @@ export const projectService = {
         throw new Error('Проект не найден')
       }
       const projectScenes = Object.values(scenes).filter((s) => s.projectId === projectId)
+      // T-35: контент — в отдельных документах; догружаем всё, что ещё не поднято
+      await Promise.all(
+        useScriptStore.getState().scripts
+          .filter((s) => s.projectId === projectId)
+          .map((s) => useScriptStore.getState().ensureContentLoaded(s.id))
+      )
       const projectScripts = useScriptStore.getState().scripts.filter((s) => s.projectId === projectId)
       const exportData = {
         schemaVersion: 2,
@@ -362,7 +372,8 @@ export const projectService = {
 
   async importProjectFromJSON(jsonString: string, signal?: AbortSignal): Promise<Project> {
     try {
-      useNormalizedProjectStore.getState().setLoading(true)      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      useNormalizedProjectStore.getState().setLoading(true)
+      if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
 
       const parsed = JSON.parse(jsonString)
       const { project: validatedProj, scenes: validatedScenes, scripts: validatedScripts } = validateImportedData(parsed)

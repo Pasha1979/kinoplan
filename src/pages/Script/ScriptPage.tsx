@@ -106,6 +106,13 @@ export default function ScriptPage() {
 
   const updateScript = useScriptStore((s) => s.updateScript)
 
+  // T-35: контент сценариев хранится отдельными документами — подгружаем лениво
+  const episodeIds = episodeScripts.map((s) => s.id).join(',')
+  useEffect(() => {
+    episodeScripts.forEach((s) => { void useScriptStore.getState().ensureContentLoaded(s.id) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodeIds])
+
   // Поиск по сценарию
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
   const search = useScriptSearch(editorInstance)
@@ -702,6 +709,9 @@ export default function ScriptPage() {
                     transition: 'background 0.15s',
                   }} />
                 )}
+                {currentScript && currentScript.content === undefined ? (
+                  <div style={{ padding: 24, color: '#64748b', fontSize: 14 }}>Загрузка сценария…</div>
+                ) : (
                 <ScriptEditorTiptap
                   key={currentScript?.id || 'no-script'}
                   format={scriptFormat}
@@ -731,6 +741,7 @@ export default function ScriptPage() {
                   dialogueCharacter={dialogueMode.activeCharacter}
                   povCharacter={dialogueMode.povMode ? dialogueMode.activeCharacter : null}
                 />
+                )}
               </div>
 
               {/* Divider */}
@@ -810,6 +821,9 @@ export default function ScriptPage() {
                   )}
 
                   <div style={{ flex: 1, overflow: 'hidden' }}>
+                    {rightScript && rightScript.content === undefined ? (
+                      <div style={{ padding: 24, color: '#64748b', fontSize: 14 }}>Загрузка сценария…</div>
+                    ) : (
                     <ScriptEditorTiptap
                       key={`right-${rightScript?.id || 'none'}`}
                       format={scriptFormat}
@@ -833,6 +847,7 @@ export default function ScriptPage() {
                         }
                       }}
                     />
+                    )}
                   </div>
                 </div>
               )}

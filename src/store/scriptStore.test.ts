@@ -280,3 +280,61 @@ describe('ScriptStore — Notes & Drafts', () => {
     expect(useScriptStore.getState().drafts).toHaveLength(1)
   })
 })
+
+// T-35: контент сценария — отдельный документ script-content:{id},
+// общий persist-документ остаётся лёгким
+describe('T-35 per-script content docs', () => {
+  it('updateScript content → уходит в script-content:{id}, а не в kinoplan-scripts', async () => {
+    const { flushWrites } = await import('../services/storageService')
+    const html = '<div data-type="scene">BIG CONTENT '.repeat(50) + '</div>'
+    useScriptStore.getState().addScript(makeScript({ id: 's-t35', content: '<p></p>' }))
+    useScriptStore.getState().updateScript('s-t35', { content: html })
+    await flushWrites('script-content:s-t35')
+    await flushWrites('kinoplan-scripts')
+
+    const { pouchStorage } = await import('../services/storageService')
+    const contentDoc = await pouchStorage.getItem('script-content:s-t35')
+    expect(contentDoc).not.toBeNull()
+    expect(JSON.parse(contentDoc!).html).toBe(html)
+
+    const storeDoc = await pouchStorage.getItem('kinoplan-scripts')
+    expect(storeDoc).not.toBeNull()
+    const persisted = JSON.parse(storeDoc!) as { state: { scripts: Array<{ id: string; content?: string }> } }
+    const persistedScript = persisted.state.scripts.find((s) => s.id === 's-t35')
+    expect(persistedScript).toBeTruthy()
+    expect(persistedScript!.content).toBeUndefined()
+    // общий документ не раздувается контентом
+    expect(storeDoc!.length).toBeLessThan(html.length)
+  })
+
+  it('ensureContentLoaded подгружает контент из отдельного документа', async () => {
+    const { flushWrites, saveScriptContent, pouchStorage } = await import('../services/storageService')
+    useScriptStore.getState().addScript(makeScript({ id: 's-lazy' }))
+    // имитируем гидрацию без контента
+    useScriptStore.setState((state) => ({
+      scripts: state.scripts.map((s) => {
+        const { content: _c, ...rest } = s as Script & { content?: string }
+        return rest as Script
+      }),
+    }))
+    expect(useScriptStore.getState().scripts.find((s) => s.id === 's-lazy')?.content).toBeUndefined()
+
+    saveScriptContent('s-lazy', '<p>lazy html</p>')
+    await flushWrites('script-content:s-lazy')
+    expect(await pouchStorage.getItem('script-content:s-lazy')).not.toBeNull()
+
+    await useScriptStore.getState().ensureContentLoaded('s-lazy')
+    expect(useScriptStore.getState().scripts.find((s) => s.id === 's-lazy')?.content).toBe('<p>lazy html</p>')
+  })
+
+  it('deleteScript удаляет контентный документ', async () => {
+    const { flushWrites, pouchStorage } = await import('../services/storageService')
+    useScriptStore.getState().addScript(makeScript({ id: 's-del', content: '<p>x</p>' }))
+    await flushWrites('script-content:s-del')
+    expect(await pouchStorage.getItem('script-content:s-del')).not.toBeNull()
+
+    useScriptStore.getState().deleteScript('s-del')
+    await flushWrites('script-content:s-del')
+    expect(await pouchStorage.getItem('script-content:s-del')).toBeNull()
+  })
+})
