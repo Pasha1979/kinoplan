@@ -16,7 +16,7 @@ import CardsView from './components/CardsView'
 import DevelopmentView from './components/DevelopmentView'
 import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
-import { extractSceneHtml, insertSceneHtml, renumberHeaders } from './components/sceneHtmlOps'
+import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor } from './components/sceneHtmlOps'
 import { renumberSceneNumbers } from '../../utils/sceneNumbering'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
@@ -105,6 +105,8 @@ export default function ScriptPage() {
   } = logic
 
   const updateScript = useScriptStore((s) => s.updateScript)
+  // T-97: ошибки ленивой загрузки контента — гейт «Повторить» вместо пустого редактора
+  const contentErrors = useScriptStore((s) => s.contentErrors)
 
   // T-35: контент сценариев хранится отдельными документами — подгружаем лениво
   const episodeIds = episodeScripts.map((s) => s.id).join(',')
@@ -298,15 +300,22 @@ export default function ScriptPage() {
     if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneLinks: links }) }
   }, [episodeScripts, updateScript, pushUndo])
 
-  const handleSaveScene = useCallback((newContent: string) => {
-    if (!editSceneOwner) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
-    // 1) пишем в стор — сохранится и в PouchDB, и для закрытых серий
+  // T-99: модалка отдаёт ФРАГМЕНТ сцены (getHTML мини-редактора).
+  // Открытая серия — транзакция splice по UUID в живой документ (undo/курсор живы);
+  // закрытая — строковая хирургия в контенте стора.
+  const handleSaveScene = useCallback((sceneHtml: string) => {
+    if (!editSceneOwner || !editScene) { console.warn('[sceneSave] владелец сцены не найден — не сохранено'); return }
+    if (editSceneOwner.id === currentScript?.id && editorInstance
+        && replaceSceneInEditor(editorInstance, editScene.id, sceneHtml, editScene.number)) {
+      return // пересчёт сцен и content пойдёт через onUpdate редактора
+    }
+    const idx = editSceneOwner.scenes!.findIndex((s) => s.id === editScene.id)
+    const newContent = spliceSceneHtml(editSceneOwner.content || '', editScene.number, Math.max(0, idx), sceneHtml, editScene.id)
     updateScript(editSceneOwner.id, { content: newContent })
-    // 2) если это открытый скрипт — обновляем живой редактор (пересчёт сцен пойдёт сам)
     if (editSceneOwner.id === currentScript?.id && editorInstance) {
       editorInstance.commands.setContent(newContent)
     }
-  }, [editSceneOwner, currentScript?.id, editorInstance, updateScript])
+  }, [editSceneOwner, editScene, currentScript?.id, editorInstance, updateScript])
 
   const handleContentChange = useCallback((html: string) => {
     if (currentScript?.id) {
@@ -353,6 +362,11 @@ export default function ScriptPage() {
     const owner = episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === sc.id))
     if (!owner) return
     const idx = owner.scenes!.findIndex((s) => s.id === sc.id)
+    // T-99: открытая серия — транзакция по UUID в живой документ, не setContent
+    if (owner.id === currentScript?.id && editorInstance
+        && replaceSceneInEditor(editorInstance, sc.id, html, sc.number)) {
+      return
+    }
     const newContent = spliceSceneHtml(owner.content || '', sc.number, Math.max(0, idx), html, sc.id)
     updateScript(owner.id, { content: newContent })
     if (owner.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(newContent)
@@ -712,7 +726,17 @@ export default function ScriptPage() {
                   }} />
                 )}
                 {currentScript && currentScript.content === undefined ? (
+                  contentErrors[currentScript.id] ? (
+                    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ color: '#f87171', fontSize: 14 }}>Не удалось загрузить сценарий: {contentErrors[currentScript.id]}</div>
+                      <button
+                        onClick={() => void useScriptStore.getState().ensureContentLoaded(currentScript.id)}
+                        style={{ padding: '8px 16px', borderRadius: 8, background: '#818cf8', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14 }}
+                      >Повторить</button>
+                    </div>
+                  ) : (
                   <div style={{ padding: 24, color: '#64748b', fontSize: 14 }}>Загрузка сценария…</div>
+                  )
                 ) : (
                 <ScriptEditorTiptap
                   key={currentScript?.id || 'no-script'}
@@ -823,7 +847,17 @@ export default function ScriptPage() {
 
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     {rightScript && rightScript.content === undefined ? (
+                      contentErrors[rightScript.id] ? (
+                        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+                          <div style={{ color: '#f87171', fontSize: 14 }}>Не удалось загрузить сценарий: {contentErrors[rightScript.id]}</div>
+                          <button
+                            onClick={() => void useScriptStore.getState().ensureContentLoaded(rightScript.id)}
+                            style={{ padding: '8px 16px', borderRadius: 8, background: '#818cf8', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14 }}
+                          >Повторить</button>
+                        </div>
+                      ) : (
                       <div style={{ padding: 24, color: '#64748b', fontSize: 14 }}>Загрузка сценария…</div>
+                      )
                     ) : (
                     <ScriptEditorTiptap
                       key={`right-${rightScript?.id || 'none'}`}
@@ -843,8 +877,11 @@ export default function ScriptPage() {
                       smartTypeCharacters={smartTypeCharacters}
                       smartTypeLocations={smartTypeLocations}
                       onContentChange={(html) => {
+                        // T-98: общий путь сохранения — статусбар честно
+                        // показывает unsaved/saving и при правках справа
                         if (rightScript?.id) {
                           useScriptStore.getState().updateScript(rightScript.id, { content: html })
+                          triggerAutoSave()
                         }
                       }}
                     />

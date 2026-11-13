@@ -41,8 +41,8 @@ interface SceneEditModalProps {
   sceneIndex: number
   isDark: boolean
   onClose: () => void
-  /** save → (newContent html) обновляет владельца + живой редактор при совпадении */
-  onSave: (newContent: string) => void
+  /** save → (sceneHtml fragment) — владелец сам решает: транзакция в живой редактор или splice в контент */
+  onSave: (sceneHtml: string) => void
 }
 
 const isHeader = (el: Element) => {
@@ -152,9 +152,10 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
 
   const handleSave = () => {
     if (!editor) return
+    // T-99: отдаём фрагмент сцены — splice в документ/стор делает владелец
+    // (по UUID: транзакция в живой редактор или строковая хирургия)
     try {
-      const newContent = spliceSceneHtml(script.content || '', scene.number, sceneIndex, editor.getHTML(), scene.id)
-      onSave(newContent)
+      onSave(editor.getHTML())
     } catch (e) {
       console.error('[sceneSave] ОШИБКА сохранения:', e)
     }
