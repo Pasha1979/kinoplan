@@ -25,26 +25,31 @@ export interface ScriptLayout {
   transition: BlockMetrics
 }
 
+// Отступы — только marginTop («space before»), marginBottom всегда 0:
+// граница между блоками считается один раз, экран = счётчик = экспорт.
+// Пустая строка Word = 1 line-height = 24px (12pt × 1.5).
+// Header: 2 пустые строки (48px) как в FD/КИТ; action/character/transition: 1 (24px);
+// внутри связки персонаж→(з/к)→диалог — 0 (без пустой строки).
 export const SCRIPT_LAYOUT: Record<'russian' | 'hollywood', ScriptLayout> = {
   // Русский формат — по стандарту КИТ Сценарист
   russian: {
-    header: { marginTop: '16px', marginBottom: '0' },
-    cast: { marginTop: '0', marginBottom: '8px' },
-    action: { marginTop: '12px', marginBottom: '12px' },
-    character: { marginTop: '16px', marginBottom: '0', characterIndent: '6.75cm' },
-    dialog: { marginTop: '0', marginBottom: '16px', leftIndent: '3.75cm', rightIndent: '3.75cm' },
+    header: { marginTop: '48px', marginBottom: '0' },
+    cast: { marginTop: '0', marginBottom: '0' },
+    action: { marginTop: '24px', marginBottom: '0' },
+    character: { marginTop: '24px', marginBottom: '0', characterIndent: '6.75cm' },
+    dialog: { marginTop: '0', marginBottom: '0', leftIndent: '3.75cm', rightIndent: '3.75cm' },
     parenthetical: { marginTop: '0', marginBottom: '0', leftIndent: '5.5cm', rightIndent: '4.5cm' },
-    transition: { marginTop: '16px', marginBottom: '16px' },
+    transition: { marginTop: '24px', marginBottom: '0' },
   },
   // Голливудский формат — US industry standard (дюймы → см)
   hollywood: {
-    header: { marginTop: '16px', marginBottom: '0' },
-    cast: { marginTop: '0', marginBottom: '8px' },
-    action: { marginTop: '12px', marginBottom: '12px' },
-    character: { marginTop: '16px', marginBottom: '0', characterIndent: '9.3cm' },
-    dialog: { marginTop: '0', marginBottom: '16px', leftIndent: '6.35cm', rightIndent: '2.5cm' },
+    header: { marginTop: '48px', marginBottom: '0' },
+    cast: { marginTop: '0', marginBottom: '0' },
+    action: { marginTop: '24px', marginBottom: '0' },
+    character: { marginTop: '24px', marginBottom: '0', characterIndent: '9.3cm' },
+    dialog: { marginTop: '0', marginBottom: '0', leftIndent: '6.35cm', rightIndent: '2.5cm' },
     parenthetical: { marginTop: '0', marginBottom: '0', leftIndent: '7.8cm', rightIndent: '2.5cm' },
-    transition: { marginTop: '16px', marginBottom: '16px' },
+    transition: { marginTop: '24px', marginBottom: '0' },
   },
 }
 

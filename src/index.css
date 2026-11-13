@@ -188,6 +188,11 @@ body {
   border-left-color: #6366f1;
 }
 
+/* Первый блок документа — без верхнего отступа (как в Word: нет пустой строки до начала) */
+.tiptap-editor > *:first-child {
+  margin-top: 0 !important;
+}
+
 /* Scene Header: 2-1. ИНТ. КВАРТИРА ВЛАДЫ.КОМНАТА. НОЧЬ */
 .tiptap-editor div[data-type="scene-header"] {
   position: relative;

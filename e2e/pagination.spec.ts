@@ -49,37 +49,38 @@ const scene = (n: number, lines: number) =>
 // Метод фиксации: прогон на эталонном тексте → значения записаны сюда.
 // Отклонение > толеранса = регрессия пагинации (шрифт/поля/высота строки).
 
-test('эталон: одна короткая сцена — меньше страницы', async ({ page }) => {
+test('эталон: одна короткая сцена → 0.4 стр.', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages S ${Date.now()}`)
   await pasteScript(page, scene(1, 3))
   const pages = await readPages(page)
-  expect(pages).toBeGreaterThan(0)
-  expect(pages).toBeLessThan(0.5)
+  expect(pages).toBeGreaterThan(0.2)
+  expect(pages).toBeLessThan(0.6)
 })
 
-// NB: ~15 однострочных ремарок/стр. — у action-блока margin 12+12px
-// (SCRIPT_LAYOUT.russian.action), чего нет в Word-шаблоне сценария.
-// Зафиксировано как текущий эталон; сверка с Word — отдельный вопрос верности геометрии.
-test('эталон: 40 ремарок → 2.7 стр.', async ({ page }) => {
+// Геометрия сведена к модели «space before» (FD/КИТ): пустая строка = 24px
+// (line-height 1.5), перед шапкой 2 строки (48px), внутри персонаж→диалог — 0.
+// ~40 строк полуторного интервала на страницу A4 = канон КИТ.
+// Значения зафиксированы из реального layout 13.11.2026 (Courier Prime в бандле).
+test('эталон: 40 ремарок (перенос в ~2 строки) → 3.1 стр.', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages M ${Date.now()}`)
   await pasteScript(page, scene(1, 40))
   const pages = await readPages(page)
-  expect(pages).toBeGreaterThan(2.4)
-  expect(pages).toBeLessThan(3.0)
+  expect(pages).toBeGreaterThan(2.9)
+  expect(pages).toBeLessThan(3.3)
 })
 
-test('эталон: 120 ремарок в двух сценах → 7.8 стр.', async ({ page }) => {
+test('эталон: 120 ремарок в двух сценах → 9.0 стр.', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages L ${Date.now()}`)
   await pasteScript(page, `${scene(1, 60)}\n\n${scene(2, 60)}`)
   const pages = await readPages(page)
-  expect(pages).toBeGreaterThan(7.4)
-  expect(pages).toBeLessThan(8.2)
+  expect(pages).toBeGreaterThan(8.7)
+  expect(pages).toBeLessThan(9.3)
 })
 
-test('эталон: диалоги не меняют геометрию (монологи компактнее)', async ({ page }) => {
+test('эталон: 12 диалоговых пар → 2.3 стр.', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages D ${Date.now()}`)
   await pasteScript(page, `1. ИНТ. КАБИНЕТ - ДЕНЬ\n\n${Array.from({ length: 12 }, () => DIALOGUE).join('\n\n')}`)
   const pages = await readPages(page)
-  expect(pages).toBeGreaterThan(0.5)
-  expect(pages).toBeLessThan(2.5)
+  expect(pages).toBeGreaterThan(2.0)
+  expect(pages).toBeLessThan(2.6)
 })

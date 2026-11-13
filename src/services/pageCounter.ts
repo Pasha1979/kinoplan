@@ -42,6 +42,10 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
     if (child instanceof HTMLElement) convert(child)
   })
 
+  // У первого блока нет «пустой строки перед» — как в Word
+  const first = doc.body.firstElementChild
+  if (first instanceof HTMLElement) first.style.marginTop = '0'
+
   const wrapper = document.createElement('div')
   wrapper.innerHTML = doc.body.innerHTML
   wrapper.setAttribute('style',
