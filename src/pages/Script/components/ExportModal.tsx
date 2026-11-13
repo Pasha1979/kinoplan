@@ -38,6 +38,12 @@ export default function ExportModal({ script, isDark, onClose }: ExportModalProp
     setSelected(allSelected ? new Set() : new Set(scenes.map((s) => s.id)))
   }
 
+  const handlePrintPdf = () => {
+    if (selected.size === 0) return
+    const html = buildPrintableHtml(script, scenes, selected)
+    printHtmlAsPdf(html)
+  }
+
   const handleExport = async () => {
     if (exporting || selected.size === 0) return
     setExporting(true)

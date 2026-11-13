@@ -46,3 +46,35 @@ describe('wrapAsWordDoc', () => {
     expect(doc).toContain('<body><p>x</p></body>')
   })
 })
+
+describe('buildPrintableHtml', () => {
+  it('содержит @page A4 и поля КИТ', async () => {
+    const { buildPrintableHtml } = await import('./exportScenes')
+    const html = buildPrintableHtml(script, scenes, null)
+    expect(html).toContain('@page { size: A4; margin: 2cm 2cm 2cm 3cm; }')
+    expect(html).toContain('ДОМ')
+  })
+
+  it('добавляет титульный лист при titlePage.print', async () => {
+    const { buildPrintableHtml } = await import('./exportScenes')
+    const withTitle = {
+      ...script,
+      title: 'Фильм',
+      titlePage: {
+        title: 'ФИЛЬМ', writtenBy: 'ИВАНОВ', basedOn: '', director: 'ПЕТРОВ',
+        company: '', email: '', phone: '', address: '', draftNumber: 'v2', date: '13.11', print: true,
+      },
+    }
+    const html = buildPrintableHtml(withTitle as never, scenes, null)
+    expect(html).toContain('title-page')
+    expect(html).toContain('ФИЛЬМ')
+    expect(html).toContain('ИВАНОВ')
+    expect(html).toContain('page-break-after: always')
+  })
+
+  it('без titlePage.print титульного листа нет', async () => {
+    const { buildPrintableHtml } = await import('./exportScenes')
+    const html = buildPrintableHtml(script, scenes, null)
+    expect(html).not.toContain('<div class="title-page">')
+  })
+})
