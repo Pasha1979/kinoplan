@@ -24,11 +24,13 @@ export function buildScenesExportHtml(
   return convertToWordCompatibleHtml(parts.join(''), format)
 }
 
-/** Оборачивает тело в документ, который Word открывает как .doc */
+/** Оборачивает тело в документ, который Word открывает как .doc.
+ *  @page фиксирует геометрию A4/КИТ — без неё Word пагинирует своими дефолтами (T-92). */
 export function wrapAsWordDoc(bodyHtml: string, title: string): string {
   return [
     '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">',
-    `<head><meta charset="utf-8"><title>${title}</title></head>`,
+    `<head><meta charset="utf-8"><title>${title}</title>`,
+    '<style>@page { size: A4; margin: 2cm 2cm 2cm 3cm; }</style></head>',
     `<body>${bodyHtml}</body></html>`,
   ].join('')
 }

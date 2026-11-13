@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { ETALONS, etalonText } from './fixtures/etalons'
 
 // Хелпер: создать проект → сценарий → вернуть редактор (как в reliability.spec.ts)
 async function openFreshEditor(page: Page, projectName: string) {
@@ -90,6 +91,21 @@ test('T-16: длинная реплика разрывается с маркер
   const bodyText = await page.locator('.tiptap-editor').first().innerText()
   expect(bodyText.split('(ПРОДОЛЖЕНИЕ)').length - 1).toBe(0)
 })
+
+// T-92: фиделити против Word — те же тексты, экспортированные в .doc и
+// измеренные в Word через COM (e2e/fixtures/etalons.ts → word.pages).
+// Критерий аудита: расхождение с Word = 0 страниц.
+for (const etalon of ETALONS) {
+  test(`фиделити Word: ${etalon.id} → ${etalon.word.pages} стр.`, async ({ page }) => {
+    await openFreshEditor(page, `E2E Fidelity ${etalon.id} ${Date.now()}`)
+    await pasteScript(page, etalonText(etalon))
+    const pages = await readPages(page)
+    // Модель считает дробно (высота/страница), Word — целые страницы:
+    // ceil(модель) должен совпасть с замером Word.
+    expect(Math.ceil(pages)).toBe(etalon.word.pages)
+    expect(pages).toBeLessThanOrEqual(etalon.word.pages)
+  })
+}
 
 test('эталон: 12 диалоговых пар → 2.3 стр.', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages D ${Date.now()}`)

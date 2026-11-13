@@ -20,14 +20,24 @@ export interface Etalon {
   id: string
   title: string
   html: string
-  /** Заполняется после замера в Word (T-92): страниц и индексы блоков-разрывов */
-  word?: { pages: number; breakAfterBlocks: number[] }
+  /** Замер Word через COM (13.11.2026): страниц и 0-based индексы блоков,
+   *  с которых начинается новая страница. Экспорт: Courier New 12pt,
+   *  line-height 18pt, @page A4 2/2/2/3cm — та же геометрия, что у модели. */
+  word: { pages: number; breakStartBlocks: number[] }
 }
+
+/** Текст для вставки в редактор (блоки через пустую строку) */
+export const etalonText = (e: Etalon): string =>
+  e.html
+    .replace(/<div[^>]*>/g, '')
+    .replace(/<\/div>/g, '\n\n')
+    .trim()
 
 /** 1. Короткие сцены — несколько маленьких сцен подряд */
 const etalon1: Etalon = {
   id: 'short-scenes',
   title: 'Эталон 1 — короткие сцены',
+  word: { pages: 1, breakStartBlocks: [] },
   html: [
     header('1. ИНТ. КВАРТИРА - ДЕНЬ'),
     action('ИВАН входит в прихожую, вешает пальто.'),
@@ -46,6 +56,7 @@ const etalon1: Etalon = {
 const etalon2: Etalon = {
   id: 'long-scene',
   title: 'Эталон 2 — длинная сцена (2+ стр.)',
+  word: { pages: 6, breakStartBlocks: [13, 26, 39, 52, 65] },
   html:
     header('1. ИНТ. ЗАВОДСКОЙ ЦЕХ - НОЧЬ') +
     Array.from({ length: 70 }, (_, i) =>
@@ -57,6 +68,7 @@ const etalon2: Etalon = {
 const etalon3: Etalon = {
   id: 'dialogue',
   title: 'Эталон 3 — диалоговый',
+  word: { pages: 2, breakStartBlocks: [21] },
   html: [
     header('1. ИНТ. КАФЕ - ДЕНЬ'),
     action('За столиком ИВАН и МАРЬЯ. На улице дождь.'),
@@ -81,6 +93,7 @@ const ACTION_PARA =
 const etalon4: Etalon = {
   id: 'action-prose',
   title: 'Эталон 4 — экшен-описательный',
+  word: { pages: 2, breakStartBlocks: [7] },
   html: [
     header('1. ИНТ. СКЛАД - НОЧЬ'),
     action(ACTION_PARA),
@@ -98,6 +111,7 @@ const etalon4: Etalon = {
 const etalon5: Etalon = {
   id: 'mixed',
   title: 'Эталон 5 — смешанный с переходами',
+  word: { pages: 1, breakStartBlocks: [] },
   html: [
     header('1. ИНТ. КВАРТИРА - УТРО'),
     action('ИВАН просыпается от звонка будильника.'),
