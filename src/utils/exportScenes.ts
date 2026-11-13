@@ -89,52 +89,6 @@ export function printHtmlAsPdf(html: string): void {
 }
 
 /**
- * T-77: вызывной лист на съёмочный день — печатный HTML → PDF.
+ * T-77: вызывной лист — удалено решением пользователя (D-62):
+ * модуль планирования делается пользователем с нуля.
  */
-export function buildCallsheetHtml(
-  projectName: string,
-  dayNumber: number,
-  day: { date?: string; location?: string; notes?: string },
-  scenes: Scene[]
-): string {
-  const rows = scenes.map((s) => `
-    <tr>
-      <td>${s.number}</td>
-      <td>${s.type}</td>
-      <td>${s.location}${s.sublocation ? ' — ' + s.sublocation : ''}</td>
-      <td>${s.time || ''}</td>
-      <td>${(s.cast || []).join(', ')}</td>
-      <td>${(s.pages || 0).toFixed(1)}</td>
-    </tr>`).join('')
-  const castAll = [...new Set(scenes.flatMap((s) => s.cast || []))]
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Вызывной — день ${dayNumber}</title>
-<style>
-  @page { size: A4 landscape; margin: 1.5cm; }
-  body { font-family: "Courier New", Courier, monospace; font-size: 10pt; color: #000; margin: 0; }
-  h1 { font-size: 14pt; text-transform: uppercase; margin: 0 0 2px; }
-  .meta { font-size: 10pt; margin-bottom: 10px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #000; padding: 3px 6px; text-align: left; vertical-align: top; }
-  th { background: #e5e5e5; text-transform: uppercase; font-size: 9pt; }
-  .cast { margin-top: 10px; font-size: 9pt; }
-</style>
-</head>
-<body>
-  <h1>Вызывной лист — ${projectName}</h1>
-  <div class="meta">
-    Съёмочный день №${dayNumber}${day.date ? ` · ${day.date}` : ''}${day.location ? ` · Локация: ${day.location}` : ''}
-  </div>
-  <table>
-    <tr><th>№</th><th>ИНТ/ЭКСТ</th><th>Локация</th><th>Время</th><th>Персонажи</th><th>Стр.</th></tr>
-    ${rows}
-  </table>
-  ${castAll.length ? `<div class="cast"><b>В работе:</b> ${castAll.join(', ')}</div>` : ''}
-  ${day.notes ? `<div class="cast"><b>Примечания:</b> ${day.notes}</div>` : ''}
-</body>
-</html>`
-}

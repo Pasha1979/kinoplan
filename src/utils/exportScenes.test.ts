@@ -78,30 +78,3 @@ describe('buildPrintableHtml', () => {
     expect(html).not.toContain('<div class="title-page">')
   })
 })
-
-describe('buildCallsheetHtml (T-77)', () => {
-  const dayScenes = [
-    { id: 's1', number: '3', type: 'ИНТ', location: 'КВАРТИРА', time: 'ДЕНЬ', cast: ['ИВАН', 'МАРЬЯ'], pages: 1.5 },
-    { id: 's2', number: '7', type: 'ЭКСТ', location: 'УЛИЦА', time: 'НОЧЬ', cast: ['ПЁТР'], pages: 0.5 },
-  ] as Scene[]
-
-  it('строит таблицу вызывного с номером дня, сценами и составом', async () => {
-    const { buildCallsheetHtml } = await import('./exportScenes')
-    const html = buildCallsheetHtml('Мой проект', 2, { date: '2026-11-20', location: 'Павильон' }, dayScenes)
-    expect(html).toContain('Съёмочный день №2')
-    expect(html).toContain('2026-11-20')
-    expect(html).toContain('Мой проект')
-    expect(html).toContain('КВАРТИРА')
-    expect(html).toContain('ИВАН, МАРЬЯ')
-    expect(html).toContain('@page { size: A4 landscape')
-  })
-
-  it('сводит всех персонажей дня в блок «В работе» без дублей', async () => {
-    const { buildCallsheetHtml } = await import('./exportScenes')
-    const dup = [...dayScenes, { id: 's3', number: '9', type: 'ИНТ', location: 'ОФИС', time: 'ДЕНЬ', cast: ['ИВАН'], pages: 1 }] as Scene[]
-    const html = buildCallsheetHtml('P', 1, {}, dup)
-    const castBlock = html.split('В работе:')[1]
-    expect(castBlock.match(/ИВАН/g)?.length).toBe(1)
-    expect(castBlock).toContain('ПЁТР')
-  })
-})
