@@ -4,6 +4,7 @@ import { useScriptStore, type TitlePage } from '../../store/scriptStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import ScriptEmptyState from './components/ScriptEmptyState'
 import ScriptHeader from './components/ScriptHeader'
+import ExportModal from './components/ExportModal'
 import ScriptTabs from './components/ScriptTabs'
 import ScriptStatusBar from './components/ScriptStatusBar'
 import FormatSelectModal from './components/FormatSelectModal'
@@ -118,6 +119,7 @@ export default function ScriptPage() {
   const search = useScriptSearch(editorInstance)
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [showAutoFormatModal, setShowAutoFormatModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
   const [formatRawText, setFormatRawText] = useState('')
   const focusMode = useFocusMode()
   const splitScreen = useSplitScreen(currentSeries)
@@ -544,6 +546,7 @@ export default function ScriptPage() {
           dialogueActiveCharacter={dialogueMode.activeCharacter}
           onToggleDialoguePicker={dialogueMode.togglePicker}
           onFormat={handleOpenFormat}
+          onExport={currentScript ? () => setShowExportModal(true) : undefined}
         />}
 
         {/* Dialogue Character Picker — dropdown под шапкой */}
@@ -924,6 +927,15 @@ export default function ScriptPage() {
             navigate(`/project/${project?.id}/script/create`)
           }}
           onClose={() => setShowFormatModal(false)}
+        />
+      )}
+
+      {/* Модальное окно экспорта сцен в .doc */}
+      {showExportModal && currentScript && (
+        <ExportModal
+          script={currentScript}
+          isDark={isDark}
+          onClose={() => setShowExportModal(false)}
         />
       )}
 

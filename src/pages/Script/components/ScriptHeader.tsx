@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2 } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2, Download } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 import { useUiStore, type EnterPreset } from '../../../store/uiStore'
@@ -33,6 +33,7 @@ interface ScriptHeaderProps {
   dialogueActiveCharacter?: string | null
   onToggleDialoguePicker?: () => void
   onFormat?: () => void
+  onExport?: () => void
 }
 
 function ScriptHeader({
@@ -58,6 +59,7 @@ function ScriptHeader({
   onToggleSplitScreen,
   dialogueActiveCharacter,
   onToggleDialoguePicker,
+  onExport,
 
   onFormat,
 }: ScriptHeaderProps) {
@@ -240,6 +242,19 @@ function ScriptHeader({
           <option value="fd">Final Draft</option>
           <option value="kit">КИТ</option>
         </select>
+        {/* Экспорт выбранных сцен в .doc */}
+        {onExport && (
+          <button
+            onClick={onExport}
+            className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+            style={{ color: textSecondary }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            title="Экспорт сценария в Word (.doc)"
+          >
+            <Download size={15} />
+          </button>
+        )}
         {/* Кнопка Настройки — открывает модальное окно */}
         <button
           onClick={onOpenSettings}
