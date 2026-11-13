@@ -42,47 +42,9 @@ body {
 /* ========== TIPTAP EDITOR - SCRIPT FORMATTING ========== */
 /* CSS Variables for format switching */
 :root {
-  /* Russian format (default) - based on KIT Scenarist standard */
-  --russian-header-margin-top: 16px;
-  --russian-header-margin-bottom: 0;
-  --russian-cast-margin-top: 0;
-  --russian-cast-margin-bottom: 8px;
-  --russian-action-margin-top: 12px;
-  --russian-action-margin-bottom: 12px;
-  --russian-character-margin-top: 16px;
-  --russian-character-margin-bottom: 0;
-  --russian-character-indent: 6.75cm; /* по стандарту КИТ Сценарист */
-  --russian-dialog-margin-top: 0;
-  --russian-dialog-margin-bottom: 16px;
-  --russian-dialog-left-indent: 3.75cm; /* по стандарту КИТ Сценарист */
-  --russian-dialog-right-indent: 3.75cm;  /* симметрично */
-  --russian-transition-margin-top: 16px;
-  --russian-transition-margin-bottom: 16px;
-  --russian-parenthetical-margin-top: 0;
-  --russian-parenthetical-margin-bottom: 0;
-  --russian-parenthetical-left-indent: 5.5cm;
-  --russian-parenthetical-right-indent: 4.5cm;
-
-  /* Hollywood format - based on US industry standard */
-  --hollywood-header-margin-top: 16px;
-  --hollywood-header-margin-bottom: 0;
-  --hollywood-cast-margin-top: 0;
-  --hollywood-cast-margin-bottom: 8px;
-  --hollywood-action-margin-top: 12px;
-  --hollywood-action-margin-bottom: 12px;
-  --hollywood-character-margin-top: 16px;
-  --hollywood-character-margin-bottom: 0;
-  --hollywood-character-indent: 9.3cm; /* 3.7" from left page edge */
-  --hollywood-dialog-margin-top: 0;
-  --hollywood-dialog-margin-bottom: 16px;
-  --hollywood-dialog-left-indent: 6.35cm; /* 2.5" from left page edge */
-  --hollywood-dialog-right-indent: 2.5cm;
-  --hollywood-transition-margin-top: 16px;
-  --hollywood-transition-margin-bottom: 16px;
-  --hollywood-parenthetical-margin-top: 0;
-  --hollywood-parenthetical-margin-bottom: 0;
-  --hollywood-parenthetical-left-indent: 7.8cm; /* 3.1" from left page edge */
-  --hollywood-parenthetical-right-indent: 2.5cm;
+  /* T-58: значения метрик форматов НЕ дублируются здесь — единый источник
+     src/constants/scriptLayout.ts, переменные --russian-*/--hollywood-*
+     выставляет applyScriptLayoutVars() при старте приложения. */
 }
 
 /* Russian format mode */
@@ -227,15 +189,15 @@ body {
   -ms-hyphens: auto;
 }
 
-/* Scene Character (Speaking): "ВЛАДА" — Russian: центрирование */
+/* Scene Character (Speaking): "ВЛАДА" — Russian: отступ по канону КИТ (T-58) */
 .tiptap-editor.format-russian div[data-type="scene-character"],
 .tiptap-editor.format-russian.ProseMirror div[data-type="scene-character"] {
   position: relative;
-  width: 100% !important;
-  text-align: center !important;
+  padding-left: var(--character-indent) !important;
   margin: var(--character-margin-top) 0 var(--character-margin-bottom) 0 !important;
   font-weight: 600;
   text-transform: uppercase;
+  width: auto;
 }
 
 /* Scene Character — Hollywood: отступ от левого края, без центрирования */
