@@ -37,12 +37,11 @@ export interface DocxImportResult {
 export type DocxImportErrorKind = 'not-docx' | 'corrupt'
 
 export class DocxImportError extends Error {
-  constructor(
-    public readonly kind: DocxImportErrorKind,
-    message: string,
-  ) {
+  readonly kind: DocxImportErrorKind
+  constructor(kind: DocxImportErrorKind, message: string) {
     super(message)
     this.name = 'DocxImportError'
+    this.kind = kind
   }
 }
 
