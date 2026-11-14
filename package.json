@@ -13,7 +13,8 @@
     "brain:links": "node scripts/brain/check-links.mjs",
     "brain:status": "node scripts/brain/gen-status.mjs",
     "brain:regs": "node scripts/brain/check-registries.mjs",
-    "brain:check": "npm run brain:links && npm run brain:regs",
+    "brain:refs": "node scripts/brain/check-refs.mjs",
+    "brain:check": "npm run brain:links && npm run brain:regs && npm run brain:refs",
     "gate": "npm run build && npm run test && npm run test:e2e && npm run brain:check"
   },
   "dependencies": {
