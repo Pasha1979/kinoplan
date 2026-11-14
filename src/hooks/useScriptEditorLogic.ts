@@ -28,6 +28,7 @@ import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/p
 import { createSearchPlugin } from './useScriptSearch'
 import { useMultiCursor } from './useMultiCursor'
 import { SCENE_NUMBER } from '../utils/sceneNumber'
+import { centerCursorBlock } from '../utils/typewriterScroll'
 import { RU_TO_EN_REPLACEMENTS, EN_TO_RU_REPLACEMENTS } from '../utils/formatRules'
 
 export interface UseScriptEditorLogicOptions {
@@ -113,6 +114,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   } = options
 
   const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
+  // T-105: typewriter-режим — курсор держится на середине экрана
+  const typewriterMode = useUiStore((s) => s.typewriterMode)
+  const typewriterModeRef = useRef(typewriterMode)
+  useEffect(() => { typewriterModeRef.current = typewriterMode }, [typewriterMode])
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
@@ -1110,6 +1115,21 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
     editor.on('selectionUpdate', handler)
     return () => { editor.off('selectionUpdate', handler) }
+  }, [editor])
+
+  // T-105 typewriter: блок с курсором держится на вертикальной середине экрана.
+  // Без smooth — при наборе каждая буква иначе вызывает плавную прокрутку
+  useEffect(() => {
+    if (!editor) return
+    const center = () => {
+      if (typewriterModeRef.current) centerCursorBlock(editor)
+    }
+    editor.on('selectionUpdate', center)
+    editor.on('update', center)
+    return () => {
+      editor.off('selectionUpdate', center)
+      editor.off('update', center)
+    }
   }, [editor])
 
   // Декорации разрывов управляются плагином PageBreaksExtension —

@@ -15,11 +15,14 @@ interface UiStore {
   enterPreset: EnterPreset
   /** T-72: авто-типографика при наборе (--→—, "→«», (з/к)→(З/К)) */
   autoTypography: boolean
+  /** T-105: typewriter-режим — курсор держится на вертикальной середине экрана */
+  typewriterMode: boolean
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
   setEnterPreset: (p: EnterPreset) => void
   toggleAutoTypography: () => void
+  toggleTypewriterMode: () => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -30,6 +33,7 @@ export const useUiStore = create<UiStore>()(
       a4Mode: true,
       enterPreset: 'kinoplan',
       autoTypography: true,
+      typewriterMode: false,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -45,6 +49,9 @@ export const useUiStore = create<UiStore>()(
 
       toggleAutoTypography: () =>
         set((state) => ({ autoTypography: !state.autoTypography })),
+
+      toggleTypewriterMode: () =>
+        set((state) => ({ typewriterMode: !state.typewriterMode })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

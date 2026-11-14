@@ -22,7 +22,7 @@ const todFromTime = (t: string): TimeOfDay => {
 export type ScriptView = 'empty' | 'editor'
 export type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
 
-export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: string) => void }) {
+export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: string, fromIndex: number, toIndex: number) => void }) {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
@@ -246,8 +246,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     if (fromIndex === toIndex) return
     if (!currentScriptId) return
 
-    // Снимок для кнопки «Отменить» на доске — до любых изменений
-    opts?.onBeforeSceneReorder?.(currentScriptId)
+    // Запись для кнопки «Отменить» на доске — до любых изменений (T-107: обратная операция, не снапшот)
+    opts?.onBeforeSceneReorder?.(currentScriptId, fromIndex, toIndex)
 
     // Переставляем сцены в scriptStore (единый источник истины)
     const reordered = [...(currentScript?.scenes || [])]

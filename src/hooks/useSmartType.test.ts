@@ -118,3 +118,44 @@ describe('per-project частоты (T-100)', () => {
     expect(result.current.suggestions.map(s => s.text)).toContain('МАША')
   })
 })
+
+// T-106: раскладка QWERTY→ЙЦУКЕН + нечёткий поиск локаций
+describe('раскладка и нечёткий поиск (T-106)', () => {
+  it('BYN в латинской раскладке матчит ИНТ.', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('BYN', 3, 'scene_header'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('ИНТ.')
+  })
+
+  it('LTYM в латинской раскладке матчит ДЕНЬ (д=l, е=t, н=y, ь=m)', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('LTYM', 4, 'scene_header'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('ДЕНЬ')
+  })
+
+  it('латиница без кириллического соответствия не даёт ложных подсказок', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    // ZZZ → яяя — ничего не матчится
+    act(() => result.current.updateSuggestions('ZZZ', 3, 'scene_header'))
+    expect(result.current.suggestions).toHaveLength(0)
+  })
+
+  it('КУХ находит локацию ДОМ.КУХНЯ по сегменту', () => {
+    const { result } = renderHook(() => useSmartType({
+      ...OPTIONS,
+      locations: ['ДОМ.КУХНЯ', 'УЛИЦА'],
+    }))
+    act(() => result.current.updateSuggestions('КУХ', 3, 'scene_header'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('ДОМ.КУХНЯ')
+    expect(result.current.suggestions.map(s => s.text)).not.toContain('УЛИЦА')
+  })
+
+  it('выбор подсказки заменяет латинское слово на кириллицу', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('BYN', 3, 'scene_header'))
+    const sug = result.current.suggestions.find(s => s.text === 'ИНТ.')!
+    const { newText, newCursorPos } = result.current.selectSuggestion('BYN', 3, sug)
+    expect(newText).toBe('ИНТ.')
+    expect(newCursorPos).toBe(4)
+  })
+})

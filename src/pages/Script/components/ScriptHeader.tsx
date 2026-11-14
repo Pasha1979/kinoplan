@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2, Download } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2, Download, AlignVerticalJustifyCenter } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 import { useUiStore, type EnterPreset } from '../../../store/uiStore'
@@ -68,6 +68,8 @@ function ScriptHeader({
   const setEnterPreset = useUiStore((s) => s.setEnterPreset)
   const autoTypography = useUiStore((s) => s.autoTypography)
   const toggleAutoTypography = useUiStore((s) => s.toggleAutoTypography)
+  const typewriterMode = useUiStore((s) => s.typewriterMode)
+  const toggleTypewriterMode = useUiStore((s) => s.toggleTypewriterMode)
 
   return (
     <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b"
@@ -305,6 +307,20 @@ function ScriptHeader({
           title={formatLocked ? 'Формат заблокирован — автоопределение отключено' : 'Формат открыт — автоопределение включено'}
         >
           {formatLocked ? <Lock size={15} /> : <Unlock size={15} />}
+        </button>
+        {/* T-105: Typewriter-режим — курсор держится по центру экрана */}
+        <button
+          onClick={toggleTypewriterMode}
+          className="w-8 h-8 rounded-lg flex items-center justify-center relative"
+          style={{
+            color: typewriterMode ? '#818cf8' : textSecondary,
+            background: typewriterMode ? 'rgba(99,102,241,0.15)' : 'transparent',
+          }}
+          onMouseEnter={e => !typewriterMode && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+          onMouseLeave={e => !typewriterMode && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+          title={typewriterMode ? 'Typewriter: курсор по центру экрана — ВКЛ' : 'Typewriter: курсор по центру экрана'}
+        >
+          <AlignVerticalJustifyCenter size={15} />
         </button>
         {/* Кнопка Format Assistant */}
         <button

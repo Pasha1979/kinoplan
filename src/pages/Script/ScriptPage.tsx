@@ -16,8 +16,8 @@ import CardsView from './components/CardsView'
 import DevelopmentView from './components/DevelopmentView'
 import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
-import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor } from './components/sceneHtmlOps'
-import { renumberSceneNumbers } from '../../utils/sceneNumbering'
+import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor, setEditorContentNoHistory } from './components/sceneHtmlOps'
+import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './components/boardUndo'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
@@ -33,12 +33,15 @@ import { useSplitScreen } from '../../hooks/useSplitScreen'
 import { useDialogueMode } from '../../hooks/useDialogueMode'
 import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
 import FormatModal from './components/FormatModal'
+import { browserFS } from '../../adapters/BrowserFS'
+import { docxToScreenplayHtml } from '../../services/docxImportService'
+import { saveScriptContent } from '../../services/storageService'
 
 export default function ScriptPage() {
   // Мост к pushUndo: навигатор сцен сообщает о перестановке до её выполнения
-  const beforeSceneReorderRef = useRef<(scriptId: string) => void>(() => {})
+  const beforeSceneReorderRef = useRef<(scriptId: string, fromIndex: number, toIndex: number) => void>(() => {})
   const logic = useScriptPageLogic({
-    onBeforeSceneReorder: useCallback((id: string) => beforeSceneReorderRef.current(id), []),
+    onBeforeSceneReorder: useCallback((id: string, from: number, to: number) => beforeSceneReorderRef.current(id, from, to), []),
   })
   const formatLocked = useScriptStore((s) => s.formatLocked)
   const toggleFormatLock = useScriptStore((s) => s.toggleFormatLock)
@@ -165,32 +168,54 @@ export default function ScriptPage() {
   const editSceneOwner = editScene ? episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === editScene.id)) : undefined
   const editSceneIndex = editScene && editSceneOwner ? editSceneOwner.scenes!.findIndex((s) => s.id === editScene.id) : -1
 
-  // ── UNDO-стек для операций на доске (драг, группы, маркеры) — 15 действий
-  type ScriptSnapshot = { content: string; scenes: Scene[]; sceneGroups?: import('../../types/scene').SceneGroup[]; actMarkers?: Record<string, string> }
-  const undoStack = useRef<Array<Array<{ scriptId: string; snap: ScriptSnapshot }>>>([])
+  // ── UNDO-стек доски (T-107): фрагментные записи вместо копий полного content.
+  // meta — патч полей без контента; reorder — обратная перестановка;
+  // move — исходные позиции сцен (HTML не хранится — фрагменты живут в контенте).
+  // Стеки разведены: контент-записи доски идут через setEditorContentNoHistory,
+  // поэтому Ctrl+Z в редакторе не трогает операции доски и наоборот.
+  const undoStack = useRef<BoardUndoEntry[]>([])
+  const isUndoingRef = useRef(false)
   const [undoCount, setUndoCount] = useState(0)
-  const pushUndo = useCallback((scriptIds: string[]) => {
-    const pack = scriptIds.map((id) => {
-      const s = episodeScripts.find((ep) => ep.id === id)
-      return s ? { scriptId: id, snap: { content: s.content || '', scenes: structuredClone(s.scenes || []), sceneGroups: s.sceneGroups, actMarkers: s.actMarkers } } : null
-    }).filter(Boolean) as Array<{ scriptId: string; snap: ScriptSnapshot }>
-    undoStack.current.push(pack)
+  const pushUndo = useCallback((entry: BoardUndoEntry) => {
+    if (isUndoingRef.current) return
+    undoStack.current.push(entry)
     if (undoStack.current.length > 15) undoStack.current.shift()
     setUndoCount(undoStack.current.length)
-  }, [episodeScripts])
-  // Навигатор сцен → undo-стек доски (снимок «до» перестановки)
+  }, [])
+  // Навигатор сцен → undo-стек доски (запись «до» перестановки)
   useEffect(() => {
-    beforeSceneReorderRef.current = (id: string) => pushUndo([id])
+    beforeSceneReorderRef.current = (scriptId: string, fromIndex: number, toIndex: number) =>
+      pushUndo({ kind: 'reorder', scriptId, fromIndex, toIndex })
   }, [pushUndo])
   const handleUndo = useCallback(() => {
-    const pack = undoStack.current.pop()
-    if (!pack) return
-    pack.forEach(({ scriptId, snap }: { scriptId: string; snap: ScriptSnapshot }) => {
-      updateScript(scriptId, { content: snap.content, scenes: snap.scenes, sceneGroups: snap.sceneGroups, actMarkers: snap.actMarkers })
-      if (scriptId === currentScript?.id && editorInstance) editorInstance.commands.setContent(snap.content)
-    })
+    const entry = undoStack.current.pop()
+    if (!entry) return
+    isUndoingRef.current = true
+    try {
+      if (entry.kind === 'meta') {
+        updateScript(entry.scriptId, entry.patch)
+      } else if (entry.kind === 'reorder') {
+        // обратная перестановка — через тот же путь (стор + PM-транзакция)
+        handleSceneReorder(entry.toIndex, entry.fromIndex)
+      } else {
+        // move: вернуть сцены на исходные позиции — фрагменты из живого контента
+        const home = useScriptStore.getState().scripts.find((s) => s.id === entry.toScriptId)
+        const dest = useScriptStore.getState().scripts.find((s) => s.id === entry.fromScriptId)
+        if (home && dest) {
+          const r = restoreMove(home, dest, entry.items, project?.type === 'serial')
+          updateScript(home.id, { content: r.homeContent, scenes: r.homeScenes })
+          if (home.id === currentScript?.id && editorInstance) setEditorContentNoHistory(editorInstance, r.homeContent)
+          if (r.destContent !== null && r.destScenes) {
+            updateScript(dest.id, { content: r.destContent, scenes: r.destScenes })
+            if (dest.id === currentScript?.id && editorInstance) setEditorContentNoHistory(editorInstance, r.destContent)
+          }
+        }
+      }
+    } finally {
+      isUndoingRef.current = false
+    }
     setUndoCount(undoStack.current.length)
-  }, [episodeScripts, currentScript?.id, editorInstance, updateScript])
+  }, [project?.type, currentScript?.id, editorInstance, updateScript, handleSceneReorder])
 
   // Перенос сцен drag&drop: внутри серии ИЛИ между скриптами-сериями.
   // Вырезает HTML-фрагменты по номерам шапок, вставляет в цель, перенумеровывает.
@@ -202,17 +227,18 @@ export default function ScriptPage() {
     // все переносимые сцены должны быть из одного скрипта
     if (!sceneIds.every((id) => from.scenes!.some((s) => s.id === id))) return
 
-    pushUndo([from.id, to.id])
+    // T-107: фрагментная запись — исходные позиции сцен, без копии контента
+    const items = sceneIds.map((sceneId) => ({
+      sceneId,
+      index: from.scenes!.findIndex((s) => s.id === sceneId),
+    }))
+    pushUndo({ kind: 'move', fromScriptId: from.id, toScriptId: to.id, items })
     const fromEp = from.episodeNumber ?? 1
     const moving = sceneIds.map((id) => from.scenes!.find((s) => s.id === id)!)
     const frags = moving.map((s) => extractSceneHtml(from.content || '', s.number, 0, s.id)).join('')
     const movedSet = new Set(sceneIds)
 
-    const renum = (arr: typeof from.scenes, ep: number) => {
-      // Литерные варианты (1-9-А) сохраняют буквы и каскадно перенумеровываются
-      const nums = renumberSceneNumbers((arr || []).map((s) => s.number), isSerial, ep)
-      return arr!.map((s, i) => ({ ...s, number: nums[i], order: i }))
-    }
+    const renum = (arr: typeof from.scenes, ep: number) => renumberScenesArr(arr || [], ep, isSerial)
 
     if (from.id === to.id) {
       // тот же скрипт: вырезать → вставить внутрь с поправкой индекса
@@ -225,7 +251,8 @@ export default function ScriptPage() {
       const arr = from.scenes!.filter((s) => !movedSet.has(s.id))
       arr.splice(insertIdx, 0, ...moving)
       updateScript(from.id, { content, scenes: renum(arr, toEpisode) })
-      if (from.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(content)
+      // T-107: запись вне PM-истории — Ctrl+Z редактора не трогает операции доски
+      if (from.id === currentScript?.id && editorInstance) setEditorContentNoHistory(editorInstance, content)
       return
     }
 
@@ -242,9 +269,9 @@ export default function ScriptPage() {
 
     updateScript(from.id, { content: fromContent, scenes: fromScenes })
     updateScript(to.id, { content: toContent, scenes: toScenes })
-    if (from.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(fromContent)
-    if (to.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(toContent)
-  }, [episodeScripts, project?.type, currentScript?.id, editorInstance, updateScript])
+    if (from.id === currentScript?.id && editorInstance) setEditorContentNoHistory(editorInstance, fromContent)
+    if (to.id === currentScript?.id && editorInstance) setEditorContentNoHistory(editorInstance, toContent)
+  }, [episodeScripts, project?.type, currentScript?.id, editorInstance, updateScript, pushUndo])
   // Контент скриптов по сериям — для встроенного просмотра сцены в модале карточек
   const contentByEp = useMemo(
     () => Object.fromEntries(episodeScripts.map((ep) => [ep.episodeNumber ?? 1, ep.content || ''])),
@@ -260,7 +287,7 @@ export default function ScriptPage() {
   const handleMarkerSet = useCallback((key: string, sceneId: string, episode: number) => {
     const owner = episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
     if (!owner) return
-    pushUndo([owner.id])
+    pushUndo({ kind: 'meta', scriptId: owner.id, patch: { actMarkers: owner.actMarkers } })
     updateScript(owner.id, { actMarkers: { ...(owner.actMarkers || {}), [key]: sceneId } })
   }, [episodeScripts, updateScript, pushUndo])
 
@@ -281,7 +308,7 @@ export default function ScriptPage() {
     const owner = episodeScripts.find((ep) =>
       (ep.episodeNumber ?? 1) === episode && (ep.scenes || []).some((sc) => allIds.has(sc.id)),
     ) || episodeScripts.find((ep) => (ep.episodeNumber ?? 1) === episode)
-    if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneGroups: groups }) }
+    if (owner) { pushUndo({ kind: 'meta', scriptId: owner.id, patch: { sceneGroups: owner.sceneGroups } }); updateScript(owner.id, { sceneGroups: groups }) }
   }, [episodeScripts, updateScript, pushUndo])
 
   // Связи между сценами (фаза 6) — плоский список, может пересекать серии.
@@ -298,7 +325,7 @@ export default function ScriptPage() {
     const ids = new Set(links.flatMap((l) => [l.from, l.to]))
     const owner = episodeScripts.find((ep) => (ep.scenes || []).some((sc) => ids.has(sc.id)))
       || episodeScripts[0]
-    if (owner) { pushUndo([owner.id]); updateScript(owner.id, { sceneLinks: links }) }
+    if (owner) { pushUndo({ kind: 'meta', scriptId: owner.id, patch: { sceneLinks: owner.sceneLinks } }); updateScript(owner.id, { sceneLinks: links }) }
   }, [episodeScripts, updateScript, pushUndo])
 
   // T-99: модалка отдаёт ФРАГМЕНТ сцены (getHTML мини-редактора).
@@ -513,13 +540,51 @@ export default function ScriptPage() {
     return [...set]
   }, [episodeScripts])
 
+  // T-31: импорт сценария из .docx (mammoth → parseScreenplayText → blocksToHtml)
+  const handleImportDocx = useCallback(async () => {
+    if (!project) return
+    try {
+      const { name, buffer } = await browserFS.uploadFileBinary('.docx')
+      const { html, blockCount } = await docxToScreenplayHtml(buffer)
+      if (blockCount === 0) {
+        showToast('В файле не найден текст сценария', 'error')
+        return
+      }
+      const newScript = {
+        id: crypto.randomUUID(),
+        projectId: project.id,
+        title: name.replace(/\.docx$/i, ''),
+        version: 'Импорт DOCX',
+        format: 'russian' as const,
+        scenes: [],
+        characters: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        timingSystem: 'page' as const,
+        genreCoefficient: 1.0,
+        fontFamily: 'Courier New',
+        fontSize: 12,
+        autoExtractCharacters: true,
+      }
+      const store = useScriptStore.getState()
+      store.addScript(newScript)
+      saveScriptContent(newScript.id, html)
+      store.setCurrentScript(newScript.id)
+      showToast(`Сценарий импортирован: ${name} (${blockCount} блоков)`, 'success')
+    } catch (e) {
+      // Отмена выбора файла — не ошибка
+      if ((e as Error)?.message === 'Файл не выбран') return
+      showToast(`Не удалось импортировать DOCX: ${(e as Error)?.message || 'ошибка файла'}`, 'error')
+    }
+  }, [project, showToast])
+
   if (view === 'empty') {
     return (
       <ScriptEmptyState
         isDark={isDark}
         projectName={project?.name}
         colors={colors}
-        onImportClick={() => showToast('Функция импорта файлов будет реализована в ближайшем обновлении', 'info')}
+        onImportClick={handleImportDocx}
         onCreateClick={() => navigate(`/project/${project?.id}/script/create`)}
       />
     )

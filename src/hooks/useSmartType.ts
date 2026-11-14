@@ -31,6 +31,20 @@ function getFreqKey(type: string, text: string): string {
   return `${type}:${text.toUpperCase()}`
 }
 
+// T-106: карта QWERTY → ЙЦУКЕН — автоисправление раскладки (BYN→ИНТ, LTRF→ДЕНЬ)
+const LAT_TO_CYR: Record<string, string> = {
+  q: 'й', w: 'ц', e: 'у', r: 'к', t: 'е', y: 'н', u: 'г', i: 'ш', o: 'щ', p: 'з',
+  '[': 'х', ']': 'ъ', a: 'ф', s: 'ы', d: 'в', f: 'а', g: 'п', h: 'р', j: 'о',
+  k: 'л', l: 'д', ';': 'ж', "'": 'э', z: 'я', x: 'ч', c: 'с', v: 'м', b: 'и',
+  n: 'т', m: 'ь', ',': 'б', '.': 'ю', '`': 'ё',
+}
+
+/** Если слово набрано в латинской раскладке — возвращает кириллический вариант */
+function translitLayout(word: string): string {
+  if (!/[a-z;'\[\],.`]/i.test(word)) return word
+  return word.split('').map((ch) => LAT_TO_CYR[ch.toLowerCase()] ?? ch).join('')
+}
+
 export interface SmartTypeSuggestion {
   id: string
   text: string
@@ -195,19 +209,32 @@ export function useSmartType(options: UseSmartTypeOptions) {
       )
     }
 
-    // Фильтруем по совпадению
-    const filtered = relevantSuggestions
-      .filter(s => {
-        const sug = s.text.toLowerCase()
-        const word = currentWord.toLowerCase()
-        if (sug.startsWith(word) && sug !== word) return true
+    // Фильтруем по совпадению — проверяем и кириллический вариант слова
+    // (T-106: юзер набрал в латинской раскладке — BYN матчит ИНТ)
+    const wordBase = currentWord.toLowerCase()
+    const wordAlt = translitLayout(wordBase)
+    const matchWord = (sug: string, word: string, type: string, allowExact = false): boolean => {
+      // allowExact: для alt-варианта раскладки точное совпадение валидно —
+      // набранная латиница всё равно заменяется кириллической подсказкой
+      if (sug.startsWith(word) && (allowExact || sug !== word)) return true
+      if (type === 'location') {
+        // Нечёткий поиск: любой сегмент «ДОМ.КУХНЯ» — КУХ→кухня
+        if (sug.split('.').some((seg) => seg.startsWith(word) && seg !== word)) return true
         // Подлокации: «ДОМ ДЕДА.С» → сравниваем последний сегмент после точки
-        if (s.type === 'location' && word.includes('.')) {
+        if (word.includes('.')) {
           const wSeg = word.split('.').pop()!
           const sSeg = sug.split('.').pop()!
           return wSeg.length > 0 && sSeg.startsWith(wSeg) && sSeg !== wSeg
         }
-        return false
+      }
+      return false
+    }
+
+    const filtered = relevantSuggestions
+      .filter(s => {
+        const sug = s.text.toLowerCase()
+        if (matchWord(sug, wordBase, s.type)) return true
+        return wordAlt !== wordBase && matchWord(sug, wordAlt, s.type, true)
       })
       .sort((a, b) => b.frequency - a.frequency)
       .slice(0, maxSuggestions)

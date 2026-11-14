@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneParenthetical } from '../../../components/tiptap'
-import { replaceSceneInEditor } from './sceneHtmlOps'
+import { replaceSceneInEditor, setEditorContentNoHistory } from './sceneHtmlOps'
 
 const exts = [
   StarterKit.configure({
@@ -71,6 +71,37 @@ describe('replaceSceneInEditor (T-99)', () => {
     const editor = mkEditor(DOC)
     expect(replaceSceneInEditor(editor, 'uuid-nope', '<p>x</p>', '99')).toBe(false)
     expect(editor.getHTML()).toContain('Сцена 2.')
+    editor.destroy()
+  })
+})
+
+// T-107: запись контента доски вне истории PM — стеки undo разведены
+describe('setEditorContentNoHistory (T-107)', () => {
+  it('заменяет контент, но Ctrl+Z редактора его не видит', () => {
+    const editor = mkEditor(DOC)
+    setEditorContentNoHistory(
+      editor,
+      '<div data-type="scene-header" data-scene-id="uuid-x">1. ИНТ. НОВЫЙ — ДЕНЬ.</div><div data-type="scene-action">Только одна сцена.</div>',
+    )
+    expect(editor.getHTML()).toContain('НОВЫЙ')
+    expect(editor.getHTML()).not.toContain('Сцена 1.')
+    // запись не попала в историю → undo нечего откатывать
+    expect(editor.can().undo()).toBe(false)
+    editor.commands.undo()
+    expect(editor.getHTML()).toContain('НОВЫЙ')
+    editor.destroy()
+  })
+
+  it('обычная печать после записи доски отменяет только печать', () => {
+    const editor = mkEditor(DOC)
+    setEditorContentNoHistory(editor, '<div data-type="scene-action">НОВЫЙ-БАЗА</div>')
+    editor.commands.insertContent('<div data-type="scene-action">НАПЕЧАТАНО</div>')
+    expect(editor.getHTML()).toContain('НАПЕЧАТАНО')
+    editor.commands.undo()
+    // undo снял печать, но НЕ запись доски
+    expect(editor.getHTML()).toContain('НОВЫЙ-БАЗА')
+    expect(editor.getHTML()).not.toContain('НАПЕЧАТАНО')
+    expect(editor.can().undo()).toBe(false)
     editor.destroy()
   })
 })

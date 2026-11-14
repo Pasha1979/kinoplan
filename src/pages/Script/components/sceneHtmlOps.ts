@@ -43,6 +43,20 @@ export function renumberHeaders(content: string, episode: number, isSerial: bool
 }
 
 /**
+ * T-107: полная замена контента БЕЗ записи в историю PM.
+ * Операции доски карточек (перенос сцен) имеют собственный стек отмены —
+ * их контент-записи не должны попадать в Ctrl+Z редактора.
+ */
+export function setEditorContentNoHistory(editor: Editor, html: string): void {
+  const { state, view } = editor
+  const dom = new window.DOMParser().parseFromString(html, 'text/html')
+  const newDoc = PMDOMParser.fromSchema(state.schema).parse(dom.body)
+  const tr = state.tr.replaceWith(0, state.doc.content.size, newDoc.content)
+  tr.setMeta('addToHistory', false)
+  view.dispatch(tr)
+}
+
+/**
  * T-99: заменяет диапазон сцены в ЖИВОМ документе редактора одной транзакцией
  * по UUID (attrs.sceneId, fallback — номер в тексте шапки). Сохраняет
  * undo-историю и позицию курсора, в отличие от полного setContent.
