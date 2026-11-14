@@ -20,9 +20,11 @@ export interface Etalon {
   id: string
   title: string
   html: string
-  /** Замер Word через COM (13.11.2026): страниц и 0-based индексы блоков,
-   *  с которых начинается новая страница. Экспорт: Courier New 12pt,
-   *  line-height 18pt, @page A4 2/2/2/3cm — та же геометрия, что у модели. */
+  /** Замер Word через COM (перемерено 14.11.2026 после добавления @page
+   *  в gen-etalons.mjs — раньше Word мерил со своими дефолтными полями 3/1.5см,
+   *  числа совпали): страниц и 0-based индексы блоков, с которых начинается
+   *  новая страница. Экспорт: Courier New 12pt, line-height 18pt,
+   *  @page A4 2/2/2/3cm — та же геометрия, что у модели PageCounter. */
   word: { pages: number; breakStartBlocks: number[] }
 }
 

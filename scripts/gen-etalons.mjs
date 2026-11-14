@@ -26,10 +26,14 @@ const { ETALONS, convertToWordCompatibleHtml } = await import(
   pathToFileURL(join(root, 'scripts/.gen-etalons.cjs')).href
 )
 
+// @page фиксирует геометрию A4 с полями приложения (2/2/2/3 см) — иначе Word
+// меряет со своими дефолтами (3/1.5 см) и замер несопоставим с моделью.
 const wrap = (body, title) =>
   '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">' +
-  `<head><meta charset="utf-8"><title>${title}</title></head>` +
-  `<body>${body}</body></html>`
+  '<head><meta charset="utf-8">' +
+  `<title>${title}</title>` +
+  '<style>@page { size: 21cm 29.7cm; margin: 2cm 2cm 2cm 3cm; mso-page-orientation: portrait; }</style>' +
+  `</head><body>${body}</body></html>`
 
 mkdirSync(join(root, 'etalons'), { recursive: true })
 for (const e of ETALONS) {
