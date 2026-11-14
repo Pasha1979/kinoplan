@@ -11,7 +11,7 @@ const DEF={I:new Set(),R:new Set(),T:new Set(),D:new Set(),Q:new Set(),L:new Set
 const REGS={ideas:'I',rules:'R',tasks:'T',decisions:'D',questions:'Q',lessons:'L'};
 for(const [file,pfx] of Object.entries(REGS)){
  for(const line of readFileSync(`_ai_workspace/_extracted/${file}.md`,'utf8').split('\n')){
-  const m=line.match(/^\|\s*([A-Z])-(\d+)\s*\|/);if(m&&DEF[m[1]])DEF[m[1]].add(+m[2]);
+  const m=line.match(/^\|\s*([A-Z])-(\d+)(?:\([^)]*\))?\s*\|/);if(m&&DEF[m[1]])DEF[m[1]].add(+m[2]);
  }}
 // извлечь упомянутые ID: T-5, T-13..18 (диапазон), T-113/114/115 и T-105,106 (списки)
 const mentioned=new Map(); // id -> where
