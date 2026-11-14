@@ -21,7 +21,7 @@ import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './component
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
-import { extractBlocksFromHtml } from '../../utils/formatBlockExtractor'
+import { extractBlocksFromHtml, type FormatBlock } from '../../utils/formatBlockExtractor'
 import { Settings } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import SearchBar from '../../components/SearchBar'
@@ -33,6 +33,7 @@ import { useSplitScreen } from '../../hooks/useSplitScreen'
 import { useDialogueMode } from '../../hooks/useDialogueMode'
 import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
 import FormatModal from './components/FormatModal'
+import ScriptBreakdown from '../../components/ScriptBreakdown'
 import { browserFS } from '../../adapters/BrowserFS'
 import { docxToScreenplayHtml } from '../../services/docxImportService'
 import { saveScriptContent } from '../../services/storageService'
@@ -162,6 +163,41 @@ export default function ScriptPage() {
       scenes: owner.scenes!.map((s) => (s.id === sceneId ? { ...s, ...patch } : s)),
     })
   }, [episodeScripts, updateScript])
+
+  // T-108 мостик: элемент разбивки → персонажи/локации Разработки (без дублей по имени)
+  const handleSendToDevelopment = useCallback((el: { category: string; name: string; sceneIds: string[] }) => {
+    if (!project) return
+    const dev = project.development ?? { characters: [], locations: [], synopsis: {} }
+    if (el.category === 'cast') {
+      if (dev.characters.some((c) => c.name === el.name)) {
+        showToast(`«${el.name}» уже в кастинге`, 'info')
+        return
+      }
+      useNormalizedProjectStore.getState().updateProject(project.id, {
+        development: {
+          ...dev,
+          characters: [...dev.characters, {
+            id: crypto.randomUUID(), name: el.name, type: 'secondary', sceneIds: el.sceneIds,
+          }],
+        },
+      })
+      showToast(`«${el.name}» → персонажи Разработки`, 'success')
+    } else if (el.category === 'locations') {
+      if (dev.locations.some((l) => l.name === el.name)) {
+        showToast(`«${el.name}» уже в локациях`, 'info')
+        return
+      }
+      useNormalizedProjectStore.getState().updateProject(project.id, {
+        development: {
+          ...dev,
+          locations: [...dev.locations, {
+            id: crypto.randomUUID(), name: el.name, sceneIds: el.sceneIds,
+          }],
+        },
+      })
+      showToast(`«${el.name}» → локации Разработки`, 'success')
+    }
+  }, [project, showToast])
 
   // Одиночный редактор сцены («Перейти к сцене» из карточки)
   const [editScene, setEditScene] = useState<Scene | null>(null)
@@ -494,22 +530,14 @@ export default function ScriptPage() {
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
 
   // Блоки всех серий — парсим из сохранённого HTML каждого скрипта (data-type у блоков).
-  // Нужно статистике: темп и диалог/действие считаются по блокам, а у каждой серии свой документ
+  // Нужно статистике и разбивке: id/sceneId несут идентичность сцены-владельца,
+  // у каждой серии свой документ
   const allBlocks = useMemo(() => {
-    const out: Array<{ type: string; content: string }> = []
-    const TYPE_MAP: Record<string, string> = {
-      'scene-header': 'scene_header', 'scene-dialog': 'dialog', 'scene-action': 'action',
-      sceneHeader: 'scene_header', sceneDialog: 'dialog', sceneAction: 'action',
-      scene_header: 'scene_header', dialog: 'dialog', action: 'action',
-    }
+    const out: FormatBlock[] = []
     for (const ep of episodeScripts) {
       if (!ep.content) continue
       try {
-        const doc = new DOMParser().parseFromString(ep.content, 'text/html')
-        doc.body.querySelectorAll('[data-type]').forEach((el) => {
-          const t = el.getAttribute('data-type') || ''
-          out.push({ type: TYPE_MAP[t] ?? t, content: el.textContent || '' })
-        })
+        out.push(...extractBlocksFromHtml(ep.content))
       } catch { /* битый контент скрипта — пропускаем */ }
     }
     return out
@@ -737,7 +765,15 @@ export default function ScriptPage() {
               }
             }}
           />
-        ) : ['breakdown', 'plan'].includes(activeTab) ? (
+        ) : activeTab === 'breakdown' ? (
+          <ScriptBreakdown
+            isDark={isDark}
+            scenes={allScenes}
+            blocks={allBlocks}
+            onUpdateScene={handleUpdateScene}
+            onSendToDevelopment={handleSendToDevelopment}
+          />
+        ) : ['plan'].includes(activeTab) ? (
           <div className="flex-1 flex items-center justify-center" style={{ background: bg }}>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
