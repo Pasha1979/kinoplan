@@ -1,19 +1,29 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 
 const FREQUENCY_KEY = 'smartType_frequency'
 
-function loadFrequencies(): Record<string, number> {
+// T-100: частоты подсказок — per-project, глобальный ключ = seed-фоллбэк
+const freqStorageKey = (projectId?: string) =>
+  projectId ? `${FREQUENCY_KEY}:${projectId}` : FREQUENCY_KEY
+
+function loadFrequencies(projectId?: string): Record<string, number> {
   try {
-    const raw = localStorage.getItem(FREQUENCY_KEY)
-    return raw ? JSON.parse(raw) : {}
+    const raw = localStorage.getItem(freqStorageKey(projectId))
+    if (raw) return JSON.parse(raw)
+    // Проектный ключ ещё не создан — стартуем от глобального (старый формат)
+    if (projectId) {
+      const global = localStorage.getItem(FREQUENCY_KEY)
+      return global ? JSON.parse(global) : {}
+    }
+    return {}
   } catch {
     return {}
   }
 }
 
-function saveFrequencies(freq: Record<string, number>) {
+function saveFrequencies(freq: Record<string, number>, projectId?: string) {
   try {
-    localStorage.setItem(FREQUENCY_KEY, JSON.stringify(freq))
+    localStorage.setItem(freqStorageKey(projectId), JSON.stringify(freq))
   } catch { /* ignore */ }
 }
 
@@ -37,6 +47,8 @@ export interface UseSmartTypeOptions {
   times?: string[]
   minMatchLength?: number
   maxSuggestions?: number
+  /** T-100: частоты хранятся per-project (smartType_frequency:{id}) */
+  projectId?: string
 }
 
 export function useSmartType(options: UseSmartTypeOptions) {
@@ -47,6 +59,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     times: initialTimes = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
     minMatchLength = 2,
     maxSuggestions = 5,
+    projectId,
   } = options
 
   const [suggestions, setSuggestions] = useState<SmartTypeSuggestion[]>([])
@@ -59,7 +72,15 @@ export function useSmartType(options: UseSmartTypeOptions) {
   const [locations, setLocations] = useState(initialLocations)
   const [props, setProps] = useState(initialProps)
   const [times, setTimes] = useState(initialTimes)
-  const [frequencies, setFrequencies] = useState<Record<string, number>>(loadFrequencies)
+  const [frequencies, setFrequencies] = useState<Record<string, number>>(() => loadFrequencies(projectId))
+
+  // Смена проекта → перечитываем его частоты (изолированные пространства)
+  const projectIdRef = useRef(projectId)
+  useEffect(() => {
+    if (projectIdRef.current === projectId) return
+    projectIdRef.current = projectId
+    setFrequencies(loadFrequencies(projectId))
+  }, [projectId])
 
   const updateLists = useCallback((lists: {
     characters?: string[]
@@ -136,8 +157,8 @@ export function useSmartType(options: UseSmartTypeOptions) {
   // Получить текущее слово перед курсором
   const getCurrentWord = useCallback((text: string, cursorPos: number): string => {
     const beforeCursor = text.substring(0, cursorPos)
-    // Находим последнее слово — берем текст после последнего пробела/переноса строки
-    const match = beforeCursor.match(/[^\s]*$/)
+    // T-100: [,;] — тоже границы слова (список действующих лиц «ИВАН, ПЕТР»)
+    const match = beforeCursor.match(/[^\s,;]*$/)
     return match ? match[0] : ''
   }, [])
 
@@ -249,7 +270,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     const key = getFreqKey(suggestion.type, suggestion.text)
     const next = { ...frequencies, [key]: (frequencies[key] || 0) + 1 }
     setFrequencies(next)
-    saveFrequencies(next)
+    saveFrequencies(next, projectIdRef.current)
   }, [frequencies])
 
   return {

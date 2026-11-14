@@ -47,6 +47,8 @@ export interface UseScriptEditorLogicOptions {
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
   onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number, newNumbers?: Array<{ id: string; number: string }>) => void) => void
   onFormatReady?: (formatFn: () => string) => void
+  /** T-101 scrollspy: UUID сцены, в которой сейчас курсор (объемлющая шапка) */
+  onActiveSceneChange?: (sceneId: string | null) => void
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
@@ -84,6 +86,7 @@ function getNextSceneNumber(doc: PMNode): number {
 export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const {
     format: _format,
+    projectId,
     projectType,
     currentSeries,
     fontFamily,
@@ -95,6 +98,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onConvertReady,
     onReorderReady,
     onFormatReady,
+    onActiveSceneChange,
     genreCoefficient,
     timingSystem,
     smartTypeCharacters,
@@ -118,6 +122,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     characters: smartTypeCharacters || [],
     locations: smartTypeLocations || [],
     times: smartTypeTimes || [],
+    projectId,
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
@@ -142,6 +147,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const genreCoefficientRef = useRef(genreCoefficient)
   const onScenesChangeRef = useRef(onScenesChange)
   const onStatsChangeRef = useRef(onStatsChange)
+  const onActiveSceneChangeRef = useRef(onActiveSceneChange)
   const currentSeriesRef = useRef(currentSeries)
   const projectTypeRef = useRef(projectType)
   const autoExtractCharactersRef = useRef(autoExtractCharacters)
@@ -154,11 +160,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     genreCoefficientRef.current = genreCoefficient
     onScenesChangeRef.current = onScenesChange
     onStatsChangeRef.current = onStatsChange
+    onActiveSceneChangeRef.current = onActiveSceneChange
     currentSeriesRef.current = currentSeries
     projectTypeRef.current = projectType
     autoExtractCharactersRef.current = autoExtractCharacters
     enterPresetRef.current = enterPreset
-  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters, enterPreset])
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters, enterPreset, onActiveSceneChange])
 
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
@@ -1079,6 +1086,30 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     const handler = ({ editor: ed }: { editor: Editor }) => onUpdateRef.current?.({ editor: ed })
     editor.on('update', handler)
     return () => { editor.off('update', handler) }
+  }, [editor])
+
+  // T-101 scrollspy: активная сцена следует за курсором — берём последнюю
+  // шапку до позиции выделения (объемлющая сцена), коллбэк только при смене
+  useEffect(() => {
+    if (!editor) return
+    let lastSceneId: string | null = null
+    const handler = () => {
+      const { state } = editor
+      const topIndex = state.selection.$from.index(0)
+      let sceneId: string | null = null
+      for (let i = 0; i <= topIndex && i < state.doc.childCount; i++) {
+        const node = state.doc.child(i)
+        if (node.type.name === 'sceneHeader') {
+          sceneId = (node.attrs.sceneId as string | null) ?? null
+        }
+      }
+      if (sceneId !== lastSceneId) {
+        lastSceneId = sceneId
+        onActiveSceneChangeRef.current?.(sceneId)
+      }
+    }
+    editor.on('selectionUpdate', handler)
+    return () => { editor.off('selectionUpdate', handler) }
   }, [editor])
 
   // Декорации разрывов управляются плагином PageBreaksExtension —

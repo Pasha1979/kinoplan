@@ -86,6 +86,8 @@ export interface SceneTempoStat {
 interface BlockLike {
   type: string
   content: string
+  /** T-103: data-scene-id шапки — устойчивый маппинг на сцену */
+  sceneId?: string
 }
 
 const LONG_SCENE_SEC = 180 // >3 минут — длинная сцена
@@ -241,37 +243,52 @@ export function useScriptStats(
     const scenesPagesSum = scenes.reduce((s, sc) => s + (sc.pages || 0), 0)
     const totalPages = scenesPagesSum > 0 ? scenesPagesSum : (isFiltered ? 0 : precisePages)
 
-    // Темп по сценам — считаем по ПОЛНОМУ списку сцен: блоки документа
-    // идут в том же порядке что и сцены; фильтрация по серии — в UI
+    // Темп по сценам — считаем по ПОЛНОМУ списку сцен. T-103: маппинг блоков
+    // по сценам устойчив к нераспарсенным шапкам — сцена определяется по
+    // data-scene-id (UUID), затем по номеру в тексте шапки, позиция — fallback.
     const tempo: SceneTempoStat[] = []
     const tempoScenes = allScenes ?? scenes
     {
-      let sceneIdx = -1
-      let dlg = 0, act = 0
-      const flush = () => {
-        if (sceneIdx >= 0 && tempoScenes[sceneIdx]) {
-          const total = dlg + act
-          tempo.push({
-            id: tempoScenes[sceneIdx].id,
-            number: tempoScenes[sceneIdx].number,
-            dialogChars: dlg,
-            actionChars: act,
-            ratio: total > 0 ? dlg / total : 0,
-          })
-        }
-      }
+      const sceneById = new Map(tempoScenes.map((s) => [s.id, s]))
+      const normNum = (s: string) => s.replace(/\./g, '').toLowerCase()
+      const sceneByNumber = new Map(tempoScenes.map((s) => [normNum(s.number), s]))
+      const numRe = /^([\dА-ЯA-Zа-я\-]+)\./
+      const buckets = new Map<string, { dlg: number; act: number }>()
+
+      let seqIdx = -1
+      let current: Scene | null = null
       blocks.forEach((b) => {
         if (b.type === 'scene_header') {
-          flush()
-          sceneIdx++
-          dlg = 0; act = 0
-        } else if (b.type === 'dialog') {
-          dlg += b.content.length
-        } else if (b.type === 'action') {
-          act += b.content.length
+          seqIdx++
+          current = (b.sceneId ? sceneById.get(b.sceneId) : undefined) ?? null
+          if (!current) {
+            const m = b.content.trim().match(numRe)
+            if (m) current = sceneByNumber.get(normNum(m[1])) ?? null
+          }
+          if (!current) current = tempoScenes[seqIdx] ?? null
+        } else if (current && b.type === 'dialog') {
+          const bk = buckets.get(current.id) ?? { dlg: 0, act: 0 }
+          bk.dlg += b.content.length
+          buckets.set(current.id, bk)
+        } else if (current && b.type === 'action') {
+          const bk = buckets.get(current.id) ?? { dlg: 0, act: 0 }
+          bk.act += b.content.length
+          buckets.set(current.id, bk)
         }
       })
-      flush()
+
+      tempoScenes.forEach((sc) => {
+        const bk = buckets.get(sc.id)
+        if (!bk) return
+        const total = bk.dlg + bk.act
+        tempo.push({
+          id: sc.id,
+          number: sc.number,
+          dialogChars: bk.dlg,
+          actionChars: bk.act,
+          ratio: total > 0 ? bk.dlg / total : 0,
+        })
+      })
 
       // Диалог/действие честно по отфильтрованным сценам:
       // суммируем объёмы только сцен текущего набора (tempo уже сгруппирован по сценам)

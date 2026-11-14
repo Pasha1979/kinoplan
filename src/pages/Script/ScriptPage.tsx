@@ -55,6 +55,7 @@ export default function ScriptPage() {
     currentScript,
     scenes,
     selectedScene,
+    setSelectedScene,
     // tabs
     activeTab,
     setActiveTab,
@@ -756,6 +757,12 @@ export default function ScriptPage() {
                   onConvertReady={(fn) => { convertFormatRef.current = fn }}
                   onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
                   onFormatReady={(formatFn) => { formatEditorRef.current = formatFn }}
+                  onActiveSceneChange={(sceneId) => {
+                    // T-101 scrollspy: навигатор подсвечивает сцену под курсором
+                    if (!sceneId) return
+                    const sc = scenes.find((s) => s.id === sceneId)
+                    if (sc && sc.id !== selectedScene?.id) setSelectedScene(sc)
+                  }}
                   formatLocked={formatLocked}
                   autoExtractCharacters={currentScript?.autoExtractCharacters ?? true}
                   initialContent={currentScript?.content}

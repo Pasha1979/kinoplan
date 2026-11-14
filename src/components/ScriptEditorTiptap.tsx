@@ -22,6 +22,8 @@ interface ScriptEditorTiptapProps {
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
   onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number, newNumbers?: Array<{ id: string; number: string }>) => void) => void
   onFormatReady?: (formatFn: () => string) => void
+  /** T-101 scrollspy: UUID сцены, в которой курсор */
+  onActiveSceneChange?: (sceneId: string | null) => void
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]

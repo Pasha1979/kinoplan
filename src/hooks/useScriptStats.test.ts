@@ -99,3 +99,44 @@ describe('useScriptStats', () => {
     expect(result.current.alerts.some(a => a.id.startsWith('dialog-streak-f'))).toBe(true)
   })
 })
+
+// T-103: темп устойчив к нераспарсенным шапкам — маппинг по sceneId, не по позиции
+describe('темп по sceneId (T-103)', () => {
+  const ID_BLOCKS = [
+    { type: 'scene_header', content: '1-1. ИНТ. ДОМ - ДЕНЬ', sceneId: 'a' },
+    { type: 'dialog', content: 'диалог-A' },                  // 7
+    // «Лишняя» шапка, которой нет в списке сцен (нераспарсенная) —
+    // со старым позиционным маппингом всё ниже сдвигалось
+    { type: 'scene_header', content: 'ЗАГОЛОВОК БЕЗ СЦЕНЫ', sceneId: 'ghost' },
+    { type: 'dialog', content: 'сирота' },
+    { type: 'scene_header', content: '1-2. ЭКСТ. УЛИЦА - НОЧЬ', sceneId: 'b' },
+    { type: 'action', content: 'действие-B' },                 // 9
+    { type: 'scene_header', content: '2-1. ИНТ. ДОМ - УТРО', sceneId: 'c' },
+    { type: 'dialog', content: 'две' },                        // 3
+  ]
+
+  it('символы привязываются к своим сценам несмотря на лишнюю шапку', () => {
+    const { result } = renderHook(() => useScriptStats(ALL, ID_BLOCKS, 6, false))
+    const tempo = result.current.tempo
+    const a = tempo.find(t => t.id === 'a')!
+    const b = tempo.find(t => t.id === 'b')!
+    const c = tempo.find(t => t.id === 'c')!
+    expect(a.dialogChars).toBe(8)
+    expect(b.actionChars).toBe(10)
+    expect(c.dialogChars).toBe(3)
+  })
+
+  it('шапка без sceneId — fallback по номеру из текста', () => {
+    const blocks = [
+      { type: 'scene_header', content: '1-1. ИНТ. ДОМ - ДЕНЬ' },
+      { type: 'dialog', content: 'aaaa' },                     // 4
+      { type: 'scene_header', content: '2-1. ИНТ. ДОМ - УТРО' }, // без id, но номер '2-1'
+      { type: 'action', content: 'bb' },                       // 2
+    ]
+    const { result } = renderHook(() => useScriptStats(ALL, blocks, 6, false))
+    const a = result.current.tempo.find(t => t.id === 'a')!
+    const c = result.current.tempo.find(t => t.id === 'c')!
+    expect(a.dialogChars).toBe(4)
+    expect(c.actionChars).toBe(2)
+  })
+})

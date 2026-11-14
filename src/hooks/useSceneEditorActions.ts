@@ -73,17 +73,16 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
     editor.state.doc.descendants((node, pos) => {
       if (found) return false
       if (node.type.name === 'sceneHeader') {
+        // T-101: сначала по стабильному UUID, номер — fallback для старых вызовов
+        const byId = node.attrs.sceneId === focusSceneId
         const headerText = node.textContent
         const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
-        if (headerMatch) {
-          const sceneNum = headerMatch[1]
-          if (focusSceneId === sceneNum) {
-            found = true
-            scrollPos = pos
-            const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
-            if (domNode) {
-              domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
+        if (byId || (headerMatch && headerMatch[1] === focusSceneId)) {
+          found = true
+          scrollPos = pos
+          const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
+          if (domNode) {
+            domNode.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }
         }
       }

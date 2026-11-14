@@ -84,3 +84,37 @@ describe('useSmartType', () => {
     expect(texts[0]).toBe('МАША')
   })
 })
+
+// T-100: частоты per-project и [,;] как границы слова
+describe('per-project частоты (T-100)', () => {
+  it('частоты пишутся в ключ проекта, глобальный — только seed', () => {
+    const { result } = renderHook(() => useSmartType({ ...OPTIONS, projectId: 'p1' }))
+    act(() => result.current.updateSuggestions('ИВ', 2, 'character'))
+    act(() => result.current.recordUsage(result.current.suggestions[0]))
+    expect(localStorage.getItem('smartType_frequency:p1')).toContain('ИВАН')
+    expect(localStorage.getItem('smartType_frequency')).toBeNull()
+  })
+
+  it('первый запуск проекта — seed из глобального ключа', () => {
+    localStorage.setItem('smartType_frequency', JSON.stringify({ 'character:ИВАН': 7 }))
+    const { result } = renderHook(() => useSmartType({ ...OPTIONS, projectId: 'p2' }))
+    act(() => result.current.updateSuggestions('ИВ', 2, 'character'))
+    const s = result.current.suggestions.find(x => x.text === 'ИВАН')!
+    expect(s.frequency).toBe(7)
+  })
+
+  it('частоты проектов изолированы', () => {
+    localStorage.setItem('smartType_frequency:p2', JSON.stringify({ 'character:ИВАН': 99 }))
+    const { result } = renderHook(() => useSmartType({ ...OPTIONS, projectId: 'p1' }))
+    act(() => result.current.updateSuggestions('ИВ', 2, 'character'))
+    const s = result.current.suggestions.find(x => x.text === 'ИВАН')!
+    expect(s.frequency).toBe(1) // дефолт, не 99 из p2
+  })
+
+  it('запятая — граница слова в списке действующих лиц', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    // курсор после «МА» в «ИВАН,МА» → слово «МА», подсказка МАША
+    act(() => result.current.updateSuggestions('ИВАН,МА', 7, 'sceneCast'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('МАША')
+  })
+})

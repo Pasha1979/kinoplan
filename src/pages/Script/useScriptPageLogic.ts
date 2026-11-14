@@ -280,7 +280,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   const handleSceneClick = useCallback((sceneId: string) => {
     const selected = scenes.find(s => s.id === sceneId) || scenes[0]
     setSelectedScene(selected)
-    setFocusSceneId(selected.number)
+    // T-101: фокус по стабильному UUID (data-scene-id), не по номеру
+    setFocusSceneId(selected.id)
   }, [scenes])
 
   // Применение настроек хронометража из модального окна

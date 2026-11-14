@@ -490,6 +490,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 </span>
               </>
             )}
+            {/* T-32: конструктор раскладки — dev-инструмент, в проде скрыт */}
+            {import.meta.env.DEV && (
             <button
               onClick={() => setEditMode(!editMode)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
@@ -502,6 +504,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               {editMode ? <Check size={12} /> : <Settings2 size={12} />}
               {editMode ? 'Готово' : 'Настроить'}
             </button>
+            )}
           </div>
         </div>
 
