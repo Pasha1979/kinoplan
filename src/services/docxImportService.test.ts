@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import JSZip from 'jszip'
-import { mammothHtmlToText, docxToScreenplayHtml } from './docxImportService'
+import { mammothHtmlToText, docxToScreenplayHtml, DocxImportError } from './docxImportService'
 
 // Минимальный валидный .docx: [Content_Types].xml + _rels/.rels + word/document.xml
 async function makeDocx(paragraphs: string[]): Promise<ArrayBuffer> {
@@ -61,5 +61,41 @@ describe('docxToScreenplayHtml (T-31)', () => {
     const buf = await makeDocx([])
     const r = await docxToScreenplayHtml(buf)
     expect(r.blockCount).toBe(0)
+  })
+})
+
+describe('обработка ошибок (T-111)', () => {
+  it('не-docx (текстовый файл, переименованный в .docx) → DocxImportError not-docx', async () => {
+    const buf = new TextEncoder().encode('Это просто текст, а не zip-архив').buffer as ArrayBuffer
+    await expect(docxToScreenplayHtml(buf)).rejects.toBeInstanceOf(DocxImportError)
+    await expect(docxToScreenplayHtml(buf)).rejects.toMatchObject({ kind: 'not-docx' })
+  })
+
+  it('картинка/бинарь без ZIP-сигнатуры → not-docx, а не сырая ошибка mammoth', async () => {
+    const buf = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).buffer as ArrayBuffer // PNG-сигнатура
+    await expect(docxToScreenplayHtml(buf)).rejects.toMatchObject({ kind: 'not-docx' })
+  })
+
+  it('пустой буфер → not-docx', async () => {
+    await expect(docxToScreenplayHtml(new ArrayBuffer(0))).rejects.toMatchObject({ kind: 'not-docx' })
+  })
+
+  it('битый ZIP (сигнатура PK есть, структура мёртвая) → DocxImportError corrupt', async () => {
+    const buf = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff, 0xff, 0xff, 0xff, 0x00]).buffer as ArrayBuffer
+    await expect(docxToScreenplayHtml(buf)).rejects.toBeInstanceOf(DocxImportError)
+    await expect(docxToScreenplayHtml(buf)).rejects.toMatchObject({ kind: 'corrupt' })
+  })
+
+  it('усечённый настоящий docx → corrupt (не необработанное исключение)', async () => {
+    const full = await makeDocx(['1. ИНТ. ДОМ - ДЕНЬ.'])
+    const truncated = full.slice(0, Math.floor(full.byteLength / 2))
+    await expect(docxToScreenplayHtml(truncated)).rejects.toMatchObject({ kind: 'corrupt' })
+  })
+
+  it('валидный docx после фиксов по-прежнему импортируется', async () => {
+    const buf = await makeDocx(['1. ИНТ. ДОМ - ДЕНЬ.', 'Текст сцены.'])
+    const r = await docxToScreenplayHtml(buf)
+    expect(r.blockCount).toBeGreaterThan(0)
+    expect(r.html).toContain('scene-header')
   })
 })

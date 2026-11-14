@@ -159,3 +159,38 @@ describe('раскладка и нечёткий поиск (T-106)', () => {
     expect(newCursorPos).toBe(4)
   })
 })
+
+// T-112: легальная латиница не портится — транслит-подсказка только если
+// кириллический результат совпадает с известным токеном (никакой абракадабры)
+describe('легальная латиница (T-112)', () => {
+  it('JOHN (нет в списке персонажей) → ничего, без «РЩРТ»-абракадабры', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('JOHN', 4, 'character'))
+    expect(result.current.isOpen).toBe(false)
+    expect(result.current.suggestions).toHaveLength(0)
+  })
+
+  it('JOHN в шапке сцены → ничего (транслит «ощрт» не токен)', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('JOHN', 4, 'scene_header'))
+    expect(result.current.suggestions).toHaveLength(0)
+  })
+
+  it('латинский персонаж ИЗ списка — подсказка работает по прямому слову', () => {
+    const { result } = renderHook(() => useSmartType({
+      ...OPTIONS,
+      characters: ['ИВАН', 'JOHN', 'JOHNNY'],
+    }))
+    act(() => result.current.updateSuggestions('JOH', 3, 'character'))
+    const texts = result.current.suggestions.map(s => s.text)
+    expect(texts).toContain('JOHN')
+    expect(texts).toContain('JOHNNY')
+  })
+
+  it('латиница, чей транслит совпадает с токеном, — подсказывает (BYN→ИНТ)', () => {
+    // контрольный: механизм раскладки жив для реальных токенов
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('BYN', 3, 'scene_header'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('ИНТ.')
+  })
+})

@@ -35,7 +35,7 @@ import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
 import FormatModal from './components/FormatModal'
 import ScriptBreakdown from '../../components/ScriptBreakdown'
 import { browserFS } from '../../adapters/BrowserFS'
-import { docxToScreenplayHtml } from '../../services/docxImportService'
+import { docxToScreenplayHtml, DocxImportError } from '../../services/docxImportService'
 import { saveScriptContent } from '../../services/storageService'
 
 export default function ScriptPage() {
@@ -573,9 +573,14 @@ export default function ScriptPage() {
     if (!project) return
     try {
       const { name, buffer } = await browserFS.uploadFileBinary('.docx')
+      // T-111: accept в диалоге — лишь подсказка, формат проверяем явно
+      if (!/\.docx$/i.test(name)) {
+        showToast('Это не файл Word. Выберите документ .docx', 'error')
+        return
+      }
       const { html, blockCount } = await docxToScreenplayHtml(buffer)
       if (blockCount === 0) {
-        showToast('В файле не найден текст сценария', 'error')
+        showToast('Файл открылся, но текста сценария в нём нет', 'error')
         return
       }
       const newScript = {
@@ -602,7 +607,13 @@ export default function ScriptPage() {
     } catch (e) {
       // Отмена выбора файла — не ошибка
       if ((e as Error)?.message === 'Файл не выбран') return
-      showToast(`Не удалось импортировать DOCX: ${(e as Error)?.message || 'ошибка файла'}`, 'error')
+      if (e instanceof DocxImportError) {
+        showToast(e.kind === 'not-docx'
+          ? 'Не удалось прочитать файл — это не .docx. Убедитесь, что выбран документ Word'
+          : 'Файл повреждён и не читается. Попробуйте пересохранить его в Word', 'error')
+        return
+      }
+      showToast('Не удалось импортировать DOCX-файл', 'error')
     }
   }, [project, showToast])
 
