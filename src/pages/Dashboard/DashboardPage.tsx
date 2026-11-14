@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, FileText, ClipboardList, Users, TrendingUp, AlertCircle, CheckCircle2, Circle, Clock, Zap, ChevronDown, Info } from 'lucide-react'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
+import { useScriptStore } from '../../store/scriptStore'
 import type { ShootingDayType } from '../../types/project'
 import { useUiStore } from '../../store/uiStore'
 import { useTaskStore } from '../../store/taskStore'
@@ -274,7 +275,7 @@ function OnboardingBanner({ isDark, navigate, projectId }: {
 
 // ─── Радар-диаграмма пре-продакшна ───────────────────────────────────────────
 function RadarChart({ data, isDark }: {
-  data: { label: string; value: number; color: string }[]
+  data: { label: string; value: number; soon?: boolean; color: string }[]
   isDark: boolean
 }) {
   const SIZE = 280
@@ -323,7 +324,13 @@ function RadarChart({ data, isDark }: {
       {dataPoints.map((p, i) => (
         <g key={i}>
           <circle cx={p.x} cy={p.y} r={5} fill={data[i].color} stroke={isDark ? '#1a1a35' : '#fff'} strokeWidth={2} />
-          {data[i].value > 0 && (
+          {data[i].soon && (
+            /* T-102: у заглушек нет процента — метка «скоро» */
+            <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize={8}
+              fill={textColor}
+            >скоро</text>
+          )}
+          {!data[i].soon && data[i].value > 0 && (
             <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize={9}
               fill={data[i].color} fontWeight={700}
             >{data[i].value}%</text>
@@ -861,6 +868,7 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { currentProjectId, projects } = useNormalizedProjectStore()
   const { theme } = useUiStore()
+  const allScripts = useScriptStore((s) => s.scripts)
   const project = currentProjectId ? projects[currentProjectId] : null
 
   if (!project) {
@@ -871,9 +879,26 @@ export default function DashboardPage() {
     )
   }
 
-  const overallProgress = Math.round(
-    (project.scriptProgress + project.castingProgress + project.locationsProgress + project.scheduleProgress) / 4
-  )
+  // T-102: честные KPI — готовность считаем только по реализованным модулям.
+  // Сценарий: реальный хронометраж сцен / целевой хронометраж проекта.
+  const projectScripts = allScripts.filter((s) => s.projectId === project.id)
+  const scriptMetrics = (() => {
+    let scenes = 0, pages = 0, durationSec = 0
+    projectScripts.forEach((s) => {
+      (s.scenes || []).forEach((sc) => {
+        scenes++
+        pages += sc.pages || 0
+        durationSec += sc.duration || 0
+      })
+    })
+    const targetMin = project.type === 'serial' ? project.episodeDuration : project.totalDuration
+    const pct = targetMin && targetMin > 0
+      ? Math.min(100, Math.round((durationSec / 60 / targetMin) * 100))
+      : null
+    return { scenes, pages: Math.round(pages * 10) / 10, pct }
+  })()
+  // Общий % — только по реализованным модулям (сейчас: сценарий)
+  const overallProgress: number | null = scriptMetrics.pct
 
   const isShooting = project.status === 'shooting'
 
@@ -903,26 +928,29 @@ export default function DashboardPage() {
     {
       icon: <FileText size={22} />,
       label: 'Сценарий',
-      value: project.scriptProgress,
+      value: scriptMetrics.pct ?? 0,
+      valueText: scriptMetrics.pct === null ? `${scriptMetrics.scenes} сцен` : undefined,
       color: 'from-blue-500 to-blue-600',
       textColor: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
-      detail: `${project.scriptProgress}% написано`,
+      detail: `${scriptMetrics.scenes} сцен · ${scriptMetrics.pages} стр.`,
       path: `/project/${project.id}/script`,
-      ready: false,
+      ready: true,
+      soon: false,
     },
     {
       icon: <Calendar size={22} />,
       label: 'Планирование',
-      value: project.scheduleProgress,
+      value: 0,
       color: 'from-purple-500 to-purple-600',
       textColor: 'text-purple-400',
       bgColor: 'bg-purple-500/10',
       borderColor: 'border-purple-500/20',
-      detail: `${project.plannedShootingDays} дней запланировано`,
+      detail: 'Модуль в разработке',
       path: `/project/${project.id}/schedule`,
       ready: false,
+      soon: true,
     },
     {
       icon: <ClipboardList size={22} />,
@@ -932,21 +960,23 @@ export default function DashboardPage() {
       textColor: 'text-green-400',
       bgColor: 'bg-green-500/10',
       borderColor: 'border-green-500/20',
-      detail: 'Вызывных пока нет',
+      detail: 'Модуль в разработке',
       path: `/project/${project.id}/callsheets`,
       ready: false,
+      soon: true,
     },
     {
       icon: <Users size={22} />,
       label: 'Пре-продакшн',
-      value: project.castingProgress,
+      value: 0,
       color: 'from-orange-500 to-orange-600',
       textColor: 'text-orange-400',
       bgColor: 'bg-orange-500/10',
       borderColor: 'border-orange-500/20',
-      detail: `Кастинг ${project.castingProgress}%`,
+      detail: 'Модуль в разработке',
       path: `/project/${project.id}/preproduction`,
       ready: false,
+      soon: true,
     },
   ]
 
@@ -1044,7 +1074,7 @@ export default function DashboardPage() {
             style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.2)' }}
           >
             <TrendingUp size={14} className="text-orange-400" />
-            <span className="text-orange-400 font-bold text-sm">{overallProgress}%</span>
+            <span className="text-orange-400 font-bold text-sm">{overallProgress === null ? '—' : `${overallProgress}%`}</span>
             <span className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>готовности</span>
           </div>
 
@@ -1054,7 +1084,7 @@ export default function DashboardPage() {
       <div className="max-w-5xl mx-auto" style={{ padding: '32px 32px 48px' }}>
 
         {/* Onboarding — только если проект совсем новый */}
-        {overallProgress === 0 && (
+        {(overallProgress === 0 || (overallProgress === null && scriptMetrics.scenes === 0)) && (
           <OnboardingBanner isDark={isDark} navigate={navigate} projectId={project.id} />
         )}
 
@@ -1095,7 +1125,7 @@ export default function DashboardPage() {
             style={{ color: isDark ? '#6b7280' : '#9ca3af' }}
           >Модули проекта</h2>
           {(() => {
-            const minVal = Math.min(...moduleCards.map(c => c.value))
+            const minVal = Math.min(...moduleCards.filter(c => !c.soon).map(c => c.value))
             const weakCard = moduleCards.find(c => c.value === minVal && minVal < 50)
             return (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1133,11 +1163,16 @@ export default function DashboardPage() {
                   {card.label}
                 </p>
                 <p className="text-xs mb-3" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>{card.detail}</p>
+                {card.soon ? (
+                  /* T-102: у заглушек нет процента — честный бейдж «Скоро» */
+                  <p className="mt-3 text-xs font-semibold" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Скоро</p>
+                ) : (
+                <>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs" style={{ color: isDark ? '#4b5563' : '#d1d5db' }}>Готовность</span>
                   <span className="text-sm font-bold" style={{
                     color: card.value >= 70 ? '#4ade80' : card.value >= 30 ? '#fbbf24' : '#f87171'
-                  }}>{card.value}%</span>
+                  }}>{card.valueText ?? `${card.value}%`}</span>
                 </div>
                 <div className="h-1.5 rounded-full overflow-hidden"
                   style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6' }}
@@ -1149,8 +1184,7 @@ export default function DashboardPage() {
                     }}
                   />
                 </div>
-                {!card.ready && (
-                  <p className="mt-3 text-xs" style={{ color: isDark ? '#374151' : '#d1d5db' }}>В разработке</p>
+                </>
                 )}
                 {isWeak && (
                   <p className="mt-2 text-xs font-semibold" style={{ color: '#f87171' }}>⚠ Требует внимания</p>
@@ -1305,7 +1339,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-sm" style={{ color: isDark ? '#e5e7eb' : '#111827' }}>Готовность пре-продакшна</h2>
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(249,115,22,0.12)' }}>
-                <span className="text-lg font-black text-orange-400">{overallProgress}</span>
+                <span className="text-lg font-black text-orange-400">{overallProgress === null ? '—' : overallProgress}</span>
                 <span className="text-xs text-orange-400 font-bold">%</span>
               </div>
             </div>
@@ -1313,14 +1347,10 @@ export default function DashboardPage() {
               <RadarChart
                 isDark={isDark}
                 data={[
-                  { label: 'Сценарий',    value: project.scriptProgress,    color: '#60a5fa' },
-                  { label: 'Кастинг',     value: project.castingProgress,   color: '#fb923c' },
-                  { label: 'Локации',     value: project.locationsProgress, color: '#4ade80' },
-                  { label: 'Расписание',  value: project.scheduleProgress,  color: '#a78bfa' },
-                  { label: 'Костюмы',     value: 20,  color: '#f472b6' },
-                  { label: 'Грим',        value: 10,  color: '#f59e0b' },
-                  { label: 'Реквизит',    value: 35,  color: '#34d399' },
-                  { label: 'VFX',         value: 5,   color: '#38bdf8' },
+                  { label: 'Сценарий',   value: scriptMetrics.pct ?? 0, soon: false, color: '#60a5fa' },
+                  { label: 'Кастинг',    value: 0, soon: true, color: '#fb923c' },
+                  { label: 'Локации',    value: 0, soon: true, color: '#4ade80' },
+                  { label: 'Расписание', value: 0, soon: true, color: '#a78bfa' },
                 ]}
               />
             </div>

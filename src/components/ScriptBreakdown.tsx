@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react'
 import {
   Users, Box, MapPin, Shirt, Car, Sparkles, Flame,
   Monitor, StickyNote, Plus, X,
-  Search, Filter, Download, BarChart3
+  Search, Filter, Download, BarChart3, Table, ArrowRight
 } from 'lucide-react'
 import { useToastStore } from '../store/toastStore'
-import { parseScript, getUniqueElements } from '../utils/scriptParser'
-import type { Block } from '../utils/scriptParser'
+import { parseScript, getUniqueElements, flattenSceneTags, mergeBreakdownElements } from '../utils/scriptParser'
+import type { Block, SceneTag } from '../utils/scriptParser'
+import type { BreakdownElement as SceneBreakdownElement } from '../types/scene'
 import CharacterStats from './CharacterStats'
 
 export type BreakdownCategory = 
@@ -56,9 +57,13 @@ export interface SceneBreakdown {
 }
 
 interface ScriptBreakdownProps {
-  scenes: Array<{ id: string; number: string; location: string; type: string }>
+  scenes: Array<{ id: string; number: string; location: string; type: string; breakdownElements?: SceneTag[] }>
   isDark: boolean
   blocks?: Block[]
+  /** T-108: персист ручных тегов — пишет breakdownElements в сцену-владельца */
+  onUpdateScene?: (sceneId: string, patch: { breakdownElements: SceneBreakdownElement[] }) => void
+  /** T-108: мостик — cast → персонажи разработки, locations → локации разработки */
+  onSendToDevelopment?: (el: { category: BreakdownCategory; name: string; sceneIds: string[] }) => void
 }
 
 const CATEGORIES: { id: BreakdownCategory; label: string; icon: typeof Users; color: string }[] = [
@@ -74,16 +79,16 @@ const CATEGORIES: { id: BreakdownCategory; label: string; icon: typeof Users; co
   { id: 'notes', label: 'Заметки', icon: StickyNote, color: '#6b7280' },
 ]
 
-export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakdownProps) {
+export default function ScriptBreakdown({ scenes, isDark, blocks, onUpdateScene, onSendToDevelopment }: ScriptBreakdownProps) {
   const { showToast } = useToastStore()
   const [selectedCategory, setSelectedCategory] = useState<BreakdownCategory | 'all'>('all')
   const [selectedScene, setSelectedScene] = useState<string | 'all'>('all')
-  const [manualElements, setManualElements] = useState<BreakdownElement[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [newElementName, setNewElementName] = useState('')
   const [newElementCategory, setNewElementCategory] = useState<BreakdownCategory>('cast')
+  const [newElementScene, setNewElementScene] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeView, setActiveView] = useState<'elements' | 'stats'>('elements')
+  const [activeView, setActiveView] = useState<'elements' | 'table' | 'stats'>('elements')
 
   const cardBg = isDark ? '#13132a' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
@@ -99,18 +104,37 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
     const parsedScenes = parseScript(memoizedBlocks)
     const uniqueElements = getUniqueElements(parsedScenes)
     
-    // Конвертируем ParsedElement в BreakdownElement
     return uniqueElements.map(el => ({
       id: el.id,
       category: el.category,
       name: el.name,
       notes: el.notes,
       sceneIds: el.sceneIds,
+      occurrences: el.occurrences,
     }))
   }, [memoizedBlocks])
 
-  // Объединяем распарсенные и ручные элементы — оборачиваем в useMemo для избежания лишних рендеров
-  const allElements = useMemo(() => [...parsedElements, ...manualElements], [parsedElements, manualElements])
+  // Ручные теги — персистентно на сценах (scene.breakdownElements)
+  const manualElements = useMemo(() => flattenSceneTags(scenes), [scenes])
+
+  // Авто + ручные склеиваются по «категория|имя» — один ИВАН не дублируется
+  const allElements = useMemo(
+    () => mergeBreakdownElements(parsedElements, manualElements),
+    [parsedElements, manualElements],
+  )
+
+  // Элементы по сцене — для таблицы «сцена × категория»
+  const sceneElements = useMemo(() => {
+    const map = new Map<string, typeof allElements>()
+    scenes.forEach((s) => map.set(s.id, []))
+    allElements.forEach((el) => {
+      el.sceneIds.forEach((sid) => {
+        const arr = map.get(sid)
+        if (arr) arr.push(el)
+      })
+    })
+    return map
+  }, [scenes, allElements])
 
   // Подготовка данных для CharacterStats
   const characterData = useMemo(() => {
@@ -146,21 +170,43 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
 
   const handleAddElement = () => {
     if (!newElementName.trim()) return
-    
-    const newElement: BreakdownElement = {
+    const targetScene = newElementScene || (selectedScene !== 'all' ? selectedScene : scenes[0]?.id)
+    if (!targetScene) {
+      showToast('Нет сцен для привязки тега', 'error')
+      return
+    }
+    const scene = scenes.find((s) => s.id === targetScene)
+    if (!scene) return
+    const newTag: SceneTag = {
       id: crypto.randomUUID(),
       category: newElementCategory,
       name: newElementName.toUpperCase(),
-      sceneIds: selectedScene !== 'all' ? [selectedScene] : [],
     }
-    
-    setManualElements(prev => [...prev, newElement])
+    onUpdateScene?.(targetScene, {
+      breakdownElements: [...(scene.breakdownElements || []), newTag],
+    })
     setNewElementName('')
     setShowAddModal(false)
+    showToast(`Тег «${newTag.name}» → сцена ${scene.number}`, 'success')
   }
 
-  const removeElement = (elementId: string) => {
-    setManualElements(prev => prev.filter(e => e.id !== elementId))
+  const removeElement = (el: (typeof allElements)[number]) => {
+    if (el.manualRefs.length === 0) {
+      showToast('Элемент из текста сценария — убирается правкой текста', 'info')
+      return
+    }
+    el.manualRefs.forEach(({ sceneId, elementId }) => {
+      const scene = scenes.find((s) => s.id === sceneId)
+      if (!scene) return
+      onUpdateScene?.(sceneId, {
+        breakdownElements: (scene.breakdownElements || []).filter((t) => t.id !== elementId),
+      })
+    })
+  }
+
+  const openAddModal = () => {
+    setNewElementScene(selectedScene !== 'all' ? selectedScene : scenes[0]?.id || '')
+    setShowAddModal(true)
   }
 
   const getCategoryIcon = (category: BreakdownCategory) => {
@@ -182,6 +228,101 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
         totalScenes={scenes.length}
         isDark={isDark}
       />
+    )
+  }
+
+  // T-108: таблица по сценам — матрица «сцена × категория» (классическая разбивка)
+  if (activeView === 'table') {
+    const shownCategories = selectedCategory === 'all'
+      ? CATEGORIES
+      : CATEGORIES.filter((c) => c.id === selectedCategory)
+    const shownScenes = selectedScene === 'all'
+      ? scenes
+      : scenes.filter((s) => s.id === selectedScene)
+    return (
+      <div className="flex-1 flex overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
+        {/* Левая панель — те же фильтры */}
+        <div className="w-72 flex flex-col border-r overflow-hidden" style={{ background: cardBg, borderColor: border }}>
+          <div className="p-4 border-b" style={{ borderColor: border }}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold" style={{ color: textPrimary }}>Разбивка по сценам</h2>
+            </div>
+            <div className="flex gap-1 mb-3">
+              <button onClick={() => setActiveView('elements')} className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-white/5 text-gray-500">Элементы</button>
+              <button onClick={() => setActiveView('table')} className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all bg-indigo-500/20 text-indigo-400"><Table size={12} className="inline mr-1" />Сцены</button>
+              <button onClick={() => setActiveView('stats')} className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-white/5 text-gray-500"><BarChart3 size={12} className="inline mr-1" />Стат</button>
+            </div>
+            <select
+              value={selectedScene}
+              onChange={(e) => setSelectedScene(e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg text-xs outline-none border mb-3 ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-300'}`}
+              style={{ color: textPrimary }}
+            >
+              <option value="all">Все сцены</option>
+              {scenes.map(scene => (
+                <option key={scene.id} value={scene.id}>{scene.number}. {scene.location}</option>
+              ))}
+            </select>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as BreakdownCategory | 'all')}
+              className={`w-full px-3 py-2 rounded-lg text-xs outline-none border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-300'}`}
+              style={{ color: textPrimary }}
+            >
+              <option value="all">Все категории</option>
+              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="flex-1" />
+        </div>
+
+        {/* Матрица */}
+        <div className="flex-1 overflow-auto p-4">
+          <table className="border-collapse text-xs" style={{ minWidth: '100%' }}>
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-10 text-left px-3 py-2 border-b" style={{ background: cardBg, borderColor: border, color: textSecondary }}>Сцена</th>
+                {shownCategories.map((cat) => {
+                  const Icon = cat.icon
+                  return (
+                    <th key={cat.id} className="text-left px-3 py-2 border-b" style={{ borderColor: border, color: cat.color }}>
+                      <span className="flex items-center gap-1"><Icon size={12} />{cat.label}</span>
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {shownScenes.map((scene) => {
+                const els = sceneElements.get(scene.id) || []
+                return (
+                  <tr key={scene.id} className="border-b" style={{ borderColor: border }}>
+                    <td className="sticky left-0 z-10 px-3 py-2 font-medium whitespace-nowrap" style={{ background: cardBg, color: textPrimary }}>
+                      {scene.number}. {scene.location}
+                    </td>
+                    {shownCategories.map((cat) => {
+                      const inCat = els.filter((e) => e.category === cat.id)
+                      return (
+                        <td key={cat.id} className="px-3 py-2 align-top" style={{ color: textPrimary }}>
+                          {inCat.map((e) => (
+                            <span key={e.id} className="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded"
+                              style={{ background: `${cat.color}18`, color: cat.color }}>
+                              {e.name}
+                            </span>
+                          ))}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {shownScenes.length === 0 && (
+            <p className="text-sm text-center py-12" style={{ color: textSecondary }}>Нет сцен</p>
+          )}
+        </div>
+      </div>
     )
   }
 
@@ -209,16 +350,24 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
           <div className="flex gap-1">
             <button
               onClick={() => setActiveView('elements')}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'elements' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
+              className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'elements' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-500'}`}
             >
               Элементы
             </button>
             <button
+              onClick={() => setActiveView('table')}
+              className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-white/5 text-gray-500"
+              title="Таблица по сценам"
+            >
+              <Table size={12} className="inline mr-1" />
+              Сцены
+            </button>
+            <button
               onClick={() => setActiveView('stats')}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeView === 'elements' ? '' : 'bg-indigo-500/20 text-indigo-400'}`}
+              className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-white/5 text-gray-500"
             >
               <BarChart3 size={12} className="inline mr-1" />
-              Статистика
+              Стат
             </button>
           </div>
 
@@ -252,7 +401,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
 
           {/* Кнопка добавить */}
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={openAddModal}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-90"
             style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8' }}
           >
@@ -370,13 +519,27 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
                         </div>
                       </div>
                       <button
-                        onClick={() => removeElement(element.id)}
+                        onClick={() => removeElement(element)}
                         className="p-1 rounded hover:bg-red-500/20 transition-colors"
                         style={{ color: textSecondary }}
+                        title={element.manualRefs.length ? 'Удалить тег' : 'Авто-элемент из текста'}
                       >
                         <X size={14} />
                       </button>
                     </div>
+
+                    {/* Мостик в разработку: актёры и локации */}
+                    {(element.category === 'cast' || element.category === 'locations') && onSendToDevelopment && (
+                      <button
+                        onClick={() => onSendToDevelopment({ category: element.category, name: element.name, sceneIds: element.sceneIds })}
+                        className="mt-2 flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-all hover:opacity-80"
+                        style={{ background: isDark ? 'rgba(34,197,94,0.12)' : '#dcfce7', color: isDark ? '#4ade80' : '#16a34a' }}
+                        title={element.category === 'cast' ? 'Отправить в кастинг (Разработка)' : 'Отправить в локации (Разработка)'}
+                      >
+                        <ArrowRight size={10} />
+                        {element.category === 'cast' ? 'В кастинг' : 'В локации'}
+                      </button>
+                    )}
                     
                     <div className="flex items-center gap-2 mt-3">
                       <span className="text-[10px] px-2 py-0.5 rounded-full"
@@ -422,6 +585,22 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium mb-1.5 block" style={{ color: textSecondary }}>
+                  Сцена
+                </label>
+                <select
+                  value={newElementScene}
+                  onChange={(e) => setNewElementScene(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg text-sm outline-none border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-300'}`}
+                  style={{ color: textPrimary }}
+                >
+                  {scenes.map(scene => (
+                    <option key={scene.id} value={scene.id}>{scene.number}. {scene.location}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: textSecondary }}>
                   Название
                 </label>
                 <input
@@ -439,7 +618,7 @@ export default function ScriptBreakdown({ scenes, isDark, blocks }: ScriptBreakd
                   Категория
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {CATEGORIES.slice(0, 6).map(cat => {
+                  {CATEGORIES.map(cat => {
                     const Icon = cat.icon
                     return (
                       <button

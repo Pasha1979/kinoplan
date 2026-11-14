@@ -58,6 +58,32 @@ class BrowserFS implements FileSystemAdapter {
       document.body.removeChild(input)
     })
   }
+
+  async uploadFileBinary(acceptMime: string): Promise<{ name: string; buffer: ArrayBuffer }> {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = acceptMime
+      input.style.display = 'none'
+
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) {
+          reject(new Error('Файл не выбран'))
+          return
+        }
+
+        const reader = new FileReader()
+        reader.onload = () => resolve({ name: file.name, buffer: reader.result as ArrayBuffer })
+        reader.onerror = () => reject(new Error('Не удалось прочитать файл'))
+        reader.readAsArrayBuffer(file)
+      }
+
+      document.body.appendChild(input)
+      input.click()
+      document.body.removeChild(input)
+    })
+  }
 }
 
 export const browserFS = new BrowserFS()

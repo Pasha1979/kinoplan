@@ -500,12 +500,35 @@ body {
   color: #e2e8f0;
 }
 
+/* T-16: разрыв внутри блока — отступ-спейсер не нужен, линия по смещению */
+.tiptap-editor [data-page-break][data-page-split] {
+  margin-top: 0;
+}
+.tiptap-editor [data-page-break][data-page-split]::before {
+  top: var(--split-offset, 0px);
+}
+
+/* Маркер (ПРОДОЛЖЕНИЕ) — артефакт пагинации, не контент документа */
+.tiptap-editor [data-continued]::after {
+  content: attr(data-continued);
+  position: absolute;
+  top: calc(var(--split-offset, 0px) + 3px);
+  left: var(--dialog-left-indent);
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 5;
+}
+
 @media print {
-  .tiptap-editor [data-page-break] {
+  .tiptap-editor [data-page-break]:not([data-page-split]) {
     margin-top: 0 !important;
     page-break-before: always;
   }
-  .tiptap-editor [data-page-break]::before {
+  .tiptap-editor [data-page-break]::before,
+  .tiptap-editor [data-continued]::after {
     display: none !important;
   }
 }

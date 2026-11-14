@@ -20,9 +20,10 @@ interface ScriptEditorTiptapProps {
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; time: string; cast: string[]; pages: number; charCount: number }>) => void
   focusSceneId?: string
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
-  onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number) => void) => void
-  onUpdateNumbersReady?: (updateFn: (scenes: Array<{ id: string; number: string }>) => void) => void
+  onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number, newNumbers?: Array<{ id: string; number: string }>) => void) => void
   onFormatReady?: (formatFn: () => string) => void
+  /** T-101 scrollspy: UUID сцены, в которой курсор */
+  onActiveSceneChange?: (sceneId: string | null) => void
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]

@@ -17,6 +17,8 @@ import { useUiStore } from '../store/uiStore'
 import { typographyTransform } from '../utils/autoTypography'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
+import { type PageBreakInfo } from '../services/pagination'
+import { PageBreaksExtension, pageBreaksPluginKey } from '../components/tiptap/PageBreaksExtension'
 
 import { extractScenesFromDocument } from '../utils/sceneExtractor'
 import { convertToWordCompatibleHtml } from '../utils/wordExport'
@@ -26,6 +28,7 @@ import { sanitizeHtml, sanitizePlainText, isScreenplayContent } from '../utils/p
 import { createSearchPlugin } from './useScriptSearch'
 import { useMultiCursor } from './useMultiCursor'
 import { SCENE_NUMBER } from '../utils/sceneNumber'
+import { centerCursorBlock } from '../utils/typewriterScroll'
 import { RU_TO_EN_REPLACEMENTS, EN_TO_RU_REPLACEMENTS } from '../utils/formatRules'
 
 export interface UseScriptEditorLogicOptions {
@@ -43,9 +46,10 @@ export interface UseScriptEditorLogicOptions {
   onScenesChange?: (scenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; pages: number; charCount: number }>) => void
   focusSceneId?: string
   onConvertReady?: (convertFn: (from: ScriptFormat, to: ScriptFormat) => void) => void
-  onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number) => void) => void
-  onUpdateNumbersReady?: (updateFn: (scenes: Array<{ id: string; number: string }>) => void) => void
+  onReorderReady?: (reorderFn: (fromIndex: number, toIndex: number, newNumbers?: Array<{ id: string; number: string }>) => void) => void
   onFormatReady?: (formatFn: () => string) => void
+  /** T-101 scrollspy: UUID сцены, в которой сейчас курсор (объемлющая шапка) */
+  onActiveSceneChange?: (sceneId: string | null) => void
   smartTypeCharacters?: string[]
   smartTypeLocations?: string[]
   smartTypeTimes?: string[]
@@ -83,6 +87,7 @@ function getNextSceneNumber(doc: PMNode): number {
 export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const {
     format: _format,
+    projectId,
     projectType,
     currentSeries,
     fontFamily,
@@ -93,8 +98,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     focusSceneId,
     onConvertReady,
     onReorderReady,
-    onUpdateNumbersReady,
     onFormatReady,
+    onActiveSceneChange,
     genreCoefficient,
     timingSystem,
     smartTypeCharacters,
@@ -109,6 +114,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   } = options
 
   const showPlaceholders = useScriptStore((s) => s.showPlaceholders)
+  // T-105: typewriter-режим — курсор держится на середине экрана
+  const typewriterMode = useUiStore((s) => s.typewriterMode)
+  const typewriterModeRef = useRef(typewriterMode)
+  useEffect(() => { typewriterModeRef.current = typewriterMode }, [typewriterMode])
 
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const editorBg = isDark ? '#111126' : '#fefefe'
@@ -118,6 +127,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     characters: smartTypeCharacters || [],
     locations: smartTypeLocations || [],
     times: smartTypeTimes || [],
+    projectId,
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
@@ -142,6 +152,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const genreCoefficientRef = useRef(genreCoefficient)
   const onScenesChangeRef = useRef(onScenesChange)
   const onStatsChangeRef = useRef(onStatsChange)
+  const onActiveSceneChangeRef = useRef(onActiveSceneChange)
   const currentSeriesRef = useRef(currentSeries)
   const projectTypeRef = useRef(projectType)
   const autoExtractCharactersRef = useRef(autoExtractCharacters)
@@ -154,11 +165,12 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     genreCoefficientRef.current = genreCoefficient
     onScenesChangeRef.current = onScenesChange
     onStatsChangeRef.current = onStatsChange
+    onActiveSceneChangeRef.current = onActiveSceneChange
     currentSeriesRef.current = currentSeries
     projectTypeRef.current = projectType
     autoExtractCharactersRef.current = autoExtractCharacters
     enterPresetRef.current = enterPreset
-  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters, enterPreset])
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters, enterPreset, onActiveSceneChange])
 
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
@@ -175,11 +187,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
   const pageCountTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Сохраняем page breaks для повторного применения после ProseMirror рендера
-  const pageBreaksRef = useRef<{ page: number; startIndex: number }[]>([])
+  const pageBreaksRef = useRef<PageBreakInfo[]>([])
   // Таймаут для гарантийного повторного применения page breaks
   const pageBreakApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Флаг чтобы предотвратить бесконечный цикл при повторном применении
-  const isReApplyingRef = useRef(false)
   // Per-component PageCounter instance (убран singleton)
   const pageCounterRef = useRef<PageCounter | null>(null)
   // Создаём лениво в точке использования — PageCounter создаёт DOM-контейнер,
@@ -472,6 +482,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           })]
         },
       }),
+      PageBreaksExtension,
       StarterKit.configure({
         orderedList: false,
         bulletList: false,
@@ -597,7 +608,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     editor,
     focusSceneId,
     onReorderReady,
-    onUpdateNumbersReady,
     precisePagesRef,
     timingSystem,
     genreCoefficient,
@@ -605,41 +615,17 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onStatsChange,
   })
 
-  // Применяем page-start и отступы на основе точных данных из pageCounter
-  // Используем pageBreaksRef (вычисленный через виртуальный A4-рендеринг)
+  // Применяем разрывы страниц через PM-декорации (T-16/T-94): meta-транзакция
+  // обновляет DecorationSet — PM сам держит атрибуты на нодах при ререндерах.
+  // Документ не меняется → в сохранённый HTML и undo маркеры не попадают.
   const applyPageBreaks = useCallback(() => {
-    if (!editor) return
-    const editorDom = editor.view.dom as HTMLElement
-    const children = Array.from(editorDom.children) as HTMLElement[]
-    children.forEach(child => {
-      child.removeAttribute('data-page-break')
-      child.removeAttribute('data-page')
-      child.classList.remove('page-start', 'page-break-marker')
+    if (!editor || editor.isDestroyed) return
+    const tr = editor.state.tr.setMeta(pageBreaksPluginKey, {
+      breaks: pageBreaksRef.current,
+      format: (_formatRef.current as 'russian' | 'hollywood') || 'russian',
     })
-    if (children.length === 0 || pageBreaksRef.current.length === 0) return
-
-    // Маркер разрыва через data-атрибут — он переживает рендеры ProseMirror
-    // (PM затирает class/style узлов при перерисовке, data-* не трогает).
-    // Пунктирная линия рисуется через CSS ::before, без отступов-хаков.
-    pageBreaksRef.current.forEach((breakInfo) => {
-      const { page, startIndex } = breakInfo
-      if (startIndex >= children.length) return
-      children[startIndex].setAttribute('data-page-break', `Страница ${page}`)
-    })
-
-    // Повторно применяем page breaks после рендера ProseMirror (сбрасывает inline стили)
-    // Не планируем повторное применение если уже в процессе (предотвращаем бесконечный цикл)
-    if (!isReApplyingRef.current) {
-      if (pageBreakApplyTimeoutRef.current) {
-        clearTimeout(pageBreakApplyTimeoutRef.current)
-      }
-      pageBreakApplyTimeoutRef.current = setTimeout(() => {
-        isReApplyingRef.current = true
-        applyPageBreaks()
-        isReApplyingRef.current = false
-        pageBreakApplyTimeoutRef.current = null
-      }, 300)
-    }
+    tr.setMeta('addToHistory', false)
+    editor.view.dispatch(tr)
   }, [editor])
 
   // Устанавливаем актуальные callback'и в refs (предотвращаем stale closures в useEditor)
@@ -1106,6 +1092,48 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     editor.on('update', handler)
     return () => { editor.off('update', handler) }
   }, [editor])
+
+  // T-101 scrollspy: активная сцена следует за курсором — берём последнюю
+  // шапку до позиции выделения (объемлющая сцена), коллбэк только при смене
+  useEffect(() => {
+    if (!editor) return
+    let lastSceneId: string | null = null
+    const handler = () => {
+      const { state } = editor
+      const topIndex = state.selection.$from.index(0)
+      let sceneId: string | null = null
+      for (let i = 0; i <= topIndex && i < state.doc.childCount; i++) {
+        const node = state.doc.child(i)
+        if (node.type.name === 'sceneHeader') {
+          sceneId = (node.attrs.sceneId as string | null) ?? null
+        }
+      }
+      if (sceneId !== lastSceneId) {
+        lastSceneId = sceneId
+        onActiveSceneChangeRef.current?.(sceneId)
+      }
+    }
+    editor.on('selectionUpdate', handler)
+    return () => { editor.off('selectionUpdate', handler) }
+  }, [editor])
+
+  // T-105 typewriter: блок с курсором держится на вертикальной середине экрана.
+  // Без smooth — при наборе каждая буква иначе вызывает плавную прокрутку
+  useEffect(() => {
+    if (!editor) return
+    const center = () => {
+      if (typewriterModeRef.current) centerCursorBlock(editor)
+    }
+    editor.on('selectionUpdate', center)
+    editor.on('update', center)
+    return () => {
+      editor.off('selectionUpdate', center)
+      editor.off('update', center)
+    }
+  }, [editor])
+
+  // Декорации разрывов управляются плагином PageBreaksExtension —
+  // PM пересоздаёт их при ререндерах автоматически, наблюдать не нужно.
 
   // Перехватываем Ctrl+D на уровне window, чтобы браузер не открывал диалог закладок
   useEffect(() => {

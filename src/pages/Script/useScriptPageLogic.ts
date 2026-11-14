@@ -22,7 +22,7 @@ const todFromTime = (t: string): TimeOfDay => {
 export type ScriptView = 'empty' | 'editor'
 export type ScriptTab = 'text' | 'title' | 'cards' | 'development' | 'plan' | 'statistics' | 'breakdown'
 
-export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: string) => void }) {
+export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: string, fromIndex: number, toIndex: number) => void }) {
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const { currentProjectId, projects } = useNormalizedProjectStore()
@@ -73,9 +73,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   // 4.1 Ссылка на функцию конвертации внутри редактора
   const convertFormatRef = useRef<((from: ScriptFormat, to: ScriptFormat) => void) | null>(null)
   // Ссылка на функцию перестановки сцен в редакторе
-  const reorderEditorRef = useRef<((fromIndex: number, toIndex: number) => void) | null>(null)
-  // Ссылка на функцию обновления номеров в редакторе
-  const updateNumbersRef = useRef<((scenes: Array<{ id: string; number: string }>) => void) | null>(null)
+  const reorderEditorRef = useRef<((fromIndex: number, toIndex: number, newNumbers?: Array<{ id: string; number: string }>) => void) | null>(null)
   // Ссылка на функцию получения текста редактора для автоформатирования
   const formatEditorRef = useRef<(() => string) | null>(null)
   // AbortController для отмены устаревших запросов сохранения
@@ -248,8 +246,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     if (fromIndex === toIndex) return
     if (!currentScriptId) return
 
-    // Снимок для кнопки «Отменить» на доске — до любых изменений
-    opts?.onBeforeSceneReorder?.(currentScriptId)
+    // Запись для кнопки «Отменить» на доске — до любых изменений (T-107: обратная операция, не снапшот)
+    opts?.onBeforeSceneReorder?.(currentScriptId, fromIndex, toIndex)
 
     // Переставляем сцены в scriptStore (единый источник истины)
     const reordered = [...(currentScript?.scenes || [])]
@@ -271,14 +269,10 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     // 1. Обновляем scriptStore
     useScriptStore.getState().updateScript(currentScriptId, { scenes: renumberedScenes })
 
-    // 2. Переставляем блоки в редакторе
+    // 2. Переставляем блоки + перенумеровываем в ОДНОЙ транзакции редактора (T-43):
+    //    один Ctrl+Z отменяет и порядок, и номера.
     if (reorderEditorRef.current) {
-      reorderEditorRef.current(fromIndex, toIndex)
-    }
-
-    // 3. Сразу обновляем номера в редакторе (без setTimeout — reorder синхронный)
-    if (updateNumbersRef.current) {
-      updateNumbersRef.current(renumberedScenes)
+      reorderEditorRef.current(fromIndex, toIndex, renumberedScenes)
     }
   }, [scenes, currentScriptId, currentScript?.scenes, currentScript?.episodeNumber, project?.type, opts?.onBeforeSceneReorder])
 
@@ -286,7 +280,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   const handleSceneClick = useCallback((sceneId: string) => {
     const selected = scenes.find(s => s.id === sceneId) || scenes[0]
     setSelectedScene(selected)
-    setFocusSceneId(selected.number)
+    // T-101: фокус по стабильному UUID (data-scene-id), не по номеру
+    setFocusSceneId(selected.id)
   }, [scenes])
 
   // Применение настроек хронометража из модального окна
@@ -432,7 +427,6 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     // editor refs
     convertFormatRef,
     reorderEditorRef,
-    updateNumbersRef,
     formatEditorRef,
   }
 }

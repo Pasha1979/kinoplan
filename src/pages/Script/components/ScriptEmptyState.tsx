@@ -59,7 +59,7 @@ export default function ScriptEmptyState({ isDark, projectName, colors, onImport
             onClick={onImportClick}
             onMouseEnter={() => setImportHover(true)}
             onMouseLeave={() => setImportHover(false)}
-            className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden opacity-60"
+            className="relative flex flex-col items-start rounded-2xl p-6 text-left transition-all overflow-hidden"
             style={{
               background: isDark
                 ? 'linear-gradient(135deg, #1e1b4b 0%, #1a1a35 60%, #1e1b4b 100%)'
@@ -84,10 +84,10 @@ export default function ScriptEmptyState({ isDark, projectName, colors, onImport
               Загрузить файл
             </p>
             <p className="text-xs leading-relaxed mb-4 relative" style={{ color: isDark ? '#94a3b8' : '#6366f1' }}>
-              Импорт из Word, PDF или Final Draft. Сцены распознаются автоматически.
+              Импорт из Word (.docx). Сцены распознаются автоматически. PDF и Final Draft — скоро.
             </p>
             <div className="flex gap-2 flex-wrap relative">
-              {['DOCX', 'PDF', 'FDX'].map(f => (
+              {['DOCX'].map(f => (
                 <span key={f} className="text-xs px-2.5 py-1 rounded-lg font-mono font-bold"
                   style={{
                     background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)',

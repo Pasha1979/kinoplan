@@ -266,3 +266,60 @@ describe('projectService round-trip: экспорт → импорт', () => {
     useScriptStore.setState({ scripts: [] })
   })
 })
+
+// T-96: при импорте data-scene-id регенерируются с картой old→new;
+// все ссылки на сцены (scenes[].id, actMarkers, sceneGroups, sceneLinks) ремапятся
+describe('projectService.importProjectFromJSON — ремап связей (T-96)', () => {
+  it('id сцен и все ссылки на них единообразно переведены на новые UUID', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    useScriptStore.setState({ scripts: [] })
+
+    const content = [
+      '<div data-type="scene-header" data-scene-id="old-1">1. ИНТ. ДОМ — ДЕНЬ.</div>',
+      '<div data-type="scene-action">Текст</div>',
+      '<div data-type="scene-header" data-scene-id="old-2">2. ЭКСТ. ЛЕС — НОЧЬ.</div>',
+      '<div data-type="scene-action">Текст</div>',
+    ].join('')
+
+    const json = JSON.stringify({
+      project: { name: 'Проект со связями', type: 'film' },
+      scripts: [{
+        title: 'Сценарий 1',
+        content,
+        scenes: [
+          { id: 'old-1', number: '1', type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', cast: [], pages: 1 },
+          { id: 'old-2', number: '2', type: 'ЭКСТ', location: 'ЛЕС', time: 'НОЧЬ', cast: [], pages: 1 },
+        ],
+        actMarkers: { act2: 'old-2' },
+        sceneGroups: [{ id: 'grp-1', name: 'Группа', color: '#fff', sceneIds: ['old-1', 'old-2'] }],
+        sceneLinks: [{ id: 'lnk-1', from: 'old-1', to: 'old-2', label: 'связь' }],
+      }],
+    })
+
+    const imported = await projectService.importProjectFromJSON(json)
+    const script = useScriptStore.getState().scripts.find((s) => s.projectId === imported.id)!
+    expect(script).toBeDefined()
+
+    // Старые id нигде не остались
+    expect(script.content).not.toContain('old-1')
+    expect(script.content).not.toContain('old-2')
+
+    // Каждый scene.id соответствует data-scene-id своей шапки в контенте
+    const headerIds = [...(script.content || '').matchAll(/data-scene-id="([^"]+)"/g)].map((m) => m[1])
+    expect(headerIds).toHaveLength(2)
+    expect(script.scenes!.map((s) => s.id)).toEqual(headerIds)
+
+    // Ссылки ремаплены на те же новые id
+    const [new1, new2] = headerIds
+    expect(script.actMarkers).toEqual({ act2: new2 })
+    expect(script.sceneGroups![0].sceneIds).toEqual([new1, new2])
+    expect(script.sceneLinks![0].from).toBe(new1)
+    expect(script.sceneLinks![0].to).toBe(new2)
+
+    // Идентичность внутренних сущностей тоже регенерирована
+    expect(script.sceneGroups![0].id).not.toBe('grp-1')
+    expect(script.sceneLinks![0].id).not.toBe('lnk-1')
+
+    useScriptStore.setState({ scripts: [] })
+  })
+})

@@ -1122,7 +1122,7 @@ function ScenesListModal({ title, color, sceneList, isDark, onClose, onSceneClic
             const ep = s._episode ?? 1
             const epScenes = sceneList.filter((x) => (x._episode ?? 1) === ep)
             const epIdx = epScenes.findIndex((x) => x.id === s.id)
-            const html = contentsByEpisode[ep] ? extractSceneHtml(contentsByEpisode[ep], s.number, Math.max(0, epIdx)) : ''
+            const html = contentsByEpisode[ep] ? extractSceneHtml(contentsByEpisode[ep], s.number, Math.max(0, epIdx), s.id) : ''
             return (
               <div key={s.id} className={openId === s.id ? 'flex-1 flex flex-col min-h-[400px]' : ''}>
                 <button

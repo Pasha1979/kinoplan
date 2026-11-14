@@ -1,24 +1,48 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 
 const FREQUENCY_KEY = 'smartType_frequency'
 
-function loadFrequencies(): Record<string, number> {
+// T-100: частоты подсказок — per-project, глобальный ключ = seed-фоллбэк
+const freqStorageKey = (projectId?: string) =>
+  projectId ? `${FREQUENCY_KEY}:${projectId}` : FREQUENCY_KEY
+
+function loadFrequencies(projectId?: string): Record<string, number> {
   try {
-    const raw = localStorage.getItem(FREQUENCY_KEY)
-    return raw ? JSON.parse(raw) : {}
+    const raw = localStorage.getItem(freqStorageKey(projectId))
+    if (raw) return JSON.parse(raw)
+    // Проектный ключ ещё не создан — стартуем от глобального (старый формат)
+    if (projectId) {
+      const global = localStorage.getItem(FREQUENCY_KEY)
+      return global ? JSON.parse(global) : {}
+    }
+    return {}
   } catch {
     return {}
   }
 }
 
-function saveFrequencies(freq: Record<string, number>) {
+function saveFrequencies(freq: Record<string, number>, projectId?: string) {
   try {
-    localStorage.setItem(FREQUENCY_KEY, JSON.stringify(freq))
+    localStorage.setItem(freqStorageKey(projectId), JSON.stringify(freq))
   } catch { /* ignore */ }
 }
 
 function getFreqKey(type: string, text: string): string {
   return `${type}:${text.toUpperCase()}`
+}
+
+// T-106: карта QWERTY → ЙЦУКЕН — автоисправление раскладки (BYN→ИНТ, LTRF→ДЕНЬ)
+const LAT_TO_CYR: Record<string, string> = {
+  q: 'й', w: 'ц', e: 'у', r: 'к', t: 'е', y: 'н', u: 'г', i: 'ш', o: 'щ', p: 'з',
+  '[': 'х', ']': 'ъ', a: 'ф', s: 'ы', d: 'в', f: 'а', g: 'п', h: 'р', j: 'о',
+  k: 'л', l: 'д', ';': 'ж', "'": 'э', z: 'я', x: 'ч', c: 'с', v: 'м', b: 'и',
+  n: 'т', m: 'ь', ',': 'б', '.': 'ю', '`': 'ё',
+}
+
+/** Если слово набрано в латинской раскладке — возвращает кириллический вариант */
+function translitLayout(word: string): string {
+  if (!/[a-z;'\[\],.`]/i.test(word)) return word
+  return word.split('').map((ch) => LAT_TO_CYR[ch.toLowerCase()] ?? ch).join('')
 }
 
 export interface SmartTypeSuggestion {
@@ -37,6 +61,8 @@ export interface UseSmartTypeOptions {
   times?: string[]
   minMatchLength?: number
   maxSuggestions?: number
+  /** T-100: частоты хранятся per-project (smartType_frequency:{id}) */
+  projectId?: string
 }
 
 export function useSmartType(options: UseSmartTypeOptions) {
@@ -47,6 +73,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     times: initialTimes = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
     minMatchLength = 2,
     maxSuggestions = 5,
+    projectId,
   } = options
 
   const [suggestions, setSuggestions] = useState<SmartTypeSuggestion[]>([])
@@ -59,7 +86,15 @@ export function useSmartType(options: UseSmartTypeOptions) {
   const [locations, setLocations] = useState(initialLocations)
   const [props, setProps] = useState(initialProps)
   const [times, setTimes] = useState(initialTimes)
-  const [frequencies, setFrequencies] = useState<Record<string, number>>(loadFrequencies)
+  const [frequencies, setFrequencies] = useState<Record<string, number>>(() => loadFrequencies(projectId))
+
+  // Смена проекта → перечитываем его частоты (изолированные пространства)
+  const projectIdRef = useRef(projectId)
+  useEffect(() => {
+    if (projectIdRef.current === projectId) return
+    projectIdRef.current = projectId
+    setFrequencies(loadFrequencies(projectId))
+  }, [projectId])
 
   const updateLists = useCallback((lists: {
     characters?: string[]
@@ -136,8 +171,8 @@ export function useSmartType(options: UseSmartTypeOptions) {
   // Получить текущее слово перед курсором
   const getCurrentWord = useCallback((text: string, cursorPos: number): string => {
     const beforeCursor = text.substring(0, cursorPos)
-    // Находим последнее слово — берем текст после последнего пробела/переноса строки
-    const match = beforeCursor.match(/[^\s]*$/)
+    // T-100: [,;] — тоже границы слова (список действующих лиц «ИВАН, ПЕТР»)
+    const match = beforeCursor.match(/[^\s,;]*$/)
     return match ? match[0] : ''
   }, [])
 
@@ -174,19 +209,32 @@ export function useSmartType(options: UseSmartTypeOptions) {
       )
     }
 
-    // Фильтруем по совпадению
-    const filtered = relevantSuggestions
-      .filter(s => {
-        const sug = s.text.toLowerCase()
-        const word = currentWord.toLowerCase()
-        if (sug.startsWith(word) && sug !== word) return true
+    // Фильтруем по совпадению — проверяем и кириллический вариант слова
+    // (T-106: юзер набрал в латинской раскладке — BYN матчит ИНТ)
+    const wordBase = currentWord.toLowerCase()
+    const wordAlt = translitLayout(wordBase)
+    const matchWord = (sug: string, word: string, type: string, allowExact = false): boolean => {
+      // allowExact: для alt-варианта раскладки точное совпадение валидно —
+      // набранная латиница всё равно заменяется кириллической подсказкой
+      if (sug.startsWith(word) && (allowExact || sug !== word)) return true
+      if (type === 'location') {
+        // Нечёткий поиск: любой сегмент «ДОМ.КУХНЯ» — КУХ→кухня
+        if (sug.split('.').some((seg) => seg.startsWith(word) && seg !== word)) return true
         // Подлокации: «ДОМ ДЕДА.С» → сравниваем последний сегмент после точки
-        if (s.type === 'location' && word.includes('.')) {
+        if (word.includes('.')) {
           const wSeg = word.split('.').pop()!
           const sSeg = sug.split('.').pop()!
           return wSeg.length > 0 && sSeg.startsWith(wSeg) && sSeg !== wSeg
         }
-        return false
+      }
+      return false
+    }
+
+    const filtered = relevantSuggestions
+      .filter(s => {
+        const sug = s.text.toLowerCase()
+        if (matchWord(sug, wordBase, s.type)) return true
+        return wordAlt !== wordBase && matchWord(sug, wordAlt, s.type, true)
       })
       .sort((a, b) => b.frequency - a.frequency)
       .slice(0, maxSuggestions)
@@ -249,7 +297,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     const key = getFreqKey(suggestion.type, suggestion.text)
     const next = { ...frequencies, [key]: (frequencies[key] || 0) + 1 }
     setFrequencies(next)
-    saveFrequencies(next)
+    saveFrequencies(next, projectIdRef.current)
   }, [frequencies])
 
   return {

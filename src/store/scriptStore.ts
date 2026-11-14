@@ -162,6 +162,9 @@ interface ScriptStore {
   /** T-35: ленивая подгрузка контента из отдельного документа script-content:{id} */
   ensureContentLoaded: (scriptId: string) => Promise<void>
 
+  /** T-97: ошибки загрузки контента по scriptId — гейт «Повторить» в UI */
+  contentErrors: Record<string, string>
+
   // Подсказки-placeholder в пустых блоках
   showPlaceholders: boolean
   toggleShowPlaceholders: () => void
@@ -176,6 +179,7 @@ export const useScriptStore = create<ScriptStore>()(
       drafts: [],
       notes: [],
       formatLocked: false,
+      contentErrors: {},
       showPlaceholders: true,
       
       // Script CRUD
@@ -341,13 +345,26 @@ export const useScriptStore = create<ScriptStore>()(
       ensureContentLoaded: async (scriptId) => {
         const existing = get().scripts.find((x) => x.id === scriptId)
         if (!existing || existing.content !== undefined) return
-        const html = await loadScriptContent(scriptId)
+        let html: string | null
+        try {
+          html = await loadScriptContent(scriptId)
+        } catch (e) {
+          // T-97: сбой чтения — НЕ подставляем пустой контент (иначе
+          // пустой редактор перезапишет реальный текст), а помечаем ошибку
+          const message = e instanceof Error ? e.message : 'Ошибка чтения хранилища'
+          set((state) => ({ contentErrors: { ...state.contentErrors, [scriptId]: message } }))
+          return
+        }
         if (get().scripts.find((x) => x.id === scriptId)?.content !== undefined) return
-        set((state) => ({
-          scripts: state.scripts.map((x) =>
-            x.id === scriptId ? { ...x, content: html ?? '' } : x
-          ),
-        }))
+        set((state) => {
+          const { [scriptId]: _cleared, ...restErrors } = state.contentErrors
+          return {
+            contentErrors: restErrors,
+            scripts: state.scripts.map((x) =>
+              x.id === scriptId ? { ...x, content: html ?? '' } : x
+            ),
+          }
+        })
       },
     }),
     {
@@ -356,6 +373,8 @@ export const useScriptStore = create<ScriptStore>()(
       // T-35: контент не сериализуем в общий документ — он в script-content:{id}
       partialize: (state) => ({
         ...state,
+        // T-97: ошибки загрузки — транзиентное состояние, не персистим
+        contentErrors: {},
         scripts: state.scripts.map((script) => {
           const { content: _content, ...rest } = script
           return rest

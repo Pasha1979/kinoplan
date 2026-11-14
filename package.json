@@ -26,6 +26,7 @@
     "events": "^3.3.0",
     "immer": "^11.1.8",
     "lucide-react": "^1.16.0",
+    "mammoth": "^1.13.0",
     "pouchdb-adapter-memory": "^9.0.0",
     "pouchdb-browser": "^9.0.0",
     "react": "^19.2.6",

@@ -125,7 +125,23 @@ export function saveScriptContent(id: string, html: string): void {
 }
 
 export async function loadScriptContent(id: string): Promise<string | null> {
-  const raw = await pouchStorage.getItem(scriptContentKey(id))
+  const name = scriptContentKey(id)
+  // Read-after-write: незаписанные изменения важнее диска
+  const pending = pendingWrites.get(name)
+  const raw = pending !== undefined ? pending : await (async () => {
+    try {
+      const doc = (await (await getDb()).get(name)) as StoreDoc
+      return doc.value
+    } catch (e) {
+      // 404 = документа нет (новый/пустой сценарий) — не ошибка.
+      // T-97: остальные ошибки БД ПРОБРАСЫВАЕМ — иначе сбой чтения
+      // молча превращался в пустой редактор и затирал контент
+      if (e && typeof e === 'object' && (e as { status?: number }).status === 404) {
+        return localStorage.getItem(name)
+      }
+      throw e
+    }
+  })()
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as { html?: unknown }

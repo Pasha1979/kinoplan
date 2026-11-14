@@ -2,6 +2,8 @@ export interface FormatBlock {
   id: string
   type: string
   content: string
+  /** T-103: UUID сцены из data-scene-id (только у шапок) — устойчивый маппинг блоков */
+  sceneId?: string
 }
 
 function contentHash(s: string): string {
@@ -48,6 +50,7 @@ export function extractBlocksFromHtml(html: string): FormatBlock[] {
         id: sceneId ? `${type}-${sceneId}` : `${type}-${contentHash(content) || index}`,
         type,
         content,
+        sceneId: sceneId ?? undefined,
       })
     })
 

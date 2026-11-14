@@ -26,8 +26,11 @@ export interface ParsedScene {
 
 export interface Block {
   id: string
-  type: 'scene_header' | 'action' | 'character' | 'dialog' | 'parenthetical' | 'transition'
+  type: 'scene_header' | 'action' | 'character' | 'dialog' | 'parenthetical' | 'transition' | string
   content: string
+  /** T-108: стабильный UUID сцены-владельца (data-scene-id) — идентичность
+   * сцены для элементов разбивки; без него fallback на id блока */
+  sceneId?: string
 }
 
 /**
@@ -210,7 +213,9 @@ export function parseScript(blocks: Block[]): ParsedScene[] {
         }
         
         currentScene = {
-          id: block.id,
+          // T-108: UUID сцены (data-scene-id) — совпадает с scenes[].id,
+          // чтобы элементы разбивки ссылались на те же сцены, что и ручные теги
+          id: block.sceneId ?? block.id,
           number: header.number,
           type: header.type,
           location: header.location,
@@ -227,15 +232,15 @@ export function parseScript(blocks: Block[]): ParsedScene[] {
             id: locationKey,
             category: 'locations',
             name: header.location,
-            sceneIds: [block.id],
-            occurrences: [{ sceneId: block.id, blockId: block.id, context: block.content }]
+            sceneIds: [currentScene.id],
+            occurrences: [{ sceneId: currentScene.id, blockId: block.id, context: block.content }]
           }
           elementsMap.set(locationKey, locationElement)
         } else {
           const existing = elementsMap.get(locationKey)!
-          if (!existing.sceneIds.includes(block.id)) {
-            existing.sceneIds.push(block.id)
-            existing.occurrences.push({ sceneId: block.id, blockId: block.id, context: block.content })
+          if (!existing.sceneIds.includes(currentScene.id)) {
+            existing.sceneIds.push(currentScene.id)
+            existing.occurrences.push({ sceneId: currentScene.id, blockId: block.id, context: block.content })
           }
         }
       }
@@ -321,4 +326,60 @@ export function getUniqueElements(scenes: ParsedScene[]): ParsedElement[] {
   })
   
   return Array.from(elementsMap.values())
+}
+
+// ── T-108: слияние авто-элементов с ручными тегами сцен ─────────────────
+
+/** Ручной тег, хранящийся на сцене (Scene.breakdownElements) */
+export interface SceneTag {
+  id: string
+  category: BreakdownCategory
+  name: string
+  notes?: string
+}
+
+export interface MergedBreakdownElement extends ParsedElement {
+  /** Ссылки на ручные теги-источники — для удаления через сцену-владельца */
+  manualRefs: Array<{ sceneId: string; elementId: string }>
+}
+
+/** Ручные теги всех сцен → плоский список элементов со ссылками-владельцами */
+export function flattenSceneTags(
+  scenes: Array<{ id: string; breakdownElements?: SceneTag[] }>,
+): MergedBreakdownElement[] {
+  return scenes.flatMap((s) =>
+    (s.breakdownElements || []).map((e) => ({
+      id: e.id,
+      category: e.category,
+      name: e.name,
+      notes: e.notes,
+      sceneIds: [s.id],
+      occurrences: [],
+      manualRefs: [{ sceneId: s.id, elementId: e.id }],
+    })),
+  )
+}
+
+/**
+ * Склеивает авто-элементы парсера и ручные теги по ключу «категория|имя»:
+ * один элемент «ИВАН» — и из текста, и от ручного тега — показывается один раз.
+ */
+export function mergeBreakdownElements(
+  parsed: ParsedElement[],
+  manual: MergedBreakdownElement[],
+): MergedBreakdownElement[] {
+  const map = new Map<string, MergedBreakdownElement>()
+  for (const el of [...parsed, ...manual]) {
+    const key = `${el.category}|${el.name}`
+    const refs = (el as MergedBreakdownElement).manualRefs ?? []
+    const cur = map.get(key)
+    if (cur) {
+      cur.sceneIds = [...new Set([...cur.sceneIds, ...el.sceneIds])]
+      cur.manualRefs.push(...refs)
+      if (!cur.notes && el.notes) cur.notes = el.notes
+    } else {
+      map.set(key, { ...el, sceneIds: [...el.sceneIds], manualRefs: [...refs] })
+    }
+  }
+  return [...map.values()]
 }

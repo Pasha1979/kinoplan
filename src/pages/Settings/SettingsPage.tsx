@@ -1,5 +1,10 @@
-import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight, Download } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
+import { useNormalizedProjectStore } from '../../store/useProjectStore'
+import { useToastStore } from '../../store/toastStore'
+import { projectService } from '../../services/projectService'
+import { browserFS } from '../../adapters/BrowserFS'
 
 function ComingSoonRow({ icon, label, isDark }: { icon: React.ReactNode; label: string; isDark: boolean }) {
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
@@ -25,7 +30,27 @@ function ComingSoonRow({ icon, label, isDark }: { icon: React.ReactNode; label: 
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useUiStore()
+  const { currentProjectId, projects } = useNormalizedProjectStore()
+  const showToast = useToastStore((s) => s.showToast)
+  const [isExporting, setIsExporting] = useState(false)
   const isDark = theme === 'dark'
+  const currentProject = currentProjectId ? projects[currentProjectId] : null
+
+  // T-104: резервное копирование — реальный экспорт текущего проекта в JSON
+  const handleBackup = async () => {
+    if (!currentProject || isExporting) return
+    setIsExporting(true)
+    try {
+      const json = await projectService.exportProjectToJSON(currentProject.id)
+      const filename = `${currentProject.name.replace(/[^a-zа-яё0-9]/gi, '_')}_backup.json`
+      await browserFS.downloadFile(filename, json, 'application/json')
+      showToast('Резервная копия сохранена', 'success')
+    } catch {
+      showToast('Не удалось создать резервную копию', 'error')
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   const bg = isDark ? '#0f0f20' : '#f5f7fa'
   const cardBg = isDark ? '#1a1a35' : '#ffffff'
@@ -107,7 +132,32 @@ export default function SettingsPage() {
         <div className="rounded-2xl overflow-hidden mb-6"
           style={{ background: cardBg, border: `1px solid ${border}` }}
         >
-          <ComingSoonRow icon={<Database size={18} />} label="Резервное копирование" isDark={isDark} />
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: `1px solid ${border}` }}
+          >
+            <div className="flex items-center gap-3">
+              <Database size={18} style={{ color: textSecondary }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: textPrimary }}>Резервное копирование</p>
+                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>
+                  {currentProject ? `Экспорт «${currentProject.name}» в JSON` : 'Нет открытого проекта'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleBackup}
+              disabled={!currentProject || isExporting}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+              style={{
+                background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
+                color: isDark ? '#818cf8' : '#6366f1',
+                border: `1px solid ${isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)'}`,
+              }}
+            >
+              <Download size={15} />
+              {isExporting ? 'Экспорт…' : 'Скачать'}
+            </button>
+          </div>
           <ComingSoonRow icon={<Lock size={18} />} label="Конфиденциальность" isDark={isDark} />
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">

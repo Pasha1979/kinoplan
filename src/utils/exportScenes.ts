@@ -1,6 +1,9 @@
 import type { Scene, Script } from '../store/scriptStore'
 import { convertToWordCompatibleHtml } from './wordExport'
 import { extractSceneHtml } from '../pages/Script/components/SceneEditModal'
+import { PageCounter } from '../services/pageCounter'
+import { SCRIPT_LAYOUT } from '../constants/scriptLayout'
+import { CONTINUED_MARKER_TYPES } from '../services/pagination'
 
 /**
  * T-61/T-63: собирает Word-совместимый HTML из выбранных сцен сценария.
@@ -15,19 +18,107 @@ export function buildScenesExportHtml(
   const format = (script.format as 'russian' | 'hollywood') || 'russian'
   const parts = scenes
     .map((s, idx) => (selectedIds === null || selectedIds.has(s.id)
-      ? extractSceneHtml(content, s.number, idx)
+      ? extractSceneHtml(content, s.number, idx, s.id)
       : ''))
     .filter(Boolean)
   return convertToWordCompatibleHtml(parts.join(''), format)
 }
 
-/** Оборачивает тело в документ, который Word открывает как .doc */
+/** Оборачивает тело в документ, который Word открывает как .doc.
+ *  @page фиксирует геометрию A4/КИТ — без неё Word пагинирует своими дефолтами (T-92). */
 export function wrapAsWordDoc(bodyHtml: string, title: string): string {
   return [
     '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">',
-    `<head><meta charset="utf-8"><title>${title}</title></head>`,
+    `<head><meta charset="utf-8"><title>${title}</title>`,
+    '<style>@page { size: A4; margin: 2cm 2cm 2cm 3cm; }</style></head>',
     `<body>${bodyHtml}</body></html>`,
   ].join('')
+}
+
+let printPageCounter: PageCounter | null = null
+
+/**
+ * T-16: вставляет в печатный HTML принудительные разрывы страниц и маркеры
+ * «(ПРОДОЛЖЕНИЕ)» — по расчёту PageCounter (та же модель SCRIPT_LAYOUT).
+ * Маркер — артефакт пагинации: в сохранённый контент не попадает.
+ * В .doc НЕ инжектится — Word пагинирует сам, маркер лёг бы в случайное место.
+ */
+export function injectPrintPageBreaks(
+  html: string,
+  format: 'russian' | 'hollywood' = 'russian'
+): string {
+  if (typeof document === 'undefined') return html
+  try {
+    printPageCounter ??= new PageCounter()
+    const { breaks, blocks } = printPageCounter.calculatePagesWithBreaks(html, format)
+    if (breaks.length <= 1) return html
+
+    const wrapper = document.createElement('div')
+    wrapper.innerHTML = html
+    // body — это один div-обёртка из convertToWordCompatibleHtml
+    const root = (wrapper.children.length === 1 ? wrapper.children[0] : wrapper) as HTMLElement
+    const children = Array.from(root.children) as HTMLElement[]
+
+    const splitsByIndex = new Map<number, number[]>()
+    for (const b of breaks) {
+      if (b.page === 1) continue
+      if (b.splitOffsetPx !== undefined) {
+        const arr = splitsByIndex.get(b.startIndex) ?? []
+        arr.push(b.splitOffsetPx)
+        splitsByIndex.set(b.startIndex, arr)
+      } else {
+        const el = children[b.startIndex]
+        // setAttribute, не CSSOM: jsdom/cssstyle не знает page-break-before
+        if (el) el.setAttribute('style', `${el.getAttribute('style') || ''}; page-break-before: always;`)
+      }
+    }
+
+    splitsByIndex.forEach((offsets, index) => {
+      const el = children[index]
+      const heightPx = blocks[index]?.heightPx
+      if (!el || !heightPx) return
+      const isContinued = CONTINUED_MARKER_TYPES.has(el.getAttribute('data-type') ?? '')
+      const baseStyle = el.getAttribute('style') || ''
+
+      let cur = el
+      let consumedPx = 0
+      for (const offsetPx of offsets.slice().sort((a, b) => a - b)) {
+        const text = cur.textContent || ''
+        if (!text.trim()) break
+        // Оценка позиции символа: доля высоты блока ≈ доля текста, щёлчок по пробелу
+        const frac = Math.min(1, Math.max(0, (offsetPx - consumedPx) / Math.max(1, heightPx - consumedPx)))
+        let cut = text.lastIndexOf(' ', Math.round(text.length * frac))
+        if (cut <= 0) cut = Math.max(1, Math.round(text.length * frac))
+
+        const rest = cur.cloneNode(false) as HTMLElement
+        rest.textContent = text.slice(cut).trimStart()
+        cur.textContent = text.slice(0, cut)
+
+        if (isContinued) {
+          const marker = document.createElement('div')
+          marker.setAttribute('data-print-contd', '')
+          marker.setAttribute(
+            'style',
+            `margin-left: ${SCRIPT_LAYOUT[format].dialog.leftIndent}; page-break-before: always;`
+          )
+          marker.textContent = format === 'hollywood' ? "(CONT'D)" : '(ПРОДОЛЖЕНИЕ)'
+          cur.after(marker)
+          rest.setAttribute('style', `${baseStyle}; margin-top: 0`)
+          marker.after(rest)
+        } else {
+          rest.setAttribute('style', `${baseStyle}; margin-top: 0; page-break-before: always;`)
+          cur.after(rest)
+        }
+        cur = rest
+        consumedPx = offsetPx
+      }
+    })
+
+    return wrapper.innerHTML
+  } catch (e) {
+    console.warn('injectPrintPageBreaks failed:', e)
+    return html
+  }
 }
 
 /**
@@ -39,7 +130,10 @@ export function buildPrintableHtml(
   scenes: Scene[],
   selectedIds: ReadonlySet<string> | null
 ): string {
-  const body = buildScenesExportHtml(script, scenes, selectedIds)
+  const body = injectPrintPageBreaks(
+    buildScenesExportHtml(script, scenes, selectedIds),
+    (script.format as 'russian' | 'hollywood') || 'russian'
+  )
   const tp = script.titlePage
   const titleBlock = tp?.print
     ? `<div class="title-page">

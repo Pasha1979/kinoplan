@@ -7,16 +7,19 @@ import { SCRIPT_LAYOUT, type ScriptLayout } from './scriptLayout'
  */
 
 const upper = 'font-weight: 600; text-transform: uppercase'
+// Word игнорирует line-height на div-обёртке — только на самом абзаце (T-92).
+// 18pt = 12pt × 1.5 = наши 24px: счётчик не меняется, .doc чтит интервал.
+const lh = 'line-height: 18pt'
 
 function styles(l: ScriptLayout): Record<string, string> {
   return {
-    'scene-header': `margin-top: ${l.header.marginTop}; margin-bottom: ${l.header.marginBottom}; ${upper}; margin-left: 0`,
-    'scene-cast': `margin-top: ${l.cast.marginTop}; margin-bottom: ${l.cast.marginBottom}; ${upper}; margin-left: 0`,
-    'scene-action': `margin-top: ${l.action.marginTop}; margin-bottom: ${l.action.marginBottom}; margin-left: 0`,
-    'scene-character': `margin-top: ${l.character.marginTop}; margin-bottom: ${l.character.marginBottom}; margin-left: ${l.character.characterIndent}; ${upper}`,
-    'scene-dialog': `margin-top: ${l.dialog.marginTop}; margin-bottom: ${l.dialog.marginBottom}; margin-left: ${l.dialog.leftIndent}; margin-right: ${l.dialog.rightIndent}`,
-    'scene-parenthetical': `margin-top: ${l.parenthetical.marginTop}; margin-bottom: ${l.parenthetical.marginBottom}; margin-left: ${l.parenthetical.leftIndent}; margin-right: ${l.parenthetical.rightIndent}`,
-    'scene-transition': `margin-top: ${l.transition.marginTop}; margin-bottom: ${l.transition.marginBottom}; text-align: right; ${upper}; margin-left: 0`,
+    'scene-header': `${lh}; margin-top: ${l.header.marginTop}; margin-bottom: ${l.header.marginBottom}; ${upper}; margin-left: 0`,
+    'scene-cast': `${lh}; margin-top: ${l.cast.marginTop}; margin-bottom: ${l.cast.marginBottom}; ${upper}; margin-left: 0`,
+    'scene-action': `${lh}; margin-top: ${l.action.marginTop}; margin-bottom: ${l.action.marginBottom}; margin-left: 0`,
+    'scene-character': `${lh}; margin-top: ${l.character.marginTop}; margin-bottom: ${l.character.marginBottom}; margin-left: ${l.character.characterIndent}; ${upper}`,
+    'scene-dialog': `${lh}; margin-top: ${l.dialog.marginTop}; margin-bottom: ${l.dialog.marginBottom}; margin-left: ${l.dialog.leftIndent}; margin-right: ${l.dialog.rightIndent}`,
+    'scene-parenthetical': `${lh}; margin-top: ${l.parenthetical.marginTop}; margin-bottom: ${l.parenthetical.marginBottom}; margin-left: ${l.parenthetical.leftIndent}; margin-right: ${l.parenthetical.rightIndent}`,
+    'scene-transition': `${lh}; margin-top: ${l.transition.marginTop}; margin-bottom: ${l.transition.marginBottom}; text-align: right; ${upper}; margin-left: 0`,
   }
 }
 
