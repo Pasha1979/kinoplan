@@ -23,10 +23,29 @@ const norm=p=>p.replace(/\\/g,'/');
   const t=readFileSync(p,'utf8');
   if(isStub(t,f))stubs.push(norm(p));
   for(const [i,l] of t.split('\n').entries())if(/TODO|FIXME|HACK/.test(l))todos.push(`${norm(p)}:${i+1}`)}}})('src');
+// ── счётчики реестров ──
+const EX='_ai_workspace/_extracted';
+const rows=r=>readFileSync(`${EX}/${r}.md`,'utf8').split('\n').filter(l=>/^\|\s*[A-Z]-\d+/.test(l));
+const cell=(l,i)=>l.split('|').map(s=>s.trim())[i]||'';
+const tasks=rows('tasks');
+const tStat=s=>s.startsWith('✅')?'done':s.startsWith('🔄')?'wip':s.startsWith('📅')?'plan':s.startsWith('⏸️')?'hold':'other';
+const tc={done:0,wip:0,plan:0,hold:0,other:0};for(const l of tasks)tc[tStat(cell(l,7))]++;
+const nIdeas=rows('ideas').length,nDec=rows('decisions').length;
+const openQ=rows('questions').filter(l=>!cell(l,7).startsWith('✅'));
+// ── СЕЙЧАС из плана ──
+const plan=readFileSync('_ai_workspace/v4/01_ПЛАН.md','utf8');
+const now=(plan.match(/## 🔴 СЕЙЧАС[\s\S]*?(?=\n## (?!🔴)|$)/)||['—'])[0].replace(/^## 🔴 /,'## ').trim();
 const date=new Date().toISOString().slice(0,10);
 writeFileSync('_ai_workspace/v4/02_СТАТУС.md',`# 02 · СТАТУС (автогенерируемый — НЕ редактировать руками)
 > Сгенерировано scripts/brain/gen-status.mjs · ${date}
 
+## Реестры
+- Задачи: ${tasks.length} — ✅ ${tc.done} · 🔄 ${tc.wip} · 📅 ${tc.plan} · ⏸️ ${tc.hold}${tc.other?` · прочие ${tc.other}`:''}
+- Идеи: ${nIdeas} · Решения: ${nDec} · Открытые вопросы: ${openQ.length}
+
+${now}
+
+${openQ.length?`## Открытые вопросы\n${openQ.map(l=>`- **${cell(l,1).replace(/\s*\(.*\)/,'')}**: ${cell(l,3)}`).join('\n')}\n`:''}
 ## Git
 - Ветка: \`${branch}\` · незакоммиченных файлов: ${dirty}
 \`\`\`
@@ -42,4 +61,4 @@ ${todos.map(s=>`- \`${s}\``).join('\n')||'— нет'}
 ## Готовность по модулям
 См. v4/01_ПЛАН.md · реестр заглушек: _extracted/tasks.md T-33
 `);
-console.log(`✅ 02_СТАТУС: ветка ${branch}, заглушек ${stubs.length}, TODO ${todos.length}`);
+console.log(`✅ 02_СТАТУС: ветка ${branch}, задач ${tasks.length} (✅${tc.done}/🔄${tc.wip}/📅${tc.plan}/⏸️${tc.hold}), вопросов ${openQ.length}, заглушек ${stubs.length}, TODO ${todos.length}`);
