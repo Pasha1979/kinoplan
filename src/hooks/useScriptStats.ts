@@ -254,6 +254,10 @@ export function useScriptStats(
       const sceneByNumber = new Map(tempoScenes.map((s) => [normNum(s.number), s]))
       const numRe = /^([\dА-ЯA-Zа-я\-]+)\./
       const buckets = new Map<string, { dlg: number; act: number }>()
+      // Позиционный fallback — только для чистого легаси (ни одного
+      // data-scene-id в документе). В смешанном документе шапка-сирота
+      // иначе молча приписывалась бы следующей реальной сцене.
+      const hasSceneIds = blocks.some((b) => !!b.sceneId)
 
       let seqIdx = -1
       let current: Scene | null = null
@@ -265,7 +269,7 @@ export function useScriptStats(
             const m = b.content.trim().match(numRe)
             if (m) current = sceneByNumber.get(normNum(m[1])) ?? null
           }
-          if (!current) current = tempoScenes[seqIdx] ?? null
+          if (!current && !hasSceneIds) current = tempoScenes[seqIdx] ?? null
         } else if (current && b.type === 'dialog') {
           const bk = buckets.get(current.id) ?? { dlg: 0, act: 0 }
           bk.dlg += b.content.length

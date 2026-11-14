@@ -36,6 +36,41 @@ describe('paginateBlocks — модель marginTop-only (T-94)', () => {
     expect(totalHeightPx).toBe(24 + 48 + 24) // height1 + gap(48) + height2
   })
 
+  it('граница считается один раз: marginTop тоже не дублирует gap', () => {
+    // Обратное направление: prevBottom=24, curTop=48 → gap=48, а не 72
+    const blocks: MeasuredBlock[] = [
+      { heightPx: 24, marginTopPx: 0, marginBottomPx: 24, dataType: 'scene-action' },
+      { heightPx: 24, marginTopPx: 48, marginBottomPx: 0, dataType: 'scene-action' },
+    ]
+    const { totalHeightPx } = paginateBlocks(blocks, PAGE, LINE)
+    expect(totalHeightPx).toBe(24 + 48 + 24)
+  })
+
+  it('marginBottom никогда не суммируется отдельно от gap', () => {
+    // Агрессивный кейс: большие marginBottom у КАЖДОГО блока — общая высота
+    // = высоты + по одной границе на стык, а не высоты + top + bottom
+    const blocks: MeasuredBlock[] = [
+      { heightPx: 100, marginTopPx: 10, marginBottomPx: 200, dataType: 'scene-action' },
+      { heightPx: 100, marginTopPx: 30, marginBottomPx: 200, dataType: 'scene-action' },
+      { heightPx: 100, marginTopPx: 40, marginBottomPx: 200, dataType: 'scene-action' },
+    ]
+    const { totalHeightPx } = paginateBlocks(blocks, PAGE * 10, LINE)
+    // gaps: 10 + max(200,30)=200 + max(200,40)=200 → 410; heights 300 → 710
+    // Если бы marginBottom суммировался: было бы 10+200+30+200+40+300+200=980+
+    expect(totalHeightPx).toBe(300 + 10 + 200 + 200)
+  })
+
+  it('канон SSoT: marginBottom=0 → высота = блоки + marginTop, без скрытых добавок', () => {
+    const blocks: MeasuredBlock[] = [
+      { heightPx: 24, marginTopPx: 48, marginBottomPx: 0, dataType: 'scene-header' },
+      { heightPx: 48, marginTopPx: 24, marginBottomPx: 0, dataType: 'scene-action' },
+      { heightPx: 24, marginTopPx: 24, marginBottomPx: 0, dataType: 'scene-character' },
+      { heightPx: 48, marginTopPx: 0, marginBottomPx: 0, dataType: 'scene-dialog' },
+    ]
+    const { totalHeightPx } = paginateBlocks(blocks, PAGE, LINE)
+    expect(totalHeightPx).toBe(48 + 24 + 24 + 48 + 24 + 24 + 48)
+  })
+
   it('блок упирается в границу → текст делится через разрыв, как в Word', () => {
     // блоки по 500px: первый (0+500), второй — помещается 447px, остаток 53px на стр.2
     const blocks = [blk(500, 'scene-action', 0), blk(500)]

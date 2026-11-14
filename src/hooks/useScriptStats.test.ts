@@ -139,4 +139,38 @@ describe('темп по sceneId (T-103)', () => {
     expect(a.dialogChars).toBe(4)
     expect(c.actionChars).toBe(2)
   })
+
+  it('призрачная шапка (ни sceneId, ни номер) НЕ приписывает контент чужой сцене', () => {
+    // В смешанном документе (есть data-scene-id) позиционный fallback — ложный:
+    // «шапка-сирота» иначе молча садится на следующую реальную сцену.
+    const blocks = [
+      { type: 'scene_header', content: '1-1. ИНТ. ДОМ - ДЕНЬ', sceneId: 'a' },
+      { type: 'dialog', content: 'aaaa' },                     // 4 → сцена a
+      { type: 'scene_header', content: 'ЗАГОЛОВОК БЕЗ СЦЕНЫ' }, // ничем не резолвится
+      { type: 'dialog', content: 'сирота-не-чья-то' },         // НЕ должна попасть в b!
+      { type: 'scene_header', content: '1-2. ЭКСТ. УЛИЦА - НОЧЬ', sceneId: 'b' },
+      { type: 'dialog', content: 'bb' },                       // 2 → сцена b
+      { type: 'scene_header', content: '2-1. ИНТ. ДОМ - УТРО', sceneId: 'c' },
+      { type: 'action', content: 'ccc' },                      // 3 → сцена c
+    ]
+    const { result } = renderHook(() => useScriptStats(ALL, blocks, 6, false))
+    const tempo = result.current.tempo
+    expect(tempo.find(t => t.id === 'a')!.dialogChars).toBe(4)
+    // сцены ниже призрака — не сдвинулись и не унаследовали его контент
+    expect(tempo.find(t => t.id === 'b')!.dialogChars).toBe(2)
+    expect(tempo.find(t => t.id === 'c')!.actionChars).toBe(3)
+    // сиротский контент ни у кого не учтён
+    const total = tempo.reduce((s, t) => s + t.dialogChars + t.actionChars, 0)
+    expect(total).toBe(4 + 2 + 3)
+  })
+
+  it('чистое легаси (sceneId нет нигде) — позиционный fallback сохраняется', () => {
+    // В документе без единого data-scene-id порядок шапок = порядок сцен:
+    // призрак тут неотличим от реальной сцены — позиция единственный сигнал.
+    const { result } = renderHook(() => useScriptStats(ALL, BLOCKS, 6, false))
+    expect(result.current.tempo).toHaveLength(3)
+    expect(result.current.tempo[0].dialogChars).toBe(6)
+    expect(result.current.tempo[1].dialogChars).toBe(2)
+    expect(result.current.tempo[2].actionChars).toBe(4)
+  })
 })
