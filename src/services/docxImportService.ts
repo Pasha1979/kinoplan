@@ -32,13 +32,42 @@ export interface DocxImportResult {
   warnings: string[]
 }
 
+/** T-111: типизированная ошибка импорта — чтобы UI различал причины
+ *  и показывал дружелюбные сообщения вместо сырых ошибок mammoth */
+export type DocxImportErrorKind = 'not-docx' | 'corrupt'
+
+export class DocxImportError extends Error {
+  constructor(
+    public readonly kind: DocxImportErrorKind,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'DocxImportError'
+  }
+}
+
+/** .docx — это ZIP: файл обязан начинаться с сигнатуры PK\x03\x04 (или PK\x05\x06 у пустых) */
+function hasZipSignature(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 4) return false
+  const v = new DataView(buffer)
+  return v.getUint8(0) === 0x50 && v.getUint8(1) === 0x4b
+}
+
 export async function docxToScreenplayHtml(buffer: ArrayBuffer): Promise<DocxImportResult> {
+  if (!hasZipSignature(buffer)) {
+    throw new DocxImportError('not-docx', 'Файл не является документом Word (.docx)')
+  }
   // ленивый импорт: mammoth (~100КБ) нужен только при импорте файла
   const mammoth = (await import('mammoth')).default
   // browser-сборка mammoth ждёт {arrayBuffer}, node-сборка — {buffer|path}
   const input: { arrayBuffer: ArrayBuffer } & Record<string, unknown> = { arrayBuffer: buffer }
   if (typeof Buffer !== 'undefined') input.buffer = Buffer.from(buffer)
-  const result = await mammoth.convertToHtml(input)
+  let result: Awaited<ReturnType<typeof mammoth.convertToHtml>>
+  try {
+    result = await mammoth.convertToHtml(input)
+  } catch (e) {
+    throw new DocxImportError('corrupt', `Файл повреждён или не читается: ${(e as Error)?.message || 'ошибка структуры'}`)
+  }
   const text = mammothHtmlToText(result.value)
   const blocks = parseScreenplayText(text)
   return {
