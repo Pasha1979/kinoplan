@@ -174,20 +174,6 @@ body {
   width: 100%;
 }
 
-/* Scene Node: Container for entire scene (header + content) */
-.tiptap-editor div[data-type="scene"] {
-  position: relative;
-  margin: 2rem 0;
-  padding: 0.5rem 0;
-  border-left: 1px solid #e5e7eb;
-  border-radius: 0.25rem;
-  transition: border-color 0.2s;
-}
-
-.tiptap-editor div[data-type="scene"]:hover {
-  border-left-color: #6366f1;
-}
-
 /* Первый блок документа — без верхнего отступа (как в Word: нет пустой строки до начала) */
 .tiptap-editor > *:first-child {
   margin-top: 0 !important;

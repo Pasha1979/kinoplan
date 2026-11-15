@@ -8,7 +8,7 @@ import { useEffect, useCallback, useRef, useState } from 'react'
 import { DOMSerializer, Node as PMNode } from 'prosemirror-model'
 import type { ScriptFormat, TimingSystem } from '../store/scriptStore'
 import type { ProjectType } from '../types/project'
-import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../components/tiptap'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneParenthetical } from '../components/tiptap'
 import { DialogueHighlightExtension, pluginKey as dialogueHighlightPluginKey } from '../components/tiptap/DialogueHighlightExtension'
 import { PovFilterExtension, pluginKey as povFilterPluginKey } from '../components/tiptap/PovFilterExtension'
 import { useSmartType } from './useSmartType'
@@ -492,7 +492,6 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         horizontalRule: false,
         hardBreak: false,
       }),
-      SceneNode,
       SceneHeader,
       SceneCast,
       SceneAction,
