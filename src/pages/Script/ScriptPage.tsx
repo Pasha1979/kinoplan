@@ -17,6 +17,7 @@ import DevelopmentView from './components/DevelopmentView'
 import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
 import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor, setEditorContentNoHistory } from './components/sceneHtmlOps'
+import { mergeCharacters } from './components/charMerge'
 import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './components/boardUndo'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
@@ -246,7 +247,20 @@ export default function ScriptPage() {
     if (!entry) return
     isUndoingRef.current = true
     try {
-      if (entry.kind === 'meta') {
+      if (entry.kind === 'merge') {
+        // T-133: откат слияния — development + снапшоты скриптов
+        if (project?.id) {
+          useNormalizedProjectStore.getState().updateProject(project.id, {
+            development: entry.development as import('../../types/development').ProjectDevelopment,
+          })
+        }
+        entry.scripts.forEach((s) => {
+          updateScript(s.id, { content: s.content, scenes: s.scenes })
+          if (s.id === currentScript?.id && editorInstance && s.content) {
+            setEditorContentNoHistory(editorInstance, s.content)
+          }
+        })
+      } else if (entry.kind === 'meta') {
         updateScript(entry.scriptId, entry.patch)
       } else if (entry.kind === 'reorder') {
         // обратная перестановка — через тот же путь (стор + PM-транзакция)
@@ -344,6 +358,54 @@ export default function ScriptPage() {
     pushUndo({ kind: 'meta', scriptId: owner.id, patch: { actMarkers: owner.actMarkers } })
     updateScript(owner.id, { actMarkers: { ...(owner.actMarkers || {}), [key]: sceneId } })
   }, [episodeScripts, updateScript, pushUndo])
+
+  // T-133: слияние персонажей справочника (вариант B — имя заменяется и в тексте).
+  // undo: снапшот development + всех серий до слияния.
+  const handleMergeCharacters = useCallback((keepId: string, dropId: string) => {
+    if (!project) return
+    const dev = project.development ?? { characters: [], locations: [], synopsis: {} }
+    const keep = dev.characters.find((c) => c.id === keepId)
+    const drop = dev.characters.find((c) => c.id === dropId)
+    if (!keep || !drop) return
+
+    pushUndo({
+      kind: 'merge',
+      development: dev,
+      scripts: episodeScripts.map((ep) => ({ id: ep.id, content: ep.content, scenes: ep.scenes })),
+    })
+
+    const r = mergeCharacters({
+      characters: dev.characters,
+      folders: dev.folders,
+      keepId, dropId,
+      scenes: allScenes,
+      contents: episodeScripts.map((ep) => ep.content || ''),
+    })
+
+    episodeScripts.forEach((ep, i) => {
+      const patched = r.contentsPatched[i]
+      const scenePatches = (ep.scenes ?? [])
+        .filter((sc) => r.sceneCastPatches.has(sc.id))
+        .map((sc) => ({ ...sc, cast: r.sceneCastPatches.get(sc.id)! }))
+      const scenesPatch = scenePatches.length
+        ? (ep.scenes ?? []).map((sc) => scenePatches.find((p) => p.id === sc.id) ?? sc)
+        : undefined
+      if (patched !== (ep.content || '') || scenesPatch) {
+        updateScript(ep.id, {
+          ...(patched !== (ep.content || '') ? { content: patched } : {}),
+          ...(scenesPatch ? { scenes: scenesPatch } : {}),
+        })
+        if (ep.id === currentScript?.id && editorInstance && patched !== (ep.content || '')) {
+          setEditorContentNoHistory(editorInstance, patched)
+        }
+      }
+    })
+
+    useNormalizedProjectStore.getState().updateProject(project.id, {
+      development: { ...dev, characters: r.characters, folders: r.folders },
+    })
+    showToast(`«${drop.name}» → «${keep.name}» · замен в тексте: ${r.replacedInText}`, 'success')
+  }, [project, episodeScripts, allScenes, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
 
   // Группы карточек по сериям (фаза 5)
   // На одну серию может быть несколько скриптов (версии) — объединяем группы,
@@ -792,6 +854,7 @@ export default function ScriptPage() {
             contentsByEpisode={contentByEp}
             scriptFormat={scriptFormat}
             onSaveSceneHtml={handleSaveSceneHtml}
+            onMergeCharacters={handleMergeCharacters}
             onDevelopmentChange={(dev) => {
               if (project?.id) {
                 useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })

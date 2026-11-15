@@ -21,6 +21,8 @@ export type BoardUndoEntry =
   | { kind: 'meta'; scriptId: string; patch: BoardUndoMeta }
   | { kind: 'reorder'; scriptId: string; fromIndex: number; toIndex: number }
   | { kind: 'move'; fromScriptId: string; toScriptId: string; items: Array<{ sceneId: string; index: number }> }
+  /** T-133: слияние персонажей — снапшот development + затронутых скриптов */
+  | { kind: 'merge'; development: unknown; scripts: Array<{ id: string; content?: string; scenes?: Scene[] }> }
 
 interface ScriptLike {
   id: string

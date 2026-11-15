@@ -9,6 +9,7 @@ import type {
 } from '../../../types/development'
 import { extractSceneHtml } from './sceneHtmlOps'
 import { SceneTextEditor } from './SceneDetailModal'
+import { findCharDuplicates, type DupPair } from './charMerge'
 
 const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
   main:      { l: 'Главная',        c: '#fb923c' },
@@ -38,12 +39,14 @@ interface DevelopmentViewProps {
   contentsByEpisode?: Record<number, string>
   scriptFormat?: 'russian' | 'hollywood' | 'custom'
   onSaveSceneHtml?: (scene: Scene, html: string) => void
+  /** T-133: слияние персонажей — имя заменяется и в тексте сценария */
+  onMergeCharacters?: (keepId: string, dropId: string) => void
 }
 
 const uid = () => `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const emptyDev: ProjectDevelopment = { characters: [], locations: [], synopsis: {}, folders: [] }
 
-function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml }: DevelopmentViewProps) {
+function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters }: DevelopmentViewProps) {
   const [tab, setTab] = useState<'chars' | 'locs' | 'synopsis' | 'episodes'>('chars')
   const [editChar, setEditChar] = useState<DevCharacter | 'new' | null>(null)
   const [editLoc, setEditLoc] = useState<DevLocation | 'new' | null>(null)
@@ -57,6 +60,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [dragItemId, setDragItemId] = useState<string | null>(null)
   const [scenesList, setScenesList] = useState<{ title: string; color: string; sceneIds: string[] } | null>(null)
+  const [noScenesOnly, setNoScenesOnly] = useState(false)
+  const [dupPairs, setDupPairs] = useState<DupPair[] | null>(null)
 
   const dev = development ?? emptyDev
   const folders = dev.folders ?? []
@@ -161,6 +166,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
       .filter((c) => typeFilter === 'all' || c.type === typeFilter)
       .filter((c) => epFilter === 'all' || c.episodeTag === epFilter)
       .filter((c) => applyFolder(c.id, 'chars'))
+      .filter((c) => !noScenesOnly || charSceneCount(c) === 0)
     const by = {
       manual: (a: DevCharacter, b: DevCharacter) => (a.order ?? 999) - (b.order ?? 999),
       alpha: (a: DevCharacter, b: DevCharacter) => a.name.localeCompare(b.name, 'ru'),
@@ -347,6 +353,25 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                   title="Собрать персонажей из текста сценария">
                   <Sparkles size={12} /> Импорт из текста ({charNamesInText.size})
                 </button>
+                {onMergeCharacters && (
+                  <button onClick={() => setDupPairs(findCharDuplicates(dev.characters))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ color: textSecondary, border: `1px solid ${border}` }}
+                    title="Найти похожие имена и объединить">
+                    <Users size={12} /> Найти дубли
+                  </button>
+                )}
+                <button
+                  onClick={() => setNoScenesOnly(!noScenesOnly)}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-medium transition-all"
+                  style={{
+                    background: noScenesOnly ? 'rgba(249,115,22,0.2)' : 'transparent',
+                    color: noScenesOnly ? '#fb923c' : textSecondary,
+                    border: `1px ${noScenesOnly ? 'solid' : 'dashed'} ${noScenesOnly ? 'rgba(249,115,22,0.6)' : border}`,
+                  }}
+                  title="Показать только персонажей, которые не появляются ни в одной сцене">
+                  Без сцен
+                </button>
                 <span className="text-[10px]" style={{ color: textSecondary }}>{filteredChars.length} из {dev.characters.length}</span>
               </div>
               {filteredChars.length === 0 ? (
@@ -382,7 +407,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-[10px]" style={{ color: textSecondary }}>{charSceneCount(c)} сцен</div>
+                            <div className="text-[10px]" style={{ color: charSceneCount(c) === 0 ? '#f59e0b' : textSecondary }}>
+                              {charSceneCount(c) === 0 ? 'не в сценах' : `${charSceneCount(c)} сцен`}
+                            </div>
                             <div className="text-[9px]" style={{ color: textSecondary }}>{Math.round(durOf(charSceneIds(c)) / 60)} мин</div>
                           </div>
                         </div>
@@ -591,6 +618,79 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           onClose={() => setScenesList(null)}
           onSceneClick={onSceneClick}
         />
+      )}
+
+      {/* ── Модал дублей ── */}
+      {dupPairs !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setDupPairs(null)}>
+          <div className="w-full max-w-lg rounded-2xl p-5 space-y-3"
+            style={{ background: cardBg, border: `1px solid ${border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold" style={{ color: textPrimary }}>
+                {dupPairs.length ? `Возможные дубли — ${dupPairs.length}` : 'Дублей не найдено'}
+              </span>
+              <button onClick={() => setDupPairs(null)} style={{ color: textSecondary }}><X size={16} /></button>
+            </div>
+            {dupPairs.length === 0 && (
+              <p className="text-xs" style={{ color: textSecondary }}>
+                Похожих имён не нашлось — справочник чист.
+              </p>
+            )}
+            {dupPairs.map((pair, i) => (
+              <div key={i} className="rounded-xl p-3 space-y-2" style={{ background: fieldBg, border: `1px solid ${border}` }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: textSecondary }}>
+                  {pair.reason === 'prefix' && 'Одно имя — часть другого'}
+                  {pair.reason === 'firstword' && 'Общее первое слово'}
+                  {pair.reason === 'typo' && 'Похожи (возможна опечатка)'}
+                </div>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-semibold" style={{ color: textPrimary }}>
+                    {pair.a.name} <span style={{ color: textSecondary }}>({charSceneCount(pair.a)} сцен)</span>
+                  </span>
+                  <span style={{ color: textSecondary }}>≈</span>
+                  <span className="text-xs font-semibold" style={{ color: textPrimary }}>
+                    {pair.b.name} <span style={{ color: textSecondary }}>({charSceneCount(pair.b)} сцен)</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      onMergeCharacters?.(pair.a.id, pair.b.id)
+                      setDupPairs(findCharDuplicates(dev.characters.filter((c) => c.id !== pair.b.id)))
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold"
+                    style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}
+                    title={`Объединить: «${pair.b.name}» заменится на «${pair.a.name}» в справочнике и в тексте`}>
+                    {pair.a.name} ← {pair.b.name}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onMergeCharacters?.(pair.b.id, pair.a.id)
+                      setDupPairs(findCharDuplicates(dev.characters.filter((c) => c.id !== pair.a.id)))
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold"
+                    style={{ background: fieldBg, color: textSecondary, border: `1px solid ${border}` }}
+                    title={`Объединить: «${pair.a.name}» заменится на «${pair.b.name}» в справочнике и в тексте`}>
+                    {pair.b.name} ← {pair.a.name}
+                  </button>
+                  <button
+                    onClick={() => setDupPairs(dupPairs.filter((_, j) => j !== i))}
+                    className="ml-auto text-[10px]"
+                    style={{ color: textSecondary }}>
+                    Не дубль
+                  </button>
+                </div>
+              </div>
+            ))}
+            {dupPairs.length > 0 && (
+              <p className="text-[10px]" style={{ color: textSecondary }}>
+                Слияние заменяет имя и в тексте сценария (вариант B) — можно отменить кнопкой отката доски.
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Модал персонажа ── */}
