@@ -318,20 +318,26 @@ export const projectService = {
   },
 
   async updateScene(sceneId: string, updates: Partial<Scene>, signal?: AbortSignal): Promise<void> {
+    // T-21: снимок источника до записи — при ошибке откатываем оба стора
+    const scriptStore = useScriptStore.getState()
+    const owner = scriptStore.scripts.find((s) => s.scenes?.some((sc) => sc.id === sceneId))
+    const prevScenes = owner?.scenes
     try {
       // SSoT: источник — scriptStore (script.scenes), normalized — проекция.
       // Сначала пишем в источник, иначе следующая синхронизация редактора затрёт правку.
-      const scriptStore = useScriptStore.getState()
-      const owner = scriptStore.scripts.find((s) => s.scenes?.some((sc) => sc.id === sceneId))
-      if (owner?.scenes) {
+      if (owner && prevScenes) {
         scriptStore.updateScript(owner.id, {
-          scenes: owner.scenes.map((sc) => (sc.id === sceneId ? { ...sc, ...updates } : sc)),
+          scenes: prevScenes.map((sc) => (sc.id === sceneId ? { ...sc, ...updates } : sc)),
         })
       }
       useNormalizedProjectStore.getState().updateScene(sceneId, updates)
       if (signal?.aborted) { throw new DOMException('Aborted', 'AbortError') }
+      useNormalizedProjectStore.getState().commitScene(sceneId)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') { throw error }
+      if (owner && prevScenes) {
+        scriptStore.updateScript(owner.id, { scenes: prevScenes })
+      }
       useNormalizedProjectStore.getState().revertScene(sceneId)
       useNormalizedProjectStore.getState().setError('Не удалось сохранить сцену')
       useToastStore.getState().showToast('Не удалось сохранить сцену', 'error')

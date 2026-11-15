@@ -24,12 +24,17 @@ interface NormalizedProjectActions {
   reorderProjects: (orderedIds: string[]) => void
   updateScene: (sceneId: string, updates: Partial<Scene>) => void
   revertScene: (sceneId: string) => void
+  commitScene: (sceneId: string) => void
   setScenesBatch: (scenes: Scene[]) => void
   setError: (error: string | null) => void
   setLoading: (loading: boolean) => void
 }
 
 type NormalizedProjectStore = NormalizedProjectState & NormalizedProjectActions
+
+// T-21: снимки сцен для отката при ошибке сохранения.
+// Хранится вне state — не персистится, не попадает в devtools.
+const sceneSnapshots = new Map<string, Scene>()
 
 const initialState: NormalizedProjectState = {
   projects: {},
@@ -41,7 +46,7 @@ const initialState: NormalizedProjectState = {
 
 export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
   persist(
-    immer((set) => ({
+    immer((set, get) => ({
       ...initialState,
 
       setProjects: (projects) =>
@@ -110,15 +115,31 @@ export const useNormalizedProjectStore = create<NormalizedProjectStore>()(
           scenes.forEach((s) => { state.scenes[s.id] = s })
         }),
 
-      updateScene: (sceneId, updates) =>
+      updateScene: (sceneId, updates) => {
+        // Снимок до первого некоммиченного изменения — откат вернёт именно его
+        if (!sceneSnapshots.has(sceneId)) {
+          const current = get().scenes[sceneId]
+          if (current) sceneSnapshots.set(sceneId, current)
+        }
         set((state) => {
           if (state.scenes[sceneId]) {
             Object.assign(state.scenes[sceneId], updates)
           }
-        }),
+        })
+      },
 
-      revertScene: () => {
-        // TODO: реализовать откат при ошибке сохранения (Этап 2)
+      revertScene: (sceneId) => {
+        const snapshot = sceneSnapshots.get(sceneId)
+        if (!snapshot) return
+        sceneSnapshots.delete(sceneId)
+        set((state) => {
+          state.scenes[sceneId] = snapshot
+        })
+      },
+
+      // Сохранение прошло — снимок больше не нужен
+      commitScene: (sceneId) => {
+        sceneSnapshots.delete(sceneId)
       },
 
       setError: (error) =>

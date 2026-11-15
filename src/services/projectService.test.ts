@@ -116,6 +116,68 @@ describe('projectService.updateScene', () => {
     expect(revertSpy).toHaveBeenCalledWith('scene-1')
     expect(setErrorSpy).toHaveBeenCalledWith('Не удалось сохранить сцену')
   })
+
+  // T-21: реальный откат, не заглушка
+  it('revertScene восстанавливает сцену к состоянию до первого updateScene', () => {
+    const store = useNormalizedProjectStore.getState()
+    const scene: Scene = {
+      id: 'scene-2', projectId: 'proj-1', number: '2', type: 'ИНТ',
+      location: 'КВАРТИРА', time: 'ДЕНЬ', cast: [], pages: 1,
+    }
+    useNormalizedProjectStore.setState({ scenes: { 'scene-2': scene } })
+
+    store.updateScene('scene-2', { location: 'ОФИС' })
+    store.updateScene('scene-2', { pages: 5 })
+    expect(useNormalizedProjectStore.getState().scenes['scene-2'].location).toBe('ОФИС')
+
+    store.revertScene('scene-2')
+    const reverted = useNormalizedProjectStore.getState().scenes['scene-2']
+    expect(reverted.location).toBe('КВАРТИРА')
+    expect(reverted.pages).toBe(1)
+  })
+
+  it('commitScene очищает снимок — следующий revert не откатывает сохранённое', () => {
+    const store = useNormalizedProjectStore.getState()
+    const scene: Scene = {
+      id: 'scene-3', projectId: 'proj-1', number: '3', type: 'ИНТ',
+      location: 'КВАРТИРА', time: 'ДЕНЬ', cast: [], pages: 1,
+    }
+    useNormalizedProjectStore.setState({ scenes: { 'scene-3': scene } })
+
+    store.updateScene('scene-3', { location: 'ОФИС' })
+    store.commitScene('scene-3')
+    store.updateScene('scene-3', { location: 'САД' })
+    store.revertScene('scene-3')
+
+    // откат к 'ОФИС' (последний commit), не к исходной 'КВАРТИРА'
+    expect(useNormalizedProjectStore.getState().scenes['scene-3'].location).toBe('ОФИС')
+  })
+
+  it('при ошибке восстанавливает сцены и в scriptStore (источник)', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    const scene: Scene = {
+      id: 'scene-4', projectId: 'proj-1', number: '4', type: 'ИНТ',
+      location: 'КВАРТИРА', time: 'ДЕНЬ', cast: [], pages: 1,
+    }
+    useScriptStore.setState({
+      scripts: [{
+        id: 'script-1', projectId: 'proj-1', title: 'Серия 1', scenes: [scene],
+        format: 'russian', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      }] as never,
+    })
+
+    vi.spyOn(useNormalizedProjectStore.getState(), 'updateScene').mockImplementationOnce(() => {
+      throw new Error('Ошибка записи')
+    })
+
+    await expect(
+      projectService.updateScene('scene-4', { location: 'ОФИС' })
+    ).rejects.toThrow('Ошибка записи')
+
+    const src = useScriptStore.getState().scripts[0].scenes.find((s) => s.id === 'scene-4')
+    expect(src?.location).toBe('КВАРТИРА')
+    useScriptStore.setState({ scripts: [] })
+  })
 })
 
 describe('projectService.importProjectFromJSON', () => {
