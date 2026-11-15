@@ -6,6 +6,17 @@ export type BookmarkColor = 'red' | 'yellow' | 'blue'
 export type ScenePriority = 'high' | 'medium' | 'low'
 export type SceneStatus = 'not_planned' | 'planned' | 'shot'
 
+/** Редакционный статус сцены (готовность текста) — НЕ продакшн-статус и не приоритет съёмки */
+export interface DraftStatus {
+  id: string
+  label: string        // «На доработке», «Финал»
+  color: string
+  /** вес в % готовности сценария (0–100) */
+  weight: number
+  /** встроенный статус — нельзя удалить/переименовать */
+  builtin?: boolean
+}
+
 export type BreakdownCategory =
   | 'cast'
   | 'extras'
@@ -44,6 +55,7 @@ export interface Scene {
   breakdownElements?: BreakdownElement[]
   colorTag?: string // цветная ревизия (белый/синий/розовый...)
   isOmitted?: boolean // сцена исключена из съёмок
+  draftStatus?: string // id редакционного статуса (DraftStatus.id) — готовность текста
   order?: number // порядок в сценарии
   
   // Заделы для продакшена (Шаг 2.2)

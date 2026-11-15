@@ -103,4 +103,6 @@ export interface Project {
   conflicts: number
   /** Разработка: библия персонажей, локации, синопсис (вкладка «Разработка») */
   development?: import('./development').ProjectDevelopment
+  /** Пользовательские редакционные статусы сцен (поверх встроенных DEFAULT_DRAFT_STATUSES) */
+  draftStatuses?: import('./scene').DraftStatus[]
 }

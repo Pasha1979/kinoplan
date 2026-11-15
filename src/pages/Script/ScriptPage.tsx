@@ -755,6 +755,7 @@ export default function ScriptPage() {
             contentsByEpisode={contentByEp}
             scriptFormat={scriptFormat}
             onSaveSceneHtml={handleSaveSceneHtml}
+            draftStatuses={project?.draftStatuses}
           />
         ) : activeTab === 'development' ? (
           <DevelopmentView

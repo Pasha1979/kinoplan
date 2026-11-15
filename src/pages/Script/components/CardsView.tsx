@@ -1,6 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff, ZoomIn, ZoomOut, Maximize } from 'lucide-react'
-import type { Scene, SceneGroup, SceneLink } from '../../../types/scene'
+import type { Scene, SceneGroup, SceneLink, DraftStatus } from '../../../types/scene'
+import { draftStatusById, allDraftStatuses } from '../../../utils/draftStatus'
 import SceneDetailModal from './SceneDetailModal'
 import { extractSceneHtml } from './sceneHtmlOps'
 
@@ -39,6 +40,8 @@ interface CardsViewProps {
   scriptFormat?: 'russian' | 'hollywood' | 'custom'
   /** сохранение отредактированного текста сцены (HTML-фрагмент) */
   onSaveSceneHtml?: (scene: SceneWithEp, html: string) => void
+  /** пользовательские редакционные статусы проекта (поверх встроенных) */
+  draftStatuses?: DraftStatus[]
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -57,8 +60,6 @@ const TYPE_COLOR: Record<string, string> = {
   'ИНТ': '#818cf8', 'ЭКСТ': '#f59e0b', 'ИНТ-ЭКСТ': '#a78bfa', 'ИНТ/ЭКСТ': '#a78bfa', 'ПАВ': '#94a3b8',
 }
 const TAG_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a78bfa'] as const
-const PRIORITY_COLOR: Record<string, string> = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' }
-const PRIORITY_LABEL: Record<string, string> = { high: 'ВЫСОКИЙ', medium: 'СРЕДНИЙ' }
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   planned: { label: 'Запланирована', color: '#3b82f6' },
   shot: { label: 'Снята', color: '#22c55e' },
@@ -201,7 +202,7 @@ function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my
   return { d, mx: mid.x, my: mid.y - 8 }
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, draftStatuses }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -212,6 +213,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [series, setSeries] = useState<number | 'all'>('all')
   const [detail, setDetail] = useState<SceneWithEp | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string; ep: number } | null>(null)
+  // Выпадашка редакционного статуса (клик по бейджу/точке на карточке)
+  const [statusMenu, setStatusMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   // Драг и мультивыбор
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dragIds, setDragIds] = useState<string[]>([])
@@ -497,7 +500,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}
-      onClick={() => { setCtxMenu(null); setGroupCtx(null); if (selected.size) setSelected(new Set()) }}>
+      onClick={() => { setCtxMenu(null); setGroupCtx(null); setStatusMenu(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
       <LayoutBox k="toolbar" style={{ padding: '16px 40px 12px' }}>
@@ -587,7 +590,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       <div className="flex-1 flex overflow-hidden">
       <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
         <div ref={boardRef} className="relative" style={{ zoom }}
-          onScroll={() => setCtxMenu(null)}
+          onScroll={() => { setCtxMenu(null); setStatusMenu(null) }}
           onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -753,16 +756,27 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
-                          {(sc.priority === 'high' || sc.priority === 'medium') && (
-                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold"
-                              style={{
-                                background: PRIORITY_COLOR[sc.priority] + '26',
-                                color: PRIORITY_COLOR[sc.priority],
-                                border: `1px solid ${PRIORITY_COLOR[sc.priority]}55`,
-                              }}>
-                              {PRIORITY_LABEL[sc.priority]}
-                            </span>
-                          )}
+                          {(() => {
+                            const ds = draftStatusById(sc.draftStatus, draftStatuses)
+                            return (
+                              <span
+                                className="text-[8px] px-1.5 py-0.5 rounded-full font-bold cursor-pointer"
+                                style={ds ? {
+                                  background: ds.color + '26',
+                                  color: ds.color,
+                                  border: `1px solid ${ds.color}55`,
+                                } : {
+                                  color: textSecondary,
+                                  border: `1px dashed ${border}`,
+                                  opacity: isHover ? 1 : 0.35,
+                                }}
+                                title="Редакционный статус — клик для выбора"
+                                onClick={(e) => { e.stopPropagation(); setStatusMenu({ x: e.clientX, y: e.clientY, id: sc.id }) }}
+                              >
+                                {ds ? ds.label.toUpperCase() : 'СТАТУС'}
+                              </span>
+                            )
+                          })()}
                           {st && <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: st.color + '26', color: st.color }}>{st.label}</span>}
                         </div>
                         <span className="flex items-center gap-1 text-[10px]" style={{ color: textSecondary }}>
@@ -1140,6 +1154,40 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 )
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Выпадашка редакционного статуса (клик по бейджу на карточке) */}
+      {statusMenu && (
+        <div className="fixed rounded-xl p-2 z-50"
+          style={{
+            left: Math.min(statusMenu.x, window.innerWidth - 200),
+            top: Math.min(statusMenu.y, window.innerHeight - 280),
+            background: isDark ? '#1e1e3a' : '#ffffff',
+            border: `1px solid ${border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            minWidth: 170,
+          }}
+          onClick={(e) => e.stopPropagation()}>
+          <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Редакционный статус</div>
+          <div className="px-1 pb-1 space-y-0.5">
+            {allDraftStatuses(draftStatuses).map((s) => (
+              <button key={s.id}
+                className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+                style={{ color: textPrimary }}
+                onClick={() => { onUpdateScene?.(statusMenu.id, { draftStatus: s.id }); setStatusMenu(null) }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                {s.label}
+                <span className="ml-auto text-[9px]" style={{ color: textSecondary }}>{s.weight}%</span>
+              </button>
+            ))}
+            <button
+              className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+              style={{ color: textSecondary }}
+              onClick={() => { onUpdateScene?.(statusMenu.id, { draftStatus: undefined }); setStatusMenu(null) }}>
+              ✕ Без статуса
+            </button>
           </div>
         </div>
       )}
