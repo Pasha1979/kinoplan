@@ -557,7 +557,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         {/* Фильтр по редакционным статусам — выпадающий список (мультивыбор, I-91) */}
         <button
           onClick={(e) => { e.stopPropagation(); setStatusFilterMenu((m) => m ? null : { x: e.clientX, y: e.clientY + 10 }) }}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
           style={{
             background: statusFilter.size ? 'rgba(249,115,22,0.2)' : 'transparent',
             color: statusFilter.size ? '#fb923c' : textSecondary,
