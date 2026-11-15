@@ -237,8 +237,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
     return (
       <button
         onClick={() => { setTab(k); setFolderFilter('all') }}
-        className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all relative"
+        className="flex items-center gap-2 text-sm font-medium transition-all relative"
         style={{
+          padding: '11px 22px',
           color: active ? '#fb923c' : textSecondary,
           background: active ? panelBg : 'transparent',
           borderTopLeftRadius: 10,
@@ -267,10 +268,10 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
 
           {/* Закладки — язычки картотеки, активная срастается с панелью */}
           <div className="flex items-end gap-0.5 px-2">
-            <SubTab k="chars" icon={<Users size={13} />} label="Персонажи" />
-            <SubTab k="locs" icon={<MapPin size={13} />} label="Локации" />
-            <SubTab k="synopsis" icon={<FileText size={13} />} label="Синопсис" />
-            <SubTab k="episodes" icon={<ListTree size={13} />} label="Посерийник" />
+            <SubTab k="chars" icon={<Users size={15} />} label="Персонажи" />
+            <SubTab k="locs" icon={<MapPin size={15} />} label="Локации" />
+            <SubTab k="synopsis" icon={<FileText size={15} />} label="Синопсис" />
+            <SubTab k="episodes" icon={<ListTree size={15} />} label="Посерийник" />
           </div>
           <div className="rounded-b-xl rounded-tr-xl p-4 space-y-5"
             style={{ background: panelBg, border: `1px solid ${border}` }}>
