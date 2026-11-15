@@ -525,6 +525,7 @@ export default function ScriptPage() {
     pages: s.pages || 0,
     charCount: s.charCount,
     cast: s.cast,
+    draftStatus: s.draftStatus,
   })), [viewAllSeries, allScenes, scenes])
 
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
