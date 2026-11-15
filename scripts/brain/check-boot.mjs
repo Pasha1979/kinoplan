@@ -5,7 +5,7 @@ import {readFileSync} from 'fs';
 const BUDGET=+(process.env.BOOT_BUDGET||8000);
 const V4='_ai_workspace/v4';
 const parts=[];
-for(const f of ['00_ВИДЕНИЕ.md','02_СТАТУС.md','04_ПРАВИЛА.md'])
+for(const f of ['SESSION_HANDOFF.md','00_ВИДЕНИЕ.md','02_СТАТУС.md','04_ПРАВИЛА.md'])
  parts.push([f,readFileSync(`${V4}/${f}`,'utf8').length]);
 const plan=readFileSync(`${V4}/01_ПЛАН.md`,'utf8');
 const m=plan.match(/## 🔴 СЕЙЧАС[\s\S]*?(?=\n## (?!🔴)|$)/);

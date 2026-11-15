@@ -35,3 +35,6 @@ description: Обновление AI-мозга после работы над �
    - `git commit -m "T-…: <краткое описание>"` (T-ID обязателен)
    - `git push`
    - Проверить Vercel деплой (https://kinoplan.vercel.app)
+
+8. Завершение сессии — сгенерируй handoff:
+   - `npm run brain:handoff` — обновит `v4/SESSION_HANDOFF.md` (читается первым при старте)

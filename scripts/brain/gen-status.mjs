@@ -3,7 +3,7 @@ import {execSync} from 'child_process';
 import {writeFileSync,readdirSync,readFileSync,statSync} from 'fs';
 import {join} from 'path';
 const sh=c=>{try{return execSync(c,{encoding:'utf8'}).trim()}catch{return''}};
-const log=sh('git log --oneline -15'),branch=sh('git rev-parse --abbrev-ref HEAD'),
+const log=sh('git log --oneline -5'),branch=sh('git rev-parse --abbrev-ref HEAD'),
 dirty=sh('git status --porcelain').split('\n').filter(Boolean).length;
 const stubs=[],todos=[];
 const isStub=(t,f)=>{
@@ -52,11 +52,8 @@ ${openQ.length?`## Открытые вопросы\n${openQ.map(l=>`- **${cell(l
 ${log}
 \`\`\`
 
-## Заглушки в коде (${stubs.length} файлов)
-${stubs.map(s=>`- \`${s}\``).join('\n')||'— нет'}
-
-## TODO/FIXME в коде (${todos.length})
-${todos.map(s=>`- \`${s}\``).join('\n')||'— нет'}
+## Заглушки в коде
+${stubs.length} файлов (ComingSoonPage-плейсхолдеры) · TODO/FIXME: ${todos.length}${todos.length?` — ${todos.map(s=>`\`${s}\``).join(', ')}`:''}
 
 ## Готовность по модулям
 См. v4/01_ПЛАН.md · реестр заглушек: _extracted/tasks.md T-33

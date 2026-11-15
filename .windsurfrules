@@ -1,6 +1,7 @@
 # 🎬 KinoPlan — Правила AI (Brain v4, 12.11.2026)
 
 ## 🧠 СТАРТ СЕССИИ (≤2 страницы):
+0. `_ai_workspace/v4/SESSION_HANDOFF.md` — ПЕРВЫМ: где остановились (автоген, конец сессии → npm run brain:handoff)
 1. `_ai_workspace/v4/00_ВИДЕНИЕ.md` — продукт и принципы
 2. `_ai_workspace/v4/02_СТАТУС.md` — где мы
 3. `_ai_workspace/v4/04_ПРАВИЛА.md` — правила работы

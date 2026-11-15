@@ -16,6 +16,7 @@
     "brain:refs": "node scripts/brain/check-refs.mjs",
     "brain:boot": "node scripts/brain/check-boot.mjs",
     "brain:next": "node scripts/brain/next.mjs",
+    "brain:handoff": "node scripts/brain/gen-handoff.mjs",
     "brain:check": "npm run brain:links && npm run brain:regs && npm run brain:refs && npm run brain:boot",
     "gate": "npm run build && npm run test && npm run test:e2e && npm run brain:check"
   },
