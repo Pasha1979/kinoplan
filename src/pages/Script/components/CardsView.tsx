@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff, ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import type { Scene, SceneGroup, SceneLink, DraftStatus } from '../../../types/scene'
-import { draftStatusById, allDraftStatuses, scriptReadiness } from '../../../utils/draftStatus'
+import { draftStatusById, allDraftStatuses, scriptReadiness, isBuiltinStatus, countScenesWithStatus } from '../../../utils/draftStatus'
 import SceneDetailModal from './SceneDetailModal'
 import { extractSceneHtml } from './sceneHtmlOps'
 
@@ -44,6 +44,8 @@ interface CardsViewProps {
   draftStatuses?: DraftStatus[]
   /** сохранение списка своих редакционных статусов (создание «＋ Свой статус») */
   onDraftStatusesChange?: (list: DraftStatus[]) => void
+  /** удаление своего статуса: чистит/переводит ссылки у сцен ВСЕХ серий, затем убирает статус */
+  onDeleteDraftStatus?: (statusId: string, replacementId?: string) => void
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -204,7 +206,7 @@ function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my
   return { d, mx: mid.x, my: mid.y - 8 }
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, draftStatuses, onDraftStatusesChange }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, draftStatuses, onDraftStatusesChange, onDeleteDraftStatus }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -236,6 +238,11 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [statusMenu, setStatusMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   // Форма создания своего статуса (внутри выпадашки)
   const [newStatus, setNewStatus] = useState<{ name: string; color: string; weight: number } | null>(null)
+  // Модалка «Управление статусами»: список своих, ✏️ правка, 🗑 удаление с выбором судьбы сцен
+  const [statusMgr, setStatusMgr] = useState(false)
+  const [editStatus, setEditStatus] = useState<{ id: string; name: string; color: string; weight: number } | null>(null)
+  const [delStatus, setDelStatus] = useState<DraftStatus | null>(null)
+  const [delReassign, setDelReassign] = useState<string>('') // '' = оставить сцены без статуса
   // Драг и мультивыбор
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dragIds, setDragIds] = useState<string[]>([])
@@ -1388,12 +1395,22 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           {/* Свой статус */}
           <div className="mt-1 pt-1.5 px-1 pb-1" style={{ borderTop: `1px solid ${border}` }}>
             {!newStatus ? (
-              <button
-                className="w-full text-left px-1.5 py-1 rounded text-[11px]"
-                style={{ color: '#fb923c' }}
-                onClick={() => setNewStatus({ name: '', color: '#0ea5e9', weight: 70 })}>
-                ＋ Свой статус…
-              </button>
+              <>
+                <button
+                  className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                  style={{ color: '#fb923c' }}
+                  onClick={() => setNewStatus({ name: '', color: '#0ea5e9', weight: 70 })}>
+                  ＋ Свой статус…
+                </button>
+                {(draftStatuses?.length ?? 0) > 0 && (
+                  <button
+                    className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                    style={{ color: textSecondary }}
+                    onClick={() => { setStatusMenu(null); setStatusMgr(true) }}>
+                    ⚙ Управление статусами
+                  </button>
+                )}
+              </>
             ) : (
               <div className="space-y-1.5">
                 <input
@@ -1444,6 +1461,129 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Модалка «Управление статусами» — правка/удаление СВОИХ статусов (T-122) */}
+      {statusMgr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => { setStatusMgr(false); setEditStatus(null); setDelStatus(null) }}>
+          <div className="rounded-2xl p-5 w-full max-w-md"
+            style={{ background: isDark ? '#1e1e3a' : '#ffffff', border: `1px solid ${border}`, boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold" style={{ color: textPrimary }}>Управление статусами</span>
+              <button onClick={() => { setStatusMgr(false); setEditStatus(null); setDelStatus(null) }} style={{ color: textSecondary }}><X size={16} /></button>
+            </div>
+
+            {/* Список всех статусов: встроенные — только просмотр, свои — ✏️/🗑 */}
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {allDraftStatuses(draftStatuses).map((s) => {
+                const custom = !isBuiltinStatus(s.id)
+                const usage = countScenesWithStatus(s.id, scenes)
+                if (editStatus?.id === s.id) {
+                  // Форма правки — id сохраняется, ссылки сцен остаются валидными
+                  return (
+                    <div key={s.id} className="rounded-lg p-2 space-y-1.5" style={{ background: isDark ? 'rgba(255,255,255,0.04)' : '#f8f9fc', border: `1px solid ${border}` }}>
+                      <input autoFocus value={editStatus.name}
+                        onChange={(e) => setEditStatus({ ...editStatus, name: e.target.value })}
+                        placeholder="Название статуса…"
+                        className="w-full rounded px-2 py-1 text-[12px] outline-none"
+                        style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#fff', border: `1px solid ${border}`, color: textPrimary }} />
+                      <div className="flex gap-1 px-0.5">
+                        {TAG_COLORS.map((c) => (
+                          <button key={c} className="w-4 h-4 rounded-full transition-transform hover:scale-110"
+                            style={{ background: c, border: editStatus.color === c ? `2px solid ${textPrimary}` : `2px solid transparent` }}
+                            onClick={() => setEditStatus({ ...editStatus, color: c })} />
+                        ))}
+                      </div>
+                      <select value={editStatus.weight}
+                        onChange={(e) => setEditStatus({ ...editStatus, weight: Number(e.target.value) })}
+                        className="w-full rounded px-2 py-1 text-[11px] outline-none"
+                        style={{ background: isDark ? '#252545' : '#fff', border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}>
+                        <option value={30}>Черновая работа · 30%</option>
+                        <option value={70}>Почти готово · 70%</option>
+                        <option value={100}>Готово · 100%</option>
+                      </select>
+                      <div className="flex gap-1">
+                        <button className="flex-1 rounded px-2 py-1 text-[11px] font-bold"
+                          style={{ background: '#fb923c', color: '#1a1a33', opacity: editStatus.name.trim() ? 1 : 0.4 }}
+                          onClick={() => {
+                            const name = editStatus.name.trim()
+                            if (!name) return
+                            onDraftStatusesChange?.((draftStatuses ?? []).map((d) =>
+                              d.id === editStatus.id ? { ...d, label: name, color: editStatus.color, weight: editStatus.weight } : d))
+                            setEditStatus(null)
+                          }}>
+                          Сохранить
+                        </button>
+                        <button className="rounded px-2 py-1 text-[11px]" style={{ color: textSecondary }} onClick={() => setEditStatus(null)}>✕</button>
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8f9fc' }}>
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                    <span className="text-[12px]" style={{ color: textPrimary }}>{s.label}</span>
+                    <span className="text-[10px]" style={{ color: textSecondary }}>{s.weight}%</span>
+                    {usage > 0 && <span className="text-[10px]" style={{ color: textSecondary }}>· {usage} сц</span>}
+                    <span className="ml-auto flex items-center gap-1">
+                      {custom ? (
+                        <>
+                          <button className="text-[11px] px-1" style={{ color: textSecondary }} title="Править статус"
+                            onClick={() => { setEditStatus({ id: s.id, name: s.label, color: s.color, weight: s.weight }); setDelStatus(null) }}>✏️</button>
+                          <button className="text-[11px] px-1" style={{ color: '#ef4444' }} title="Удалить статус"
+                            onClick={() => { setDelStatus(s); setDelReassign(''); setEditStatus(null) }}>🗑</button>
+                        </>
+                      ) : (
+                        <span className="text-[9px] uppercase tracking-wide" style={{ color: textSecondary }}>встроенный</span>
+                      )}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Подтверждение удаления: судьба сцен — без статуса или перевод в другой */}
+            {delStatus && (() => {
+              const usage = countScenesWithStatus(delStatus.id, scenes)
+              const targets = allDraftStatuses(draftStatuses).filter((s) => s.id !== delStatus.id)
+              return (
+                <div className="mt-3 rounded-xl p-3 space-y-2" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)' }}>
+                  <p className="text-[12px]" style={{ color: textPrimary }}>
+                    Удалить статус «{delStatus.label}»?
+                    {usage > 0 ? ` Его используют ${usage} сцен${usage === 1 ? 'а' : ''} — они` : ''}
+                  </p>
+                  {usage > 0 && (
+                    <select value={delReassign}
+                      onChange={(e) => setDelReassign(e.target.value)}
+                      className="w-full rounded px-2 py-1.5 text-[11px] outline-none"
+                      style={{ background: isDark ? '#252545' : '#fff', border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}>
+                      <option value="">останутся без статуса</option>
+                      {targets.map((t) => (
+                        <option key={t.id} value={t.id}>перевести в «{t.label}»</option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="flex gap-2">
+                    <button className="flex-1 rounded px-2 py-1.5 text-[11px] font-bold"
+                      style={{ background: '#ef4444', color: '#fff' }}
+                      onClick={() => {
+                        onDeleteDraftStatus?.(delStatus.id, delReassign || undefined)
+                        setStatusFilter((prev) => { const n = new Set(prev); n.delete(delStatus.id); return n })
+                        setDelStatus(null)
+                        if (!(draftStatuses ?? []).some((d) => d.id !== delStatus.id)) setStatusMgr(false)
+                      }}>
+                      Удалить
+                    </button>
+                    <button className="rounded px-3 py-1.5 text-[11px]" style={{ color: textSecondary, border: `1px solid ${border}` }}
+                      onClick={() => setDelStatus(null)}>Отмена</button>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}

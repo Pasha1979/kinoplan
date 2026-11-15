@@ -22,6 +22,7 @@ import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml, type FormatBlock } from '../../utils/formatBlockExtractor'
+import { isBuiltinStatus, reassignSceneStatus } from '../../utils/draftStatus'
 import { Settings } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import SearchBar from '../../components/SearchBar'
@@ -163,6 +164,21 @@ export default function ScriptPage() {
       scenes: owner.scenes!.map((s) => (s.id === sceneId ? { ...s, ...patch } : s)),
     })
   }, [episodeScripts, updateScript])
+
+  // T-122: удаление своего статуса — сначала чистим/переводим draftStatus у сцен
+  // ВО ВСЕХ сериях (статусы проект-широкие), затем убираем статус из проекта.
+  // Осиротевших ссылок не остаётся.
+  const handleDeleteDraftStatus = useCallback((statusId: string, replacementId?: string) => {
+    if (!project || isBuiltinStatus(statusId)) return
+    for (const ep of episodeScripts) {
+      if (ep.scenes?.some((s) => s.draftStatus === statusId)) {
+        updateScript(ep.id, { scenes: reassignSceneStatus(ep.scenes, statusId, replacementId) })
+      }
+    }
+    useNormalizedProjectStore.getState().updateProject(project.id, {
+      draftStatuses: (project.draftStatuses ?? []).filter((d) => d.id !== statusId),
+    })
+  }, [project, episodeScripts, updateScript])
 
   // T-108 мостик: элемент разбивки → персонажи/локации Разработки (без дублей по имени)
   const handleSendToDevelopment = useCallback((el: { category: string; name: string; sceneIds: string[] }) => {
@@ -758,6 +774,7 @@ export default function ScriptPage() {
             onSaveSceneHtml={handleSaveSceneHtml}
             draftStatuses={project?.draftStatuses}
             onDraftStatusesChange={(list) => project && useNormalizedProjectStore.getState().updateProject(project.id, { draftStatuses: list })}
+            onDeleteDraftStatus={handleDeleteDraftStatus}
           />
         ) : activeTab === 'development' ? (
           <DevelopmentView

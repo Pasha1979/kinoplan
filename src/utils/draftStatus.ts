@@ -29,3 +29,25 @@ export function scriptReadiness(scenes: Pick<Scene, 'draftStatus'>[], custom?: D
   const sum = scenes.reduce((acc, sc) => acc + (draftStatusById(sc.draftStatus, custom)?.weight ?? 0), 0)
   return Math.round(sum / scenes.length)
 }
+
+/** Встроенный статус — канон: нельзя править и удалять (даже если свой статус перекрыл id) */
+export function isBuiltinStatus(id: string): boolean {
+  return DEFAULT_DRAFT_STATUSES.some((s) => s.id === id)
+}
+
+/** Сколько сцен ссылаются на статус — передавать сцены ВСЕХ серий (статусы проект-широкие) */
+export function countScenesWithStatus(statusId: string, scenes: Pick<Scene, 'draftStatus'>[]): number {
+  return scenes.filter((s) => s.draftStatus === statusId).length
+}
+
+/**
+ * Очистка ссылок перед удалением статуса: у сцен с fromId ставим toId
+ * (undefined — «без статуса»). Остальные сцены не трогаем — ссылок-сирот не остаётся.
+ */
+export function reassignSceneStatus<T extends Pick<Scene, 'draftStatus'>>(
+  scenes: T[],
+  fromId: string,
+  toId?: string,
+): T[] {
+  return scenes.map((s) => (s.draftStatus === fromId ? { ...s, draftStatus: toId } : s))
+}
