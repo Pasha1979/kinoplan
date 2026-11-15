@@ -97,7 +97,7 @@ function SceneNavigator({
   const [locFilter, setLocFilter] = useState<string | null>(null)
   const [charFilter, setCharFilter] = useState<string | null>(null)
   const [colorFilter, setColorFilter] = useState<string | null>(null)
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersPos, setFiltersPos] = useState<{ left: number; top: number } | null>(null)
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -625,13 +625,20 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
             </button>
           </div>
 
-          {/* Расширенные фильтры: тип / локация / персонаж / цвет */}
-          <div className="relative ml-auto">
+          {/* Расширенные фильтры: тип / локация / персонаж / цвет — fixed, не обрезается шапкой */}
+          <div className="ml-auto">
             <button
-              onClick={() => setFiltersOpen(v => !v)}
+              onClick={(e) => {
+                if (filtersPos) { setFiltersPos(null); return }
+                const r = e.currentTarget.getBoundingClientRect()
+                setFiltersPos({
+                  left: Math.max(8, Math.min(r.right - 210, window.innerWidth - 220)),
+                  top: r.bottom + 4,
+                })
+              }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
               style={{
-                background: extraFiltersCount > 0 || filtersOpen
+                background: extraFiltersCount > 0 || filtersPos
                   ? (isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.2)')
                   : 'transparent',
                 color: extraFiltersCount > 0 ? accentColor : textSecondary,
@@ -641,16 +648,18 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
               <SlidersHorizontal size={13} />
               Фильтры{extraFiltersCount > 0 ? ` ·${extraFiltersCount}` : ''}
             </button>
-            {filtersOpen && (
+            {filtersPos && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setFiltersOpen(false)} />
+                <div className="fixed inset-0 z-40" onClick={() => setFiltersPos(null)} />
                 <div
-                  className="absolute top-full right-0 mt-1 rounded-xl p-2 z-50 overflow-y-auto"
+                  className="fixed rounded-xl p-2 z-50 overflow-y-auto"
                   style={{
+                    left: filtersPos.left,
+                    top: filtersPos.top,
                     background: isDark ? '#1e1e3a' : '#ffffff',
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb'}`,
                     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    minWidth: 210, maxHeight: 340,
+                    minWidth: 210, maxHeight: Math.min(340, window.innerHeight - filtersPos.top - 12),
                   }}
                 >
                   {/* Тип сцены */}
