@@ -206,6 +206,20 @@ function SceneNavigator({
     if (next !== idx) onSceneClick?.(filteredScenes[next].id)
   }, [filteredScenes, activeSceneId, onSceneClick])
 
+  // ↑/↓ на клавиатуре — то же листание, но только когда фокус НЕ в тексте:
+  // в редакторе и полях ввода стрелки остаются перемещением курсора
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return
+      e.preventDefault()
+      goScene(e.key === 'ArrowUp' ? -1 : 1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [goScene])
+
   // Единый расчёт timing для всех отфильтрованных сцен (без дублирования)
   const filteredScenesWithTiming = useMemo(() => {
     return filteredScenes.map(scene => ({
