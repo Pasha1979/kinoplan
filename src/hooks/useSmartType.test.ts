@@ -193,4 +193,22 @@ describe('легальная латиница (T-112)', () => {
     act(() => result.current.updateSuggestions('BYN', 3, 'scene_header'))
     expect(result.current.suggestions.map(s => s.text)).toContain('ИНТ.')
   })
+
+  // T-26: updateLists — «выученное из текста», объединяется со справочником,
+  // а не затирает его. Персонаж из Разработки остаётся в подсказках
+  // даже если его ещё нет ни в одной сцене документа.
+  it('updateLists не затирает справочник: персонаж без сцен остаётся в подсказках', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    // эмуляция экстракции сцен: в документе пока только МАША
+    act(() => result.current.updateLists({ characters: ['МАША'], locations: [], times: [] }))
+    act(() => result.current.updateSuggestions('ИВ', 2, 'character'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('ИВАН')
+  })
+
+  it('updateLists добавляет выученных персонажей к справочнику', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateLists({ characters: ['ПЁТР'] }))
+    act(() => result.current.updateSuggestions('ПЁ', 2, 'character'))
+    expect(result.current.suggestions.map(s => s.text)).toContain('ПЁТР')
+  })
 })

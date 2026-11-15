@@ -65,12 +65,14 @@ export interface UseSmartTypeOptions {
   projectId?: string
 }
 
+const EMPTY_LIST: string[] = []
+
 export function useSmartType(options: UseSmartTypeOptions) {
   const {
-    characters: initialCharacters = [],
-    locations: initialLocations = [],
-    props: initialProps = [],
-    times: initialTimes = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ'],
+    characters: registryCharacters = EMPTY_LIST,
+    locations: registryLocations = EMPTY_LIST,
+    props: registryProps = EMPTY_LIST,
+    times: registryTimes,
     minMatchLength = 2,
     maxSuggestions = 5,
     projectId,
@@ -81,11 +83,28 @@ export function useSmartType(options: UseSmartTypeOptions) {
   const [isOpen, setIsOpen] = useState(false)
   const [cursorPosition, setCursorPosition] = useState(0)
 
-  // Внутренний state для динамического обновления списков
-  const [characters, setCharacters] = useState(initialCharacters)
-  const [locations, setLocations] = useState(initialLocations)
-  const [props, setProps] = useState(initialProps)
-  const [times, setTimes] = useState(initialTimes)
+  // T-26: справочник (пропсы) и «выученное из текста» (updateLists) —
+  // отдельные источники. Подсказки = объединение: персонаж из Разработки
+  // предлагается до первой сцены, а updateLists больше не затирает справочник.
+  const [learned, setLearned] = useState<{ characters: string[]; locations: string[]; props: string[]; times: string[] }>(
+    { characters: [], locations: [], props: [], times: [] }
+  )
+  const characters = useMemo(
+    () => [...new Set([...registryCharacters, ...learned.characters])],
+    [registryCharacters, learned.characters]
+  )
+  const locations = useMemo(
+    () => [...new Set([...registryLocations, ...learned.locations])],
+    [registryLocations, learned.locations]
+  )
+  const props = useMemo(
+    () => [...new Set([...registryProps, ...learned.props])],
+    [registryProps, learned.props]
+  )
+  const times = useMemo(
+    () => [...new Set([...(registryTimes ?? ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ']), ...learned.times])],
+    [registryTimes, learned.times]
+  )
   const [frequencies, setFrequencies] = useState<Record<string, number>>(() => loadFrequencies(projectId))
 
   // Смена проекта → перечитываем его частоты (изолированные пространства)
@@ -102,10 +121,12 @@ export function useSmartType(options: UseSmartTypeOptions) {
     props?: string[]
     times?: string[]
   }) => {
-    if (lists.characters !== undefined) setCharacters(lists.characters)
-    if (lists.locations !== undefined) setLocations(lists.locations)
-    if (lists.props !== undefined) setProps(lists.props)
-    if (lists.times !== undefined) setTimes(lists.times)
+    setLearned(prev => ({
+      characters: lists.characters ?? prev.characters,
+      locations: lists.locations ?? prev.locations,
+      props: lists.props ?? prev.props,
+      times: lists.times ?? prev.times,
+    }))
   }, [])
 
   // Все доступные варианты
