@@ -231,32 +231,49 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
     setDragItemId(null)
   }
 
-  const SubTab = ({ k, icon, label }: { k: typeof tab; icon: React.ReactNode; label: string }) => (
-    <button
-      onClick={() => { setTab(k); setFolderFilter('all') }}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-      style={{ background: tab === k ? 'rgba(249,115,22,0.15)' : 'transparent', color: tab === k ? '#fb923c' : textSecondary }}
-    >
-      {icon}{label}
-    </button>
-  )
+  // Закладка в стиле картотеки: активная «срастается» с панелью контента
+  const SubTab = ({ k, icon, label }: { k: typeof tab; icon: React.ReactNode; label: string }) => {
+    const active = tab === k
+    return (
+      <button
+        onClick={() => { setTab(k); setFolderFilter('all') }}
+        className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all relative"
+        style={{
+          color: active ? '#fb923c' : textSecondary,
+          background: active ? panelBg : 'transparent',
+          borderTopLeftRadius: 10,
+          borderTopRightRadius: 10,
+          border: `1px solid ${active ? border : 'transparent'}`,
+          borderBottom: 'none',
+          marginBottom: -1,
+          zIndex: active ? 1 : 0,
+          fontWeight: active ? 600 : 500,
+        }}
+      >
+        {icon}{label}
+      </button>
+    )
+  }
 
   const isContentTab = tab === 'chars' || tab === 'locs'
+  const panelBg = isDark ? 'rgba(255,255,255,0.03)' : '#ffffff'
 
   return (
     <div className="flex-1 flex overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       {/* ── Основной контент ── */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-5xl mx-auto space-y-5">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Разработка</h2>
-            <div className="flex items-center gap-1 rounded-lg p-1" style={{ background: isDark ? 'rgba(255,255,255,0.04)' : '#ececf0' }}>
-              <SubTab k="chars" icon={<Users size={13} />} label="Персонажи" />
-              <SubTab k="locs" icon={<MapPin size={13} />} label="Локации" />
-              <SubTab k="synopsis" icon={<FileText size={13} />} label="Синопсис" />
-              <SubTab k="episodes" icon={<ListTree size={13} />} label="Посерийник" />
-            </div>
+          <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Разработка</h2>
+
+          {/* Закладки — язычки картотеки, активная срастается с панелью */}
+          <div className="flex items-end gap-0.5 px-2">
+            <SubTab k="chars" icon={<Users size={13} />} label="Персонажи" />
+            <SubTab k="locs" icon={<MapPin size={13} />} label="Локации" />
+            <SubTab k="synopsis" icon={<FileText size={13} />} label="Синопсис" />
+            <SubTab k="episodes" icon={<ListTree size={13} />} label="Посерийник" />
           </div>
+          <div className="rounded-b-xl rounded-tr-xl p-4 space-y-5"
+            style={{ background: panelBg, border: `1px solid ${border}` }}>
 
           {/* Панель: поиск + сортировка + тип + серия */}
           {isContentTab && (
@@ -455,6 +472,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
               {isSerial && <p className="text-[10px] mt-2" style={{ color: textSecondary }}>В проекте {episodesCount || 8} серий</p>}
             </div>
           )}
+          </div>
         </div>
       </div>
 
