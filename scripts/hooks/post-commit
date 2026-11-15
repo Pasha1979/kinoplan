@@ -2,4 +2,5 @@
 # Brain v5: авто-регенерация SESSION_HANDOFF после каждого коммита.
 # Файл остаётся изменённым в рабочем дереве и уходит в следующий коммит —
 # handoff всегда описывает состояние «минус один коммит» (норма).
-node scripts/brain/gen-handoff.mjs >/dev/null 2>&1 || true
+# T-20: уведомление об автосохранении контекста — раньше шло молча
+node scripts/brain/gen-handoff.mjs >/dev/null 2>&1 && echo "💾 контекст сохранён: SESSION_HANDOFF обновлён (прежний → _archive/contexts/)" || true
