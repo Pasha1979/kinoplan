@@ -7,7 +7,7 @@ description: Запуск новой сессии работы с AI-памят�
 При вызове этого workflow выполни boot-протокол (≤2 страницы):
 
 1. Прочитай в строгом порядке:
-   - `_ai_workspace/v4/SESSION_HANDOFF.md` — ПЕРВЫМ: где остановились (мгновенный вход после паузы)
+   - `_ai_workspace/v4/SESSION_HANDOFF.md` — ПЕРВЫМ: где остановились (мгновенный вход после паузы). Если CONTEXT_CHECKPOINT.md свежее (<1 часа) И handoff отстал >1 коммита — мы посреди сессии: читай checkpoint ДО handoff
    - `_ai_workspace/v4/00_ВИДЕНИЕ.md` — продукт и принципы
    - `_ai_workspace/v4/TARGET_STATE.md` — к чему стремимся (целевое состояние модулей)
    - `_ai_workspace/v4/02_СТАТУС.md` — где мы сейчас

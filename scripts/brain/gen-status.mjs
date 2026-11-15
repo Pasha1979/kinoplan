@@ -32,9 +32,7 @@ const tStat=s=>s.startsWith('✅')?'done':s.startsWith('🔄')?'wip':s.startsWit
 const tc={done:0,wip:0,plan:0,hold:0,other:0};for(const l of tasks)tc[tStat(cell(l,7))]++;
 const nIdeas=rows('ideas').length,nDec=rows('decisions').length;
 const openQ=rows('questions').filter(l=>!cell(l,7).startsWith('✅'));
-// ── СЕЙЧАС из плана ──
-const plan=readFileSync('_ai_workspace/v4/01_ПЛАН.md','utf8');
-const now=(plan.match(/## 🔴 СЕЙЧАС[\s\S]*?(?=\n## (?!🔴)|$)/)||['—'])[0].replace(/^## 🔴 /,'## ').trim();
+// ── СЕЙЧАС из плана (не встраиваем — check-boot считает её из 01_ПЛАН, дубль раздувает бюджет) ──
 const date=new Date().toISOString().slice(0,10);
 writeFileSync('_ai_workspace/v4/02_СТАТУС.md',`# 02 · СТАТУС (автогенерируемый — НЕ редактировать руками)
 > Сгенерировано scripts/brain/gen-status.mjs · ${date}
@@ -43,7 +41,8 @@ writeFileSync('_ai_workspace/v4/02_СТАТУС.md',`# 02 · СТАТУС (ав�
 - Задачи: ${tasks.length} — ✅ ${tc.done} · 🔄 ${tc.wip} · 📅 ${tc.plan} · ⏸️ ${tc.hold}${tc.other?` · прочие ${tc.other}`:''}
 - Идеи: ${nIdeas} · Решения: ${nDec} · Открытые вопросы: ${openQ.length}
 
-${now}
+## СЕЙЧАС
+→ см. 01_ПЛАН.md, раздел «🔴 СЕЙЧАС» (boot читает её там)
 
 ${openQ.length?`## Открытые вопросы\n${openQ.map(l=>`- **${cell(l,1).replace(/\s*\(.*\)/,'')}**: ${cell(l,3)}`).join('\n')}\n`:''}
 ## Git

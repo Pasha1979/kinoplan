@@ -19,7 +19,8 @@
     "brain:handoff": "node scripts/brain/gen-handoff.mjs",
     "brain:check": "npm run brain:links && npm run brain:regs && npm run brain:refs && npm run brain:boot && npm run brain:handoff-check",
     "gate": "npm run build && npm run test && npm run test:e2e && npm run brain:check",
-    "brain:handoff-check": "node scripts/brain/check-handoff.mjs"
+    "brain:handoff-check": "node scripts/brain/check-handoff.mjs",
+    "brain:checkpoint": "node scripts/brain/gen-checkpoint.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
