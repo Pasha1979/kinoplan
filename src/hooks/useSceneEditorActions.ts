@@ -77,7 +77,10 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
         const byId = node.attrs.sceneId === focusSceneId
         const headerText = node.textContent
         const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
-        if (byId || (headerMatch && headerMatch[1] === focusSceneId)) {
+        // Из документов без data-scene-id экстрактор даёт id вида «scene-N» —
+        // тогда сравниваем с чистым номером N
+        const focusNumber = focusSceneId?.replace(/^scene-/, '')
+        if (byId || (headerMatch && headerMatch[1] === focusNumber)) {
           found = true
           scrollPos = pos
           const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
