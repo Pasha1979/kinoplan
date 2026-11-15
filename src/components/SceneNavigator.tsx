@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, memo, useCallback } from 'react'
-import { Film, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react'
+import { Film, MapPin, Clock, ChevronDown, ChevronRight, ChevronUp, Search, X, SlidersHorizontal } from 'lucide-react'
 import {
   DndContext,
   closestCorners,
@@ -93,6 +93,11 @@ function SceneNavigator({
   onUpdateScene,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
+  const [search, setSearch] = useState('')
+  const [locFilter, setLocFilter] = useState<string | null>(null)
+  const [charFilter, setCharFilter] = useState<string | null>(null)
+  const [colorFilter, setColorFilter] = useState<string | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -149,13 +154,53 @@ function SceneNavigator({
     }
   }, [currentSeriesDuration, episodeDuration])
 
+  // Списки для фильтров: уникальные локации/персонажи с кол-вом сцен
+  const locationOptions = useMemo(() => {
+    const m = new Map<string, number>()
+    scenes.forEach(s => { if (s.location) m.set(s.location, (m.get(s.location) || 0) + 1) })
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+  }, [scenes])
+
+  const characterOptions = useMemo(() => {
+    const m = new Map<string, number>()
+    scenes.forEach(s => (s.cast || []).forEach(c => m.set(c, (m.get(c) || 0) + 1)))
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+  }, [scenes])
+
+  const colorOptions = useMemo(() => {
+    const present = new Set(scenes.map(s => s.colorTag).filter(Boolean))
+    return ['blue', 'pink', 'yellow', 'green', 'orange'].filter(c => present.has(c))
+  }, [scenes])
+
+  const extraFiltersCount = (locFilter ? 1 : 0) + (charFilter ? 1 : 0) + (colorFilter ? 1 : 0)
+
   const filteredScenes = useMemo(() => {
-    if (filter === 'all') return scenes
-    if (filter === 'ИНТ') return scenes.filter(s => s.type === 'ИНТ' || s.type === 'ИНТ-ЭКСТ')
-    if (filter === 'ЭКСТ') return scenes.filter(s => s.type === 'ЭКСТ')
-    if (filter === 'ПАВ') return scenes.filter(s => s.type === 'ПАВ')
-    return scenes
-  }, [scenes, filter])
+    let list = scenes
+    if (filter === 'ИНТ') list = list.filter(s => s.type === 'ИНТ' || s.type === 'ИНТ-ЭКСТ')
+    else if (filter === 'ЭКСТ') list = list.filter(s => s.type === 'ЭКСТ')
+    else if (filter === 'ПАВ') list = list.filter(s => s.type === 'ПАВ')
+    if (locFilter) list = list.filter(s => s.location === locFilter)
+    if (charFilter) list = list.filter(s => (s.cast || []).includes(charFilter))
+    if (colorFilter) list = list.filter(s => s.colorTag === colorFilter)
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter(s =>
+        [s.number, s.location, s.sublocation, s.synopsis, ...(s.cast || [])]
+          .filter(Boolean).join(' ').toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [scenes, filter, locFilter, charFilter, colorFilter, search])
+
+  // Стрелки ↑↓ — листаем отображаемый (отфильтрованный) список
+  const goScene = useCallback((dir: 1 | -1) => {
+    if (!filteredScenes.length) return
+    const idx = filteredScenes.findIndex(s => s.id === activeSceneId)
+    const next = idx === -1
+      ? (dir === 1 ? 0 : filteredScenes.length - 1)
+      : Math.min(filteredScenes.length - 1, Math.max(0, idx + dir))
+    if (next !== idx) onSceneClick?.(filteredScenes[next].id)
+  }, [filteredScenes, activeSceneId, onSceneClick])
 
   // Единый расчёт timing для всех отфильтрованных сцен (без дублирования)
   const filteredScenesWithTiming = useMemo(() => {
@@ -557,8 +602,8 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
           </span>
         </div>
 
-        {/* Фильтры - стильные кнопки */}
-        <div className="flex items-center gap-1 pl-2">
+        {/* Фильтры - стильные кнопки + стрелки + расширенные фильтры */}
+        <div className="flex items-center gap-1 pl-2 pr-2">
           {(['Все', 'ИНТ', 'ЭКСТ', 'ПАВ'] as const).map((label) => {
             const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ' | 'ПАВ'
             const isActive = filter === f
@@ -584,6 +629,147 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
               </button>
             )
           })}
+
+          {/* Стрелки ↑↓ — предыдущая/следующая сцена по отображаемому списку */}
+          <div className="flex items-center ml-auto">
+            <button
+              onClick={() => goScene(-1)}
+              disabled={!filteredScenes.length}
+              title="Предыдущая сцена"
+              className="p-1.5 rounded-lg transition-all disabled:opacity-30"
+              style={{ color: textSecondary }}
+            >
+              <ChevronUp size={15} />
+            </button>
+            <button
+              onClick={() => goScene(1)}
+              disabled={!filteredScenes.length}
+              title="Следующая сцена"
+              className="p-1.5 rounded-lg transition-all disabled:opacity-30"
+              style={{ color: textSecondary }}
+            >
+              <ChevronDown size={15} />
+            </button>
+          </div>
+
+          {/* Расширенные фильтры: локация / персонаж / цвет */}
+          <div className="relative">
+            <button
+              onClick={() => setFiltersOpen(v => !v)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: extraFiltersCount > 0 || filtersOpen
+                  ? (isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.2)')
+                  : 'transparent',
+                color: extraFiltersCount > 0 ? accentColor : textSecondary,
+                border: `1px solid ${extraFiltersCount > 0 ? (isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.3)') : 'transparent'}`,
+              }}
+            >
+              <SlidersHorizontal size={13} />
+              Фильтры{extraFiltersCount > 0 ? ` ·${extraFiltersCount}` : ''}
+            </button>
+            {filtersOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFiltersOpen(false)} />
+                <div
+                  className="absolute top-full right-0 mt-1 rounded-xl p-2 z-50 overflow-y-auto"
+                  style={{
+                    background: isDark ? '#1e1e3a' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb'}`,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    minWidth: 210, maxHeight: 340,
+                  }}
+                >
+                  {/* Локации */}
+                  <div className="text-[10px] mb-1 px-1" style={{ color: textSecondary }}>Локация</div>
+                  <div className="pb-1 space-y-0.5 max-h-28 overflow-y-auto">
+                    {locationOptions.map(([loc, count]) => (
+                      <button key={loc}
+                        onClick={() => setLocFilter(locFilter === loc ? null : loc)}
+                        className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px]"
+                        style={{
+                          color: locFilter === loc ? accentColor : textPrimary,
+                          background: locFilter === loc ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)') : 'transparent',
+                        }}>
+                        <MapPin size={10} style={{ color: textSecondary }} />
+                        <span className="truncate">{loc}</span>
+                        <span className="ml-auto text-[9px] shrink-0" style={{ color: textSecondary }}>{count}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Персонажи */}
+                  <div className="text-[10px] mb-1 mt-1.5 px-1 border-t pt-1.5" style={{ color: textSecondary, borderColor: border }}>Персонаж</div>
+                  <div className="pb-1 space-y-0.5 max-h-28 overflow-y-auto">
+                    {characterOptions.map(([ch, count]) => (
+                      <button key={ch}
+                        onClick={() => setCharFilter(charFilter === ch ? null : ch)}
+                        className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px]"
+                        style={{
+                          color: charFilter === ch ? accentColor : textPrimary,
+                          background: charFilter === ch ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)') : 'transparent',
+                        }}>
+                        <span className="truncate">{ch}</span>
+                        <span className="ml-auto text-[9px] shrink-0" style={{ color: textSecondary }}>{count}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Цветовая метка */}
+                  {colorOptions.length > 0 && (
+                    <>
+                      <div className="text-[10px] mb-1 mt-1.5 px-1 border-t pt-1.5" style={{ color: textSecondary, borderColor: border }}>Цвет метки</div>
+                      <div className="flex items-center gap-1.5 px-1.5 pb-1">
+                        {colorOptions.map(c => (
+                          <button key={c}
+                            onClick={() => setColorFilter(colorFilter === c ? null : c)}
+                            title={c}
+                            className="w-5 h-5 rounded-full transition-all"
+                            style={{
+                              background: getColorTagColor(c, isDark),
+                              outline: colorFilter === c ? `2px solid ${accentColor}` : 'none',
+                              outlineOffset: 1,
+                            }} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {extraFiltersCount > 0 && (
+                    <button
+                      onClick={() => { setLocFilter(null); setCharFilter(null); setColorFilter(null) }}
+                      className="w-full mt-1.5 pt-1.5 border-t text-left px-1.5 py-1 rounded text-[11px]"
+                      style={{ color: textSecondary, borderColor: border }}>
+                      ✕ Сбросить фильтры
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Поиск по навигатору */}
+        <div className="relative pl-2 pr-2 mt-2">
+          <Search size={13} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: textSecondary }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Поиск: локация, персонаж, синопсис…"
+            className="w-full pl-7 pr-7 py-1.5 rounded-lg text-xs outline-none transition-all"
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.9)',
+              color: textPrimary,
+              border: `1px solid ${search ? (isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.3)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}`,
+            }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-0.5 rounded"
+              style={{ color: textSecondary }}>
+              <X size={12} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -616,10 +802,10 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
         {filteredScenes.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs" style={{ color: textSecondary }}>
-              Нет сцен
+              {search || extraFiltersCount > 0 || filter !== 'all' ? 'Ничего не найдено по фильтрам' : 'Нет сцен'}
             </p>
           </div>
-        ) : filter !== 'all' ? (
+        ) : filter !== 'all' || extraFiltersCount > 0 || search.trim() !== '' ? (
           // При активном фильтре — plain список без drag-and-drop
           filteredScenesWithTiming.map(({ scene, timing }) => {
             const isActive = activeSceneId === scene.id
