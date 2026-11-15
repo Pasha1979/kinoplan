@@ -341,30 +341,32 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           {/* ── Персонажи ── */}
           {tab === 'chars' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
                 <button onClick={() => setEditChar('new')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}>
-                  <Plus size={12} /> Персонаж
+                  className="flex items-center rounded-lg font-semibold"
+                  style={{ gap: 6, padding: '8px 14px', fontSize: 13, background: 'rgba(249,115,22,0.15)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)' }}>
+                  <Plus size={14} /> Персонаж
                 </button>
                 <button onClick={importChars}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                  style={{ color: textSecondary, border: `1px solid ${border}` }}
+                  className="flex items-center rounded-lg font-medium"
+                  style={{ gap: 6, padding: '8px 14px', fontSize: 13, color: textSecondary, border: `1px solid ${border}` }}
                   title="Собрать персонажей из текста сценария">
-                  <Sparkles size={12} /> Импорт из текста ({charNamesInText.size})
+                  <Sparkles size={14} /> Импорт из текста ({charNamesInText.size})
                 </button>
                 {onMergeCharacters && (
                   <button onClick={() => setDupPairs(findCharDuplicates(dev.characters))}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                    style={{ color: textSecondary, border: `1px solid ${border}` }}
+                    className="flex items-center rounded-lg font-medium"
+                    style={{ gap: 6, padding: '8px 14px', fontSize: 13, color: textSecondary, border: `1px solid ${border}` }}
                     title="Найти похожие имена и объединить">
-                    <Users size={12} /> Найти дубли
+                    <Users size={14} /> Найти дубли
                   </button>
                 )}
                 <button
                   onClick={() => setNoScenesOnly(!noScenesOnly)}
-                  className="px-2.5 py-1 rounded-full text-[10px] font-medium transition-all"
+                  className="rounded-full font-medium transition-all"
                   style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
                     background: noScenesOnly ? 'rgba(249,115,22,0.2)' : 'transparent',
                     color: noScenesOnly ? '#fb923c' : textSecondary,
                     border: `1px ${noScenesOnly ? 'solid' : 'dashed'} ${noScenesOnly ? 'rgba(249,115,22,0.6)' : border}`,
@@ -372,7 +374,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                   title="Показать только персонажей, которые не появляются ни в одной сцене">
                   Без сцен
                 </button>
-                <span className="text-[10px]" style={{ color: textSecondary }}>{filteredChars.length} из {dev.characters.length}</span>
+                <span style={{ fontSize: 12, color: textSecondary }}>{filteredChars.length} из {dev.characters.length}</span>
               </div>
               {filteredChars.length === 0 ? (
                 <Empty text={dev.characters.length ? 'Никого не найдено по фильтрам' : 'Пусто — добавь или импортируй из текста'} isDark={isDark} />

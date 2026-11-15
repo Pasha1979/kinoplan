@@ -90,7 +90,7 @@ export function mergeCharacters(params: {
     'prototype', 'desire', 'fear', 'secret', 'conflict', 'episodeTag',
   ]
   const merged: DevCharacter = { ...keep }
-  META_KEYS.forEach((k) => { if (!merged[k] && drop[k]) (merged as Record<string, unknown>)[k] = drop[k] })
+  META_KEYS.forEach((k) => { if (!merged[k] && drop[k]) (merged as unknown as Record<string, unknown>)[k] = drop[k] })
   merged.sceneIds = [...new Set([...(keep.sceneIds ?? []), ...(drop.sceneIds ?? [])])]
   // связи keep: перенацелить ссылки на drop → keep
   merged.relationships = (keep.relationships ?? []).map((r) =>
