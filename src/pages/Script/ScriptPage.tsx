@@ -819,6 +819,8 @@ export default function ScriptPage() {
               onSceneClick={handleSceneClickRouted}
               onSceneReorder={handleSceneReorder}
               activeSceneId={selectedScene?.id || ''}
+              draftStatuses={project?.draftStatuses}
+              onUpdateScene={handleUpdateScene}
             />}
 
             {/* ─── Split Screen container ─── */}

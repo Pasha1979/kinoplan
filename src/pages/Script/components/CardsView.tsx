@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff, ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import type { Scene, SceneGroup, SceneLink, DraftStatus } from '../../../types/scene'
-import { draftStatusById, allDraftStatuses } from '../../../utils/draftStatus'
+import { draftStatusById, allDraftStatuses, scriptReadiness } from '../../../utils/draftStatus'
 import SceneDetailModal from './SceneDetailModal'
 import { extractSceneHtml } from './sceneHtmlOps'
 
@@ -212,6 +212,14 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
+  // Фильтр по редакционным статусам: id статуса + 'none' (без статуса) + 'unfinished' (вес <100)
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set())
+  const toggleStatusFilter = (k: string) =>
+    setStatusFilter((prev) => {
+      const n = new Set(prev)
+      if (n.has(k)) n.delete(k); else n.add(k)
+      return n
+    })
   const [series, setSeries] = useState<number | 'all'>('all')
   const [detail, setDetail] = useState<SceneWithEp | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string; ep: number } | null>(null)
@@ -317,6 +325,14 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           : typeFilter === 'ИНТ' ? (sc.type === 'ИНТ' || sc.type === 'ИНТ-ЭКСТ' || sc.type === 'ИНТ/ЭКСТ')
           : (sc.type === 'ЭКСТ' || sc.type === 'ИНТ-ЭКСТ' || sc.type === 'ИНТ/ЭКСТ'))
     }
+    if (statusFilter.size) {
+      list = list.filter((sc) => {
+        const st = draftStatusById(sc.draftStatus, draftStatuses)
+        if (statusFilter.has('unfinished') && (!st || st.weight < 100)) return true
+        if (statusFilter.has('none') && !st) return true
+        return sc.draftStatus !== undefined && statusFilter.has(sc.draftStatus)
+      })
+    }
     const q = query.trim().toLowerCase()
     if (q) {
       list = list.filter((sc) =>
@@ -327,7 +343,10 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         syn(sc).toLowerCase().includes(q))
     }
     return list
-  }, [scenes, series, typeFilter, query, autoSynopsis])
+  }, [scenes, series, typeFilter, statusFilter, draftStatuses, query, autoSynopsis])
+
+  // % готовности сценария — средневзвешенная по весам редакционных статусов
+  const readiness = useMemo(() => scriptReadiness(scenes, draftStatuses), [scenes, draftStatuses])
 
   const groups = useMemo(() => {
     const g = new Map<number, SceneWithEp[]>()
@@ -533,6 +552,39 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               }}>{t}</button>
           ))}
         </div>
+        {/* Фильтр по редакционным статусам (мультивыбор) */}
+        <div className="flex gap-1 flex-wrap items-center">
+          {allDraftStatuses(draftStatuses).map((s) => (
+            <button key={s.id}
+              onClick={() => toggleStatusFilter(s.id)}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all"
+              style={{
+                background: statusFilter.has(s.id) ? s.color + '30' : 'transparent',
+                color: statusFilter.has(s.id) ? s.color : textSecondary,
+                border: `1px solid ${statusFilter.has(s.id) ? s.color + '66' : 'transparent'}`,
+              }}
+              title={`Статус «${s.label}» · ${s.weight}%`}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />{s.label}
+            </button>
+          ))}
+          <button
+            onClick={() => toggleStatusFilter('none')}
+            className="px-2 py-1 rounded-md text-[10px] font-medium transition-all"
+            style={{
+              background: statusFilter.has('none') ? 'rgba(156,163,175,0.25)' : 'transparent',
+              color: statusFilter.has('none') ? textPrimary : textSecondary,
+              border: `1px dashed ${statusFilter.has('none') ? textSecondary : 'transparent'}`,
+            }}>Без статуса</button>
+          <button
+            onClick={() => toggleStatusFilter('unfinished')}
+            className="px-2 py-1 rounded-md text-[10px] font-medium transition-all"
+            style={{
+              background: statusFilter.has('unfinished') ? 'rgba(249,115,22,0.2)' : 'transparent',
+              color: statusFilter.has('unfinished') ? '#fb923c' : textSecondary,
+              border: `1px solid ${statusFilter.has('unfinished') ? 'rgba(249,115,22,0.5)' : 'transparent'}`,
+            }}
+            title="Сцены со статусом <100% или без статуса">Недописанные</button>
+        </div>
         {seriesPills && (
           <div className="flex gap-1 ml-auto">
             {seriesPills.map((s) => (
@@ -547,6 +599,14 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           </div>
         )}
         <span className="text-[10px] ml-1" style={{ color: textSecondary }}>{visible.length} сц</span>
+        {/* % готовности сценария */}
+        <span className="flex items-center gap-1.5 text-[10px]" style={{ color: textSecondary }} title="Средняя готовность сцен по весам статусов">
+          Готовность:
+          <span className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
+            <span className="block h-full rounded-full transition-all" style={{ width: `${readiness}%`, background: '#22c55e' }} />
+          </span>
+          <span className="font-bold" style={{ color: textPrimary }}>{readiness}%</span>
+        </span>
         {/* Откат последнего действия (драг/группы/маркеры) */}
         <button
           onClick={onUndo}
@@ -602,7 +662,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               <Film size={44} style={{ color: textSecondary, margin: '0 auto 14px' }} />
               <p className="text-sm font-medium mb-1" style={{ color: textPrimary }}>Сцены не найдены</p>
               <p className="text-xs" style={{ color: textSecondary }}>
-                {query || typeFilter !== 'all' || series !== 'all' ? 'Измените фильтр или поиск' : 'Напишите сцены — карточки появятся здесь'}
+                {query || typeFilter !== 'all' || series !== 'all' || statusFilter.size ? 'Измените фильтр или поиск' : 'Напишите сцены — карточки появятся здесь'}
               </p>
             </div>
           </div>

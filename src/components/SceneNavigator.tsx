@@ -17,8 +17,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { TimingSystem, Scene } from '../types/scene'
+import type { TimingSystem, Scene, DraftStatus } from '../types/scene'
 import { calculateSceneTiming, formatDuration } from '../utils/sceneTiming'
+import { draftStatusById, allDraftStatuses } from '../utils/draftStatus'
 
 function getTimeIcon(time: string) {
   const t = (time || '').toUpperCase()
@@ -66,6 +67,10 @@ interface SceneNavigatorProps {
   onSeriesPagesChange?: (pages: number) => void
   /** Общее кол-во страниц из PageCounter — единый источник правды */
   totalPages?: number
+  /** редакционные статусы проекта (свои поверх встроенных) */
+  draftStatuses?: DraftStatus[]
+  /** обновление сцены — выбор редакционного статуса */
+  onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
 }
 
 function SceneNavigator({
@@ -84,6 +89,8 @@ function SceneNavigator({
   onSeriesDurationChange,
   onSeriesPagesChange,
   totalPages,
+  draftStatuses,
+  onUpdateScene,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
@@ -228,6 +235,8 @@ interface SceneCardProps {
   dragAttrs?: Record<string, any>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dragListeners?: Record<string, any>
+  draftStatuses?: DraftStatus[]
+  onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
 }
 
 // Plain карточка сцены (без drag-and-drop)
@@ -248,7 +257,11 @@ function SceneCard({
   dragRef,
   dragAttrs,
   dragListeners,
+  draftStatuses,
+  onUpdateScene,
 }: SceneCardProps) {
+  const [stMenu, setStMenu] = useState<{ x: number; y: number } | null>(null)
+  const ds = draftStatusById(scene.draftStatus, draftStatuses)
   return (
     <div
       ref={dragRef}
@@ -288,6 +301,20 @@ function SceneCard({
                 ВЫЧ
               </span>
             )}
+            {/* Редакционный статус — точка, клик открывает выпадашку */}
+            <button
+              className="flex items-center gap-1 px-1 py-0.5 rounded ml-auto shrink-0 transition-all hover:bg-white/10"
+              style={{ color: ds ? ds.color : textSecondary }}
+              title={ds ? `Статус: ${ds.label}` : 'Выбрать редакционный статус'}
+              onClick={(e) => { e.stopPropagation(); setStMenu({ x: e.clientX, y: e.clientY }) }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <span className="w-2 h-2 rounded-full shrink-0"
+                style={ds
+                  ? { background: ds.color }
+                  : { border: `1px dashed ${textSecondary}` }} />
+              {ds && <span className="text-[9px] font-bold">{ds.label.toUpperCase()}</span>}
+            </button>
           </div>
 
           {/* Локация */}
@@ -352,6 +379,43 @@ function SceneCard({
           </button>
         )}
       </div>
+
+      {/* Выпадашка редакционного статуса */}
+      {stMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setStMenu(null) }} />
+          <div className="fixed rounded-xl p-2 z-50"
+            style={{
+              left: Math.min(stMenu.x, window.innerWidth - 200),
+              top: Math.min(stMenu.y, window.innerHeight - 280),
+              background: isDark ? '#1e1e3a' : '#ffffff',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              minWidth: 170,
+            }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Редакционный статус</div>
+            <div className="px-1 pb-1 space-y-0.5">
+              {allDraftStatuses(draftStatuses).map((s) => (
+                <button key={s.id}
+                  className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+                  style={{ color: textPrimary }}
+                  onClick={() => { onUpdateScene?.(scene.id, { draftStatus: s.id }); setStMenu(null) }}>
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                  {s.label}
+                  <span className="ml-auto text-[9px]" style={{ color: textSecondary }}>{s.weight}%</span>
+                </button>
+              ))}
+              <button
+                className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                style={{ color: textSecondary }}
+                onClick={() => { onUpdateScene?.(scene.id, { draftStatus: undefined }); setStMenu(null) }}>
+                ✕ Без статуса
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Синопсис (раскрывается) */}
       {isExpanded && scene.synopsis && (
@@ -578,6 +642,8 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                 onToggleExpand={toggleExpanded}
                 pages={timing.pages}
                 duration={timing.duration}
+                draftStatuses={draftStatuses}
+                onUpdateScene={onUpdateScene}
               />
             )
           })
@@ -615,6 +681,8 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                     onToggleExpand={toggleExpanded}
                     pages={timing.pages}
                     duration={timing.duration}
+                    draftStatuses={draftStatuses}
+                    onUpdateScene={onUpdateScene}
                   />
                 )
               })}
