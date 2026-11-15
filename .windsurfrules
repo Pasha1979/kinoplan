@@ -3,10 +3,11 @@
 ## 🧠 СТАРТ СЕССИИ (≤2 страницы):
 0. `_ai_workspace/v4/SESSION_HANDOFF.md` — ПЕРВЫМ: где остановились (автоген, конец сессии → npm run brain:handoff)
 1. `_ai_workspace/v4/00_ВИДЕНИЕ.md` — продукт и принципы
-2. `_ai_workspace/v4/02_СТАТУС.md` — где мы
-3. `_ai_workspace/v4/04_ПРАВИЛА.md` — правила работы
-4. `_ai_workspace/v4/01_ПЛАН.md` — раздел «СЕЙЧАС» и «СЛЕДУЮЩИЕ»
-5. Кратко подтверди контекст + ссылки: dev http://localhost:5173 · прод https://kinoplan.vercel.app
+2. `_ai_workspace/v4/TARGET_STATE.md` — к чему стремимся (целевое состояние модулей)
+3. `_ai_workspace/v4/02_СТАТУС.md` — где мы
+4. `_ai_workspace/v4/04_ПРАВИЛА.md` — правила работы
+5. `_ai_workspace/v4/01_ПЛАН.md` — раздел «СЕЙЧАС» и «СЛЕДУЮЩИЕ»
+6. Кратко подтверди контекст + ссылки: dev http://localhost:5173 · прод https://kinoplan.vercel.app
 Остальное (05_ИДЕИ, 06_УРОКИ, 03_АРХИТЕКТУРА, _extracted/, _archive/v3/) — по необходимости.
 
 ## 💡 ПРОТОКОЛ ИДЕЙ (каждое сообщение):
