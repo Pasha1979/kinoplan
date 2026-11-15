@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { allDraftStatuses, draftStatusById, scriptReadiness, DEFAULT_DRAFT_STATUSES, isBuiltinStatus, countScenesWithStatus, reassignSceneStatus } from './draftStatus'
 
 describe('draftStatus (T-121): редакционный статус сцены', () => {
-  it('встроенный набор: 6 статусов с весами 10..100', () => {
+  it('встроенный набор: 6 статусов с весами 5..100', () => {
     expect(DEFAULT_DRAFT_STATUSES).toHaveLength(6)
     expect(DEFAULT_DRAFT_STATUSES.map((s) => s.id)).toEqual(['draft', 'wip', 'rework', 'review', 'done', 'final'])
   })
@@ -29,11 +29,11 @@ describe('draftStatus (T-121): редакционный статус сцены'
     const scenes = [
       { draftStatus: 'final' },   // 100
       { draftStatus: 'wip' },     // 50
-      { draftStatus: 'draft' },   // 10
+      { draftStatus: 'draft' },   // 5
       {},                          // 0
       { draftStatus: 'unknown' }, // 0
     ]
-    expect(scriptReadiness(scenes)).toBe(32) // (100+50+10+0+0)/5
+    expect(scriptReadiness(scenes)).toBe(31) // (100+50+5+0+0)/5
     expect(scriptReadiness([{ draftStatus: 'final' }, { draftStatus: 'done' }])).toBe(100)
     expect(scriptReadiness([])).toBe(0)
   })

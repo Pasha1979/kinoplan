@@ -2,7 +2,7 @@ import type { DraftStatus, Scene } from '../types/scene'
 
 /** Встроенные редакционные статусы (готовность текста сцены) */
 export const DEFAULT_DRAFT_STATUSES: DraftStatus[] = [
-  { id: 'draft', label: 'Набросок', color: '#94a3b8', weight: 10, builtin: true },
+  { id: 'draft', label: 'Набросок', color: '#94a3b8', weight: 5, builtin: true },
   { id: 'wip', label: 'В работе', color: '#f59e0b', weight: 50, builtin: true },
   { id: 'rework', label: 'На доработке', color: '#f97316', weight: 60, builtin: true },
   { id: 'review', label: 'На проверке', color: '#3b82f6', weight: 80, builtin: true },
