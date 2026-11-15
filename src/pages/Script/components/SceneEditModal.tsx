@@ -29,7 +29,7 @@ const EnterFlow = Extension.create({
   },
 })
 import { X, Save, Undo2, ArrowLeft } from 'lucide-react'
-import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../../../components/tiptap'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneParenthetical } from '../../../components/tiptap'
 import type { Scene } from '../../../types/scene'
 import type { Script } from '../../../store/scriptStore'
 
@@ -142,7 +142,7 @@ function SceneEditModal({ scene, script, sceneIndex, isDark, onClose, onSave }: 
         orderedList: false, bulletList: false, listItem: false,
         codeBlock: false, blockquote: false, horizontalRule: false, hardBreak: false,
       }),
-      SceneNode, SceneHeader, SceneCast, SceneAction,
+      SceneHeader, SceneCast, SceneAction,
       SceneCharacter, SceneDialog, SceneParenthetical, SceneTransition,
       EnterFlow,
     ],

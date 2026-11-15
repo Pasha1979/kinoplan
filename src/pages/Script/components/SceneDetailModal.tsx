@@ -4,7 +4,7 @@ import { X, ArrowRight, Bold, Italic, Underline, Strikethrough, Wand2, Save, Und
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../../../components/tiptap'
+import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneParenthetical } from '../../../components/tiptap'
 import { SCENE_NUMBER } from '../../../utils/sceneNumber'
 import type { Scene } from '../../../types/scene'
 import { draftStatusById, allDraftStatuses } from '../../../utils/draftStatus'
@@ -92,7 +92,7 @@ export function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark
         orderedList: false, bulletList: false, listItem: false,
         codeBlock: false, blockquote: false, horizontalRule: false, hardBreak: false,
       }),
-      SceneNode, SceneHeader, SceneCast, SceneAction,
+      SceneHeader, SceneCast, SceneAction,
       SceneCharacter, SceneDialog, SceneParenthetical, SceneTransition,
       EnterFlow,
     ],

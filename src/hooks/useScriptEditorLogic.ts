@@ -490,7 +490,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
         codeBlock: false,
         blockquote: false,
         horizontalRule: false,
-        hardBreak: false,
+        hardBreak: {}, // T-23a: Shift+Enter — мягкий перенос внутри блока
       }),
       SceneHeader,
       SceneCast,
@@ -684,8 +684,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     }
 
     const st = smartTypeRef.current
-    // Только Enter выбирает подсказку — Tab переключает тип блока
-    if (st.isOpen && event.key === 'Enter') {
+    // Только Enter выбирает подсказку — Tab переключает тип блока.
+    // Shift+Enter не выбирает — это мягкий перенос (T-23a)
+    if (st.isOpen && event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       const suggestion = st.suggestions[st.activeIndex]
       if (suggestion && editor) {
