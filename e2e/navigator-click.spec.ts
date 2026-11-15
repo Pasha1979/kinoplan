@@ -25,15 +25,15 @@ test('навигатор: клик по карточке сцены скролл
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   const bulk = Array.from({ length: 25 }, (_, i) =>
     `${i + 1}. ИНТ. ЛОКАЦИЯ ${i + 1} - ДЕНЬ\nТекст сцены ${i + 1}, пара строк для высоты.\nЕщё немного текста.\n`
-  ).join('\n')
+  ).join('\n') + '1-8-А. ИНТ. ЛИТЕРНАЯ - ДЕНЬ\nТекст литерной сцены.\n'
   await page.evaluate((t) => navigator.clipboard.writeText(t), bulk)
   await editor.click()
   await page.keyboard.press('Control+V')
   await page.waitForTimeout(2500)
 
-  // Кликаем карточку последней сцены в навигаторе (панель w-72)
+  // Кликаем карточку ЛИТЕРНОЙ сцены (1-8-А) — она в конце документа
   const nav = page.locator('div.w-72').first()
-  const card = nav.locator('div.group', { hasText: 'ЛОКАЦИЯ 25' }).last()
+  const card = nav.locator('div.group', { hasText: 'ЛИТЕРНАЯ' }).last()
   await expect(card).toBeVisible({ timeout: 10000 })
   await card.click()
   await page.waitForTimeout(1500) // smooth scroll + таймаут 500мс в хуке

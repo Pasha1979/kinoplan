@@ -70,6 +70,18 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
     let scrollPos: number | null = null
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
+    // Кириллические и латинские буквы-близнецы → латиница:
+    // «1-8-А» с русской А и «1-8-A» с латинской считаем одним номером
+    const CYR_TO_LAT: Record<string, string> = {
+      'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O',
+      'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X',
+      'а': 'a', 'в': 'b', 'е': 'e', 'к': 'k', 'м': 'm', 'н': 'h', 'о': 'o',
+      'р': 'p', 'с': 'c', 'т': 't', 'у': 'y', 'х': 'x',
+    }
+    const normalizeNum = (s: string) =>
+      s.replace(/^scene-/, '').replace(/[А-Яа-яЁё]/g, c => CYR_TO_LAT[c] ?? c).toLowerCase()
+    const focusNorm = normalizeNum(focusSceneId)
+
     editor.state.doc.descendants((node, pos) => {
       if (found) return false
       if (node.type.name === 'sceneHeader') {
@@ -78,9 +90,8 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
         const headerText = node.textContent
         const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
         // Из документов без data-scene-id экстрактор даёт id вида «scene-N» —
-        // тогда сравниваем с чистым номером N
-        const focusNumber = focusSceneId?.replace(/^scene-/, '')
-        if (byId || (headerMatch && headerMatch[1] === focusNumber)) {
+        // сравниваем номера нормализованно (префикс scene- и кириллица/латиница)
+        if (byId || (headerMatch && normalizeNum(headerMatch[1]) === focusNorm)) {
           found = true
           scrollPos = pos
           const domNode = editor.view.nodeDOM(pos) as HTMLElement | null
