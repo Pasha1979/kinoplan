@@ -531,7 +531,6 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
             </div>
             <div>
               <h2 className="text-sm font-bold" style={{ color: textPrimary }}>Навигатор сцен</h2>
-              <p className="text-[10px]" style={{ color: textSecondary }}>Drag & drop для reorder</p>
             </div>
           </div>
           
