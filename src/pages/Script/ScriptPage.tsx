@@ -655,7 +655,7 @@ export default function ScriptPage() {
           onOpenSettings={handleOpenSettings}
           onHelp={handleHelp}
           onToggleAutoFix={handleToggleAutoFix}
-          onToggleRightPanel={handleToggleRightPanel}
+          onToggleRightPanel={activeTab === 'text' ? handleToggleRightPanel : undefined}
           onToggleFormatLock={toggleFormatLock}
           onOpenSearch={handleOpenSearch}
           isFocusMode={focusMode.isFocused}
@@ -1032,7 +1032,7 @@ export default function ScriptPage() {
       </div>
 
       {/* Правая панель: валидация, заметки, версии — на статистике/карточках/разработке/титуле не нужна */}
-      {rightPanelOpen && !focusMode.isFocused && !['statistics', 'cards', 'development', 'title'].includes(activeTab) && (
+      {rightPanelOpen && !focusMode.isFocused && activeTab === 'text' && (
         <ScriptRightPanel
           isDark={isDark}
           textPrimary={textPrimary}

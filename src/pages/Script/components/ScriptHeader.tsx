@@ -23,7 +23,7 @@ interface ScriptHeaderProps {
   onOpenSettings: () => void
   onHelp: () => void
   onToggleAutoFix: () => void
-  onToggleRightPanel: () => void
+  onToggleRightPanel?: () => void
   onToggleFormatLock: () => void
   onOpenSearch: () => void
   isFocusMode?: boolean
@@ -336,16 +336,18 @@ function ScriptHeader({
         >
           <AlertTriangle size={15} />
         </button>
-        {/* Кнопка правой панели */}
-        <button
-          onClick={onToggleRightPanel}
-          className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ color: textSecondary }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-        >
-          {rightPanelOpen ? <X size={15} /> : <ChevronRight size={15} />}
-        </button>
+        {/* Кнопка правой панели — только на вкладке ТЕКСТ */}
+        {onToggleRightPanel && (
+          <button
+            onClick={onToggleRightPanel}
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ color: textSecondary }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+          >
+            {rightPanelOpen ? <X size={15} /> : <ChevronRight size={15} />}
+          </button>
+        )}
       </div>
     </div>
   )
