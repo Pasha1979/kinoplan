@@ -702,6 +702,8 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                   onToggleExpand={toggleExpanded}
                   pages={filteredScenesWithTiming.find(t => t.scene.id === activeScene.id)?.timing.pages || 0}
                   duration={filteredScenesWithTiming.find(t => t.scene.id === activeScene.id)?.timing.duration || 0}
+                  draftStatuses={draftStatuses}
+                  onUpdateScene={onUpdateScene}
                 />
               ) : null}
             </DragOverlay>

@@ -1,0 +1,96 @@
+import { test, expect } from '@playwright/test'
+
+// T-121: редакционный статус сцены — полная механика
+// карточка (бейдж+выпадашка) → правый клик → модалка → навигатор → фильтры → % → персист
+test('T-121: редакционный статус — вся механика', async ({ page }) => {
+  const projectName = `E2E Статус ${Date.now()}`
+
+  const readiness = page.getByTitle('Средняя готовность сцен по весам статусов')
+
+  // ─── Сетап: проект → сценарий → сцена ───
+  await page.goto('/')
+  const newBtn = page.getByText('Новый проект').or(page.getByText('Создать первый проект'))
+  await newBtn.first().click()
+  await page.getByPlaceholder(/Например/).fill(projectName)
+  await page.getByRole('button', { name: 'Создать проект' }).click()
+  await page.waitForURL(/\/project\//)
+  await page.waitForTimeout(800)
+  await page.getByText('Сценарий', { exact: false }).first().click()
+  await page.waitForURL(/\/script/)
+  await page.getByText('Написать с нуля').click()
+  await page.getByRole('button', { name: 'Создать сценарий' }).click()
+  const editor = page.locator('.ProseMirror[contenteditable="true"]').first()
+  await expect(editor).toBeVisible({ timeout: 10000 })
+  await editor.click()
+  await page.keyboard.type('ИНТ. ДОМ - ДЕНЬ')
+  await page.waitForTimeout(1200) // сцена ушла в стор через handleScenesChange
+
+  // ─── 1. Карточки: призрачный бейдж → выпадашка → «Финал» ───
+  await page.getByRole('button', { name: 'КАРТОЧКИ' }).click()
+  const card = page.locator('[data-scene-id]').first()
+  await expect(card).toBeVisible({ timeout: 10000 })
+  await expect(card.getByText('СТАТУС', { exact: true })).toBeVisible()
+
+  await card.getByText('СТАТУС', { exact: true }).click()
+  await expect(page.getByText('Редакционный статус')).toBeVisible()
+  await page.getByRole('button', { name: 'Финал 100%' }).click()
+  await expect(card.getByText('ФИНАЛ', { exact: true })).toBeVisible()
+  // % готовности: финал = 100%
+  await expect(readiness.getByText('100%')).toBeVisible()
+
+  // ─── 2. Правый клик → «В работе» ───
+  await card.click({ button: 'right' })
+  const ctxMenu = page.locator('div.fixed', { hasText: 'Цвет карточки' })
+  await ctxMenu.getByRole('button', { name: 'В работе', exact: true }).click()
+  await expect(card.getByText('В РАБОТЕ', { exact: true })).toBeVisible()
+  await expect(readiness.getByText('50%')).toBeVisible()
+
+  // ─── 3. Фильтры: «Готова» скрывает, «Недописанные» показывает ───
+  await page.getByRole('button', { name: 'Готова', exact: true }).click()
+  await expect(card).toHaveCount(0)
+  await page.getByRole('button', { name: 'Готова', exact: true }).click() // снять
+  await expect(card).toBeVisible()
+  await page.getByRole('button', { name: 'Недописанные' }).click()
+  await expect(card).toBeVisible() // В работе = 50% → недописанная
+  await page.getByRole('button', { name: 'Недописанные' }).click()
+
+  // ─── 4. Модалка сцены → «На проверке» ───
+  await card.click()
+  await expect(page.getByText('РЕДАКЦИОННЫЙ СТАТУС')).toBeVisible({ timeout: 5000 })
+  await page.getByText('РЕДАКЦИОННЫЙ СТАТУС').locator('..').locator('select').selectOption('review')
+  await page.keyboard.press('Escape')
+  await page.locator('.fixed.inset-0.z-50').first().click({ position: { x: 5, y: 5 } })
+  await expect(card.getByText('НА ПРОВЕРКЕ', { exact: true })).toBeVisible()
+  await expect(readiness.getByText('80%')).toBeVisible()
+
+  // ─── 5. Свой статус через выпадашку ───
+  await card.getByText('НА ПРОВЕРКЕ', { exact: true }).click()
+  await page.getByRole('button', { name: '＋ Свой статус…' }).click()
+  await page.getByPlaceholder('Название статуса…').fill('Полировка')
+  await page.getByRole('button', { name: 'Создать' }).click()
+  await expect(card.getByText('ПОЛИРОВКА', { exact: true })).toBeVisible()
+  // свой статус появился и в чипах-фильтрах
+  await expect(page.getByRole('button', { name: 'Полировка' })).toBeVisible()
+
+  // ─── 6. Текст → навигатор: точка + выпадашка ───
+  await page.getByRole('button', { name: 'ТЕКСТ' }).click()
+  const navStatus = page.getByTitle(/Статус: Полировка/)
+  await expect(navStatus).toBeVisible({ timeout: 10000 })
+  await expect(navStatus.getByText('ПОЛИРОВКА')).toBeVisible()
+  // клик может проглотиться ре-рендером списка — повторяем, пока меню не откроется
+  for (let i = 0; i < 4; i++) {
+    await navStatus.click()
+    await page.waitForTimeout(250)
+    if (await page.getByText('Редакционный статус').isVisible()) break
+  }
+  await expect(page.getByText('Редакционный статус')).toBeVisible()
+  await page.getByRole('button', { name: 'Готова 100%', exact: true }).click()
+  await expect(page.getByText('ГОТОВА')).toBeVisible()
+
+  // ─── 7. Персист: перезагрузка → статус на месте ───
+  await page.waitForTimeout(1200) // автосохранение
+  await page.reload()
+  await page.getByRole('button', { name: 'КАРТОЧКИ' }).click()
+  await expect(page.locator('[data-scene-id]').first().getByText('ГОТОВА', { exact: true }))
+    .toBeVisible({ timeout: 10000 })
+})
