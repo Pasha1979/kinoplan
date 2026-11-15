@@ -436,12 +436,22 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
               isDark={isDark} textPrimary={textPrimary} textSecondary={textSecondary} fieldBg={fieldBg} border={border} />
           )}
 
-          {/* ── Посерийник ── */}
+          {/* ── Посерийник — заглушка до следующего обновления ── */}
           {tab === 'episodes' && (
             <div className="rounded-xl p-8 text-center" style={{ background: cardBg, border: `1px solid ${border}` }}>
               <ListTree size={28} className="mx-auto mb-3" style={{ color: '#fb923c' }} />
               <p className="text-sm font-medium mb-1" style={{ color: textPrimary }}>Посерийник</p>
-              <p className="text-xs" style={{ color: textSecondary }}>План по сериям — логлайн, статус, сцены. Отдельный заход.</p>
+              <span
+                className="inline-block text-[10px] font-semibold px-2.5 py-1 rounded-full mb-2"
+                style={{
+                  color: '#fb923c',
+                  background: 'rgba(251,146,60,0.12)',
+                  border: '1px solid rgba(251,146,60,0.35)',
+                }}
+              >
+                Ожидается в следующем обновлении
+              </span>
+              <p className="text-xs" style={{ color: textSecondary }}>План по сериям — логлайн, статус, сцены каждой серии.</p>
               {isSerial && <p className="text-[10px] mt-2" style={{ color: textSecondary }}>В проекте {episodesCount || 8} серий</p>}
             </div>
           )}
