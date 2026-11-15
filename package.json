@@ -21,7 +21,8 @@
     "gate": "npm run build && npm run test && npm run test:e2e && npm run brain:check",
     "brain:handoff-check": "node scripts/brain/check-handoff.mjs",
     "brain:checkpoint": "node scripts/brain/gen-checkpoint.mjs",
-    "brain:promote": "node scripts/brain/promote.mjs"
+    "brain:promote": "node scripts/brain/promote.mjs",
+    "brain:ideas": "node scripts/brain/gen-ideas.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
