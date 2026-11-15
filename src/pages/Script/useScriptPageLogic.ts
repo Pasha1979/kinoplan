@@ -124,6 +124,14 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         order: existing?.order ?? 0,
         isBookmarked: existing?.isBookmarked,
         bookmarkColor: existing?.bookmarkColor,
+        // Поля, которые редактор не знает — берём из существующей сцены, иначе теряются
+        draftStatus: existing?.draftStatus,
+        manualDuration: existing?.manualDuration,
+        shootDate: existing?.shootDate,
+        shootDayNumber: existing?.shootDayNumber,
+        priority: existing?.priority,
+        status: existing?.status,
+        productionNotes: existing?.productionNotes,
       } as Scene
     })
 
@@ -137,16 +145,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     const pid = currentProjectId ?? project?.id
     if (pid) {
       useNormalizedProjectStore.getState().setScenesBatch(
-        dedupedScenes.map(s => ({
-          id: s.id,
-          projectId: pid,
-          number: s.number,
-          type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ' | 'ПАВ',
-          location: s.location,
-          time: s.time || '',
-          cast: s.cast,
-          pages: s.pages,
-        }))
+        // Полный объект — setScenesBatch заменяет сцены проекта целиком, срезанный маппинг теряет поля
+        dedupedScenes.map(s => ({ ...s, projectId: pid }))
       )
     }
 
@@ -214,14 +214,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     setSaveStatus('saving')
     try {
       await projectService.saveScenesBatch(pid, scenes.map(s => ({
-        id: s.id,
+        ...s,
         projectId: pid,
-        number: s.number,
-        type: s.type as 'ИНТ' | 'ЭКСТ' | 'ИНТ-ЭКСТ',
-        location: s.location,
-        time: s.time || '',
-        cast: s.cast,
-        pages: s.pages,
       })), controller.signal)
       setSaveStatus('saved')
     } catch (error) {
