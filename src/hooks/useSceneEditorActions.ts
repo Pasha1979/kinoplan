@@ -66,6 +66,11 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
   // 1. Scroll к сцене при изменении focusSceneId
   useEffect(() => {
     if (!editor || !focusSceneId) return
+    // Формат «id|номер»: id из стора, номер — запасной канал матчинга
+    // (литерные сцены могут иметь persistent-id, не совпадающий с sceneId ноды)
+    const pipeIdx = focusSceneId.lastIndexOf('|')
+    const focusId = pipeIdx === -1 ? focusSceneId : focusSceneId.slice(0, pipeIdx)
+    const focusNum = pipeIdx === -1 ? undefined : focusSceneId.slice(pipeIdx + 1)
     let found = false
     let scrollPos: number | null = null
     let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -80,13 +85,13 @@ export function useSceneEditorActions(options: UseSceneEditorActionsOptions) {
     }
     const normalizeNum = (s: string) =>
       s.replace(/^scene-/, '').replace(/[А-Яа-яЁё]/g, c => CYR_TO_LAT[c] ?? c).toLowerCase()
-    const focusNorm = normalizeNum(focusSceneId)
+    const focusNorm = normalizeNum(focusNum ?? focusId)
 
     editor.state.doc.descendants((node, pos) => {
       if (found) return false
       if (node.type.name === 'sceneHeader') {
         // T-101: сначала по стабильному UUID, номер — fallback для старых вызовов
-        const byId = node.attrs.sceneId === focusSceneId
+        const byId = node.attrs.sceneId === focusId
         const headerText = node.textContent
         const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.`))
         // Из документов без data-scene-id экстрактор даёт id вида «scene-N» —

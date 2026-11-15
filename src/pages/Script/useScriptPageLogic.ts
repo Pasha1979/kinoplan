@@ -274,8 +274,10 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   const handleSceneClick = useCallback((sceneId: string) => {
     const selected = scenes.find(s => s.id === sceneId) || scenes[0]
     setSelectedScene(selected)
-    // T-101: фокус по стабильному UUID (data-scene-id), не по номеру
-    setFocusSceneId(selected.id)
+    // T-101: фокус по стабильному UUID (data-scene-id), не по номеру.
+    // Композит «id|номер»: у литерных сцен persistent-id в сторе может не
+    // совпадать с sceneId ноды — тогда хук скролла матчит по номеру.
+    setFocusSceneId(`${selected.id}|${selected.number}`)
   }, [scenes])
 
   // Применение настроек хронометража из модального окна

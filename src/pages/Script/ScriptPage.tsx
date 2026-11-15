@@ -141,7 +141,9 @@ export default function ScriptPage() {
   // иначе — стандартное поведение через оригинальный хендлер
   const handleSceneClickRouted = useCallback((sceneId: string) => {
     if (splitScreen.isActive) {
-      splitScreen.navigateToScene(sceneId)
+      // Композит «id|номер» — тот же формат, что setFocusSceneId в handleSceneClick
+      const sc = (viewAllSeries ? allScenes : scenes).find(s => s.id === sceneId)
+      splitScreen.navigateToScene(sc ? `${sc.id}|${sc.number}` : sceneId)
     } else {
       // Режим «Все серии»: сцена может принадлежать другому скрипту —
       // сначала переключаемся на него, потом фокусируемся
@@ -153,7 +155,7 @@ export default function ScriptPage() {
       }
       handleSceneClick(sceneId)
     }
-  }, [splitScreen.isActive, splitScreen.navigateToScene, handleSceneClick, viewAllSeries, episodeScripts, currentScript?.id])
+  }, [splitScreen.isActive, splitScreen.navigateToScene, handleSceneClick, viewAllSeries, episodeScripts, currentScript?.id, allScenes, scenes])
 
   // Обновление полей сцены (синопсис, статус, заметки, colorTag) — пишем
   // в скрипт-владелец, работает и для серий, которые сейчас не открыты
