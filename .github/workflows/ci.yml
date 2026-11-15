@@ -1,0 +1,23 @@
+name: CI
+
+# T-132: автопроверка при пуше — билд + unit + brain-проверки.
+# E2E (Playwright) не гоняем в CI — тяжёлые, остаются локальным гейтом.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test
+      - run: npm run brain:check

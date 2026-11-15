@@ -22,7 +22,8 @@
     "brain:handoff-check": "node scripts/brain/check-handoff.mjs",
     "brain:checkpoint": "node scripts/brain/gen-checkpoint.mjs",
     "brain:promote": "node scripts/brain/promote.mjs",
-    "brain:ideas": "node scripts/brain/gen-ideas.mjs"
+    "brain:ideas": "node scripts/brain/gen-ideas.mjs",
+    "vercel:cleanup": "node scripts/vercel-cleanup.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
