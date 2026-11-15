@@ -220,6 +220,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   // Выпадашка фильтра серий (I-92 — как фильтр статусов)
   const [seriesMenu, setSeriesMenu] = useState<{ x: number; y: number } | null>(null)
   const [seriesBtnHover, setSeriesBtnHover] = useState(false)
+  // Выпадашка фильтра типов сцен (I-93 — как фильтры статусов и серий)
+  const [typeMenu, setTypeMenu] = useState<{ x: number; y: number } | null>(null)
+  const [typeBtnHover, setTypeBtnHover] = useState(false)
   const toggleStatusFilter = (k: string) =>
     setStatusFilter((prev) => {
       const n = new Set(prev)
@@ -529,7 +532,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}
-      onClick={() => { setCtxMenu(null); setGroupCtx(null); setStatusMenu(null); setStatusFilterMenu(null); setSeriesMenu(null); if (selected.size) setSelected(new Set()) }}>
+      onClick={() => { setCtxMenu(null); setGroupCtx(null); setStatusMenu(null); setStatusFilterMenu(null); setSeriesMenu(null); setTypeMenu(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
       <LayoutBox k="toolbar" style={{ padding: '16px 40px 12px' }}>
@@ -547,17 +550,20 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           />
           {query && <X size={12} style={{ color: textSecondary, cursor: 'pointer' }} onClick={() => setQuery('')} />}
         </div>
-        <div className="flex gap-1">
-          {(['Все', 'ИНТ', 'ЭКСТ', 'ПАВ'] as const).map((t) => (
-            <button key={t}
-              onClick={() => setTypeFilter(t === 'Все' ? 'all' : t)}
-              className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
-              style={{
-                background: (t === 'Все' ? typeFilter === 'all' : typeFilter === t) ? 'rgba(249,115,22,0.2)' : 'transparent',
-                color: (t === 'Все' ? typeFilter === 'all' : typeFilter === t) ? '#fb923c' : textSecondary,
-              }}>{t}</button>
-          ))}
-        </div>
+        {/* Фильтр по типу сцены — выпадающий список (I-93) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setTypeMenu((m) => m ? null : { x: e.clientX, y: e.clientY + 10 }) }}
+          onMouseEnter={() => setTypeBtnHover(true)}
+          onMouseLeave={() => setTypeBtnHover(false)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+          style={{
+            background: typeFilter !== 'all' ? 'rgba(249,115,22,0.2)' : typeBtnHover ? 'rgba(249,115,22,0.12)' : 'transparent',
+            color: typeFilter !== 'all' || typeBtnHover ? '#fb923c' : textSecondary,
+            border: `1px solid ${typeFilter !== 'all' ? 'rgba(249,115,22,0.5)' : typeBtnHover ? 'rgba(249,115,22,0.45)' : border}`,
+          }}
+          title="Фильтр по типу сцены">
+          {typeFilter === 'all' ? 'Все типы' : typeFilter} ▾
+        </button>
         {/* Фильтр по редакционным статусам — выпадающий список (мультивыбор, I-91) */}
         <button
           onClick={(e) => { e.stopPropagation(); setStatusFilterMenu((m) => m ? null : { x: e.clientX, y: e.clientY + 10 }) }}
@@ -645,7 +651,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       <div className="flex-1 flex overflow-hidden">
       <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
         <div ref={boardRef} className="relative" style={{ zoom }}
-          onScroll={() => { setCtxMenu(null); setStatusMenu(null); setStatusFilterMenu(null); setSeriesMenu(null) }}
+          onScroll={() => { setCtxMenu(null); setStatusMenu(null); setStatusFilterMenu(null); setSeriesMenu(null); setTypeMenu(null) }}
           onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -1223,6 +1229,40 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                 )
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Выпадающий фильтр типов — одиночный выбор, закрывается при выборе */}
+      {typeMenu && (
+        <div className="fixed rounded-xl p-2 z-50"
+          style={{
+            left: Math.min(typeMenu.x, window.innerWidth - 160),
+            top: Math.min(typeMenu.y, window.innerHeight - 200),
+            background: isDark ? '#1e1e3a' : '#ffffff',
+            border: `1px solid ${border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            minWidth: 140,
+          }}
+          onClick={(e) => e.stopPropagation()}>
+          <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Тип сцены</div>
+          <div className="px-1 pb-1 space-y-0.5">
+            {(['Все', 'ИНТ', 'ЭКСТ', 'ПАВ'] as const).map((t) => {
+              const v = t === 'Все' ? 'all' : t
+              const active = typeFilter === v
+              return (
+                <button key={t}
+                  className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+                  style={{
+                    color: active ? '#fb923c' : textPrimary,
+                    background: active ? 'rgba(249,115,22,0.15)' : 'transparent',
+                  }}
+                  onClick={() => { setTypeFilter(v); setTypeMenu(null) }}>
+                  {t === 'Все' ? 'Все типы' : t}
+                  <span className="ml-auto text-[10px]" style={{ color: '#fb923c' }}>{active ? '✓' : ''}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
