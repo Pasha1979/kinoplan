@@ -214,6 +214,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [typeFilter, setTypeFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   // Фильтр по редакционным статусам: id статуса + 'none' (без статуса) + 'unfinished' (вес <100)
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set())
+  // Выпадашка фильтра по статусам (I-91 — компактная кнопка вместо строки чипов)
+  const [statusFilterMenu, setStatusFilterMenu] = useState<{ x: number; y: number } | null>(null)
   const toggleStatusFilter = (k: string) =>
     setStatusFilter((prev) => {
       const n = new Set(prev)
@@ -523,7 +525,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}
-      onClick={() => { setCtxMenu(null); setGroupCtx(null); setStatusMenu(null); if (selected.size) setSelected(new Set()) }}>
+      onClick={() => { setCtxMenu(null); setGroupCtx(null); setStatusMenu(null); setStatusFilterMenu(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
       <LayoutBox k="toolbar" style={{ padding: '16px 40px 12px' }}>
@@ -552,39 +554,20 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               }}>{t}</button>
           ))}
         </div>
-        {/* Фильтр по редакционным статусам (мультивыбор) */}
-        <div className="flex gap-1 flex-wrap items-center">
-          {allDraftStatuses(draftStatuses).map((s) => (
-            <button key={s.id}
-              onClick={() => toggleStatusFilter(s.id)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all"
-              style={{
-                background: statusFilter.has(s.id) ? s.color + '30' : 'transparent',
-                color: statusFilter.has(s.id) ? s.color : textSecondary,
-                border: `1px solid ${statusFilter.has(s.id) ? s.color + '66' : 'transparent'}`,
-              }}
-              title={`Статус «${s.label}» · ${s.weight}%`}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />{s.label}
-            </button>
-          ))}
-          <button
-            onClick={() => toggleStatusFilter('none')}
-            className="px-2 py-1 rounded-md text-[10px] font-medium transition-all"
-            style={{
-              background: statusFilter.has('none') ? 'rgba(156,163,175,0.25)' : 'transparent',
-              color: statusFilter.has('none') ? textPrimary : textSecondary,
-              border: `1px dashed ${statusFilter.has('none') ? textSecondary : 'transparent'}`,
-            }}>Без статуса</button>
-          <button
-            onClick={() => toggleStatusFilter('unfinished')}
-            className="px-2 py-1 rounded-md text-[10px] font-medium transition-all"
-            style={{
-              background: statusFilter.has('unfinished') ? 'rgba(249,115,22,0.2)' : 'transparent',
-              color: statusFilter.has('unfinished') ? '#fb923c' : textSecondary,
-              border: `1px solid ${statusFilter.has('unfinished') ? 'rgba(249,115,22,0.5)' : 'transparent'}`,
-            }}
-            title="Сцены со статусом <100% или без статуса">Недописанные</button>
-        </div>
+        {/* Фильтр по редакционным статусам — выпадающий список (мультивыбор, I-91) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setStatusFilterMenu((m) => m ? null : { x: e.clientX, y: e.clientY + 10 }) }}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+          style={{
+            background: statusFilter.size ? 'rgba(249,115,22,0.2)' : 'transparent',
+            color: statusFilter.size ? '#fb923c' : textSecondary,
+            border: `1px solid ${statusFilter.size ? 'rgba(249,115,22,0.5)' : border}`,
+          }}
+          title="Фильтр по редакционному статусу">
+          Статус
+          {statusFilter.size > 0 && <span className="font-bold">{statusFilter.size}</span>}
+          ▾
+        </button>
         {seriesPills && (
           <div className="flex gap-1 ml-auto">
             {seriesPills.map((s) => (
@@ -654,7 +637,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       <div className="flex-1 flex overflow-hidden">
       <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
         <div ref={boardRef} className="relative" style={{ zoom }}
-          onScroll={() => { setCtxMenu(null); setStatusMenu(null) }}
+          onScroll={() => { setCtxMenu(null); setStatusMenu(null); setStatusFilterMenu(null) }}
           onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
         {visible.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -1233,6 +1216,57 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Выпадающий фильтр по статусам — мультивыбор, не закрывается при выборе */}
+      {statusFilterMenu && (
+        <div className="fixed rounded-xl p-2 z-50"
+          style={{
+            left: Math.min(statusFilterMenu.x, window.innerWidth - 200),
+            top: Math.min(statusFilterMenu.y, window.innerHeight - 320),
+            background: isDark ? '#1e1e3a' : '#ffffff',
+            border: `1px solid ${border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            minWidth: 180,
+          }}
+          onClick={(e) => e.stopPropagation()}>
+          <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Фильтр по статусу</div>
+          <div className="px-1 pb-1 space-y-0.5">
+            {allDraftStatuses(draftStatuses).map((s) => (
+              <button key={s.id}
+                className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+                style={{ color: textPrimary, background: statusFilter.has(s.id) ? s.color + '22' : 'transparent' }}
+                onClick={() => toggleStatusFilter(s.id)}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                {s.label}
+                <span className="ml-auto text-[10px]" style={{ color: s.color }}>{statusFilter.has(s.id) ? '✓' : ''}</span>
+              </button>
+            ))}
+            <button
+              className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+              style={{ color: textPrimary, background: statusFilter.has('none') ? 'rgba(156,163,175,0.2)' : 'transparent' }}
+              onClick={() => toggleStatusFilter('none')}>
+              <span className="w-2.5 h-2.5 rounded-full" style={{ border: `1px dashed ${textSecondary}` }} />
+              Без статуса
+              <span className="ml-auto text-[10px]" style={{ color: textSecondary }}>{statusFilter.has('none') ? '✓' : ''}</span>
+            </button>
+            <button
+              className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+              style={{ color: '#fb923c', background: statusFilter.has('unfinished') ? 'rgba(249,115,22,0.15)' : 'transparent' }}
+              onClick={() => toggleStatusFilter('unfinished')}>
+              Недописанные
+              <span className="ml-auto text-[10px]">{statusFilter.has('unfinished') ? '✓' : ''}</span>
+            </button>
+          </div>
+          {statusFilter.size > 0 && (
+            <button
+              className="w-full text-left px-2.5 py-1 rounded text-[11px] mt-1 pt-1.5"
+              style={{ color: textSecondary, borderTop: `1px solid ${border}` }}
+              onClick={() => { setStatusFilter(new Set()); setStatusFilterMenu(null) }}>
+              ✕ Сбросить фильтр
+            </button>
+          )}
         </div>
       )}
 

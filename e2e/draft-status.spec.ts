@@ -45,14 +45,20 @@ test('T-121: редакционный статус — вся механика',
   await expect(card.getByText('В РАБОТЕ', { exact: true })).toBeVisible()
   await expect(readiness.getByText('50%')).toBeVisible()
 
-  // ─── 3. Фильтры: «Готова» скрывает, «Недописанные» показывает ───
-  await page.getByRole('button', { name: 'Готова', exact: true }).click()
+  // ─── 3. Фильтры: выпадашка «Статус» — «Готова» скрывает, «Недописанные» показывает ───
+  const filterBtn = page.getByRole('button', { name: /^Статус/ })
+  const filterMenu = page.locator('div.fixed', { hasText: 'Фильтр по статусу' })
+  await filterBtn.click()
+  await expect(filterMenu).toBeVisible()
+  await filterMenu.getByRole('button', { name: 'Готова' }).click()
   await expect(card).toHaveCount(0)
-  await page.getByRole('button', { name: 'Готова', exact: true }).click() // снять
+  await filterMenu.getByRole('button', { name: /Готова/ }).click() // снять (имя стало «Готова ✓»)
   await expect(card).toBeVisible()
-  await page.getByRole('button', { name: 'Недописанные' }).click()
+  await filterMenu.getByRole('button', { name: /Недописанные/ }).click()
   await expect(card).toBeVisible() // В работе = 50% → недописанная
-  await page.getByRole('button', { name: 'Недописанные' }).click()
+  await filterMenu.getByRole('button', { name: /Сбросить фильтр/ }).click()
+  await expect(filterMenu).toHaveCount(0)
+  await expect(card).toBeVisible()
 
   // ─── 4. Модалка сцены → «На проверке» ───
   await card.click()
@@ -69,8 +75,10 @@ test('T-121: редакционный статус — вся механика',
   await page.getByPlaceholder('Название статуса…').fill('Полировка')
   await page.getByRole('button', { name: 'Создать' }).click()
   await expect(card.getByText('ПОЛИРОВКА', { exact: true })).toBeVisible()
-  // свой статус появился и в чипах-фильтрах
-  await expect(page.getByRole('button', { name: 'Полировка' })).toBeVisible()
+  // свой статус появился и в выпадающем фильтре
+  await filterBtn.click()
+  await expect(filterMenu.getByRole('button', { name: /Полировка/ })).toBeVisible()
+  await filterBtn.click() // закрыть выпадашку
 
   // ─── 6. Текст → навигатор: точка + выпадашка ───
   await page.getByRole('button', { name: 'ТЕКСТ' }).click()
