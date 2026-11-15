@@ -42,6 +42,8 @@ interface CardsViewProps {
   onSaveSceneHtml?: (scene: SceneWithEp, html: string) => void
   /** пользовательские редакционные статусы проекта (поверх встроенных) */
   draftStatuses?: DraftStatus[]
+  /** сохранение списка своих редакционных статусов (создание «＋ Свой статус») */
+  onDraftStatusesChange?: (list: DraftStatus[]) => void
 }
 
 const MARKER_META: Record<string, { label: string; color: string }> = {
@@ -202,7 +204,7 @@ function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my
   return { d, mx: mid.x, my: mid.y - 8 }
 }
 
-function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, draftStatuses }: CardsViewProps) {
+function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, draftStatuses, onDraftStatusesChange }: CardsViewProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -215,6 +217,8 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string; ep: number } | null>(null)
   // Выпадашка редакционного статуса (клик по бейджу/точке на карточке)
   const [statusMenu, setStatusMenu] = useState<{ x: number; y: number; id: string } | null>(null)
+  // Форма создания своего статуса (внутри выпадашки)
+  const [newStatus, setNewStatus] = useState<{ name: string; color: string; weight: number } | null>(null)
   // Драг и мультивыбор
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dragIds, setDragIds] = useState<string[]>([])
@@ -1093,6 +1097,20 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               title="Сбросить цвет"
               onClick={() => { onUpdateScene?.(ctxMenu.id, { colorTag: undefined }); setCtxMenu(null) }}>✕</button>
           </div>
+          {/* Редакционный статус */}
+          <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${border}` }}>
+            <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Редакционный статус</div>
+            <div className="px-1 pb-1 space-y-0.5">
+              {allDraftStatuses(draftStatuses).map((s) => (
+                <button key={s.id}
+                  className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
+                  style={{ color: textPrimary }}
+                  onClick={() => { onUpdateScene?.(ctxMenu.id, { draftStatus: s.id }); setCtxMenu(null) }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />{s.label}
+                </button>
+              ))}
+            </div>
+          </div>
           {/* Группы */}
           <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${border}` }}>
             <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>В группу</div>
@@ -1188,6 +1206,66 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
               onClick={() => { onUpdateScene?.(statusMenu.id, { draftStatus: undefined }); setStatusMenu(null) }}>
               ✕ Без статуса
             </button>
+          </div>
+          {/* Свой статус */}
+          <div className="mt-1 pt-1.5 px-1 pb-1" style={{ borderTop: `1px solid ${border}` }}>
+            {!newStatus ? (
+              <button
+                className="w-full text-left px-1.5 py-1 rounded text-[11px]"
+                style={{ color: '#fb923c' }}
+                onClick={() => setNewStatus({ name: '', color: '#0ea5e9', weight: 70 })}>
+                ＋ Свой статус…
+              </button>
+            ) : (
+              <div className="space-y-1.5">
+                <input
+                  autoFocus
+                  value={newStatus.name}
+                  onChange={(e) => setNewStatus({ ...newStatus, name: e.target.value })}
+                  placeholder="Название статуса…"
+                  className="w-full rounded px-1.5 py-1 text-[11px] outline-none"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
+                />
+                <div className="flex gap-1 px-0.5">
+                  {TAG_COLORS.map((c) => (
+                    <button key={c} className="w-4 h-4 rounded-full transition-transform hover:scale-110"
+                      style={{ background: c, border: newStatus.color === c ? `2px solid ${textPrimary}` : `2px solid transparent` }}
+                      onClick={() => setNewStatus({ ...newStatus, color: c })} />
+                  ))}
+                </div>
+                <select
+                  value={newStatus.weight}
+                  onChange={(e) => setNewStatus({ ...newStatus, weight: Number(e.target.value) })}
+                  className="w-full rounded px-1.5 py-1 text-[11px] outline-none"
+                  style={{ background: isDark ? '#1e1e3a' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}>
+                  <option value={30}>Черновая работа · 30%</option>
+                  <option value={70}>Почти готово · 70%</option>
+                  <option value={100}>Готово · 100%</option>
+                </select>
+                <div className="flex gap-1">
+                  <button
+                    className="flex-1 rounded px-1.5 py-1 text-[11px] font-bold"
+                    style={{ background: '#fb923c', color: '#1a1a33', opacity: newStatus.name.trim() ? 1 : 0.4 }}
+                    onClick={() => {
+                      const name = newStatus.name.trim()
+                      if (!name) return
+                      const st: DraftStatus = { id: `custom-${Date.now().toString(36)}`, label: name, color: newStatus.color, weight: newStatus.weight }
+                      onDraftStatusesChange?.([...(draftStatuses ?? []), st])
+                      onUpdateScene?.(statusMenu.id, { draftStatus: st.id })
+                      setNewStatus(null)
+                      setStatusMenu(null)
+                    }}>
+                    Создать
+                  </button>
+                  <button
+                    className="rounded px-1.5 py-1 text-[11px]"
+                    style={{ color: textSecondary }}
+                    onClick={() => setNewStatus(null)}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1382,6 +1460,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           onGoToScene={(id) => { setDetail(null); onSceneClick?.(id) }}
           onEditScene={(sc) => { setDetail(null); onOpenSceneEditor?.(sc) }}
           onUpdate={onUpdateScene}
+          draftStatuses={draftStatuses}
         />
       )}
     </div>

@@ -756,6 +756,7 @@ export default function ScriptPage() {
             scriptFormat={scriptFormat}
             onSaveSceneHtml={handleSaveSceneHtml}
             draftStatuses={project?.draftStatuses}
+            onDraftStatusesChange={(list) => project && useNormalizedProjectStore.getState().updateProject(project.id, { draftStatuses: list })}
           />
         ) : activeTab === 'development' ? (
           <DevelopmentView

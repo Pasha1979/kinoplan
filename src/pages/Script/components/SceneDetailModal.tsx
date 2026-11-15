@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneNode, SceneParenthetical } from '../../../components/tiptap'
 import { SCENE_NUMBER } from '../../../utils/sceneNumber'
 import type { Scene } from '../../../types/scene'
+import { draftStatusById, allDraftStatuses } from '../../../utils/draftStatus'
 
 interface SceneDetailModalProps {
   scene: Scene & { _episode?: number }
@@ -23,6 +24,8 @@ interface SceneDetailModalProps {
   scriptFormat?: 'russian' | 'hollywood' | 'custom'
   /** сохранение отредактированного HTML-фрагмента сцены */
   onSaveSceneHtml?: (html: string) => void
+  /** пользовательские редакционные статусы проекта */
+  draftStatuses?: import('../../../types/scene').DraftStatus[]
 }
 
 const STATUSES: Record<string, { l: string; c: string }> = {
@@ -30,12 +33,7 @@ const STATUSES: Record<string, { l: string; c: string }> = {
   planned: { l: 'Запланирована', c: '#3b82f6' },
   shot: { l: 'Снята', c: '#22c55e' },
 }
-const PRIORITIES: Array<{ v: Scene['priority']; l: string }> = [
-  { v: 'high', l: 'Высокий' },
-  { v: 'medium', l: 'Средний' },
-  { v: 'low', l: 'Низкий' },
-]
-export const PRIORITY_COLOR: Record<string, string> = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' }
+// Приоритет съёмки скрыт из UI (T-121, D-66) — поле в данных сохраняется для продакшн-блока
 
 function fmtDuration(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -210,7 +208,7 @@ export function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark
   )
 }
 
-function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate, sceneHtml, scriptFormat, onSaveSceneHtml }: SceneDetailModalProps) {
+function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpdate, sceneHtml, scriptFormat, onSaveSceneHtml, draftStatuses }: SceneDetailModalProps) {
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#1a1a33' : '#ffffff'
@@ -218,11 +216,11 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
 
   const [syn, setSyn] = useState(scene.synopsis || synopsis)
   const [notes, setNotes] = useState(scene.productionNotes ?? '')
-  const [prio, setPrio] = useState<Scene['priority']>(scene.priority || 'low')
+  const [draft, setDraft] = useState(scene.draftStatus ?? '')
   useEffect(() => {
     setSyn(scene.synopsis || synopsis)
     setNotes(scene.productionNotes ?? '')
-    setPrio(scene.priority || 'low')
+    setDraft(scene.draftStatus ?? '')
   }, [scene.id])
 
   const save = (patch: Partial<Scene>) => onUpdate?.(scene.id, patch)
@@ -303,15 +301,15 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
               </div>
             </div>
             <div>
-              <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>ПРИОРИТЕТ</div>
+              <div className="text-[10px] font-bold mb-1" style={{ color: textSecondary }}>РЕДАКЦИОННЫЙ СТАТУС</div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PRIORITY_COLOR[prio ?? 'low'] }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: draftStatusById(draft || undefined, draftStatuses)?.color ?? 'transparent', border: `1px solid ${border}` }} />
                 <select
-                  value={prio}
+                  value={draft}
                   onChange={(e) => {
-                    const v = e.target.value as Scene['priority']
-                    setPrio(v)
-                    save({ priority: v })
+                    const v = e.target.value
+                    setDraft(v)
+                    save({ draftStatus: v || undefined })
                   }}
                   className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
                   style={{
@@ -321,8 +319,9 @@ function SceneDetailModal({ scene, synopsis, isDark, onClose, onEditScene, onUpd
                     colorScheme: isDark ? 'dark' : 'light',
                   }}
                 >
-                  {PRIORITIES.map((p) => (
-                    <option key={p.v} value={p.v!} style={{ background: isDark ? '#1a1a33' : '#fff', color: textPrimary }}>{p.l}</option>
+                  <option value="" style={{ background: isDark ? '#1a1a33' : '#fff', color: textSecondary }}>Без статуса</option>
+                  {allDraftStatuses(draftStatuses).map((s) => (
+                    <option key={s.id} value={s.id} style={{ background: isDark ? '#1a1a33' : '#fff', color: textPrimary }}>{s.label} · {s.weight}%</option>
                   ))}
                 </select>
               </div>
