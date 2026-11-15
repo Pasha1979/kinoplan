@@ -49,9 +49,16 @@ toDelete.slice(0,30).forEach(show);
 if(toDelete.length>30)console.log(`  …и ещё ${toDelete.length-30}`);
 if(DRY){console.log('DRY-RUN: ничего не удалено. Без --dry-run удалит реально.');process.exit(0)}
 
-let ok=0,fail=0;
+let ok=0,fail=0,left=0;
 for(const d of toDelete){
  try{await api(`/v13/deployments/${d.uid}?force=1`,'DELETE');ok++}
- catch(e){fail++;console.log(`  ⚠️ ${d.uid}: ${e.message}`)}
+ catch(e){
+  if(e.message.includes('429')){
+   left=toDelete.length-ok-fail;
+   console.log(`  ⏸️ Лимит Vercel (200 удалений / 10 мин). Осталось ~${left} — повтори команду через 10 минут, продолжит с места.`);
+   break;
+  }
+  fail++;console.log(`  ⚠️ ${d.uid}: ${e.message}`);
+ }
 }
-console.log(`✅ Удалено ${ok}${fail?`, ошибок ${fail}`:''}`);
+console.log(`✅ Удалено ${ok}${fail?`, ошибок ${fail}`:''}${left?`, осталось ${left} (лимит)`:''}`);
