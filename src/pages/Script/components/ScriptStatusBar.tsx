@@ -15,6 +15,8 @@ interface ScriptStatusBarProps {
   seriesDuration: number
   targetDuration?: number
   saveStatus?: 'saved' | 'saving' | 'unsaved'
+  /** T-71: клик по блоку хронометража → открыть статистику */
+  onOpenStatistics?: () => void
 }
 
 function ScriptStatusBar({
@@ -25,6 +27,7 @@ function ScriptStatusBar({
   seriesDuration,
   targetDuration,
   saveStatus = 'saved',
+  onOpenStatistics,
 }: ScriptStatusBarProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
 
@@ -58,9 +61,13 @@ function ScriptStatusBar({
         {formatDuration(seriesDuration)}
       </span>
 
-      {/* Прогресс-бар хронометража серии (из навигатора — единый источник) */}
+      {/* Прогресс-бар хронометража серии (из навигатора — единый источник). Клик → статистика */}
       {targetDuration && (
-        <div className="flex-1 flex items-center gap-3 min-w-0">
+        <div className="flex-1 flex items-center gap-3 min-w-0"
+          role={onOpenStatistics ? 'button' : undefined}
+          title={onOpenStatistics ? 'Открыть статистику' : undefined}
+          onClick={onOpenStatistics}
+          style={onOpenStatistics ? { cursor: 'pointer' } : undefined}>
           <div className="flex-1 flex flex-col gap-1 min-w-0">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-medium" style={{ color: textSecondary }}>

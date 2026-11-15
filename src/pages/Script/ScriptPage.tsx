@@ -1046,6 +1046,7 @@ export default function ScriptPage() {
             seriesDuration={seriesDuration}
             targetDuration={targetDuration}
             saveStatus={saveStatus}
+            onOpenStatistics={() => setActiveTab('statistics')}
           />
         )}
       </div>
