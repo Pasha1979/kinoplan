@@ -23,7 +23,9 @@
     "brain:checkpoint": "node scripts/brain/gen-checkpoint.mjs",
     "brain:promote": "node scripts/brain/promote.mjs",
     "brain:ideas": "node scripts/brain/gen-ideas.mjs",
-    "vercel:cleanup": "node scripts/vercel-cleanup.mjs"
+    "vercel:cleanup": "node scripts/vercel-cleanup.mjs",
+    "brain:add": "node scripts/brain/add.mjs",
+    "brain:sync": "npm run brain:status && npm run brain:checkpoint && npm run brain:handoff"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

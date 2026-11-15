@@ -26,3 +26,4 @@ ${next.map((n,i)=>`${i+1}. ${n}`).join('\n')||'— см. 01_ПЛАН'}
 `;
 writeFileSync('_ai_workspace/v4/SESSION_HANDOFF.md',md);
 console.log(`✅ SESSION_HANDOFF: ${md.length} символов · ветка ${branch} · дальше ${next.length} · вопросов ${openQ.length}`);
+console.log('⚠️  СВЕРКА «вскользь»: все идеи/правила/уроки сессии записаны? Запись: npm run brain:add -- <idea|task|rule|lesson|question|decision> "<текст>" "<суть>" "<модуль>"');
