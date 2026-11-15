@@ -94,9 +94,9 @@ function SceneNavigator({
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [search, setSearch] = useState('')
-  const [locFilter, setLocFilter] = useState<string | null>(null)
-  const [charFilter, setCharFilter] = useState<string | null>(null)
-  const [colorFilter, setColorFilter] = useState<string | null>(null)
+  const [locFilter, setLocFilter] = useState<string[]>([])
+  const [charFilter, setCharFilter] = useState<string[]>([])
+  const [colorFilter, setColorFilter] = useState<string[]>([])
   const [filtersPos, setFiltersPos] = useState<{ left: number; top: number } | null>(null)
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
@@ -172,16 +172,20 @@ function SceneNavigator({
     return ['blue', 'pink', 'yellow', 'green', 'orange'].filter(c => present.has(c))
   }, [scenes])
 
-  const extraFiltersCount = (filter !== 'all' ? 1 : 0) + (locFilter ? 1 : 0) + (charFilter ? 1 : 0) + (colorFilter ? 1 : 0)
+  // Мультивыбор: несколько значений внутри фильтра работают как «ИЛИ»
+  const toggleIn = (arr: string[], v: string) =>
+    arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
+
+  const extraFiltersCount = (filter !== 'all' ? 1 : 0) + locFilter.length + charFilter.length + colorFilter.length
 
   const filteredScenes = useMemo(() => {
     let list = scenes
     if (filter === 'ИНТ') list = list.filter(s => s.type === 'ИНТ' || s.type === 'ИНТ-ЭКСТ')
     else if (filter === 'ЭКСТ') list = list.filter(s => s.type === 'ЭКСТ')
     else if (filter === 'ПАВ') list = list.filter(s => s.type === 'ПАВ')
-    if (locFilter) list = list.filter(s => s.location === locFilter)
-    if (charFilter) list = list.filter(s => (s.cast || []).includes(charFilter))
-    if (colorFilter) list = list.filter(s => s.colorTag === colorFilter)
+    if (locFilter.length) list = list.filter(s => locFilter.includes(s.location))
+    if (charFilter.length) list = list.filter(s => (s.cast || []).some(c => charFilter.includes(c)))
+    if (colorFilter.length) list = list.filter(s => !!s.colorTag && colorFilter.includes(s.colorTag))
     const q = search.trim().toLowerCase()
     if (q) {
       list = list.filter(s =>
@@ -632,7 +636,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                 if (filtersPos) { setFiltersPos(null); return }
                 const r = e.currentTarget.getBoundingClientRect()
                 setFiltersPos({
-                  left: Math.max(8, Math.min(r.right - 210, window.innerWidth - 220)),
+                  left: Math.max(8, Math.min(r.right - 160, window.innerWidth - 220)),
                   top: r.bottom + 4,
                 })
               }}
@@ -688,14 +692,15 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                   <div className="pb-1 space-y-0.5 max-h-28 overflow-y-auto">
                     {locationOptions.map(([loc, count]) => (
                       <button key={loc}
-                        onClick={() => setLocFilter(locFilter === loc ? null : loc)}
+                        onClick={() => setLocFilter(toggleIn(locFilter, loc))}
                         className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px]"
                         style={{
-                          color: locFilter === loc ? accentColor : textPrimary,
-                          background: locFilter === loc ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)') : 'transparent',
+                          color: locFilter.includes(loc) ? accentColor : textPrimary,
+                          background: locFilter.includes(loc) ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)') : 'transparent',
                         }}>
                         <MapPin size={10} style={{ color: textSecondary }} />
                         <span className="truncate">{loc}</span>
+                        {locFilter.includes(loc) && <span style={{ color: accentColor }}>✓</span>}
                         <span className="ml-auto text-[9px] shrink-0" style={{ color: textSecondary }}>{count}</span>
                       </button>
                     ))}
@@ -706,13 +711,14 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                   <div className="pb-1 space-y-0.5 max-h-28 overflow-y-auto">
                     {characterOptions.map(([ch, count]) => (
                       <button key={ch}
-                        onClick={() => setCharFilter(charFilter === ch ? null : ch)}
+                        onClick={() => setCharFilter(toggleIn(charFilter, ch))}
                         className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px]"
                         style={{
-                          color: charFilter === ch ? accentColor : textPrimary,
-                          background: charFilter === ch ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)') : 'transparent',
+                          color: charFilter.includes(ch) ? accentColor : textPrimary,
+                          background: charFilter.includes(ch) ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)') : 'transparent',
                         }}>
                         <span className="truncate">{ch}</span>
+                        {charFilter.includes(ch) && <span style={{ color: accentColor }}>✓</span>}
                         <span className="ml-auto text-[9px] shrink-0" style={{ color: textSecondary }}>{count}</span>
                       </button>
                     ))}
@@ -725,12 +731,12 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                       <div className="flex items-center gap-1.5 px-1.5 pb-1">
                         {colorOptions.map(c => (
                           <button key={c}
-                            onClick={() => setColorFilter(colorFilter === c ? null : c)}
+                            onClick={() => setColorFilter(toggleIn(colorFilter, c))}
                             title={c}
                             className="w-5 h-5 rounded-full transition-all"
                             style={{
                               background: getColorTagColor(c, isDark),
-                              outline: colorFilter === c ? `2px solid ${accentColor}` : 'none',
+                              outline: colorFilter.includes(c) ? `2px solid ${accentColor}` : 'none',
                               outlineOffset: 1,
                             }} />
                         ))}
@@ -740,7 +746,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
 
                   {extraFiltersCount > 0 && (
                     <button
-                      onClick={() => { setFilter('all'); setLocFilter(null); setCharFilter(null); setColorFilter(null) }}
+                      onClick={() => { setFilter('all'); setLocFilter([]); setCharFilter([]); setColorFilter([]) }}
                       className="w-full mt-1.5 pt-1.5 border-t text-left px-1.5 py-1 rounded text-[11px]"
                       style={{ color: textSecondary, borderColor: border }}>
                       ✕ Сбросить фильтры
