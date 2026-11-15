@@ -172,7 +172,7 @@ function SceneNavigator({
     return ['blue', 'pink', 'yellow', 'green', 'orange'].filter(c => present.has(c))
   }, [scenes])
 
-  const extraFiltersCount = (locFilter ? 1 : 0) + (charFilter ? 1 : 0) + (colorFilter ? 1 : 0)
+  const extraFiltersCount = (filter !== 'all' ? 1 : 0) + (locFilter ? 1 : 0) + (charFilter ? 1 : 0) + (colorFilter ? 1 : 0)
 
   const filteredScenes = useMemo(() => {
     let list = scenes
@@ -602,36 +602,10 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
           </span>
         </div>
 
-        {/* Фильтры - стильные кнопки + стрелки + расширенные фильтры */}
+        {/* Фильтры — одна кнопка «Фильтры ▾» + стрелки листания */}
         <div className="flex items-center gap-1 pl-2 pr-2">
-          {(['Все', 'ИНТ', 'ЭКСТ', 'ПАВ'] as const).map((label) => {
-            const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ' | 'ПАВ'
-            const isActive = filter === f
-            return (
-              <button
-                key={label}
-                onClick={() => setFilter(f)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
-                style={{
-                  background: isActive 
-                    ? (isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.2)') 
-                    : 'transparent',
-                  color: isActive ? accentColor : textSecondary,
-                  boxShadow: isActive 
-                    ? (isDark ? '0 2px 8px rgba(99,102,241,0.3)' : '0 2px 8px rgba(99,102,241,0.2)') 
-                    : 'none',
-                  border: isActive 
-                    ? `1px solid ${isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.3)'}` 
-                    : `1px solid transparent`
-                }}
-              >
-                {label}
-              </button>
-            )
-          })}
-
           {/* Стрелки ↑↓ — предыдущая/следующая сцена по отображаемому списку */}
-          <div className="flex items-center ml-auto">
+          <div className="flex items-center">
             <button
               onClick={() => goScene(-1)}
               disabled={!filteredScenes.length}
@@ -652,8 +626,8 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
             </button>
           </div>
 
-          {/* Расширенные фильтры: локация / персонаж / цвет */}
-          <div className="relative">
+          {/* Расширенные фильтры: тип / локация / персонаж / цвет */}
+          <div className="relative ml-auto">
             <button
               onClick={() => setFiltersOpen(v => !v)}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -680,8 +654,29 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                     minWidth: 210, maxHeight: 340,
                   }}
                 >
+                  {/* Тип сцены */}
+                  <div className="text-[10px] mb-1 px-1" style={{ color: textSecondary }}>Тип сцены</div>
+                  <div className="flex items-center gap-1 px-1.5 pb-1">
+                    {(['Все', 'ИНТ', 'ЭКСТ', 'ПАВ'] as const).map((label) => {
+                      const f = label === 'Все' ? 'all' : label as 'ИНТ' | 'ЭКСТ' | 'ПАВ'
+                      const isActive = filter === f
+                      return (
+                        <button key={label}
+                          onClick={() => setFilter(f)}
+                          className="px-2 py-1 rounded-md text-[11px] font-medium transition-all"
+                          style={{
+                            background: isActive ? (isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)') : 'transparent',
+                            color: isActive ? accentColor : textSecondary,
+                            border: `1px solid ${isActive ? (isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.3)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                          }}>
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+
                   {/* Локации */}
-                  <div className="text-[10px] mb-1 px-1" style={{ color: textSecondary }}>Локация</div>
+                  <div className="text-[10px] mb-1 mt-1.5 px-1 border-t pt-1.5" style={{ color: textSecondary, borderColor: border }}>Локация</div>
                   <div className="pb-1 space-y-0.5 max-h-28 overflow-y-auto">
                     {locationOptions.map(([loc, count]) => (
                       <button key={loc}
@@ -737,7 +732,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
 
                   {extraFiltersCount > 0 && (
                     <button
-                      onClick={() => { setLocFilter(null); setCharFilter(null); setColorFilter(null) }}
+                      onClick={() => { setFilter('all'); setLocFilter(null); setCharFilter(null); setColorFilter(null) }}
                       className="w-full mt-1.5 pt-1.5 border-t text-left px-1.5 py-1 rounded text-[11px]"
                       style={{ color: textSecondary, borderColor: border }}>
                       ✕ Сбросить фильтры
