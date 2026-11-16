@@ -17,7 +17,11 @@
     "brain:boot": "node scripts/brain/check-boot.mjs",
     "brain:next": "node scripts/brain/next.mjs",
     "brain:handoff": "node scripts/brain/gen-handoff.mjs",
-    "brain:check": "npm run brain:links && npm run brain:regs && npm run brain:refs && npm run brain:boot && npm run brain:handoff-check",
+    "brain:coverage": "node scripts/brain/check-coverage.mjs",
+    "brain:guard": "node scripts/brain/check-context-guard.mjs",
+    "brain:search": "node scripts/brain/search.mjs",
+    "brain:auto-checkpoint": "node scripts/brain/auto-checkpoint.mjs",
+    "brain:check": "npm run brain:links && npm run brain:regs && npm run brain:refs && npm run brain:boot && npm run brain:handoff-check && npm run brain:coverage && npm run brain:guard",
     "gate": "npm run build && npm run test && npm run test:e2e && npm run brain:check",
     "brain:handoff-check": "node scripts/brain/check-handoff.mjs",
     "brain:checkpoint": "node scripts/brain/gen-checkpoint.mjs",
@@ -25,7 +29,8 @@
     "brain:ideas": "node scripts/brain/gen-ideas.mjs",
     "vercel:cleanup": "node scripts/vercel-cleanup.mjs",
     "brain:add": "node scripts/brain/add.mjs",
-    "brain:sync": "npm run brain:status && npm run brain:checkpoint && npm run brain:handoff"
+    "brain:sync": "npm run brain:status && npm run brain:checkpoint && npm run brain:handoff && npm run brain:ideas && npm run brain:refs",
+    "prepare": "node scripts/hooks/install.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

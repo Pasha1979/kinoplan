@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-16 23:37 · `main` · cd88d6c docs: handoff после фикса dismiss-валидаци
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-16 00:05 · `main` · 6ca6cea docs: аудит доп.2 — регистрация решений по
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

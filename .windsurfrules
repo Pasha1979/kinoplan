@@ -26,6 +26,9 @@ npm run build зелёный → git add/commit/push → деплой Vercel →
 ## 🧷 CONTEXT CHECKPOINT (внутри сессии):
 Перегенерируй `npm run brain:checkpoint` ПЕРЕД каждым ответвлением (R-9: баг/идея → выполняем и возвращаемся),
 перед переключением модулей и когда чувствуешь, что теряешь нить (самосигнал). Страховка от потери контекста.
+АВТОМАТИЧЕСКИ: post-commit hook запускает `brain:auto-checkpoint` — при превышении бюджета
+(коммиты/файлы с последнего checkpoint ≥ порога в `_ai_workspace/brain.config.json`, R-90) checkpoint регенерируется сам.
+`brain:coverage` (в brain:check, warning) следит за полнотой: проверяй её вывод ПЕРЕД изменениями реестров.
 
 ## 🏁 КОНЕЦ СЕССИИ (обязательно):
 `npm run brain:sync` — одна команда: статус + checkpoint + handoff под текущий HEAD → закоммить вместе с финальными правками. Контроль: `npm run brain:handoff-check` (входит в brain:check) — ⚠️ «устарел на N коммитов» значит handoff надо обновить (отставание на 1 — норма).

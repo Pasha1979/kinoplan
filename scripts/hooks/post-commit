@@ -4,3 +4,6 @@
 # handoff всегда описывает состояние «минус один коммит» (норма).
 # T-20: уведомление об автосохранении контекста — раньше шло молча
 node scripts/brain/gen-handoff.mjs >/dev/null 2>&1 && echo "💾 контекст сохранён: SESSION_HANDOFF обновлён (прежний → _archive/contexts/)" || true
+# T-197 (I-185): авто-checkpoint по бюджету — триггерит CONTEXT_CHECKPOINT при превышении порога
+# (порог настраивается в _ai_workspace/brain.config.json → autoCheckpoint, R-90)
+node scripts/brain/auto-checkpoint.mjs || true
