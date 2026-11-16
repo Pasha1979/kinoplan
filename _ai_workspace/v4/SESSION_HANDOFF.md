@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-16 · `main` · 21213a7 Мозг: автоматизация A+B — coverage/search/
+# HANDOFF (автоген) · 2026-11-16 · `main` · 53cb2a6 Мозг: автоматизация C+D+E+F — роли, next/d
 
 Сделано:
+- 53cb2a6 Мозг: автоматизация C+D+E+F — роли, next/digest, les
 - 21213a7 Мозг: автоматизация A+B — coverage/search/auto-check
 - 6ca6cea docs: аудит доп.2 — регистрация решений по идеям 43-
 - cd88d6c docs: handoff после фикса dismiss-валидации
-- c361c70 fix(validation): dismiss issue — форс-запись на диск
 
 Дальше:
 1. ✅ Техдолг: T-21 откат сохранения, T-24/34 проверки, T-14 решение

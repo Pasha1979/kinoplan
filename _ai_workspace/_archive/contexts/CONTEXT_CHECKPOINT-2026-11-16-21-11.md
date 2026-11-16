@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-16 00:05 · `main` · 21213a7 Мозг: автоматизация A+B — coverage/search/
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-16 00:11 · `main` · 21213a7 Мозг: автоматизация A+B — coverage/search/
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
