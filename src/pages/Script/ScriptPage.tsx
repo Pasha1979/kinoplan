@@ -39,7 +39,7 @@ import FormatModal from './components/FormatModal'
 import ScriptBreakdown from '../../components/ScriptBreakdown'
 import { browserFS } from '../../adapters/BrowserFS'
 import { docxToScreenplayHtml, DocxImportError } from '../../services/docxImportService'
-import { saveScriptContent } from '../../services/storageService'
+import { saveScriptContent, flushWrites } from '../../services/storageService'
 
 export default function ScriptPage() {
   // Мост к pushUndo: навигатор сцен сообщает о перестановке до её выполнения
@@ -563,12 +563,15 @@ export default function ScriptPage() {
     if (owner.id === currentScript?.id && editorInstance) editorInstance.commands.setContent(newContent)
   }, [episodeScripts, currentScript?.id, editorInstance, updateScript])
 
-  // «Пропустить» проблему валидации — сохраняется в сценарии
+  // «Пропустить» проблему валидации — сохраняется в сценарии.
+  // flushWrites сразу: dismiss — редкое точечное действие, ждать debounce 400мс
+  // незачем, а при закрытии вкладки «сразу после клика» запись могла не успеть.
   const handleDismissIssue = useCallback((issueId: string) => {
     if (!currentScript?.id) return
     const cur = currentScript.dismissedIssues || []
     if (cur.includes(issueId)) return
     updateScript(currentScript.id, { dismissedIssues: [...cur, issueId] })
+    void flushWrites('kinoplan-scripts')
   }, [currentScript?.id, currentScript?.dismissedIssues, updateScript])
 
   // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши

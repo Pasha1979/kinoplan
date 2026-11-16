@@ -338,3 +338,41 @@ describe('T-35 per-script content docs', () => {
     expect(await pouchStorage.getItem('script-content:s-del')).toBeNull()
   })
 })
+
+// «Пропустить — больше не показывать» должно пережить перезапуск:
+// dismissedIssues сериализуется в kinoplan-scripts и доезжает до диска
+describe('dismissedIssues persist', () => {
+  it('updateScript dismissedIssues → попадает в persist-документ', async () => {
+    const { flushWrites, pouchStorage } = await import('../services/storageService')
+    useScriptStore.getState().addScript(makeScript({ id: 's-dis' }))
+    useScriptStore.getState().updateScript('s-dis', {
+      dismissedIssues: ['scene-scene-1-cast-МЕЧЕСЛАВ'],
+    })
+    await flushWrites('kinoplan-scripts')
+
+    const storeDoc = await pouchStorage.getItem('kinoplan-scripts')
+    expect(storeDoc).not.toBeNull()
+    const persisted = JSON.parse(storeDoc!) as {
+      state: { scripts: Array<{ id: string; dismissedIssues?: string[] }> }
+    }
+    const persistedScript = persisted.state.scripts.find((s) => s.id === 's-dis')
+    expect(persistedScript?.dismissedIssues).toEqual(['scene-scene-1-cast-МЕЧЕСЛАВ'])
+  })
+
+  it('последующие updateScript не затирают dismissedIssues (merge, не replace)', async () => {
+    const { flushWrites, pouchStorage } = await import('../services/storageService')
+    useScriptStore.getState().addScript(makeScript({ id: 's-dis2' }))
+    useScriptStore.getState().updateScript('s-dis2', { dismissedIssues: ['issue-a'] })
+    // имитация обычной активности — правки сцен/контента после dismiss
+    useScriptStore.getState().updateScript('s-dis2', { scenes: [makeScene()] })
+    await flushWrites('kinoplan-scripts')
+
+    const storeDoc = await pouchStorage.getItem('kinoplan-scripts')
+    const persisted = JSON.parse(storeDoc!) as {
+      state: { scripts: Array<{ id: string; dismissedIssues?: string[] }> }
+    }
+    expect(
+      persisted.state.scripts.find((s) => s.id === 's-dis2')?.dismissedIssues
+    ).toEqual(['issue-a'])
+  })
+})
