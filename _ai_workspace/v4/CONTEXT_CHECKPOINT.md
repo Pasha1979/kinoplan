@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-16 00:11 · `main` · 53cb2a6 Мозг: автоматизация C+D+E+F — роли, next/d
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-16 00:15 · `main` · 3855105 brain: автоген checkpoint/handoff после A-
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

@@ -15,11 +15,12 @@ export function lintRegistries(ideasMd,tasksMd,{now=Date.now(),dupThreshold=0.55
   const ideaIds=new Set(ideas.map(x=>x.id)),taskIds=new Set(tasks.map(x=>x.id));
   const out={dups:[],orphans:[],stale:[]};
 
-  // Fuzzy-дубли идей (пары с высокой похожестью текста) — пропускаем записи с явной пометкой «дубль»
+  // Fuzzy-дубли идей (пары с высокой похожестью текста) — пропускаем записи с явной пометкой «дубль»/«слита»/🔀
+  const merged=x=>/дубль|слита|🔀/i.test(x.links+x.status);
   const bags=ideas.map(x=>({...x,bag:words(x.text)}));
   for(let i=0;i<bags.length;i++)for(let j=i+1;j<bags.length;j++){
     const a=bags[i],b=bags[j];
-    if(/дубль/i.test(a.links+b.links))continue;
+    if(merged(a)||merged(b))continue;
     const s=jaccard(a.bag,b.bag);
     if(s>=dupThreshold)out.dups.push({a:a.id,b:b.id,score:+s.toFixed(2)});
   }
