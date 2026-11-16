@@ -385,3 +385,117 @@ describe('projectService.importProjectFromJSON — ремап связей (T-96
     useScriptStore.setState({ scripts: [] })
   })
 })
+
+// B8: каскадное удаление и порядок записи
+describe('projectService.deleteProject — каскад (B8)', () => {
+  const mkProj = (id: string): Project => ({
+    id, name: `Проект ${id}`, type: 'film', status: 'preproduction',
+    dailyOutput: 3, shootingGroups: 1, plannedShootingDays: 30, cloudStorage: 'none',
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    scriptProgress: 0, castingProgress: 0, locationsProgress: 0, scheduleProgress: 0,
+    shotDays: 0, scheduledDays: 0, callSheetsSent: 0, callSheetsConfirmed: 0,
+    shootingDays: [], locationsTotal: 0, locationsApproved: 0, locationsInScout: 0,
+    shotMinutes: 0, totalMinutes: 0, conflicts: 0,
+  })
+  const mkScene = (id: string, projectId: string): Scene => ({
+    id, projectId, number: '1', type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', cast: [], pages: 1,
+  }) as Scene
+
+  it('удаляет проект, его сцены и скрипты; currentScriptId сбрасывается', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    useNormalizedProjectStore.setState({
+      projects: { 'p-del': mkProj('p-del'), 'p-keep': mkProj('p-keep') },
+      scenes: { 's-del': mkScene('s-del', 'p-del'), 's-keep': mkScene('s-keep', 'p-keep') },
+    })
+    useScriptStore.setState({
+      scripts: [
+        { id: 'scr-del', projectId: 'p-del', title: 'С1', format: 'russian', scenes: [], characters: [], createdAt: '', updatedAt: '', timingSystem: 'page', genreCoefficient: 1, fontFamily: 'Courier', fontSize: 12, autoExtractCharacters: false },
+        { id: 'scr-keep', projectId: 'p-keep', title: 'С2', format: 'russian', scenes: [], characters: [], createdAt: '', updatedAt: '', timingSystem: 'page', genreCoefficient: 1, fontFamily: 'Courier', fontSize: 12, autoExtractCharacters: false },
+      ] as never,
+      currentScriptId: 'scr-del',
+    })
+
+    await projectService.deleteProject('p-del')
+
+    const norm = useNormalizedProjectStore.getState()
+    expect(norm.projects['p-del']).toBeUndefined()
+    expect(norm.projects['p-keep']).toBeDefined()
+    expect(norm.scenes['s-del']).toBeUndefined()
+    expect(norm.scenes['s-keep']).toBeDefined()
+
+    const ss = useScriptStore.getState()
+    expect(ss.scripts.find((s) => s.id === 'scr-del')).toBeUndefined()
+    expect(ss.scripts.find((s) => s.id === 'scr-keep')).toBeDefined()
+    expect(ss.currentScriptId).toBeNull()
+    useScriptStore.setState({ scripts: [] })
+  })
+
+  it('чужой currentScriptId НЕ сбрасывается', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    useNormalizedProjectStore.setState({ projects: { 'p-del': mkProj('p-del') }, scenes: {} })
+    useScriptStore.setState({
+      scripts: [
+        { id: 'scr-keep', projectId: 'p-other', title: 'С', format: 'russian', scenes: [], characters: [], createdAt: '', updatedAt: '', timingSystem: 'page', genreCoefficient: 1, fontFamily: 'Courier', fontSize: 12, autoExtractCharacters: false },
+      ] as never,
+      currentScriptId: 'scr-keep',
+    })
+    await projectService.deleteProject('p-del')
+    expect(useScriptStore.getState().currentScriptId).toBe('scr-keep')
+    useScriptStore.setState({ scripts: [] })
+  })
+})
+
+describe('projectService.updateScene — scriptStore пишется первым (B8)', () => {
+  it('источник (scriptStore) обновляется ДО normalized-проекции', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    const scene: Scene = {
+      id: 'sc-ord', projectId: 'p1', number: '1', type: 'ИНТ',
+      location: 'ДОМ', time: 'ДЕНЬ', cast: [], pages: 1,
+    } as Scene
+    useScriptStore.setState({
+      scripts: [{ id: 'scr-1', projectId: 'p1', title: 'С', format: 'russian', scenes: [scene], characters: [], createdAt: '', updatedAt: '', timingSystem: 'page', genreCoefficient: 1, fontFamily: 'Courier', fontSize: 12, autoExtractCharacters: false }] as never,
+    })
+    useNormalizedProjectStore.setState({ scenes: { 'sc-ord': scene } })
+
+    const order: string[] = []
+    const updateScriptSpy = vi.spyOn(useScriptStore.getState(), 'updateScript')
+      .mockImplementation(() => {
+        order.push('scriptStore')
+        return (useScriptStore.getState() as unknown as { updateScript: (i: string, u: never) => void })
+      })
+    vi.spyOn(useNormalizedProjectStore.getState(), 'updateScene')
+      .mockImplementation(() => { order.push('normalized') })
+
+    await projectService.updateScene('sc-ord', { location: 'ПАРК' })
+
+    expect(updateScriptSpy).toHaveBeenCalled()
+    expect(order[0]).toBe('scriptStore')
+    expect(order[1]).toBe('normalized')
+    useScriptStore.setState({ scripts: [] })
+  })
+})
+
+describe('projectService.importProjectFromJSON — закладки (B8)', () => {
+  it('bookmarkColor сцены сохраняется при ремапе на новый UUID', async () => {
+    const { useScriptStore } = await import('../store/scriptStore')
+    useScriptStore.setState({ scripts: [] })
+    const json = JSON.stringify({
+      project: { name: 'Закладки', type: 'film' },
+      scripts: [{
+        title: 'С',
+        content: '<div data-type="scene-header" data-scene-id="bm-1">1. ИНТ. ДОМ — ДЕНЬ.</div>',
+        scenes: [
+          { id: 'bm-1', number: '1', type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', cast: [], pages: 1, bookmarkColor: 'red' },
+        ],
+      }],
+    })
+    const imported = await projectService.importProjectFromJSON(json)
+    const script = useScriptStore.getState().scripts.find((s) => s.projectId === imported.id)!
+    const scene = script.scenes![0]
+    expect(scene.id).not.toBe('bm-1')
+    expect((scene as unknown as { bookmarkColor?: string }).bookmarkColor).toBe('red')
+    // content указывает на тот же новый id, что и сцена
+    expect(script.content).toContain(`data-scene-id="${scene.id}"`)
+    useScriptStore.setState({ scripts: [] })
+  })
+})
