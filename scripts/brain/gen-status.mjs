@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {execSync} from 'child_process';
 import {writeFileSync,readdirSync,readFileSync,statSync} from 'fs';
+import {getRole} from './lib/role.mjs';
 import {join} from 'path';
 const sh=c=>{try{return execSync(c,{encoding:'utf8'}).trim()}catch{return''}};
 const log=sh('git log --oneline -5'),branch=sh('git rev-parse --abbrev-ref HEAD'),
@@ -42,7 +43,7 @@ writeFileSync('_ai_workspace/v4/02_СТАТУС.md',`# 02 · СТАТУС (ав�
 - Идеи: ${nIdeas} · Решения: ${nDec} · Открытые вопросы: ${openQ.length}
 
 ## СЕЙЧАС
-→ см. 01_ПЛАН.md, раздел «🔴 СЕЙЧАС» (boot читает её там)
+→ см. 01_ПЛАН.md «🔴 СЕЙЧАС» · роль: ${getRole()}
 
 ${openQ.length?`## Открытые вопросы\n${openQ.map(l=>`- **${cell(l,1).replace(/\s*\(.*\)/,'')}**: ${cell(l,3)}`).join('\n')}\n`:''}
 ## Git
