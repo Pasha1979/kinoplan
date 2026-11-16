@@ -4,7 +4,7 @@ import type { Scene } from '../../../types/scene'
 /** T-133: поиск дублей и слияние персонажей справочника.
  *  Чистые функции — легко тестировать; UI и запись в сторы снаружи. */
 
-const norm = (s: string) => s.toUpperCase().replace(/Ё/g, 'Е').replace(/\s+/g, ' ').trim()
+export const norm = (s: string) => s.toUpperCase().replace(/Ё/g, 'Е').replace(/\s+/g, ' ').trim()
 
 /** Расстояние Левенштейна (короткие имена — полный расчёт дёшев) */
 export function levenshtein(a: string, b: string): number {

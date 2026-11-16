@@ -18,6 +18,7 @@ import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
 import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor, setEditorContentNoHistory } from './components/sceneHtmlOps'
 import { mergeCharacters } from './components/charMerge'
+import { mergeLocations } from './components/locMerge'
 import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './components/boardUndo'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
@@ -403,6 +404,52 @@ export default function ScriptPage() {
 
     useNormalizedProjectStore.getState().updateProject(project.id, {
       development: { ...dev, characters: r.characters, folders: r.folders },
+    })
+    showToast(`«${drop.name}» → «${keep.name}» · замен в тексте: ${r.replacedInText}`, 'success')
+  }, [project, episodeScripts, allScenes, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
+
+  // Слияние локаций справочника — тот же паттерн: название заменяется
+  // в шапках сцен и scene.location, undo — снапшот development + серий.
+  const handleMergeLocations = useCallback((keepId: string, dropId: string) => {
+    if (!project) return
+    const dev = project.development ?? { characters: [], locations: [], synopsis: {} }
+    const keep = dev.locations.find((l) => l.id === keepId)
+    const drop = dev.locations.find((l) => l.id === dropId)
+    if (!keep || !drop) return
+
+    pushUndo({
+      kind: 'merge',
+      development: dev,
+      scripts: episodeScripts.map((ep) => ({ id: ep.id, content: ep.content, scenes: ep.scenes })),
+    })
+
+    const r = mergeLocations({
+      locations: dev.locations,
+      folders: dev.folders,
+      keepId, dropId,
+      scenes: allScenes,
+      contents: episodeScripts.map((ep) => ep.content || ''),
+    })
+
+    episodeScripts.forEach((ep, i) => {
+      const patched = r.contentsPatched[i]
+      const scenesPatch = r.sceneLocPatches.size
+        ? (ep.scenes ?? []).map((sc) => r.sceneLocPatches.has(sc.id) ? { ...sc, location: r.sceneLocPatches.get(sc.id)! } : sc)
+        : undefined
+      const scenesChanged = scenesPatch && scenesPatch.some((sc, idx) => sc !== (ep.scenes ?? [])[idx])
+      if (patched !== (ep.content || '') || scenesChanged) {
+        updateScript(ep.id, {
+          ...(patched !== (ep.content || '') ? { content: patched } : {}),
+          ...(scenesChanged ? { scenes: scenesPatch } : {}),
+        })
+        if (ep.id === currentScript?.id && editorInstance && patched !== (ep.content || '')) {
+          setEditorContentNoHistory(editorInstance, patched)
+        }
+      }
+    })
+
+    useNormalizedProjectStore.getState().updateProject(project.id, {
+      development: { ...dev, locations: r.locations, folders: r.folders },
     })
     showToast(`«${drop.name}» → «${keep.name}» · замен в тексте: ${r.replacedInText}`, 'success')
   }, [project, episodeScripts, allScenes, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
@@ -855,6 +902,7 @@ export default function ScriptPage() {
             scriptFormat={scriptFormat}
             onSaveSceneHtml={handleSaveSceneHtml}
             onMergeCharacters={handleMergeCharacters}
+            onMergeLocations={handleMergeLocations}
             onDevelopmentChange={(dev) => {
               if (project?.id) {
                 useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })

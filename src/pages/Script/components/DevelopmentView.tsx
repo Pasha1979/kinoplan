@@ -10,6 +10,7 @@ import type {
 import { extractSceneHtml } from './sceneHtmlOps'
 import { SceneTextEditor } from './SceneDetailModal'
 import { findCharDuplicates, type DupPair } from './charMerge'
+import { findLocDuplicates, type LocDupPair } from './locMerge'
 
 const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
   main:      { l: 'Главная',        c: '#fb923c' },
@@ -41,12 +42,14 @@ interface DevelopmentViewProps {
   onSaveSceneHtml?: (scene: Scene, html: string) => void
   /** T-133: слияние персонажей — имя заменяется и в тексте сценария */
   onMergeCharacters?: (keepId: string, dropId: string) => void
+  /** слияние локаций — название заменяется в шапках и scene.location */
+  onMergeLocations?: (keepId: string, dropId: string) => void
 }
 
 const uid = () => `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const emptyDev: ProjectDevelopment = { characters: [], locations: [], synopsis: {}, folders: [] }
 
-function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters }: DevelopmentViewProps) {
+function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters, onMergeLocations }: DevelopmentViewProps) {
   const [tab, setTab] = useState<'chars' | 'locs' | 'synopsis' | 'episodes'>('chars')
   const [editChar, setEditChar] = useState<DevCharacter | 'new' | null>(null)
   const [editLoc, setEditLoc] = useState<DevLocation | 'new' | null>(null)
@@ -62,6 +65,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [scenesList, setScenesList] = useState<{ title: string; color: string; sceneIds: string[] } | null>(null)
   const [noScenesOnly, setNoScenesOnly] = useState(false)
   const [dupPairs, setDupPairs] = useState<DupPair[] | null>(null)
+  const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
+  const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
 
   const dev = development ?? emptyDev
   const folders = dev.folders ?? []
@@ -184,6 +189,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
     let list = dev.locations
       .filter((l) => applySearch(l.name))
       .filter((l) => applyFolder(l.id, 'locs'))
+      .filter((l) => !locNoScenesOnly || locSceneCount(l) === 0)
     const by = {
       manual: (a: DevLocation, b: DevLocation) => (a.order ?? 999) - (b.order ?? 999),
       alpha: (a: DevLocation, b: DevLocation) => a.name.localeCompare(b.name, 'ru'),
@@ -193,7 +199,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
       type: (a: DevLocation, b: DevLocation) => a.name.localeCompare(b.name, 'ru'),
     }[sortBy]
     return [...list].sort(by)
-  }, [dev.locations, search, sortBy, folderFilter, locNamesInText, scenes, folders])
+  }, [dev.locations, search, sortBy, folderFilter, locNoScenesOnly, locNamesInText, scenes, folders])
 
   /* ── Папки ── */
   const foldersOfKind = folders.filter((f) => f.kind === tab || (tab === 'chars' && f.kind === 'chars') || (tab === 'locs' && f.kind === 'locs'))
@@ -428,19 +434,40 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           {/* ── Локации ── */}
           {tab === 'locs' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
                 <button onClick={() => setEditLoc('new')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
-                  <Plus size={12} /> Локация
+                  className="flex items-center rounded-lg font-semibold"
+                  style={{ gap: 6, padding: '8px 14px', fontSize: 13, background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
+                  <Plus size={14} /> Локация
                 </button>
                 <button onClick={importLocs}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                  style={{ color: textSecondary, border: `1px solid ${border}` }}
+                  className="flex items-center rounded-lg font-medium"
+                  style={{ gap: 6, padding: '8px 14px', fontSize: 13, color: textSecondary, border: `1px solid ${border}` }}
                   title="Собрать локации из шапок сцен">
-                  <Sparkles size={12} /> Импорт из текста ({locNamesInText.size})
+                  <Sparkles size={14} /> Импорт из текста ({locNamesInText.size})
                 </button>
-                <span className="text-[10px]" style={{ color: textSecondary }}>{filteredLocs.length} из {dev.locations.length}</span>
+                {onMergeLocations && (
+                  <button onClick={() => setLocDupPairs(findLocDuplicates(dev.locations))}
+                    className="flex items-center rounded-lg font-medium"
+                    style={{ gap: 6, padding: '8px 14px', fontSize: 13, color: textSecondary, border: `1px solid ${border}` }}
+                    title="Найти похожие названия и объединить">
+                    <MapPin size={14} /> Найти дубли
+                  </button>
+                )}
+                <button
+                  onClick={() => setLocNoScenesOnly(!locNoScenesOnly)}
+                  className="rounded-full font-medium transition-all"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    background: locNoScenesOnly ? 'rgba(52,211,153,0.2)' : 'transparent',
+                    color: locNoScenesOnly ? '#34d399' : textSecondary,
+                    border: `1px ${locNoScenesOnly ? 'solid' : 'dashed'} ${locNoScenesOnly ? 'rgba(52,211,153,0.6)' : border}`,
+                  }}
+                  title="Показать только локации, которые не появляются ни в одной сцене">
+                  Без сцен
+                </button>
+                <span style={{ fontSize: 12, color: textSecondary }}>{filteredLocs.length} из {dev.locations.length}</span>
               </div>
               {filteredLocs.length === 0 ? (
                 <Empty text={dev.locations.length ? 'Ничего не найдено по фильтрам' : 'Пусто — добавь или импортируй из текста'} isDark={isDark} />
@@ -465,7 +492,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="text-sm font-bold" style={{ color: textPrimary }}>{l.name}</div>
                         <div className="text-right shrink-0">
-                          <div className="text-[10px]" style={{ color: textSecondary }}>{locSceneCount(l)} сцен</div>
+                          <div className="text-[10px]" style={{ color: locSceneCount(l) === 0 ? '#f59e0b' : textSecondary }}>
+                            {locSceneCount(l) === 0 ? 'не в сценах' : `${locSceneCount(l)} сцен`}
+                          </div>
                           <div className="text-[9px]" style={{ color: textSecondary }}>{Math.round(durOf(locSceneIds(l)) / 60)} мин</div>
                         </div>
                       </div>
@@ -689,6 +718,79 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
             {dupPairs.length > 0 && (
               <p className="text-[10px]" style={{ color: textSecondary }}>
                 Слияние заменяет имя и в тексте сценария (вариант B) — можно отменить кнопкой отката доски.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Модал дублей локаций ── */}
+      {locDupPairs !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setLocDupPairs(null)}>
+          <div className="w-full max-w-lg rounded-2xl p-5 space-y-3"
+            style={{ background: cardBg, border: `1px solid ${border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold" style={{ color: textPrimary }}>
+                {locDupPairs.length ? `Возможные дубли — ${locDupPairs.length}` : 'Дублей не найдено'}
+              </span>
+              <button onClick={() => setLocDupPairs(null)} style={{ color: textSecondary }}><X size={16} /></button>
+            </div>
+            {locDupPairs.length === 0 && (
+              <p className="text-xs" style={{ color: textSecondary }}>
+                Похожих названий не нашлось — справочник чист.
+              </p>
+            )}
+            {locDupPairs.map((pair, i) => (
+              <div key={i} className="rounded-xl p-3 space-y-2" style={{ background: fieldBg, border: `1px solid ${border}` }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: textSecondary }}>
+                  {pair.reason === 'prefix' && 'Одно название — часть другого'}
+                  {pair.reason === 'firstword' && 'Общее первое слово'}
+                  {pair.reason === 'typo' && 'Похожи (возможна опечатка)'}
+                </div>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-semibold" style={{ color: textPrimary }}>
+                    {pair.a.name} <span style={{ color: textSecondary }}>({locSceneCount(pair.a)} сцен)</span>
+                  </span>
+                  <span style={{ color: textSecondary }}>≈</span>
+                  <span className="text-xs font-semibold" style={{ color: textPrimary }}>
+                    {pair.b.name} <span style={{ color: textSecondary }}>({locSceneCount(pair.b)} сцен)</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      onMergeLocations?.(pair.a.id, pair.b.id)
+                      setLocDupPairs(findLocDuplicates(dev.locations.filter((l) => l.id !== pair.b.id)))
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold"
+                    style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}
+                    title={`Объединить: «${pair.b.name}» заменится на «${pair.a.name}» в справочнике и в шапках`}>
+                    {pair.a.name} ← {pair.b.name}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onMergeLocations?.(pair.b.id, pair.a.id)
+                      setLocDupPairs(findLocDuplicates(dev.locations.filter((l) => l.id !== pair.a.id)))
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold"
+                    style={{ background: fieldBg, color: textSecondary, border: `1px solid ${border}` }}
+                    title={`Объединить: «${pair.a.name}» заменится на «${pair.b.name}» в справочнике и в шапках`}>
+                    {pair.b.name} ← {pair.a.name}
+                  </button>
+                  <button
+                    onClick={() => setLocDupPairs(locDupPairs.filter((_, j) => j !== i))}
+                    className="ml-auto text-[10px]"
+                    style={{ color: textSecondary }}>
+                    Не дубль
+                  </button>
+                </div>
+              </div>
+            ))}
+            {locDupPairs.length > 0 && (
+              <p className="text-[10px]" style={{ color: textSecondary }}>
+                Слияние заменяет название и в шапках сцен — можно отменить кнопкой отката доски.
               </p>
             )}
           </div>
