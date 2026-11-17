@@ -15,6 +15,7 @@ import {
   Film,
   Users,
   Layout,
+  Keyboard,
 } from 'lucide-react'
 import type { ScriptFormat, TimingSystem } from '../../../store/scriptStore'
 import { useScriptStore } from '../../../store/scriptStore'
@@ -112,6 +113,8 @@ export default function TimingSettingsModal({
   const toggleShowPlaceholders = useScriptStore((s) => s.toggleShowPlaceholders)
   const a4Mode = useUiStore((s) => s.a4Mode)
   const toggleA4Mode = useUiStore((s) => s.toggleA4Mode)
+  const smartTypeAcceptKey = useUiStore((s) => s.smartTypeAcceptKey)
+  const setSmartTypeAcceptKey = useUiStore((s) => s.setSmartTypeAcceptKey)
 
   const surfaceBg = isDark ? '#1e1e3a' : '#ffffff'
   const sectionBg = isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc'
@@ -432,6 +435,42 @@ export default function TimingSettingsModal({
                   }}
                 />
               </button>
+            </div>
+
+            {/* T-138: клавиша принятия подсказки SmartType */}
+            <div
+              className="flex items-center justify-between p-4 rounded-xl mt-3"
+              style={{ background: sectionBg, border: `1px solid ${borderColor}` }}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
+                  style={{ background: 'rgba(99,102,241,0.1)', color: accentLight }}
+                >
+                  <Keyboard size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: textPrimary }}>Принимать подсказку</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
+                    Какой клавишей выбирать вариант SmartType
+                  </div>
+                </div>
+              </div>
+              <div className="flex rounded-lg overflow-hidden shrink-0" style={{ border: `1px solid ${borderColor}` }}>
+                {(['enter', 'tab'] as const).map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => setSmartTypeAcceptKey(k)}
+                    className="px-4 py-1.5 text-xs font-semibold transition-all"
+                    style={{
+                      background: smartTypeAcceptKey === k ? accent : 'transparent',
+                      color: smartTypeAcceptKey === k ? '#fff' : textSecondary,
+                    }}
+                  >
+                    {k === 'enter' ? 'Enter' : 'Tab'}
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
         </div>

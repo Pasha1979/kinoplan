@@ -70,8 +70,6 @@ function ScriptHeader({
   const toggleAutoTypography = useUiStore((s) => s.toggleAutoTypography)
   const typewriterMode = useUiStore((s) => s.typewriterMode)
   const toggleTypewriterMode = useUiStore((s) => s.toggleTypewriterMode)
-  const smartTypeAcceptKey = useUiStore((s) => s.smartTypeAcceptKey)
-  const setSmartTypeAcceptKey = useUiStore((s) => s.setSmartTypeAcceptKey)
   const autoCloseBrackets = useUiStore((s) => s.autoCloseBrackets)
   const toggleAutoCloseBrackets = useUiStore((s) => s.toggleAutoCloseBrackets)
 
@@ -249,22 +247,6 @@ function ScriptHeader({
           <option value="kinoplan">KinoPlan</option>
           <option value="fd">Final Draft</option>
           <option value="kit">КИТ</option>
-        </select>
-        {/* T-138: клавиша принятия подсказки SmartType */}
-        <select
-          value={smartTypeAcceptKey}
-          onChange={(e) => setSmartTypeAcceptKey(e.target.value as 'enter' | 'tab')}
-          className="h-8 px-1.5 rounded-lg text-[11px] cursor-pointer"
-          style={{
-            color: textSecondary,
-            background: 'transparent',
-            border: `1px solid ${colors.border}`,
-            outline: 'none',
-          }}
-          title="Чем принимать подсказку SmartType: Enter или Tab (при Tab и открытой подсказке — цикл типов не срабатывает)"
-        >
-          <option value="enter">Подсказка: Enter</option>
-          <option value="tab">Подсказка: Tab</option>
         </select>
         {/* T-171: автозакрытие скобок/кавычек */}
         <button
