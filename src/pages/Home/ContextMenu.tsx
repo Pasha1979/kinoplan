@@ -80,10 +80,10 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           }}
           className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
             item.danger
-              ? 'text-red-400 hover:bg-red-500/10'
+              ? 'text-red-400 hover:bg-red-500/15'
               : isDark
-                ? 'text-gray-300 hover:bg-white/6'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-200'
+                : 'text-gray-600 hover:bg-indigo-500/10 hover:text-indigo-700'
           }`}
         >
           {item.icon}
