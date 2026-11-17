@@ -75,6 +75,8 @@ interface SceneNavigatorProps {
   draftStatuses?: DraftStatus[]
   /** обновление сцены — выбор редакционного статуса */
   onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
+  /** Блок B: правый клик по карточке сцены — операции со сценой */
+  onSceneContextMenu?: (sceneId: string, x: number, y: number) => void
 }
 
 function SceneNavigator({
@@ -95,6 +97,7 @@ function SceneNavigator({
   totalPages,
   draftStatuses,
   onUpdateScene,
+  onSceneContextMenu,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [search, setSearch] = useState('')
@@ -263,6 +266,7 @@ interface SceneCardProps {
   dragListeners?: Record<string, any>
   draftStatuses?: DraftStatus[]
   onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
+  onSceneContextMenu?: (sceneId: string, x: number, y: number) => void
 }
 
 // Plain карточка сцены (без drag-and-drop)
@@ -285,6 +289,7 @@ function SceneCard({
   dragListeners,
   draftStatuses,
   onUpdateScene,
+  onSceneContextMenu,
 }: SceneCardProps) {
   const [stMenu, setStMenu] = useState<{ x: number; y: number } | null>(null)
   const ds = draftStatusById(scene.draftStatus, draftStatuses)
@@ -306,6 +311,10 @@ function SceneCard({
         ...dragStyle,
       }}
       onClick={() => onSceneClick?.(scene.id)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onSceneContextMenu?.(scene.id, e.clientX, e.clientY)
+      }}
     >
       {/* Основная строка сцены */}
       <div className="p-3 flex items-start gap-2">
@@ -816,6 +825,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                 duration={timing.duration}
                 draftStatuses={draftStatuses}
                 onUpdateScene={onUpdateScene}
+                onSceneContextMenu={onSceneContextMenu}
               />
             )
           })
@@ -855,6 +865,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                     duration={timing.duration}
                     draftStatuses={draftStatuses}
                     onUpdateScene={onUpdateScene}
+                onSceneContextMenu={onSceneContextMenu}
                   />
                 )
               })}
@@ -876,6 +887,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                   duration={filteredScenesWithTiming.find(t => t.scene.id === activeScene.id)?.timing.duration || 0}
                   draftStatuses={draftStatuses}
                   onUpdateScene={onUpdateScene}
+                onSceneContextMenu={onSceneContextMenu}
                 />
               ) : null}
             </DragOverlay>

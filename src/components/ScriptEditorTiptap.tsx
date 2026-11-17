@@ -57,6 +57,9 @@ export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
       fontFamily={props.fontFamily}
       fontSize={props.fontSize}
       multiCursorCount={logic.multiCursorCount}
+      gotoOpen={logic.gotoOpen}
+      setGotoOpen={logic.setGotoOpen}
+      gotoScene={logic.gotoScene}
     />
   )
 }

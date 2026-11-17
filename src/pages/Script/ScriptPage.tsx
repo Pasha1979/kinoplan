@@ -25,7 +25,9 @@ import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml, type FormatBlock } from '../../utils/formatBlockExtractor'
 import { isBuiltinStatus, reassignSceneStatus } from '../../utils/draftStatus'
-import { Settings } from 'lucide-react'
+import { Settings, Copy, ArrowUpToLine, ArrowDownToLine, Trash2 } from 'lucide-react'
+import ContextMenu from '../Home/ContextMenu'
+import { posOfSceneId, sceneAtPos, allSceneRanges, duplicateScene, mergeScenes, deleteScene } from '../../utils/sceneOps'
 import type { Editor } from '@tiptap/react'
 import SearchBar from '../../components/SearchBar'
 import { useScriptSearch } from '../../hooks/useScriptSearch'
@@ -128,6 +130,8 @@ export default function ScriptPage() {
   const search = useScriptSearch(editorInstance)
   // T-141: счётчик выделенного текста для статусбара
   const [selectionStats, setSelectionStats] = useState<{ words: number; chars: number } | null>(null)
+  // Блок B: правый клик по сцене в навигаторе
+  const [navCtxMenu, setNavCtxMenu] = useState<{ sceneId: string; x: number; y: number } | null>(null)
   useEffect(() => {
     if (!editorInstance) { setSelectionStats(null); return }
     const update = () => {
@@ -969,6 +973,7 @@ export default function ScriptPage() {
               activeSceneId={selectedScene?.id || ''}
               draftStatuses={project?.draftStatuses}
               onUpdateScene={handleUpdateScene}
+              onSceneContextMenu={(sceneId, x, y) => setNavCtxMenu({ sceneId, x, y })}
             />}
 
             {/* ─── Split Screen container ─── */}
@@ -1255,6 +1260,34 @@ export default function ScriptPage() {
           onClose={() => setShowHelpModal(false)}
         />
       )}
+
+      {/* Блок B: правый клик по сцене в навигаторе — операции со сценой */}
+      {navCtxMenu && editorInstance && (() => {
+        const doc = editorInstance.state.doc
+        const start = posOfSceneId(doc, navCtxMenu.sceneId)
+          ?? sceneAtPos(doc, 1)?.range.start ?? null // крайний фолбэк
+        const scene = navigatorScenes.find((s) => s.id === navCtxMenu.sceneId)
+        const byNumber = start === null && scene
+          ? allSceneRanges(doc).find((r) => r.number === scene.number)?.start ?? null
+          : start
+        if (byNumber === null) return null
+        const pos = byNumber + 1
+        const hit = sceneAtPos(doc, pos)!
+        const total = allSceneRanges(doc).length
+        return (
+          <ContextMenu
+            x={navCtxMenu.x}
+            y={navCtxMenu.y}
+            onClose={() => setNavCtxMenu(null)}
+            items={[
+              { label: 'Дублировать сцену', icon: <Copy size={14} />, onClick: () => duplicateScene(editorInstance, pos) },
+              ...(hit.index > 0 ? [{ label: 'Объединить с предыдущей', icon: <ArrowUpToLine size={14} />, onClick: () => mergeScenes(editorInstance, pos, 'prev' as const) }] : []),
+              ...(hit.index < total - 1 ? [{ label: 'Объединить со следующей', icon: <ArrowDownToLine size={14} />, onClick: () => mergeScenes(editorInstance, pos, 'next' as const) }] : []),
+              { label: 'Удалить сцену', icon: <Trash2 size={14} />, danger: true, onClick: () => deleteScene(editorInstance, pos) },
+            ]}
+          />
+        )
+      })()}
 
       {/* Модальное окно автоформатирования */}
       {showAutoFormatModal && (

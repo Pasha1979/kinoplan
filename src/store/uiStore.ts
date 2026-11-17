@@ -23,6 +23,8 @@ interface UiStore {
   smartTypeAcceptKey: SmartTypeAcceptKey
   /** T-171: автозакрытие скобок/кавычек при наборе */
   autoCloseBrackets: boolean
+  /** T-143: пользовательские шаблоны сцен (встроенные — в sceneTemplates.ts) */
+  customSceneTemplates: { name: string; html: string }[]
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
@@ -31,6 +33,8 @@ interface UiStore {
   toggleTypewriterMode: () => void
   setSmartTypeAcceptKey: (k: SmartTypeAcceptKey) => void
   toggleAutoCloseBrackets: () => void
+  addCustomSceneTemplate: (t: { name: string; html: string }) => void
+  removeCustomSceneTemplate: (name: string) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -44,6 +48,7 @@ export const useUiStore = create<UiStore>()(
       typewriterMode: false,
       smartTypeAcceptKey: 'enter',
       autoCloseBrackets: true,
+      customSceneTemplates: [],
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -68,6 +73,12 @@ export const useUiStore = create<UiStore>()(
 
       toggleAutoCloseBrackets: () =>
         set((state) => ({ autoCloseBrackets: !state.autoCloseBrackets })),
+
+      addCustomSceneTemplate: (t) =>
+        set((state) => ({ customSceneTemplates: [...state.customSceneTemplates.filter((x) => x.name !== t.name), t] })),
+
+      removeCustomSceneTemplate: (name) =>
+        set((state) => ({ customSceneTemplates: state.customSceneTemplates.filter((x) => x.name !== name) })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

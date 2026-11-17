@@ -16,6 +16,7 @@ import { useScriptStore } from '../store/scriptStore'
 import { useUiStore } from '../store/uiStore'
 import { typographyTransform } from '../utils/autoTypography'
 import { handleBracketInput, handleBracketBackspace } from '../utils/autoBrackets'
+import { allSceneRanges, moveScene } from '../utils/sceneOps'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 import { type PageBreakInfo } from '../services/pagination'
@@ -183,6 +184,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const initialContentLoadedRef = useRef(false)
   // Точное количество страниц (через виртуальный A4-рендеринг)
   const [precisePages, setPrecisePages] = useState<number>(0.1)
+  // T-137: поле «перейти к сцене №» (Ctrl+G)
+  const [gotoOpen, setGotoOpen] = useState(false)
   // Ref для актуального значения — избегаем stale closure в setTimeout/setCallbacks
   const precisePagesRef = useRef<number>(0.1)
   // Дебаунс для подсчёта страниц (не считать на каждый символ)
@@ -694,6 +697,20 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // T-171: умный Backspace на пустой паре скобок
     if (event.key === 'Backspace' && useUiStore.getState().autoCloseBrackets && handleBracketBackspace(view)) {
       event.preventDefault()
+      return true
+    }
+
+    // T-137: Ctrl+G — «перейти к сцене №»
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'g') {
+      event.preventDefault()
+      setGotoOpen(true)
+      return true
+    }
+
+    // T-137: Alt+↑/↓ — переместить сцену целиком
+    if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      event.preventDefault()
+      moveScene(view, view.state.selection.from, event.key === 'ArrowUp' ? 'up' : 'down')
       return true
     }
 
@@ -1515,8 +1532,24 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
 
   const currentType = getCurrentBlockType(editor)
 
+  // T-137: переход к сцене по номеру (вкл. литеры «5-А», регистр не важен)
+  const gotoScene = useCallback((number: string): boolean => {
+    if (!editor) return false
+    const norm = (s: string) => s.replace(/[.\s]/g, '').toUpperCase()
+    const target = norm(number)
+    if (!target) return false
+    const hit = allSceneRanges(editor.state.doc).find((r) => norm(r.number) === target)
+    if (!hit) return false
+    const pos = hit.start + 1
+    editor.chain().focus().setTextSelection(pos).scrollIntoView().run()
+    return true
+  }, [editor])
+
   return {
     editor,
+    gotoOpen,
+    setGotoOpen,
+    gotoScene,
     precisePages,
     isDark,
     textPrimary,

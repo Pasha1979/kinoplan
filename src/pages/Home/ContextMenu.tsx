@@ -5,6 +5,8 @@ export interface ContextMenuItem {
   label: string
   icon?: React.ReactNode
   danger?: boolean
+  /** не закрывать меню после клика (подменю) */
+  keepOpen?: boolean
   onClick: () => void
 }
 
@@ -74,7 +76,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           key={item.label}
           onClick={() => {
             item.onClick()
-            onClose()
+            if (!item.keepOpen) onClose()
           }}
           className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
             item.danger
