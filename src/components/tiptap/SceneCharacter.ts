@@ -17,6 +17,7 @@ export const SceneCharacter = Node.create({
     return ['div', mergeAttributes(HTMLAttributes, { 
       'data-type': 'scene-character',
       class: 'scene-character',
+      spellcheck: 'false',
     }), 0]
   },
 })

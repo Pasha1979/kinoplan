@@ -17,6 +17,7 @@ export const SceneCast = Node.create({
     return ['div', mergeAttributes(HTMLAttributes, { 
       'data-type': 'scene-cast',
       class: 'scene-cast',
+      spellcheck: 'false',
     }), 0]
   },
 })

@@ -15,6 +15,7 @@ import { useSmartType } from './useSmartType'
 import { useScriptStore } from '../store/scriptStore'
 import { useUiStore } from '../store/uiStore'
 import { typographyTransform } from '../utils/autoTypography'
+import { handleBracketInput, handleBracketBackspace } from '../utils/autoBrackets'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 import { type PageBreakInfo } from '../services/pagination'
@@ -545,6 +546,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       attributes: {
         class: `tiptap-editor prose prose-sm max-w-none focus:outline-none format-${_format || 'russian'}`,
         style: `font-family: ${fontFamily}; font-size: ${fontSize}pt;`,
+        spellcheck: 'true',
+        lang: 'ru',
       },
       handleDOMEvents: {
         copy: (view, event) => handleCopyRef.current?.(view, event) ?? false,
@@ -562,8 +565,13 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           multiCursorRef.current.applyTextToRanges(editor!, text)
           return true
         }
+        // T-171: автозакрытие скобок/кавычек (включает взаимодействие с авто-типографикой)
+        const ui = useUiStore.getState()
+        if (ui.autoCloseBrackets && handleBracketInput(view, from, to, text, { autoTypography: ui.autoTypography })) {
+          return true
+        }
         // T-72: авто-типографика при наборе (одиночный символ)
-        if (text.length === 1 && useUiStore.getState().autoTypography) {
+        if (text.length === 1 && ui.autoTypography) {
           const $from = view.state.doc.resolve(from)
           const before = $from.parent.textBetween(0, $from.parentOffset, '', '')
           const fix = typographyTransform(before, text)
@@ -683,10 +691,21 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       return false // позволяем стандартное перемещение курсора
     }
 
+    // T-171: умный Backspace на пустой паре скобок
+    if (event.key === 'Backspace' && useUiStore.getState().autoCloseBrackets && handleBracketBackspace(view)) {
+      event.preventDefault()
+      return true
+    }
+
     const st = smartTypeRef.current
-    // Только Enter выбирает подсказку — Tab переключает тип блока.
-    // Shift+Enter не выбирает — это мягкий перенос (T-23a)
-    if (st.isOpen && event.key === 'Enter' && !event.shiftKey) {
+    // T-138: клавиша принятия подсказки — из настроек (Enter по умолчанию, опц. Tab).
+    // Shift+Enter не выбирает — это мягкий перенос (T-23a).
+    // При acceptKey='tab' открытый попап забирает Tab у цикла типов блока.
+    const acceptKey = useUiStore.getState().smartTypeAcceptKey
+    const isAccept = acceptKey === 'tab'
+      ? event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey
+      : event.key === 'Enter' && !event.shiftKey
+    if (st.isOpen && isAccept) {
       event.preventDefault()
       const suggestion = st.suggestions[st.activeIndex]
       if (suggestion && editor) {

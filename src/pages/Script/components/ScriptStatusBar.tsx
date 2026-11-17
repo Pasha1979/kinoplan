@@ -15,6 +15,8 @@ interface ScriptStatusBarProps {
   seriesDuration: number
   targetDuration?: number
   saveStatus?: 'saved' | 'saving' | 'unsaved'
+  /** T-141: статистика выделения — показывается только при непустом выделении */
+  selectionStats?: { words: number; chars: number } | null
   /** T-71: клик по блоку хронометража → открыть статистику */
   onOpenStatistics?: () => void
 }
@@ -27,6 +29,7 @@ function ScriptStatusBar({
   seriesDuration,
   targetDuration,
   saveStatus = 'saved',
+  selectionStats = null,
   onOpenStatistics,
 }: ScriptStatusBarProps) {
   const { sidebarBg, border, textPrimary, textSecondary } = colors
@@ -52,6 +55,11 @@ function ScriptStatusBar({
         <Hash size={11} />
         {scenesCount} сцен
       </span>
+      {selectionStats && (
+        <span className="flex items-center gap-1.5 text-xs" data-testid="selection-stats" style={{ color: textSecondary }}>
+          {selectionStats.words} слов · {selectionStats.chars} знаков
+        </span>
+      )}
       <span className="flex items-center gap-1.5 text-xs" style={{ color: textSecondary }}>
         <AlignLeft size={11} />
         {seriesPages.toFixed(1)} стр.

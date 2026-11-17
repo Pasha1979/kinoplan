@@ -126,6 +126,20 @@ export default function ScriptPage() {
   // Поиск по сценарию
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
   const search = useScriptSearch(editorInstance)
+  // T-141: счётчик выделенного текста для статусбара
+  const [selectionStats, setSelectionStats] = useState<{ words: number; chars: number } | null>(null)
+  useEffect(() => {
+    if (!editorInstance) { setSelectionStats(null); return }
+    const update = () => {
+      const { from, to, empty } = editorInstance.state.selection
+      if (empty) { setSelectionStats(null); return }
+      const text = editorInstance.state.doc.textBetween(from, to, ' ', ' ')
+      setSelectionStats({ words: text.trim() ? text.trim().split(/\s+/).length : 0, chars: to - from })
+    }
+    editorInstance.on('selectionUpdate', update)
+    editorInstance.on('update', update)
+    return () => { editorInstance.off('selectionUpdate', update); editorInstance.off('update', update) }
+  }, [editorInstance])
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [showAutoFormatModal, setShowAutoFormatModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
@@ -1160,6 +1174,7 @@ export default function ScriptPage() {
             seriesDuration={seriesDuration}
             targetDuration={targetDuration}
             saveStatus={saveStatus}
+            selectionStats={selectionStats}
             onOpenStatistics={() => setActiveTab('statistics')}
           />
         )}

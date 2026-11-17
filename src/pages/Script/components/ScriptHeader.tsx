@@ -70,6 +70,10 @@ function ScriptHeader({
   const toggleAutoTypography = useUiStore((s) => s.toggleAutoTypography)
   const typewriterMode = useUiStore((s) => s.typewriterMode)
   const toggleTypewriterMode = useUiStore((s) => s.toggleTypewriterMode)
+  const smartTypeAcceptKey = useUiStore((s) => s.smartTypeAcceptKey)
+  const setSmartTypeAcceptKey = useUiStore((s) => s.setSmartTypeAcceptKey)
+  const autoCloseBrackets = useUiStore((s) => s.autoCloseBrackets)
+  const toggleAutoCloseBrackets = useUiStore((s) => s.toggleAutoCloseBrackets)
 
   return (
     <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b"
@@ -246,6 +250,35 @@ function ScriptHeader({
           <option value="fd">Final Draft</option>
           <option value="kit">КИТ</option>
         </select>
+        {/* T-138: клавиша принятия подсказки SmartType */}
+        <select
+          value={smartTypeAcceptKey}
+          onChange={(e) => setSmartTypeAcceptKey(e.target.value as 'enter' | 'tab')}
+          className="h-8 px-1.5 rounded-lg text-[11px] cursor-pointer"
+          style={{
+            color: textSecondary,
+            background: 'transparent',
+            border: `1px solid ${colors.border}`,
+            outline: 'none',
+          }}
+          title="Чем принимать подсказку SmartType: Enter или Tab (при Tab и открытой подсказке — цикл типов не срабатывает)"
+        >
+          <option value="enter">Подсказка: Enter</option>
+          <option value="tab">Подсказка: Tab</option>
+        </select>
+        {/* T-171: автозакрытие скобок/кавычек */}
+        <button
+          onClick={toggleAutoCloseBrackets}
+          className="h-8 px-2 rounded-lg text-[11px] cursor-pointer"
+          style={{
+            color: autoCloseBrackets ? '#a5b4fc' : textSecondary,
+            background: autoCloseBrackets ? 'rgba(99,102,241,0.15)' : 'transparent',
+            border: `1px solid ${autoCloseBrackets ? 'rgba(99,102,241,0.5)' : colors.border}`,
+          }}
+          title="Автозакрытие скобок и кавычек при наборе: (→() · «→«» · Backspace на пустой паре удаляет обе"
+        >
+          ()
+        </button>
         {/* T-72: авто-типографика при наборе */}
         <button
           onClick={toggleAutoTypography}

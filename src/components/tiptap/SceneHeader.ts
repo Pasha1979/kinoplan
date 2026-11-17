@@ -31,6 +31,7 @@ export const SceneHeader = Node.create({
     return ['div', mergeAttributes(HTMLAttributes, { 
       'data-type': 'scene-header',
       class: 'scene-header',
+      spellcheck: 'false',
     }), 0]
   },
 })

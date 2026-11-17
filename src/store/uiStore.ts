@@ -5,6 +5,8 @@ import { pouchStorage } from '../services/storageService'
 type Theme = 'dark' | 'light'
 
 export type EnterPreset = 'kinoplan' | 'kit' | 'fd'
+/** T-138: клавиша принятия подсказки SmartType */
+export type SmartTypeAcceptKey = 'enter' | 'tab'
 
 interface UiStore {
   theme: Theme
@@ -17,12 +19,18 @@ interface UiStore {
   autoTypography: boolean
   /** T-105: typewriter-режим — курсор держится на вертикальной середине экрана */
   typewriterMode: boolean
+  /** T-138: чем принимать подсказку SmartType — Enter (дефолт) или Tab */
+  smartTypeAcceptKey: SmartTypeAcceptKey
+  /** T-171: автозакрытие скобок/кавычек при наборе */
+  autoCloseBrackets: boolean
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
   setEnterPreset: (p: EnterPreset) => void
   toggleAutoTypography: () => void
   toggleTypewriterMode: () => void
+  setSmartTypeAcceptKey: (k: SmartTypeAcceptKey) => void
+  toggleAutoCloseBrackets: () => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -34,6 +42,8 @@ export const useUiStore = create<UiStore>()(
       enterPreset: 'kinoplan',
       autoTypography: true,
       typewriterMode: false,
+      smartTypeAcceptKey: 'enter',
+      autoCloseBrackets: true,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -52,6 +62,12 @@ export const useUiStore = create<UiStore>()(
 
       toggleTypewriterMode: () =>
         set((state) => ({ typewriterMode: !state.typewriterMode })),
+
+      setSmartTypeAcceptKey: (k) =>
+        set({ smartTypeAcceptKey: k }),
+
+      toggleAutoCloseBrackets: () =>
+        set((state) => ({ autoCloseBrackets: !state.autoCloseBrackets })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )
