@@ -710,7 +710,8 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     // T-137: Alt+↑/↓ — переместить сцену целиком
     if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
       event.preventDefault()
-      moveScene(view, view.state.selection.from, event.key === 'ArrowUp' ? 'up' : 'down')
+      moveScene(view, view.state.selection.from, event.key === 'ArrowUp' ? 'up' : 'down',
+        { isSerial: projectTypeRef.current === 'serial', episode: currentSeriesRef.current })
       return true
     }
 

@@ -121,6 +121,31 @@ describe('sceneOps — удаление и перемещение', () => {
     e.destroy()
   })
 
+  it('moveScene с opts перенумеровывает сцены подряд', () => {
+    const e = ed()
+    expect(moveScene(e, posInScene(e, 0), 'down', { isSerial: false })).toBe(true)
+    const h = headers(e)
+    // перенумерация подряд: бывшая 6 → 1, бывшая 5 → 2, 7 → 3
+    expect(h[0]).toMatch(/^1\. ЭКСТ\. УЛИЦА/)
+    expect(h[1]).toMatch(/^2\. ИНТ\. ДОМ/)
+    expect(h[2]).toMatch(/^3\. ИНТ\. ОФИС/)
+    e.destroy()
+  })
+
+  it('moveScene с opts в сериале нумерует «серия-сцена»', () => {
+    const e = ed([
+      '<div data-type="scene-header">1-1. ИНТ. ДОМ — ДЕНЬ</div>',
+      '<div data-type="scene-action">a</div>',
+      '<div data-type="scene-header">1-2. ЭКСТ. УЛИЦА — НОЧЬ</div>',
+      '<div data-type="scene-action">b</div>',
+    ].join(''))
+    const hit = sceneAtPos(e.state.doc, allSceneRanges(e.state.doc)[0].start + 1)!
+    void hit
+    expect(moveScene(e, allSceneRanges(e.state.doc)[0].start + 1, 'down', { isSerial: true, episode: 1 })).toBe(true)
+    expect(headers(e)).toEqual(['1-1. ЭКСТ. УЛИЦА — НОЧЬ', '1-2. ИНТ. ДОМ — ДЕНЬ'])
+    e.destroy()
+  })
+
   it('moveScene down/up меняет порядок сцен', () => {
     const e = ed()
     expect(moveScene(e, posInScene(e, 0), 'down')).toBe(true)

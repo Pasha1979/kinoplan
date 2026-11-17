@@ -4,8 +4,9 @@
 import type { Editor } from '@tiptap/react'
 import type { EditorView } from '@tiptap/pm/view'
 import { DOMParser as PMDOMParser, DOMSerializer, type Node as PMNode } from '@tiptap/pm/model'
-import { TextSelection } from '@tiptap/pm/state'
+import { TextSelection, type Transaction } from '@tiptap/pm/state'
 import { SCENE_NUMBER } from './sceneNumber'
+import { renumberSceneNumbers } from './sceneNumbering'
 
 const CYR = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ'
 
@@ -210,11 +211,35 @@ export function insertSceneFromHtml(e: Ed, pos: number, sceneHtml: string): bool
   return true
 }
 
-/** Переместить сцену под курсором на шаг вверх/вниз по списку сцен. */
-export function moveScene(editor: Ed, pos: number, dir: 'up' | 'down'): boolean {
+/** Перенумеровать все шапки в транзакции (литеры сохраняются, основные идут подряд). */
+function renumberHeadersInTr(tr: Transaction, isSerial: boolean, episode: number) {
+  const headers: { pos: number; num: string }[] = []
+  let p = 0
+  tr.doc.forEach((node) => {
+    if (isHeader(node)) headers.push({ pos: p, num: numberOf(node) })
+    p += node.nodeSize
+  })
+  const next = renumberSceneNumbers(headers.map((h) => h.num), isSerial, episode)
+  const prefixRe = new RegExp(`^(${SCENE_NUMBER})\\.\\s*`)
+  headers.forEach((h, i) => {
+    if (h.num === next[i]) return
+    const node = tr.doc.nodeAt(h.pos)
+    if (!node) return
+    const m = node.textContent.match(prefixRe)
+    const cut = m ? m[0].length : 0
+    // pos+1 — начало текста внутри узла шапки
+    tr.insertText(`${next[i]}. `, h.pos + 1, h.pos + 1 + cut)
+  })
+}
+
+/** Переместить сцену под курсором на шаг вверх/вниз по списку сцен (с перенумерацией). */
+export function moveScene(
+  editor: Ed, pos: number, dir: 'up' | 'down',
+  opts?: { isSerial?: boolean; episode?: number },
+): boolean {
   const hit = sceneAtPos(stateOf(editor).doc, pos)
   if (!hit) return false
-  const { state } = editor
+  const state = stateOf(editor)
   const { doc } = state
   const ranges = allSceneRanges(doc)
   const other = dir === 'down' ? ranges[hit.index + 1] : ranges[hit.index - 1]
@@ -229,6 +254,7 @@ export function moveScene(editor: Ed, pos: number, dir: 'up' | 'down'): boolean 
     tr.insert(other.start, slice.content)
     tr.delete(tr.mapping.map(hit.range.start), tr.mapping.map(hit.range.end))
   }
+  if (opts) renumberHeadersInTr(tr, !!opts.isSerial, opts.episode ?? 0)
   viewOf(editor).dispatch(tr.scrollIntoView())
   return true
 }
