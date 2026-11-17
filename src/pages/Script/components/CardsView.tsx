@@ -2,7 +2,9 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import { Film, Clock, Users, Search, X, Undo2, Folder, Eye, EyeOff, ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import type { Scene, SceneGroup, SceneLink, DraftStatus } from '../../../types/scene'
 import { draftStatusById, allDraftStatuses, scriptReadiness, isBuiltinStatus, countScenesWithStatus } from '../../../utils/draftStatus'
+import { filterByCardType, matchesCardQuery, buildAutoSynopsis, groupByEpisode, nextGroupColor } from '../../../utils/sceneFilters'
 import SceneDetailModal from './SceneDetailModal'
+import SceneStatusMenu, { TAG_COLORS } from './SceneStatusMenu'
 import { extractSceneHtml } from './sceneHtmlOps'
 
 type SceneWithEp = Scene & { _episode?: number }
@@ -63,7 +65,6 @@ function fmtDuration(sec: number): string {
 const TYPE_COLOR: Record<string, string> = {
   'ИНТ': '#818cf8', 'ЭКСТ': '#f59e0b', 'ИНТ-ЭКСТ': '#a78bfa', 'ИНТ/ЭКСТ': '#a78bfa', 'ПАВ': '#94a3b8',
 }
-const TAG_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a78bfa'] as const
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   planned: { label: 'Запланирована', color: '#3b82f6' },
   shot: { label: 'Снята', color: '#22c55e' },
@@ -236,8 +237,6 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string; ep: number } | null>(null)
   // Выпадашка редакционного статуса (клик по бейджу/точке на карточке)
   const [statusMenu, setStatusMenu] = useState<{ x: number; y: number; id: string } | null>(null)
-  // Форма создания своего статуса (внутри выпадашки)
-  const [newStatus, setNewStatus] = useState<{ name: string; color: string; weight: number } | null>(null)
   // Модалка «Управление статусами»: список своих, ✏️ правка, 🗑 удаление с выбором судьбы сцен
   const [statusMgr, setStatusMgr] = useState(false)
   const [editStatus, setEditStatus] = useState<{ id: string; name: string; color: string; weight: number } | null>(null)
@@ -295,10 +294,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   }
   const createGroup = (ep: number, name: string, sceneIds: string[]) => {
     if (!name.trim()) return
-    const colors = ['#fb923c', '#3b82f6', '#22c55e', '#a78bfa', '#ef4444']
     updateGroups(ep, (gs) => [...gs, {
       id: `g-${Date.now()}`, name: name.trim(),
-      color: colors[gs.length % colors.length], sceneIds,
+      color: nextGroupColor(gs.length), sceneIds,
     }])
   }
   // Группы: карточка → id группы (по сериям)
@@ -309,38 +307,15 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
   // Синопсис: первая ремарка сцены (диалог в начале сцены пропускаем —
   // берём первый action-блок после шапки что бы ни шло первым)
-  const autoSynopsis = useMemo(() => {
-    const map = new Map<string, string>()
-    const fallback = new Map<string, string>() // первый текстовый блок любого типа
-    let idx = -1
-    for (const b of blocks) {
-      if (b.type === 'scene_header') { idx++; continue }
-      const scene = scenes[idx]
-      if (!scene || !b.content.trim()) continue
-      // Предпочитаем первую ремарку (action) — в т.ч. если сцена открылась диалогом
-      if (b.type === 'action' && !map.has(scene.id)) {
-        map.set(scene.id, b.content.trim())
-      } else if (!fallback.has(scene.id)) {
-        fallback.set(scene.id, b.content.trim())
-      }
-    }
-    // сцены без action — берём первый текст (диалог/параграф)
-    fallback.forEach((v, k) => { if (!map.has(k)) map.set(k, v) })
-    return map
-  }, [blocks, scenes])
+  const autoSynopsis = useMemo(() => buildAutoSynopsis(blocks, scenes), [blocks, scenes])
 
   const syn = (sc: SceneWithEp) => sc.synopsis || autoSynopsis.get(sc.id) || ''
 
-  // Фильтрация: серия → тип → поиск
+  // Фильтрация: серия → тип → статус → поиск
   const visible = useMemo(() => {
     let list = scenes
     if (series !== 'all') list = list.filter((sc) => (sc._episode ?? 1) === series)
-    if (typeFilter !== 'all') {
-      list = list.filter((sc) =>
-        typeFilter === 'ПАВ' ? sc.type === 'ПАВ'
-          : typeFilter === 'ИНТ' ? (sc.type === 'ИНТ' || sc.type === 'ИНТ-ЭКСТ' || sc.type === 'ИНТ/ЭКСТ')
-          : (sc.type === 'ЭКСТ' || sc.type === 'ИНТ-ЭКСТ' || sc.type === 'ИНТ/ЭКСТ'))
-    }
+    list = filterByCardType(list, typeFilter)
     if (statusFilter.size) {
       list = list.filter((sc) => {
         const st = draftStatusById(sc.draftStatus, draftStatuses)
@@ -349,30 +324,15 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
         return sc.draftStatus !== undefined && statusFilter.has(sc.draftStatus)
       })
     }
-    const q = query.trim().toLowerCase()
-    if (q) {
-      list = list.filter((sc) =>
-        sc.number.toLowerCase().includes(q) ||
-        (sc.location || '').toLowerCase().includes(q) ||
-        (sc.sublocation || '').toLowerCase().includes(q) ||
-        (sc.cast || []).some((c) => c.toLowerCase().includes(q)) ||
-        syn(sc).toLowerCase().includes(q))
-    }
+    const q = query.trim()
+    if (q) list = list.filter((sc) => matchesCardQuery(sc, syn(sc), q))
     return list
   }, [scenes, series, typeFilter, statusFilter, draftStatuses, query, autoSynopsis])
 
   // % готовности сценария — средневзвешенная по весам редакционных статусов
   const readiness = useMemo(() => scriptReadiness(scenes, draftStatuses), [scenes, draftStatuses])
 
-  const groups = useMemo(() => {
-    const g = new Map<number, SceneWithEp[]>()
-    visible.forEach((sc) => {
-      const ep = sc._episode ?? 1
-      if (!g.has(ep)) g.set(ep, [])
-      g.get(ep)!.push(sc)
-    })
-    return [...g.entries()].sort((a, b) => a[0] - b[0])
-  }, [visible])
+  const groups = useMemo(() => groupByEpisode(visible), [visible])
 
   // ── Связи сцен (фаза 6) ──
   const linksOf = (sceneId: string) => sceneLinks.filter((l) => l.from === sceneId || l.to === sceneId)
@@ -1363,106 +1323,18 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
       {/* Выпадашка редакционного статуса (клик по бейджу на карточке) */}
       {statusMenu && (
-        <div className="fixed rounded-xl p-2 z-50"
-          style={{
-            left: Math.min(statusMenu.x, window.innerWidth - 200),
-            top: Math.min(statusMenu.y, window.innerHeight - 280),
-            background: isDark ? '#1e1e3a' : '#ffffff',
-            border: `1px solid ${border}`,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-            minWidth: 170,
+        <SceneStatusMenu
+          x={statusMenu.x} y={statusMenu.y} sceneId={statusMenu.id}
+          isDark={isDark} border={border} textPrimary={textPrimary} textSecondary={textSecondary}
+          draftStatuses={draftStatuses}
+          onSelectStatus={(id, statusId) => { onUpdateScene?.(id, { draftStatus: statusId }); setStatusMenu(null) }}
+          onCreateStatus={(id, st) => {
+            onDraftStatusesChange?.([...(draftStatuses ?? []), st])
+            onUpdateScene?.(id, { draftStatus: st.id })
+            setStatusMenu(null)
           }}
-          onClick={(e) => e.stopPropagation()}>
-          <div className="text-[10px] mb-1.5 px-1" style={{ color: textSecondary }}>Редакционный статус</div>
-          <div className="px-1 pb-1 space-y-0.5">
-            {allDraftStatuses(draftStatuses).map((s) => (
-              <button key={s.id}
-                className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
-                style={{ color: textPrimary }}
-                onClick={() => { onUpdateScene?.(statusMenu.id, { draftStatus: s.id }); setStatusMenu(null) }}>
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
-                {s.label}
-                <span className="ml-auto text-[9px]" style={{ color: textSecondary }}>{s.weight}%</span>
-              </button>
-            ))}
-            <button
-              className="w-full text-left px-1.5 py-1 rounded text-[11px]"
-              style={{ color: textSecondary }}
-              onClick={() => { onUpdateScene?.(statusMenu.id, { draftStatus: undefined }); setStatusMenu(null) }}>
-              ✕ Без статуса
-            </button>
-          </div>
-          {/* Свой статус */}
-          <div className="mt-1 pt-1.5 px-1 pb-1" style={{ borderTop: `1px solid ${border}` }}>
-            {!newStatus ? (
-              <>
-                <button
-                  className="w-full text-left px-1.5 py-1 rounded text-[11px]"
-                  style={{ color: '#fb923c' }}
-                  onClick={() => setNewStatus({ name: '', color: '#0ea5e9', weight: 70 })}>
-                  ＋ Свой статус…
-                </button>
-                {(draftStatuses?.length ?? 0) > 0 && (
-                  <button
-                    className="w-full text-left px-1.5 py-1 rounded text-[11px]"
-                    style={{ color: textSecondary }}
-                    onClick={() => { setStatusMenu(null); setStatusMgr(true) }}>
-                    ⚙ Управление статусами
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="space-y-1.5">
-                <input
-                  autoFocus
-                  value={newStatus.name}
-                  onChange={(e) => setNewStatus({ ...newStatus, name: e.target.value })}
-                  placeholder="Название статуса…"
-                  className="w-full rounded px-1.5 py-1 text-[11px] outline-none"
-                  style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary }}
-                />
-                <div className="flex gap-1 px-0.5">
-                  {TAG_COLORS.map((c) => (
-                    <button key={c} className="w-4 h-4 rounded-full transition-transform hover:scale-110"
-                      style={{ background: c, border: newStatus.color === c ? `2px solid ${textPrimary}` : `2px solid transparent` }}
-                      onClick={() => setNewStatus({ ...newStatus, color: c })} />
-                  ))}
-                </div>
-                <select
-                  value={newStatus.weight}
-                  onChange={(e) => setNewStatus({ ...newStatus, weight: Number(e.target.value) })}
-                  className="w-full rounded px-1.5 py-1 text-[11px] outline-none"
-                  style={{ background: isDark ? '#1e1e3a' : '#f5f5f5', border: `1px solid ${border}`, color: textPrimary, colorScheme: isDark ? 'dark' : 'light' }}>
-                  <option value={30}>Черновая работа · 30%</option>
-                  <option value={70}>Почти готово · 70%</option>
-                  <option value={100}>Готово · 100%</option>
-                </select>
-                <div className="flex gap-1">
-                  <button
-                    className="flex-1 rounded px-1.5 py-1 text-[11px] font-bold"
-                    style={{ background: '#fb923c', color: '#1a1a33', opacity: newStatus.name.trim() ? 1 : 0.4 }}
-                    onClick={() => {
-                      const name = newStatus.name.trim()
-                      if (!name) return
-                      const st: DraftStatus = { id: `custom-${Date.now().toString(36)}`, label: name, color: newStatus.color, weight: newStatus.weight }
-                      onDraftStatusesChange?.([...(draftStatuses ?? []), st])
-                      onUpdateScene?.(statusMenu.id, { draftStatus: st.id })
-                      setNewStatus(null)
-                      setStatusMenu(null)
-                    }}>
-                    Создать
-                  </button>
-                  <button
-                    className="rounded px-1.5 py-1 text-[11px]"
-                    style={{ color: textSecondary }}
-                    onClick={() => setNewStatus(null)}>
-                    ✕
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+          onOpenManager={() => { setStatusMenu(null); setStatusMgr(true) }}
+        />
       )}
 
       {/* Модалка «Управление статусами» — правка/удаление СВОИХ статусов (T-122) */}

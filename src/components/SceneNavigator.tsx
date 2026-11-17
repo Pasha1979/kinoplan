@@ -18,6 +18,10 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { TimingSystem, Scene, DraftStatus } from '../types/scene'
+import {
+  countByField, presentColorTags, toggleInList, applyNavigatorFilters,
+  nextSceneIndex, scenesOfSeries,
+} from '../utils/sceneFilters'
 import { calculateSceneTiming, formatDuration } from '../utils/sceneTiming'
 import { draftStatusById, allDraftStatuses } from '../utils/draftStatus'
 
@@ -104,12 +108,7 @@ function SceneNavigator({
 
   // Расчёт текущего хронометража серии (только сцены текущей серии)
   const currentSeriesDuration = useMemo(() => {
-    const seriesScenes = isSerial && currentSeries > 0
-      ? scenes.filter(scene => {
-          const match = scene.number.match(/^(\d+)-/)
-          return match && parseInt(match[1], 10) === currentSeries
-        })
-      : scenes
+    const seriesScenes = isSerial && currentSeries > 0 ? scenesOfSeries(scenes, currentSeries) : scenes
     return seriesScenes.reduce((total, scene) => {
       if (scene.pages !== undefined) {
         return total + calculateSceneTiming({ pages: scene.pages, charCount: scene.charCount }, timingSystem, genreCoefficient).duration
@@ -123,12 +122,7 @@ function SceneNavigator({
   // Иначе fallback на сумму pages сцен текущей серии (для обратной совместимости).
   const currentSeriesPages = useMemo(() => {
     if (totalPages !== undefined) return totalPages
-    const seriesScenes = isSerial && currentSeries > 0
-      ? scenes.filter(scene => {
-          const match = scene.number.match(/^(\d+)-/)
-          return match && parseInt(match[1], 10) === currentSeries
-        })
-      : scenes
+    const seriesScenes = isSerial && currentSeries > 0 ? scenesOfSeries(scenes, currentSeries) : scenes
     return seriesScenes.reduce((total, scene) => total + (scene.pages || 0), 0)
   }, [scenes, totalPages, isSerial, currentSeries])
 
@@ -155,55 +149,24 @@ function SceneNavigator({
   }, [currentSeriesDuration, episodeDuration])
 
   // Списки для фильтров: уникальные локации/персонажи с кол-вом сцен
-  const locationOptions = useMemo(() => {
-    const m = new Map<string, number>()
-    scenes.forEach(s => { if (s.location) m.set(s.location, (m.get(s.location) || 0) + 1) })
-    return [...m.entries()].sort((a, b) => b[1] - a[1])
-  }, [scenes])
-
-  const characterOptions = useMemo(() => {
-    const m = new Map<string, number>()
-    scenes.forEach(s => (s.cast || []).forEach(c => m.set(c, (m.get(c) || 0) + 1)))
-    return [...m.entries()].sort((a, b) => b[1] - a[1])
-  }, [scenes])
-
-  const colorOptions = useMemo(() => {
-    const present = new Set(scenes.map(s => s.colorTag).filter(Boolean))
-    return ['blue', 'pink', 'yellow', 'green', 'orange'].filter(c => present.has(c))
-  }, [scenes])
+  const locationOptions = useMemo(() => countByField(scenes, 'location'), [scenes])
+  const characterOptions = useMemo(() => countByField(scenes, 'character'), [scenes])
+  const colorOptions = useMemo(() => presentColorTags(scenes), [scenes])
 
   // Мультивыбор: несколько значений внутри фильтра работают как «ИЛИ»
-  const toggleIn = (arr: string[], v: string) =>
-    arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
+  const toggleIn = toggleInList
 
   const extraFiltersCount = (filter !== 'all' ? 1 : 0) + locFilter.length + charFilter.length + colorFilter.length
 
-  const filteredScenes = useMemo(() => {
-    let list = scenes
-    if (filter === 'ИНТ') list = list.filter(s => s.type === 'ИНТ' || s.type === 'ИНТ-ЭКСТ')
-    else if (filter === 'ЭКСТ') list = list.filter(s => s.type === 'ЭКСТ')
-    else if (filter === 'ПАВ') list = list.filter(s => s.type === 'ПАВ')
-    if (locFilter.length) list = list.filter(s => locFilter.includes(s.location))
-    if (charFilter.length) list = list.filter(s => (s.cast || []).some(c => charFilter.includes(c)))
-    if (colorFilter.length) list = list.filter(s => !!s.colorTag && colorFilter.includes(s.colorTag))
-    const q = search.trim().toLowerCase()
-    if (q) {
-      list = list.filter(s =>
-        [s.number, s.location, s.sublocation, s.synopsis, ...(s.cast || [])]
-          .filter(Boolean).join(' ').toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [scenes, filter, locFilter, charFilter, colorFilter, search])
+  const filteredScenes = useMemo(() => applyNavigatorFilters(scenes, {
+    type: filter, locations: locFilter, characters: charFilter,
+    colors: colorFilter, query: search,
+  }), [scenes, filter, locFilter, charFilter, colorFilter, search])
 
   // Стрелки ↑↓ — листаем отображаемый (отфильтрованный) список
   const goScene = useCallback((dir: 1 | -1) => {
-    if (!filteredScenes.length) return
-    const idx = filteredScenes.findIndex(s => s.id === activeSceneId)
-    const next = idx === -1
-      ? (dir === 1 ? 0 : filteredScenes.length - 1)
-      : Math.min(filteredScenes.length - 1, Math.max(0, idx + dir))
-    if (next !== idx) onSceneClick?.(filteredScenes[next].id)
+    const next = nextSceneIndex(filteredScenes, activeSceneId, dir)
+    if (next !== null) onSceneClick?.(filteredScenes[next].id)
   }, [filteredScenes, activeSceneId, onSceneClick])
 
   // ↑/↓ на клавиатуре — то же листание, но только когда фокус НЕ в тексте:
