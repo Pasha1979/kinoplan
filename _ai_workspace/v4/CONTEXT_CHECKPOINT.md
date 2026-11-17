@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 06:47 · `main` · dc4b20f Тесты Ч4: чистая логика фильтров в sceneFi
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 06:48 · `main` · 78fb07c Мозг: L-70 (RTL cleanup), статус/handoff п
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
