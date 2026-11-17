@@ -31,11 +31,17 @@ export interface NavigatorFilters {
   characters: string[]
   colors: string[]
   query: string
+  /** T-173: только сцены без ручного синопсиса */
+  withoutSynopsis?: boolean
+  /** I-150: только закладки */
+  bookmarkedOnly?: boolean
 }
 
 /** Полный конвейер фильтров навигатора: тип → локация → персонаж → цвет → поиск */
 export function applyNavigatorFilters(scenes: Scene[], f: NavigatorFilters): Scene[] {
   let list = filterByNavigatorType(scenes, f.type)
+  if (f.withoutSynopsis) list = list.filter((s) => !s.synopsis?.trim())
+  if (f.bookmarkedOnly) list = list.filter((s) => s.isBookmarked)
   if (f.locations.length) list = list.filter((s) => f.locations.includes(s.location))
   if (f.characters.length) list = list.filter((s) => (s.cast || []).some((c) => f.characters.includes(c)))
   if (f.colors.length) list = list.filter((s) => !!s.colorTag && f.colors.includes(s.colorTag))

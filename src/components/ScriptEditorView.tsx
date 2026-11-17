@@ -1,7 +1,7 @@
 import { useRef, memo, useState, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 import { EditorContent } from '@tiptap/react'
-import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2, Copy, Split, ArrowUpToLine, ArrowDownToLine, Trash2, ChevronRight, ChevronLeft, LayoutTemplate } from 'lucide-react'
+import { Film, AlignLeft, User, Users, MessageSquare, ArrowRight, Undo2, Redo2, Copy, Split, ArrowUpToLine, ArrowDownToLine, Trash2, ChevronRight, ChevronLeft, LayoutTemplate, Bookmark } from 'lucide-react'
 import { SmartTypePopup } from './SmartTypePopup'
 import { useUiStore } from '../store/uiStore'
 import type { ScriptFormat } from '../store/scriptStore'
@@ -36,6 +36,8 @@ export interface ScriptEditorViewProps {
   gotoOpen?: boolean
   setGotoOpen?: (v: boolean) => void
   gotoScene?: (number: string) => boolean
+  /** I-150: ПКМ «Закладка» — ScriptPage решает по сцене (id или номер) */
+  onBookmarkScene?: (sceneId: string | null, sceneNumber: string | null, x: number, y: number) => void
 }
 
 export function ScriptEditorView({
@@ -54,12 +56,13 @@ export function ScriptEditorView({
   gotoOpen = false,
   setGotoOpen,
   gotoScene,
+  onBookmarkScene,
 }: ScriptEditorViewProps) {
   const editorContentRef = useRef<HTMLDivElement | null>(null)
   const a4Mode = useUiStore((s) => s.a4Mode)
 
   // Блок B: контекстное меню редактора (ПКМ) — операции со сценой + тип блока
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; pos: number; inScene: boolean; hasPrev: boolean; hasNext: boolean } | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; pos: number; inScene: boolean; hasPrev: boolean; hasNext: boolean; sceneId: string | null; sceneNumber: string | null } | null>(null)
   const [ctxSub, setCtxSub] = useState<'main' | 'blocks' | 'templates'>('main')
   const [tplNamePos, setTplNamePos] = useState<number | null>(null) // T-143: ввод имени шаблона
   const customTemplates = useUiStore((s) => s.customSceneTemplates)
@@ -168,6 +171,8 @@ export function ScriptEditorView({
               inScene: !!hit,
               hasPrev: !!hit && hit.index > 0,
               hasNext: !!hit && hit.index < total - 1,
+              sceneId: hit?.range.sceneId ?? null,
+              sceneNumber: hit?.range.number ?? null,
             })
             setCtxSub('main')
           }}
@@ -269,6 +274,12 @@ export function ScriptEditorView({
               : [
                   { label: 'Тип блока', icon: <ChevronRight size={14} />, keepOpen: true, onClick: () => setCtxSub('blocks') },
                   { label: 'Сцена из шаблона', icon: <LayoutTemplate size={14} />, keepOpen: true, onClick: () => setCtxSub('templates') },
+                  // I-150: закладка сцены (имя задаётся полем у клика)
+                  ...(ctxMenu.sceneId || ctxMenu.sceneNumber ? [{
+                    label: 'Закладка 🔖',
+                    icon: <Bookmark size={14} />,
+                    onClick: () => onBookmarkScene?.(ctxMenu.sceneId, ctxMenu.sceneNumber, ctxMenu.x, ctxMenu.y),
+                  }] : []),
                   ...(ctxMenu.inScene ? [
                     { label: 'Дублировать сцену', icon: <Copy size={14} />, onClick: () => duplicateScene(editor, ctxMenu.pos) },
                     { label: 'Разделить сцену здесь', icon: <Split size={14} />, onClick: () => splitScene(editor, ctxMenu.pos) },

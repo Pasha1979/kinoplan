@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, memo, useCallback } from 'react'
-import { Film, MapPin, Clock, ChevronDown, ChevronRight, ChevronUp, Search, X, SlidersHorizontal } from 'lucide-react'
+import { useState, useMemo, useEffect, memo, useCallback, type ReactNode } from 'react'
+import { Film, MapPin, Clock, ChevronDown, ChevronRight, ChevronUp, Search, X, SlidersHorizontal, Bookmark } from 'lucide-react'
 import {
   DndContext,
   closestCorners,
@@ -23,6 +23,7 @@ import {
   nextSceneIndex, scenesOfSeries,
 } from '../utils/sceneFilters'
 import { calculateSceneTiming, formatDuration } from '../utils/sceneTiming'
+import { useUiStore } from '../store/uiStore'
 import { draftStatusById, allDraftStatuses } from '../utils/draftStatus'
 
 function getTimeIcon(time: string) {
@@ -77,6 +78,8 @@ interface SceneNavigatorProps {
   onUpdateScene?: (sceneId: string, patch: Partial<Scene>) => void
   /** Блок B: правый клик по карточке сцены — операции со сценой */
   onSceneContextMenu?: (sceneId: string, x: number, y: number) => void
+  /** D4: маркеры актов текущей серии (act2|mid|climax → sceneId) */
+  actMarkers?: Record<string, string | undefined>
 }
 
 function SceneNavigator({
@@ -98,12 +101,17 @@ function SceneNavigator({
   draftStatuses,
   onUpdateScene,
   onSceneContextMenu,
+  actMarkers,
 }: SceneNavigatorProps) {
   const [filter, setFilter] = useState<'all' | 'ИНТ' | 'ЭКСТ' | 'ПАВ'>('all')
   const [search, setSearch] = useState('')
   const [locFilter, setLocFilter] = useState<string[]>([])
   const [charFilter, setCharFilter] = useState<string[]>([])
   const [colorFilter, setColorFilter] = useState<string[]>([])
+  const [noSynopsisFilter, setNoSynopsisFilter] = useState(false) // T-173
+  const [onlyBookmarks, setOnlyBookmarks] = useState(false) // I-150
+  const [collapsedActs, setCollapsedActs] = useState<Set<string>>(new Set()) // D4
+  const actGrouping = useUiStore((s) => s.navigatorActGrouping)
   const [filtersPos, setFiltersPos] = useState<{ left: number; top: number } | null>(null)
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set())
   const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false)
@@ -159,12 +167,13 @@ function SceneNavigator({
   // Мультивыбор: несколько значений внутри фильтра работают как «ИЛИ»
   const toggleIn = toggleInList
 
-  const extraFiltersCount = (filter !== 'all' ? 1 : 0) + locFilter.length + charFilter.length + colorFilter.length
+  const extraFiltersCount = (filter !== 'all' ? 1 : 0) + locFilter.length + charFilter.length + colorFilter.length + (noSynopsisFilter ? 1 : 0) + (onlyBookmarks ? 1 : 0)
 
   const filteredScenes = useMemo(() => applyNavigatorFilters(scenes, {
     type: filter, locations: locFilter, characters: charFilter,
     colors: colorFilter, query: search,
-  }), [scenes, filter, locFilter, charFilter, colorFilter, search])
+    withoutSynopsis: noSynopsisFilter, bookmarkedOnly: onlyBookmarks,
+  }), [scenes, filter, locFilter, charFilter, colorFilter, search, noSynopsisFilter, onlyBookmarks])
 
   // Стрелки ↑↓ — листаем отображаемый (отфильтрованный) список
   const goScene = useCallback((dir: 1 | -1) => {
@@ -197,6 +206,63 @@ function SceneNavigator({
       ),
     }))
   }, [filteredScenes, timingSystem, genreCoefficient])
+
+  // D4: раскладка по актам — границы групп, статистика, свёрнутость
+  const actLayout = useMemo(() => {
+    if (!actGrouping || !actMarkers) return null
+    const keyOf = new Map<string, string>()
+    const headerAt = new Map<string, { label: string; color: string }>()
+    const midAt = new Set<string>()
+    const stats = new Map<string, { count: number; pages: number }>()
+    let cur = 'АКТ 1'
+    filteredScenesWithTiming.forEach(({ scene, timing }, i) => {
+      if (scene.id === actMarkers.act2) cur = 'АКТ 2'
+      else if (scene.id === actMarkers.climax) cur = 'АКТ 3'
+      keyOf.set(scene.id, cur)
+      if (i === 0) headerAt.set(scene.id, { label: cur, color: cur === 'АКТ 1' ? '#10b981' : '#3b82f6' })
+      else if (scene.id === actMarkers.act2) headerAt.set(scene.id, { label: 'АКТ 2', color: '#3b82f6' })
+      else if (scene.id === actMarkers.climax) headerAt.set(scene.id, { label: 'АКТ 3', color: '#ef4444' })
+      if (scene.id === actMarkers.mid) midAt.add(scene.id)
+      const st = stats.get(cur) ?? { count: 0, pages: 0 }
+      st.count++; st.pages += timing.pages
+      stats.set(cur, st)
+    })
+    return { keyOf, headerAt, midAt, stats }
+  }, [actGrouping, actMarkers, filteredScenesWithTiming])
+
+  const actDivider = (key: string, label: string, color: string, collapsible: boolean) => {
+    const st = actLayout!.stats.get(label)
+    const collapsed = collapsedActs.has(label)
+    return (
+      <button
+        key={`act-${key}`}
+        onClick={collapsible ? () => setCollapsedActs((p) => {
+          const n = new Set(p)
+          collapsed ? n.delete(label) : n.add(label)
+          return n
+        }) : undefined}
+        className="w-full flex items-center gap-1.5 px-2 py-1.5 mt-1 rounded text-left"
+        style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', cursor: collapsible ? 'pointer' : 'default' }}
+      >
+        {collapsible ? (collapsed ? <ChevronRight size={13} style={{ color }} /> : <ChevronDown size={13} style={{ color }} />) : <span style={{ width: 13 }} />}
+        <span className="text-[10px] font-bold tracking-wider" style={{ color }}>{label}</span>
+        {st && <span className="text-[9px]" style={{ color: textSecondary }}>{st.count} сц · {st.pages.toFixed(1)} стр</span>}
+      </button>
+    )
+  }
+
+  const renderSceneRows = (card: (scene: Scene, timing: { pages: number; duration: number }) => ReactNode) => {
+    if (!actLayout) return filteredScenesWithTiming.map(({ scene, timing }) => card(scene, timing))
+    const rows: ReactNode[] = []
+    filteredScenesWithTiming.forEach(({ scene, timing }) => {
+      const hdr = actLayout.headerAt.get(scene.id)
+      if (hdr) rows.push(actDivider(scene.id, hdr.label, hdr.color, true))
+      if (actLayout.midAt.has(scene.id)) rows.push(actDivider(`mid-${scene.id}`, 'МИДПОИНТ', '#a78bfa', false))
+      if (collapsedActs.has(actLayout.keyOf.get(scene.id) ?? '')) return
+      rows.push(card(scene, timing))
+    })
+    return rows
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -336,6 +402,15 @@ function SceneCard({
                 ВЫЧ
               </span>
             )}
+            {/* I-150: закладка — жёлтый значок + имя */}
+            {scene.isBookmarked && (
+              <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded shrink-0"
+                style={{ background: 'rgba(234,179,8,0.15)', color: '#eab308', maxWidth: 120 }}
+                title={scene.bookmarkLabel || 'Закладка'}>
+                <Bookmark size={10} fill="currentColor" />
+                {scene.bookmarkLabel && <span className="truncate">{scene.bookmarkLabel}</span>}
+              </span>
+            )}
             {/* Редакционный статус — точка, клик открывает выпадашку */}
             <button
               className="flex items-center gap-1 px-1 py-0.5 rounded ml-auto shrink-0 transition-all hover:bg-white/10"
@@ -396,8 +471,8 @@ function SceneCard({
           </div>
         </div>
 
-        {/* Кнопка развернуть (если есть синопсис) */}
-        {scene.synopsis && (
+        {/* Кнопка развернуть (если есть синопсис — ручной или авто) */}
+        {(scene.synopsis || scene.autoSynopsis) && (
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -452,11 +527,16 @@ function SceneCard({
         </>
       )}
 
-      {/* Синопсис (раскрывается) */}
-      {isExpanded && scene.synopsis && (
+      {/* Синопсис (раскрывается): ручной, иначе авто с пометкой */}
+      {isExpanded && (scene.synopsis || scene.autoSynopsis) && (
         <div className="px-3 pb-3 pt-0">
           <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-            {scene.synopsis}
+            {scene.synopsis || (
+              <>
+                <span className="italic opacity-80">{scene.autoSynopsis}</span>
+                <span className="ml-1.5 text-[9px] uppercase tracking-wide opacity-50">авто</span>
+              </>
+            )}
           </p>
         </div>
       )}
@@ -652,6 +732,25 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
                     minWidth: 210, maxHeight: Math.min(340, window.innerHeight - filtersPos.top - 12),
                   }}
                 >
+                  {/* T-173/I-150: быстрые фильтры */}
+                  <div className="flex gap-1.5 px-1.5 pb-1.5">
+                    {([
+                      { label: 'Без синопсиса', on: noSynopsisFilter, set: setNoSynopsisFilter },
+                      { label: '🔖 Закладки', on: onlyBookmarks, set: setOnlyBookmarks },
+                    ] as const).map((f) => (
+                      <button key={f.label}
+                        onClick={() => f.set(!f.on)}
+                        className="px-2 py-1 rounded-md text-[11px] font-medium transition-all"
+                        style={{
+                          background: f.on ? (isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)') : 'transparent',
+                          color: f.on ? accentColor : textSecondary,
+                          border: `1px solid ${f.on ? (isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.3)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                        }}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Тип сцены */}
                   <div className="text-[10px] mb-1 px-1" style={{ color: textSecondary }}>Тип сцены</div>
                   <div className="flex items-center gap-1 px-1.5 pb-1">
@@ -802,7 +901,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
           </div>
         ) : filter !== 'all' || extraFiltersCount > 0 || search.trim() !== '' ? (
           // При активном фильтре — plain список без drag-and-drop
-          filteredScenesWithTiming.map(({ scene, timing }) => {
+          renderSceneRows((scene, timing) => {
             const isActive = activeSceneId === scene.id
             const isExpanded = expandedScenes.has(scene.id)
             const stripColor = getColorTagColor(scene.colorTag, isDark)
@@ -842,7 +941,7 @@ function SortableSceneCard(props: Omit<SceneCardProps, 'dragStyle' | 'dragRef' |
               items={filteredScenes.map(s => s.id)}
               strategy={verticalListSortingStrategy}
             >
-              {filteredScenesWithTiming.map(({ scene, timing }) => {
+              {renderSceneRows((scene, timing) => {
                 const isActive = activeSceneId === scene.id
                 const isExpanded = expandedScenes.has(scene.id)
                 const stripColor = getColorTagColor(scene.colorTag, isDark)

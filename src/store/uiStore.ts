@@ -25,6 +25,8 @@ interface UiStore {
   autoCloseBrackets: boolean
   /** T-143: пользовательские шаблоны сцен (встроенные — в sceneTemplates.ts) */
   customSceneTemplates: { name: string; html: string }[]
+  /** D4: группировка сцен навигатора по актам (сворачиваемые) */
+  navigatorActGrouping: boolean
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
@@ -35,6 +37,7 @@ interface UiStore {
   toggleAutoCloseBrackets: () => void
   addCustomSceneTemplate: (t: { name: string; html: string }) => void
   removeCustomSceneTemplate: (name: string) => void
+  toggleNavigatorActGrouping: () => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -49,6 +52,7 @@ export const useUiStore = create<UiStore>()(
       smartTypeAcceptKey: 'enter',
       autoCloseBrackets: true,
       customSceneTemplates: [],
+      navigatorActGrouping: true,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -79,6 +83,9 @@ export const useUiStore = create<UiStore>()(
 
       removeCustomSceneTemplate: (name) =>
         set((state) => ({ customSceneTemplates: state.customSceneTemplates.filter((x) => x.name !== name) })),
+
+      toggleNavigatorActGrouping: () =>
+        set((state) => ({ navigatorActGrouping: !state.navigatorActGrouping })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

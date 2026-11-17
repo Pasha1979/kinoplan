@@ -49,6 +49,7 @@ export interface Scene {
   duration?: number // секунд хронометража
   manualDuration?: number // ручной хронометраж из шапки (мм:сс) в секундах
   synopsis?: string // краткое описание действия
+  autoSynopsis?: string // I-176: автособранный синопсис (говорящие + первое действие)
   pages: number // хронометраж в страницах (0.125 = 1/8 стр.)
   cast: string[] // имена персонажей в сцене
   dialogCharacters?: string[] // персонажи, которые реально говорят в сцене
@@ -68,6 +69,7 @@ export interface Scene {
   // Bookmarking (Шаг 1.9)
   isBookmarked?: boolean
   bookmarkColor?: BookmarkColor
+  bookmarkLabel?: string // имя закладки (I-150)
 }
 
 /** Папка/группа карточек сцен на доске (фаза 5 «Карточки») */

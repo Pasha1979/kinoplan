@@ -25,7 +25,7 @@ import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml, type FormatBlock } from '../../utils/formatBlockExtractor'
 import { isBuiltinStatus, reassignSceneStatus } from '../../utils/draftStatus'
-import { Settings, Copy, ArrowUpToLine, ArrowDownToLine, Trash2 } from 'lucide-react'
+import { Settings, Copy, ArrowUpToLine, ArrowDownToLine, Trash2, Bookmark } from 'lucide-react'
 import ContextMenu from '../Home/ContextMenu'
 import { posOfSceneId, sceneAtPos, allSceneRanges, duplicateScene, mergeScenes, deleteScene } from '../../utils/sceneOps'
 import type { Editor } from '@tiptap/react'
@@ -132,6 +132,9 @@ export default function ScriptPage() {
   const [selectionStats, setSelectionStats] = useState<{ words: number; chars: number } | null>(null)
   // Блок B: правый клик по сцене в навигаторе
   const [navCtxMenu, setNavCtxMenu] = useState<{ sceneId: string; x: number; y: number } | null>(null)
+  // I-150: ввод имени закладки
+  const [bmInput, setBmInput] = useState<{ sceneId: string; x: number; y: number } | null>(null)
+  const [bmName, setBmName] = useState('')
   useEffect(() => {
     if (!editorInstance) { setSelectionStats(null); return }
     const update = () => {
@@ -674,6 +677,8 @@ export default function ScriptPage() {
     charCount: s.charCount,
     cast: s.cast,
     draftStatus: s.draftStatus,
+    isBookmarked: s.isBookmarked,
+    bookmarkLabel: s.bookmarkLabel,
   })), [viewAllSeries, allScenes, scenes])
 
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
@@ -974,6 +979,7 @@ export default function ScriptPage() {
               draftStatuses={project?.draftStatuses}
               onUpdateScene={handleUpdateScene}
               onSceneContextMenu={(sceneId, x, y) => setNavCtxMenu({ sceneId, x, y })}
+              actMarkers={actMarkersByEp[currentSeries]}
             />}
 
             {/* ─── Split Screen container ─── */}
@@ -1025,6 +1031,17 @@ export default function ScriptPage() {
                   focusSceneId={splitScreen.isActive ? splitScreen.leftFocusSceneId : focusSceneId}
                   onConvertReady={(fn) => { convertFormatRef.current = fn }}
                   onReorderReady={(reorderFn) => { reorderEditorRef.current = reorderFn }}
+                  onBookmarkScene={(sceneId, sceneNumber, x, y) => {
+                    const sc = navigatorScenes.find((s) => s.id === sceneId)
+                      ?? navigatorScenes.find((s) => s.number === sceneNumber)
+                    if (!sc) return
+                    if (sc.isBookmarked) {
+                      handleUpdateScene(sc.id, { isBookmarked: false, bookmarkLabel: undefined })
+                    } else {
+                      setBmName('')
+                      setBmInput({ sceneId: sc.id, x, y })
+                    }
+                  }}
                   onFormatReady={(formatFn) => { formatEditorRef.current = formatFn }}
                   onActiveSceneChange={(sceneId) => {
                     // T-101 scrollspy: навигатор подсвечивает сцену под курсором
@@ -1280,6 +1297,10 @@ export default function ScriptPage() {
             y={navCtxMenu.y}
             onClose={() => setNavCtxMenu(null)}
             items={[
+              // I-150: закладка на сцене
+              scene?.isBookmarked
+                ? { label: 'Убрать закладку', icon: <Bookmark size={14} />, onClick: () => handleUpdateScene(scene.id, { isBookmarked: false, bookmarkLabel: undefined }) }
+                : { label: 'В закладку…', icon: <Bookmark size={14} />, onClick: () => { setBmName(''); setBmInput({ sceneId: navCtxMenu.sceneId, x: navCtxMenu.x, y: navCtxMenu.y }) } },
               { label: 'Дублировать сцену', icon: <Copy size={14} />, onClick: () => duplicateScene(editorInstance, pos) },
               ...(hit.index > 0 ? [{ label: 'Объединить с предыдущей', icon: <ArrowUpToLine size={14} />, onClick: () => mergeScenes(editorInstance, pos, 'prev' as const) }] : []),
               ...(hit.index < total - 1 ? [{ label: 'Объединить со следующей', icon: <ArrowDownToLine size={14} />, onClick: () => mergeScenes(editorInstance, pos, 'next' as const) }] : []),
@@ -1288,6 +1309,40 @@ export default function ScriptPage() {
           />
         )
       })()}
+
+      {/* I-150: имя закладки — мини-поле у точки клика */}
+      {bmInput && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setBmInput(null)} />
+          <div
+            className="fixed z-50 flex items-center gap-2 rounded-xl border px-3 py-2 shadow-xl"
+            style={{
+              left: Math.max(8, Math.min(bmInput.x, window.innerWidth - 260)),
+              top: Math.max(8, Math.min(bmInput.y, window.innerHeight - 60)),
+              background: isDark ? '#1e1e3a' : '#ffffff',
+              borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#e5e7eb',
+            }}
+          >
+            <Bookmark size={14} style={{ color: '#eab308' }} />
+            <input
+              autoFocus
+              value={bmName}
+              onChange={(e) => setBmName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleUpdateScene(bmInput.sceneId, { isBookmarked: true, bookmarkLabel: bmName.trim() || undefined })
+                  setBmInput(null)
+                }
+                if (e.key === 'Escape') setBmInput(null)
+              }}
+              placeholder="Имя закладки (можно пусто)"
+              className="w-44 bg-transparent text-sm outline-none"
+              style={{ color: textPrimary }}
+              data-testid="bookmark-name-input"
+            />
+          </div>
+        </>
+      )}
 
       {/* Модальное окно автоформатирования */}
       {showAutoFormatModal && (

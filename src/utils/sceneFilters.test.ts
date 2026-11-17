@@ -68,6 +68,18 @@ describe('applyNavigatorFilters', () => {
     expect(applyNavigatorFilters(all, { ...base, query: 'утро' })).toEqual([a])
     expect(applyNavigatorFilters(all, { ...base, query: 'маша' })).toEqual([b])
   })
+  it('withoutSynopsis — только сцены без ручного синопсиса (autoSynopsis не считается)', () => {
+    const autoOnly = sc({ autoSynopsis: 'ИВАН · вошёл в дом' })
+    const manual = sc({ synopsis: 'Ручное описание' })
+    const empty = sc({ synopsis: '   ' })
+    expect(applyNavigatorFilters([autoOnly, manual, empty], { ...base, withoutSynopsis: true }))
+      .toEqual([autoOnly, empty])
+  })
+  it('bookmarkedOnly — только отмеченные закладкой', () => {
+    const marked = sc({ isBookmarked: true, bookmarkLabel: 'доработать' })
+    const plain = sc({})
+    expect(applyNavigatorFilters([marked, plain], { ...base, bookmarkedOnly: true })).toEqual([marked])
+  })
 })
 
 describe('matchesCardQuery', () => {

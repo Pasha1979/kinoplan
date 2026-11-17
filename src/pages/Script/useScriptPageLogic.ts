@@ -93,7 +93,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   }, [])
 
   // При получении новых сцен из редактора — синхронизируем со всеми stores
-  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; dialogCharacters?: string[]; pages: number; charCount?: number; duration?: number }>) => {
+  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; dialogCharacters?: string[]; autoSynopsis?: string; pages: number; charCount?: number; duration?: number }>) => {
     if (!currentScriptId) return
 
     // Merge с существующими сценами из scriptStore: сохраняем metadata (synopsis, breakdownElements и т.д.)
@@ -122,8 +122,10 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         colorTag: existing?.colorTag,
         isOmitted: existing?.isOmitted || false,
         order: existing?.order ?? 0,
+        autoSynopsis: (s as { autoSynopsis?: string }).autoSynopsis,
         isBookmarked: existing?.isBookmarked,
         bookmarkColor: existing?.bookmarkColor,
+        bookmarkLabel: existing?.bookmarkLabel,
         // Поля, которые редактор не знает — берём из существующей сцены, иначе теряются
         draftStatus: existing?.draftStatus,
         manualDuration: existing?.manualDuration,

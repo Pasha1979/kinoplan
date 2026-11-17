@@ -32,6 +32,8 @@ interface ScriptEditorTiptapProps {
   initialContent?: string
   onContentChange?: (html: string) => void
   onEditorReady?: (editor: Editor | null) => void
+  /** I-150: ПКМ «Закладка» в редакторе */
+  onBookmarkScene?: (sceneId: string | null, sceneNumber: string | null, x: number, y: number) => void
   dialogueCharacter?: string | null
   povCharacter?: string | null
 }
@@ -60,6 +62,7 @@ export default function ScriptEditorTiptap(props: ScriptEditorTiptapProps) {
       gotoOpen={logic.gotoOpen}
       setGotoOpen={logic.setGotoOpen}
       gotoScene={logic.gotoScene}
+      onBookmarkScene={props.onBookmarkScene}
     />
   )
 }

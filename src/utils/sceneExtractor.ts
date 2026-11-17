@@ -13,6 +13,8 @@ export interface ExtractedScene {
   time: string
   cast: string[]
   dialogCharacters: string[] // персонажи, которые реально говорят в сцене
+  /** I-176: авто-синопсис — говорящие + первое действие (если нет ручного synopsis) */
+  autoSynopsis: string
   pages: number
   duration: number
   manualDuration?: number
@@ -57,6 +59,8 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     dialogCharacters: string[]
     charCount: number
     dialogLines: number
+    firstAction: string
+    firstText: string
     manualDuration?: number
     sceneId?: string
   }> = []
@@ -156,10 +160,15 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     // Считаем символы до следующей sceneHeader
     let charCount = headerText.length
     let dialogLines = 0
+    let firstAction = ''
+    let firstText = ''
     for (let i = index + 1; i < blockNodes.length; i++) {
       const n = blockNodes[i]
       if (n.type.name === 'sceneHeader') break
       charCount += n.textContent.length
+      const txt = n.textContent.trim()
+      if (!firstAction && n.type.name === 'sceneAction' && txt) firstAction = txt
+      if (!firstText && txt && n.type.name !== 'sceneCast') firstText = txt
       if (n.type.name === 'sceneDialog') {
         dialogLines++
       }
@@ -196,7 +205,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       }
     })
 
-    rawScenes.push({ sceneNumber, sceneId, sceneType, location, sublocation, time, cast, dialogCharacters, charCount, dialogLines, manualDuration })
+    rawScenes.push({ sceneNumber, sceneId, sceneType, location, sublocation, time, cast, dialogCharacters, charCount, dialogLines, firstAction, firstText, manualDuration })
   })
 
   // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
@@ -219,6 +228,12 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     const calculated = calculateSceneTiming({ pages, charCount: raw.charCount, dialogLines: raw.dialogLines }, timingSystem, genreCoefficient)
     const duration = raw.manualDuration ?? calculated.duration
 
+    // I-176: умный авто-синопсис — «Говорящие · первое действие» (~110 зн.)
+    const speakers = (raw.dialogCharacters.length ? raw.dialogCharacters : raw.cast).slice(0, 2).join(', ')
+    const snippet = (raw.firstAction || raw.firstText).replace(/\s+/g, ' ')
+    const cut = snippet.length > 110 ? snippet.slice(0, 110).replace(/\s+\S*$/, '') + '…' : snippet
+    const autoSynopsis = [speakers, cut].filter(Boolean).join(' · ')
+
     return {
       id: raw.sceneId ?? `scene-${raw.sceneNumber}`,
       number: raw.sceneNumber,
@@ -228,6 +243,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       time: raw.time,
       cast: raw.cast,
       dialogCharacters: raw.dialogCharacters,
+      autoSynopsis,
       pages,
       duration,
       manualDuration: raw.manualDuration,
