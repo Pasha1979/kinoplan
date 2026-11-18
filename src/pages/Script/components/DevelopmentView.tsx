@@ -65,6 +65,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [scenesList, setScenesList] = useState<{ title: string; color: string; sceneIds: string[] } | null>(null)
   const [noScenesOnly, setNoScenesOnly] = useState(false)
   const [dupPairs, setDupPairs] = useState<DupPair[] | null>(null)
+  // Ручное слияние: ПКМ «Объединить с…» → выбор цели → модал имени
+  const [mergeSource, setMergeSource] = useState<DevCharacter | null>(null)
+  const [mergeConfirm, setMergeConfirm] = useState<{ a: DevCharacter; b: DevCharacter } | null>(null)
   const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
   const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
 
@@ -248,7 +251,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
     const active = tab === k
     return (
       <button
-        onClick={() => { setTab(k); setFolderFilter('all') }}
+        onClick={() => { setTab(k); setFolderFilter('all'); setMergeSource(null); setMergeConfirm(null) }}
         className="flex items-center gap-2 text-sm font-medium transition-all relative"
         style={{
           padding: '11px 22px',
@@ -382,6 +385,16 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                 </button>
                 <span style={{ fontSize: 12, color: textSecondary }}>{filteredChars.length} из {dev.characters.length}</span>
               </div>
+              {mergeSource && (
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px]"
+                  style={{ background: 'rgba(129,140,248,0.12)', border: '1px dashed rgba(129,140,248,0.5)', color: '#a5b4fc' }}>
+                  <Users size={13} />
+                  <span>Объединение: кликните по персонажу, с которым слить «{mergeSource.name}»</span>
+                  <button onClick={() => setMergeSource(null)} className="ml-auto flex items-center gap-1 hover:opacity-80" style={{ color: '#a5b4fc' }}>
+                    <X size={12} /> Отмена
+                  </button>
+                </div>
+              )}
               {filteredChars.length === 0 ? (
                 <Empty text={dev.characters.length ? 'Никого не найдено по фильтрам' : 'Пусто — добавь или импортируй из текста'} isDark={isDark} />
               ) : (
@@ -401,9 +414,21 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                           background: cardBg, border: `1px solid ${border}`, borderTop: `2px solid ${t.c}`,
                           opacity: dragItemId === c.id ? 0.4 : 1,
                           cursor: sortBy === 'manual' ? 'grab' : 'pointer',
+                          outline: mergeSource ? `2px ${c.id === mergeSource.id ? 'solid' : 'dashed'} rgba(129,140,248,0.6)` : undefined,
                         }}
-                        onClick={() => setEditChar(c)}
+                        onClick={() => {
+                          if (mergeSource) {
+                            if (c.id !== mergeSource.id) setMergeConfirm({ a: mergeSource, b: c })
+                            return
+                          }
+                          setEditChar(c)
+                        }}
                       >
+                        {mergeSource && c.id === mergeSource.id && (
+                          <div className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#818cf8' }}>
+                            объединяем этот — кликните второго
+                          </div>
+                        )}
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div>
                             <div className="text-sm font-bold" style={{ color: textPrimary }}>{c.name}</div>
@@ -630,6 +655,23 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
             {folders.filter((f) => f.kind === folderCtx.kind).length === 0 && (
               <div className="px-3 py-1.5 text-[10px]" style={{ color: textSecondary }}>Нет папок — создайте в сайдбаре</div>
             )}
+            {folderCtx.kind === 'chars' && onMergeCharacters && (() => {
+              const src = dev.characters.find((c) => c.id === folderCtx.itemId)
+              if (!src || dev.characters.length < 2) return null
+              return (
+                <>
+                  <div className="my-1 border-t" style={{ borderColor: border }} />
+                  <button
+                    onClick={() => { setMergeSource(src); setFolderCtx(null) }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left transition-all hover:bg-white/5"
+                    style={{ color: '#818cf8' }}
+                  >
+                    <Users size={11} />
+                    <span className="flex-1">Объединить с…</span>
+                  </button>
+                </>
+              )
+            })()}
           </div>
         </>
       )}
@@ -649,6 +691,46 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           onClose={() => setScenesList(null)}
           onSceneClick={onSceneClick}
         />
+      )}
+
+      {/* ── Модал ручного слияния — выбор сохраняемого имени ── */}
+      {mergeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setMergeConfirm(null)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-3"
+            style={{ background: cardBg, border: `1px solid ${border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-bold" style={{ color: textPrimary }}>Объединить персонажей</div>
+              <button onClick={() => setMergeConfirm(null)} style={{ color: textSecondary }}><X size={16} /></button>
+            </div>
+            <p className="text-[11px] leading-snug" style={{ color: textSecondary }}>
+              «{mergeConfirm.a.name}» и «{mergeConfirm.b.name}» сольются в одного — замены пройдут в справочнике,
+              сценах и тексте сценария. Какое имя оставить?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { keep: mergeConfirm.a, drop: mergeConfirm.b },
+                { keep: mergeConfirm.b, drop: mergeConfirm.a },
+              ].map(({ keep, drop }) => (
+                <button
+                  key={keep.id}
+                  onClick={() => {
+                    onMergeCharacters?.(keep.id, drop.id)
+                    setMergeConfirm(null)
+                    setMergeSource(null)
+                  }}
+                  className="rounded-xl px-3 py-3 text-left transition-all hover:-translate-y-0.5"
+                  style={{ background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.4)' }}
+                >
+                  <div className="text-[10px] mb-1" style={{ color: textSecondary }}>оставить</div>
+                  <div className="text-[13px] font-bold" style={{ color: '#a5b4fc' }}>{keep.name}</div>
+                  <div className="text-[10px] mt-1" style={{ color: textSecondary }}>«{drop.name}» исчезнет</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Модал дублей ── */}

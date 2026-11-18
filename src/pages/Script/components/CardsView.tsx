@@ -285,7 +285,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
           transform: `translate(${s.dx}px, ${s.dy}px)`,
           width: s.w ?? style?.width,
           height: s.h ?? style?.height,
-          overflow: s.h ? 'auto' : style?.overflow ?? 'visible',
+          overflow: s.h ? 'auto' : style?.overflow ?? style?.overflowY ?? 'visible',
         }}
       >
         {children}
