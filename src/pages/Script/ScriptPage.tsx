@@ -22,6 +22,8 @@ import { mergeLocations } from './components/locMerge'
 import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './components/boardUndo'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
+import OutlineView from '../../components/OutlineView'
+import { useUiStore } from '../../store/uiStore'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml, type FormatBlock } from '../../utils/formatBlockExtractor'
 import { isBuiltinStatus, reassignSceneStatus } from '../../utils/draftStatus'
@@ -50,6 +52,10 @@ export default function ScriptPage() {
     onBeforeSceneReorder: useCallback((id: string, from: number, to: number) => beforeSceneReorderRef.current(id, from, to), []),
   })
   const formatLocked = useScriptStore((s) => s.formatLocked)
+  const outlineMode = useUiStore((s) => s.outlineMode)
+  const outlineSynopsis = useUiStore((s) => s.outlineSynopsis)
+  const toggleOutlineSynopsis = useUiStore((s) => s.toggleOutlineSynopsis)
+  const setOutlineMode = useUiStore((s) => s.setOutlineMode)
   const toggleFormatLock = useScriptStore((s) => s.toggleFormatLock)
   const {
     navigate,
@@ -1034,7 +1040,7 @@ export default function ScriptPage() {
             </div>
           </div>
         ) : (
-          <div className={`flex-1 flex overflow-hidden${focusMode.isFocused ? ' justify-center' : ''}`}>
+          <div className={`flex-1 flex overflow-hidden relative${focusMode.isFocused ? ' justify-center' : ''}`}>
             {!focusMode.isFocused && <SceneNavigator
               scenes={navigatorScenes}
               isDark={isDark}
@@ -1258,6 +1264,22 @@ export default function ScriptPage() {
                 </div>
               )}
             </div>
+
+            {/* T-136: «Каркас сцен» — оверлей поверх редактора (документ не трогаем) */}
+            {outlineMode && (
+              <OutlineView
+                scenes={scenes}
+                isDark={isDark}
+                withSynopsis={outlineSynopsis}
+                onToggleSynopsis={toggleOutlineSynopsis}
+                onClose={() => setOutlineMode(false)}
+                onSceneJump={(sceneId) => {
+                  handleSceneClickRouted(sceneId)
+                  setOutlineMode(false)
+                }}
+                onReorder={handleSceneReorder}
+              />
+            )}
           </div>
         )}
 

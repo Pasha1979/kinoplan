@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2, Download, AlignVerticalJustifyCenter } from 'lucide-react'
+import { ChevronLeft, Save, Settings, X, ChevronRight, AlertTriangle, HelpCircle, Clock, Lock, Unlock, Search, Maximize2, Columns2, MessageSquareText, Wand2, Download, AlignVerticalJustifyCenter, List } from 'lucide-react'
 import type { Scene, Script } from '../../../store/scriptStore'
 import { calculateSceneTiming, formatDuration } from '../../../utils/sceneTiming'
 import { useUiStore, type EnterPreset } from '../../../store/uiStore'
@@ -70,6 +70,8 @@ function ScriptHeader({
   const toggleAutoTypography = useUiStore((s) => s.toggleAutoTypography)
   const typewriterMode = useUiStore((s) => s.typewriterMode)
   const toggleTypewriterMode = useUiStore((s) => s.toggleTypewriterMode)
+  const outlineMode = useUiStore((s) => s.outlineMode)
+  const toggleOutlineMode = useUiStore((s) => s.toggleOutlineMode)
   const autoCloseBrackets = useUiStore((s) => s.autoCloseBrackets)
   const toggleAutoCloseBrackets = useUiStore((s) => s.toggleAutoCloseBrackets)
 
@@ -204,6 +206,20 @@ function ScriptHeader({
             <Columns2 size={15} />
           </button>
         )}
+        {/* Кнопка «Каркас сцен» */}
+        <button
+          onClick={toggleOutlineMode}
+          className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+          style={{
+            color: outlineMode ? '#818cf8' : textSecondary,
+            background: outlineMode ? 'rgba(99,102,241,0.15)' : 'transparent',
+          }}
+          onMouseEnter={e => !outlineMode && ((e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
+          onMouseLeave={e => !outlineMode && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+          title="Каркас сцен — документ, свёрнутый до шапок"
+        >
+          <List size={15} />
+        </button>
         {/* Кнопка Focus Mode */}
         {onToggleFocusMode && (
           <button

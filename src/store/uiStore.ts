@@ -27,6 +27,10 @@ interface UiStore {
   customSceneTemplates: { name: string; html: string }[]
   /** D4: группировка сцен навигатора по актам (сворачиваемые) */
   navigatorActGrouping: boolean
+  /** T-136: режим «Каркас сцен» — документ свёрнут до шапок */
+  outlineMode: boolean
+  /** показывать синопсис в каркасе */
+  outlineSynopsis: boolean
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
@@ -38,6 +42,9 @@ interface UiStore {
   addCustomSceneTemplate: (t: { name: string; html: string }) => void
   removeCustomSceneTemplate: (name: string) => void
   toggleNavigatorActGrouping: () => void
+  toggleOutlineMode: () => void
+  setOutlineMode: (v: boolean) => void
+  toggleOutlineSynopsis: () => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -53,6 +60,8 @@ export const useUiStore = create<UiStore>()(
       autoCloseBrackets: true,
       customSceneTemplates: [],
       navigatorActGrouping: true,
+      outlineMode: false,
+      outlineSynopsis: true,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -86,6 +95,14 @@ export const useUiStore = create<UiStore>()(
 
       toggleNavigatorActGrouping: () =>
         set((state) => ({ navigatorActGrouping: !state.navigatorActGrouping })),
+
+      toggleOutlineMode: () =>
+        set((state) => ({ outlineMode: !state.outlineMode })),
+
+      setOutlineMode: (v) => set({ outlineMode: v }),
+
+      toggleOutlineSynopsis: () =>
+        set((state) => ({ outlineSynopsis: !state.outlineSynopsis })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )
