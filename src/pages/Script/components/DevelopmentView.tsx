@@ -70,6 +70,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [mergeConfirm, setMergeConfirm] = useState<{ a: DevCharacter; b: DevCharacter } | null>(null)
   const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
   const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
+  const [groupLocs, setGroupLocs] = useState(true) // группировка «ЛОКАЦИЯ.ПОДЛОКАЦИЯ»
 
   const dev = development ?? emptyDev
   const folders = dev.folders ?? []
@@ -99,12 +100,17 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
 
   const locNamesInText = useMemo(() => {
     const map = new Map<string, string[]>()
-    scenes.forEach((sc) => {
-      const key = (sc.location || '').trim().toUpperCase()
-      if (!key) return
+    const add = (key: string, sceneId: string) => {
       const cur = map.get(key) ?? []
-      if (!cur.includes(sc.id)) cur.push(sc.id)
+      if (!cur.includes(sceneId)) cur.push(sceneId)
       map.set(key, cur)
+    }
+    scenes.forEach((sc) => {
+      const loc = (sc.location || '').trim().toUpperCase()
+      const sub = (sc.sublocation || '').trim().toUpperCase()
+      if (!loc) return
+      add(loc, sc.id) // родитель — все сцены с подлокациями
+      if (sub) add(`${loc}.${sub}`, sc.id) // полный путь — только свои
     })
     return map
   }, [scenes])
@@ -492,13 +498,26 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                   title="Показать только локации, которые не появляются ни в одной сцене">
                   Без сцен
                 </button>
+                <button
+                  onClick={() => setGroupLocs(!groupLocs)}
+                  className="rounded-full font-medium transition-all"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    background: groupLocs ? 'rgba(52,211,153,0.2)' : 'transparent',
+                    color: groupLocs ? '#34d399' : textSecondary,
+                    border: `1px ${groupLocs ? 'solid' : 'dashed'} ${groupLocs ? 'rgba(52,211,153,0.6)' : border}`,
+                  }}
+                  title="Сгруппировать подлокации под родительскими объектами">
+                  Группы
+                </button>
                 <span style={{ fontSize: 12, color: textSecondary }}>{filteredLocs.length} из {dev.locations.length}</span>
               </div>
               {filteredLocs.length === 0 ? (
                 <Empty text={dev.locations.length ? 'Ничего не найдено по фильтрам' : 'Пусто — добавь или импортируй из текста'} isDark={isDark} />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filteredLocs.map((l) => (
+                (() => {
+                  const locCard = (l: DevLocation) => (
                     <div
                       key={l.id}
                       draggable={sortBy === 'manual'}
@@ -525,8 +544,42 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                       </div>
                       {l.description && <p className="text-[11px] leading-snug line-clamp-3" style={{ color: textSecondary }}>{l.description}</p>}
                     </div>
-                  ))}
-                </div>
+                  )
+                  if (!groupLocs) {
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {filteredLocs.map(locCard)}
+                      </div>
+                    )
+                  }
+                  // Группировка «ЛОКАЦИЯ.ПОДЛОКАЦИЯ» под родителем
+                  const groups = new Map<string, { parent: DevLocation | null; children: DevLocation[] }>()
+                  filteredLocs.forEach((l) => {
+                    const dot = l.name.lastIndexOf('.')
+                    const key = dot > 0 ? l.name.slice(0, dot) : l.name
+                    const e = groups.get(key) ?? { parent: null, children: [] }
+                    if (dot > 0) e.children.push(l); else e.parent = l
+                    groups.set(key, e)
+                  })
+                  return (
+                    <div className="space-y-5">
+                      {[...groups.entries()].map(([key, g]) => (
+                        <div key={key}>
+                          {g.children.length > 0 && (
+                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: '#34d399' }}>
+                              <MapPin size={12} />
+                              {key} · {g.children.length + (g.parent ? 1 : 0)} об.
+                            </div>
+                          )}
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {g.parent && locCard(g.parent)}
+                            {g.children.map(locCard)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()
               )}
             </div>
           )}

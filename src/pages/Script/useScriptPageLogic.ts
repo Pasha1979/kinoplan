@@ -364,10 +364,19 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
       const charNames = new Map<string, string[]>()
       allScenes.forEach((sc) => {
         const loc = (sc.location || '').trim().toUpperCase()
+        const sub = (sc.sublocation || '').trim().toUpperCase()
         if (loc) {
+          // родительская локация — все сцены включая подлокации
           const a = locNames.get(loc) ?? []
           if (!a.includes(sc.id)) a.push(sc.id)
           locNames.set(loc, a)
+          // полный путь «ЛОКАЦИЯ.ПОДЛОКАЦИЯ» — только свои сцены
+          if (sub) {
+            const full = `${loc}.${sub}`
+            const fa = locNames.get(full) ?? []
+            if (!fa.includes(sc.id)) fa.push(sc.id)
+            locNames.set(full, fa)
+          }
         }
         ;[...(sc.cast || []), ...(sc.dialogCharacters || [])].forEach((n) => {
           const k = n.trim().toUpperCase()
