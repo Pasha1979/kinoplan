@@ -405,7 +405,7 @@ function SceneCard({
             {/* I-150: закладка — жёлтый значок + имя */}
             {scene.isBookmarked && (
               <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded shrink-0"
-                style={{ background: 'rgba(234,179,8,0.15)', color: '#eab308', maxWidth: 120 }}
+                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', maxWidth: 120 }}
                 title={scene.bookmarkLabel || 'Закладка'}>
                 <Bookmark size={10} fill="currentColor" />
                 {scene.bookmarkLabel && <span className="truncate">{scene.bookmarkLabel}</span>}

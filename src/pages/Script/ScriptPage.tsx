@@ -25,7 +25,7 @@ import SceneNavigator from '../../components/SceneNavigator'
 import ScriptEditorTiptap from '../../components/ScriptEditorTiptap'
 import { extractBlocksFromHtml, type FormatBlock } from '../../utils/formatBlockExtractor'
 import { isBuiltinStatus, reassignSceneStatus } from '../../utils/draftStatus'
-import { Settings, Copy, ArrowUpToLine, ArrowDownToLine, Trash2, Bookmark } from 'lucide-react'
+import { Settings, Copy, ArrowUpToLine, ArrowDownToLine, Trash2, Bookmark, Check } from 'lucide-react'
 import ContextMenu from '../Home/ContextMenu'
 import { posOfSceneId, sceneAtPos, allSceneRanges, duplicateScene, mergeScenes, deleteScene } from '../../utils/sceneOps'
 import type { Editor } from '@tiptap/react'
@@ -677,8 +677,13 @@ export default function ScriptPage() {
     charCount: s.charCount,
     cast: s.cast,
     draftStatus: s.draftStatus,
+    synopsis: s.synopsis,
+    autoSynopsis: s.autoSynopsis,
     isBookmarked: s.isBookmarked,
     bookmarkLabel: s.bookmarkLabel,
+    colorTag: s.colorTag,
+    isOmitted: s.isOmitted,
+    status: s.status,
   })), [viewAllSeries, allScenes, scenes])
 
   const scriptCharacters = useMemo(() => currentScript?.characters || [], [currentScript?.characters])
@@ -1313,7 +1318,14 @@ export default function ScriptPage() {
       {/* I-150: имя закладки — мини-поле у точки клика */}
       {bmInput && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setBmInput(null)} />
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              // клик вне поля = применить (закладка без имени тоже ставится)
+              handleUpdateScene(bmInput.sceneId, { isBookmarked: true, bookmarkLabel: bmName.trim() || undefined })
+              setBmInput(null)
+            }}
+          />
           <div
             className="fixed z-50 flex items-center gap-2 rounded-xl border px-3 py-2 shadow-xl"
             style={{
@@ -1323,7 +1335,7 @@ export default function ScriptPage() {
               borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#e5e7eb',
             }}
           >
-            <Bookmark size={14} style={{ color: '#eab308' }} />
+            <Bookmark size={14} style={{ color: '#ef4444' }} />
             <input
               autoFocus
               value={bmName}
@@ -1340,6 +1352,19 @@ export default function ScriptPage() {
               style={{ color: textPrimary }}
               data-testid="bookmark-name-input"
             />
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                handleUpdateScene(bmInput.sceneId, { isBookmarked: true, bookmarkLabel: bmName.trim() || undefined })
+                setBmInput(null)
+              }}
+              className="p-1 rounded-md transition-colors"
+              style={{ color: '#ef4444', background: 'rgba(239,68,68,0.12)' }}
+              title="Поставить закладку"
+              data-testid="bookmark-apply-btn"
+            >
+              <Check size={13} />
+            </button>
           </div>
         </>
       )}

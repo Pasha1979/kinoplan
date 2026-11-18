@@ -787,7 +787,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
                           {sc.isBookmarked && (
                             <span className="flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded-full font-bold"
-                              style={{ background: 'rgba(234,179,8,0.15)', color: '#eab308' }}
+                              style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
                               title={sc.bookmarkLabel || 'Закладка'}>
                               <Bookmark size={8} fill="currentColor" />
                               {sc.bookmarkLabel && <span className="truncate max-w-[70px]">{sc.bookmarkLabel}</span>}
