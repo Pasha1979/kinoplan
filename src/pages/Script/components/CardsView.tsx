@@ -10,6 +10,30 @@ import { useUiStore } from '../../../store/uiStore'
 
 type SceneWithEp = Scene & { _episode?: number }
 
+/** Обёртка зоны доски — вынесена из CardsView: компонент, определённый
+ *  внутри render, перемонтируется каждый рендер и сбрасывает скролл */
+function LayoutBox({ layout, k, children, style }: {
+  layout: Record<string, { dx: number; dy: number; w?: number; h?: number }>
+  k: string
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  const s = layout[k] ?? { dx: 0, dy: 0 }
+  return (
+    <div
+      style={{
+        ...style,
+        transform: `translate(${s.dx}px, ${s.dy}px)`,
+        width: s.w ?? style?.width,
+        height: s.h ?? style?.height,
+        overflow: s.h ? 'auto' : style?.overflow ?? style?.overflowY ?? 'visible',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 interface CardsViewProps {
   isDark: boolean
   scenes: SceneWithEp[]
@@ -278,22 +302,6 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
   }, [])
   // Макет в исходном состоянии — все зоны без смещений
   const [layout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>(() => ({}))
-  const LayoutBox = ({ k, children, style }: { k: string; children: React.ReactNode; style?: React.CSSProperties }) => {
-    const s = layout[k] ?? { dx: 0, dy: 0 }
-    return (
-      <div
-        style={{
-          ...style,
-          transform: `translate(${s.dx}px, ${s.dy}px)`,
-          width: s.w ?? style?.width,
-          height: s.h ?? style?.height,
-          overflow: s.h ? 'auto' : style?.overflow ?? style?.overflowY ?? 'visible',
-        }}
-      >
-        {children}
-      </div>
-    )
-  }
   const createGroup = (ep: number, name: string, sceneIds: string[]) => {
     if (!name.trim()) return
     updateGroups(ep, (gs) => [...gs, {
@@ -505,7 +513,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       onClick={() => { setCtxMenu(null); setGroupCtx(null); setStatusMenu(null); setStatusFilterMenu(null); setSeriesMenu(null); setTypeMenu(null); if (selected.size) setSelected(new Set()) }}>
 
       {/* Шапка: поиск + фильтры */}
-      <LayoutBox k="toolbar" style={{ padding: '16px 40px 12px' }}>
+      <LayoutBox layout={layout} k="toolbar" style={{ padding: '16px 40px 12px' }}>
       <div className="flex items-center gap-3 px-4 py-3 flex-wrap rounded-xl"
         style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1 min-w-[200px] max-w-[340px]"
@@ -619,7 +627,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
 
       {/* Доска + сайдбар папок */}
       <div className="flex-1 flex overflow-hidden">
-      <LayoutBox k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
+      <LayoutBox layout={layout} k="board" style={{ flex: 1, overflowY: 'auto', padding: '0 40px 24px' }}>
         <div ref={boardRef} className="relative" style={{ zoom }}
           onScroll={() => { setCtxMenu(null); setStatusMenu(null); setStatusFilterMenu(null); setSeriesMenu(null); setTypeMenu(null) }}
           onDrop={(e) => { if (dragIds.length) { e.preventDefault(); setDragIds([]); setDropKey(null); setSelected(new Set()) } }}>
@@ -935,7 +943,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
       </LayoutBox>
 
       {/* ── САЙДБАР «ПАПКИ» — контейнеры групп ── */}
-      <LayoutBox k="sidebar" style={{
+      <LayoutBox layout={layout} k="sidebar" style={{
         width: 268, overflowY: 'auto',
         borderLeft: `1px solid ${border}`,
         background: isDark ? 'rgba(249,115,22,0.05)' : 'rgba(249,115,22,0.04)',

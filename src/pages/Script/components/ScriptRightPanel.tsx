@@ -24,6 +24,107 @@ import { Layers } from 'lucide-react'
 
 export type { ValidationIssue }
 
+/* ── Severity helpers (module-level — чистые) ── */
+const severityColor = (s: ErrorSeverity) => {
+  switch (s) {
+    case 'error': return '#ef4444'
+    case 'warning': return '#f59e0b'
+    case 'info': return '#3b82f6'
+  }
+}
+
+const severityIcon = (s: ErrorSeverity) => {
+  switch (s) {
+    case 'error': return <AlertTriangle size={12} style={{ color: '#ef4444' }} />
+    case 'warning': return <AlertTriangle size={12} style={{ color: '#f59e0b' }} />
+    case 'info': return <Info size={12} style={{ color: '#3b82f6' }} />
+  }
+}
+
+interface SectionProps {
+  icon: React.ReactNode
+  title: string
+  count: number
+  isDark: boolean
+  border: string
+  textPrimary: string
+  textSecondary: string
+  children: React.ReactNode
+}
+
+/* Сворачиваемая секция — вынесена из render: иначе каждый рендер панели
+ * перемонтировал её и сбрасывал состояние «открыто/закрыто» */
+function Section({ icon, title, count, isDark, border, textPrimary, textSecondary, children }: SectionProps) {
+  const [open, setOpen] = useState(count > 0)
+  const hasItems = count > 0
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}
+    >
+      <button
+        className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+        onClick={() => setOpen(!open)}
+      >
+        <div className="flex items-center gap-2">
+          <div style={{ color: textSecondary }}>{icon}</div>
+          <span className="text-xs font-semibold" style={{ color: textPrimary }}>{title}</span>
+          {hasItems ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+              style={{ background: `${severityColor('error')}20`, color: severityColor('error') }}>
+              {count}
+            </span>
+          ) : (
+            <CheckCircle size={12} style={{ color: '#22c55e' }} />
+          )}
+        </div>
+        {open ? <ChevronDown size={14} style={{ color: textSecondary }} /> : <ChevronUp size={14} style={{ color: textSecondary }} />}
+      </button>
+      {open && hasItems && <div className="px-3 pb-3 space-y-1.5">{children}</div>}
+      {open && !hasItems && (
+        <div className="px-3 pb-3 text-[11px]" style={{ color: textSecondary }}>Проблем не найдено</div>
+      )}
+    </div>
+  )
+}
+
+interface GroupRowProps {
+  members: ValidationIssue[]
+  label: string
+  isDark: boolean
+  border: string
+  textPrimary: string
+  textSecondary: string
+  onMenu: (e: React.MouseEvent) => void
+  renderIssue: (issue: ValidationIssue) => React.ReactNode
+}
+
+/* Свёрнутая группа одинаковых проблем — module-level по той же причине */
+function GroupRow({ members, label, isDark, border, textPrimary, textSecondary, onMenu, renderIssue }: GroupRowProps) {
+  const [open, setOpen] = useState(false)
+  const sevColor = severityColor(members[0].severity)
+  return (
+    <div className="rounded-lg overflow-hidden"
+      style={{ background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff', border: `1px solid ${border}` }}>
+      <div
+        className="flex items-start gap-2 p-2 cursor-pointer"
+        onClick={() => setOpen(!open)}
+        onContextMenu={onMenu}
+        title="Клик — развернуть · ПКМ — действия с группой"
+      >
+        <Layers size={12} className="mt-0.5 shrink-0" style={{ color: sevColor }} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] leading-tight" style={{ color: textPrimary }}>{label}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: textSecondary }}>{members.length} одинаковых</p>
+        </div>
+        {open ? <ChevronUp size={12} style={{ color: textSecondary }} /> : <ChevronDown size={12} style={{ color: textSecondary }} />}
+      </div>
+      {open && <div className="px-2 pb-2 space-y-1.5">{members.map(renderIssue)}</div>}
+    </div>
+  )
+}
+
 interface ScriptRightPanelProps {
   isDark: boolean
   textPrimary: string
@@ -251,101 +352,6 @@ function ScriptRightPanel({
   const tabActiveBg = 'rgba(99,102,241,0.15)'
   const tabActiveColor = '#818cf8'
 
-  /* ── Severity helpers ── */
-  const severityColor = (s: ErrorSeverity) => {
-    switch (s) {
-      case 'error':
-        return '#ef4444'
-      case 'warning':
-        return '#f59e0b'
-      case 'info':
-        return '#3b82f6'
-    }
-  }
-
-  const severityIcon = (s: ErrorSeverity) => {
-    switch (s) {
-      case 'error':
-        return <AlertTriangle size={12} style={{ color: '#ef4444' }} />
-      case 'warning':
-        return <AlertTriangle size={12} style={{ color: '#f59e0b' }} />
-      case 'info':
-        return <Info size={12} style={{ color: '#3b82f6' }} />
-    }
-  }
-
-  /* ── Collapsible section ── */
-  function Section({
-    icon,
-    title,
-    count,
-    children,
-  }: {
-    icon: React.ReactNode
-    title: string
-    count: number
-    children: React.ReactNode
-  }) {
-    const [open, setOpen] = useState(count > 0)
-    const hasItems = count > 0
-
-    return (
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          border: `1px solid ${border}`,
-          background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
-        }}
-      >
-        <button
-          className="w-full flex items-center justify-between px-3 py-2.5 text-left"
-          onClick={() => setOpen(!open)}
-        >
-          <div className="flex items-center gap-2">
-            <div style={{ color: textSecondary }}>{icon}</div>
-            <span
-              className="text-xs font-semibold"
-              style={{ color: textPrimary }}
-            >
-              {title}
-            </span>
-            {hasItems && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{
-                  background: `${severityColor('error')}20`,
-                  color: severityColor('error'),
-                }}
-              >
-                {count}
-              </span>
-            )}
-            {!hasItems && (
-              <CheckCircle size={12} style={{ color: '#22c55e' }} />
-            )}
-          </div>
-          {open ? (
-            <ChevronDown size={14} style={{ color: textSecondary }} />
-          ) : (
-            <ChevronUp size={14} style={{ color: textSecondary }} />
-          )}
-        </button>
-
-        {open && hasItems && (
-          <div className="px-3 pb-3 space-y-1.5">{children}</div>
-        )}
-        {open && !hasItems && (
-          <div
-            className="px-3 pb-3 text-[11px]"
-            style={{ color: textSecondary }}
-          >
-            Проблем не найдено
-          </div>
-        )}
-      </div>
-    )
-  }
-
   /* ── Issue row ── */
   function IssueRow({ issue }: { issue: ValidationIssue }) {
     const clickable = !!(issue.sceneId || issue.sceneNumber) && !!onIssueClick
@@ -414,50 +420,6 @@ function ScriptRightPanel({
     )
   }
 
-  /* ── Group row — свёрнутая группа одинаковых проблем ── */
-  function GroupRow({ members }: { members: ValidationIssue[] }) {
-    const [open, setOpen] = useState(false)
-    const first = members[0]
-    const sevColor = severityColor(first.severity)
-    const label = first.message.replace(/^Сцена [^:]+:\s*/, '')
-    return (
-      <div
-        className="rounded-lg overflow-hidden"
-        style={{
-          background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff',
-          border: `1px solid ${border}`,
-        }}
-      >
-        <div
-          className="flex items-start gap-2 p-2 cursor-pointer"
-          onClick={() => setOpen(!open)}
-          onContextMenu={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setGroupPopup({ ruleKey: ruleKeyOf(first), members, x: e.clientX, y: e.clientY })
-          }}
-          title="Клик — развернуть · ПКМ — действия с группой"
-        >
-          <Layers size={12} className="mt-0.5 shrink-0" style={{ color: sevColor }} />
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] leading-tight" style={{ color: textPrimary }}>
-              {label}
-            </p>
-            <p className="text-[10px] mt-0.5" style={{ color: textSecondary }}>
-              {members.length} одинаковых
-            </p>
-          </div>
-          {open ? <ChevronUp size={12} style={{ color: textSecondary }} /> : <ChevronDown size={12} style={{ color: textSecondary }} />}
-        </div>
-        {open && (
-          <div className="px-2 pb-2 space-y-1.5">
-            {members.map((issue) => <IssueRow key={issue.id} issue={issue} />)}
-          </div>
-        )}
-      </div>
-    )
-  }
-
   /** Рендер списка проблем секции с учётом включённых группировок */
   const renderIssues = (list: ValidationIssue[]) => {
     const grouped = new Map<string, ValidationIssue[]>()
@@ -475,7 +437,23 @@ function ScriptRightPanel({
     return (
       <>
         {rows.map((issue) => <IssueRow key={issue.id} issue={issue} />)}
-        {[...grouped.entries()].map(([k, members]) => <GroupRow key={k} members={members} />)}
+        {[...grouped.entries()].map(([k, members]) => (
+          <GroupRow
+            key={k}
+            members={members}
+            label={members[0].message.replace(/^Сцена [^:]+:\s*/, '')}
+            isDark={isDark}
+            border={border}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            onMenu={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setGroupPopup({ ruleKey: k, members, x: e.clientX, y: e.clientY })
+            }}
+            renderIssue={(issue) => <IssueRow key={issue.id} issue={issue} />}
+          />
+        ))}
       </>
     )
   }
@@ -652,6 +630,10 @@ function ScriptRightPanel({
 
           {/* Sections */}
           <Section
+            isDark={isDark}
+            border={border}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
             icon={<FileText size={14} />}
             title="Форматирование"
             count={formatIssues.filter((i) => !dismissedSet.has(i.id)).length}
@@ -660,6 +642,10 @@ function ScriptRightPanel({
           </Section>
 
           <Section
+            isDark={isDark}
+            border={border}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
             icon={<Film size={14} />}
             title="Сцены"
             count={sceneIssues.filter((i) => !dismissedSet.has(i.id)).length}
@@ -668,6 +654,10 @@ function ScriptRightPanel({
           </Section>
 
           <Section
+            isDark={isDark}
+            border={border}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
             icon={<Users size={14} />}
             title="Персонажи"
             count={characterIssues.filter((i) => !dismissedSet.has(i.id)).length}
@@ -676,6 +666,10 @@ function ScriptRightPanel({
           </Section>
 
           <Section
+            isDark={isDark}
+            border={border}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
             icon={<Clock size={14} />}
             title="Хронометраж"
             count={timingIssues.filter((i) => !dismissedSet.has(i.id)).length}
