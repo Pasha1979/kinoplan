@@ -64,8 +64,8 @@ export interface MergeResult {
   folders?: DevFolder[]
   /** сколько имён заменено в контенте всех серий */
   replacedInText: number
-  /** новые cast-списки по сцене: sceneId → cast */
-  sceneCastPatches: Map<string, string[]>
+  /** новые cast/dialogCharacters по сцене: sceneId → оба списка */
+  sceneCastPatches: Map<string, { cast: string[]; dialogCharacters: string[] }>
 }
 
 /** Слияние drop → keep: метаданные берутся из более заполненного,
@@ -127,12 +127,16 @@ export function mergeCharacters(params: {
     html.replace(re, () => { replacedInText++; return keep.name })
   )
 
-  // cast-списки сцен: имя drop → имя keep
-  const sceneCastPatches = new Map<string, string[]>()
+  // cast-списки и говорящие сцен: имя drop → имя keep.
+  // dialogCharacters патчим обязательно — иначе авто-синк библии
+  // тут же «воскресит» удалённого персонажа из устаревшего поля
+  const sceneCastPatches = new Map<string, { cast: string[]; dialogCharacters: string[] }>()
   scenes.forEach((sc) => {
     if (sc.cast?.includes(drop.name) || sc.dialogCharacters?.includes(drop.name)) {
-      const cast = (sc.cast ?? []).map((n) => (n === drop.name ? keep.name : n))
-      sceneCastPatches.set(sc.id, cast)
+      sceneCastPatches.set(sc.id, {
+        cast: (sc.cast ?? []).map((n) => (n === drop.name ? keep.name : n)),
+        dialogCharacters: (sc.dialogCharacters ?? []).map((n) => (n === drop.name ? keep.name : n)),
+      })
     }
   })
 

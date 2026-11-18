@@ -7,6 +7,10 @@ export interface ContextMenuItem {
   danger?: boolean
   /** не закрывать меню после клика (подменю) */
   keepOpen?: boolean
+  /** метка «включено» — галочка справа */
+  checked?: boolean
+  /** пункт-заглушка без действия (серый) */
+  disabled?: boolean
   onClick: () => void
 }
 
@@ -15,6 +19,8 @@ interface ContextMenuProps {
   y: number
   items: ContextMenuItem[]
   onClose: () => void
+  /** заголовок-разделитель над пунктами */
+  header?: React.ReactNode
 }
 
 /** Возвращает ref и скорректированную позицию поповера, чтобы не выходить за края экрана */
@@ -56,7 +62,7 @@ export function usePopoverClose(onClose: () => void) {
   }, [onClose])
 }
 
-export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
+export default function ContextMenu({ x, y, items, onClose, header }: ContextMenuProps) {
   const { theme } = useUiStore()
   const { ref, style } = usePopoverPosition(x, y)
   usePopoverClose(onClose)
@@ -71,6 +77,11 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         isDark ? 'bg-[#1e1e3a] border-white/12 shadow-black/40' : 'bg-white border-gray-200 shadow-gray-300/50'
       }`}
     >
+      {header && (
+        <div className={`px-4 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          {header}
+        </div>
+      )}
       {items.map((item) => (
         <button
           key={item.label}
@@ -81,13 +92,16 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
             item.danger
               ? 'text-red-400 hover:bg-red-500/15'
-              : isDark
-                ? 'text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-200'
-                : 'text-gray-600 hover:bg-indigo-500/10 hover:text-indigo-700'
+              : item.disabled
+                ? (isDark ? 'text-gray-600' : 'text-gray-400')
+                : isDark
+                  ? 'text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-200'
+                  : 'text-gray-600 hover:bg-indigo-500/10 hover:text-indigo-700'
           }`}
         >
           {item.icon}
-          {item.label}
+          <span className="flex-1 text-left">{item.label}</span>
+          {item.checked && <span className={isDark ? 'text-indigo-300' : 'text-indigo-600'}>✓</span>}
         </button>
       ))}
     </div>

@@ -64,7 +64,7 @@ describe('mergeLocations', () => {
     })
     expect(r.replacedInText).toBe(1)
     expect(r.contentsPatched[0]).toContain('ИНТ. ДОМ — ДЕНЬ')
-    expect(r.sceneLocPatches.get('s1')).toBe('ДОМ')
+    expect(r.sceneLocPatches.get('s1')).toEqual({ location: 'ДОМ', sublocation: undefined })
     expect(r.sceneLocPatches.has('s2')).toBe(false)
     expect(r.sceneLocPatches.has('s3')).toBe(false)
   })

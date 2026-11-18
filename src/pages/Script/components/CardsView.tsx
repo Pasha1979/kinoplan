@@ -1136,8 +1136,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
             <div className="px-1 pb-1 space-y-0.5">
               {allDraftStatuses(draftStatuses).map((s) => (
                 <button key={s.id}
-                  className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all hover:opacity-80"
-                  style={{ color: textPrimary }}
+                  className={`w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-colors ${isDark ? 'text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-200' : 'text-gray-600 hover:bg-indigo-500/10 hover:text-indigo-700'}`}
                   onClick={() => { onUpdateScene?.(ctxMenu.id, { draftStatus: s.id }); setCtxMenu(null) }}>
                   <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />{s.label}
                 </button>
@@ -1150,8 +1149,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
             <div className="px-1 pb-1 space-y-0.5">
               {(groupsByEpisode[ctxMenu.ep] || []).map((g) => (
                 <button key={g.id}
-                  className="w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-all"
-                  style={{ color: textPrimary, background: isDark ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+                  className={`w-full flex items-center gap-2 text-left px-1.5 py-1 rounded text-[11px] transition-colors ${isDark ? 'text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-200' : 'text-gray-600 hover:bg-indigo-500/10 hover:text-indigo-700'}`}
                   onClick={() => {
                     updateGroups(ctxMenu.ep, (gs) => gs.map((x) => x.id === g.id ? { ...x, sceneIds: [...new Set([...x.sceneIds, ctxMenu.id])] } : x))
                     setCtxMenu(null)

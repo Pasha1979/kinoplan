@@ -408,7 +408,10 @@ export default function ScriptPage() {
       const patched = r.contentsPatched[i]
       const scenePatches = (ep.scenes ?? [])
         .filter((sc) => r.sceneCastPatches.has(sc.id))
-        .map((sc) => ({ ...sc, cast: r.sceneCastPatches.get(sc.id)! }))
+        .map((sc) => {
+          const p = r.sceneCastPatches.get(sc.id)!
+          return { ...sc, cast: p.cast, dialogCharacters: p.dialogCharacters }
+        })
       const scenesPatch = scenePatches.length
         ? (ep.scenes ?? []).map((sc) => scenePatches.find((p) => p.id === sc.id) ?? sc)
         : undefined
@@ -455,7 +458,10 @@ export default function ScriptPage() {
     episodeScripts.forEach((ep, i) => {
       const patched = r.contentsPatched[i]
       const scenesPatch = r.sceneLocPatches.size
-        ? (ep.scenes ?? []).map((sc) => r.sceneLocPatches.has(sc.id) ? { ...sc, location: r.sceneLocPatches.get(sc.id)! } : sc)
+        ? (ep.scenes ?? []).map((sc) => {
+            const p = r.sceneLocPatches.get(sc.id)
+            return p ? { ...sc, location: p.location, sublocation: p.sublocation } : sc
+          })
         : undefined
       const scenesChanged = scenesPatch && scenesPatch.some((sc, idx) => sc !== (ep.scenes ?? [])[idx])
       if (patched !== (ep.content || '') || scenesChanged) {

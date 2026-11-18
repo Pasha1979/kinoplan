@@ -38,8 +38,8 @@ export interface LocMergeResult {
   folders?: DevFolder[]
   /** сколько названий заменено в контенте всех серий */
   replacedInText: number
-  /** новые location по сцене: sceneId → location */
-  sceneLocPatches: Map<string, string>
+  /** новые location/sublocation по сцене: sceneId → патч */
+  sceneLocPatches: Map<string, { location: string; sublocation?: string }>
 }
 
 /** Слияние drop → keep: метаданные из более заполненного,
@@ -80,12 +80,22 @@ export function mergeLocations(params: {
     html.replace(re, () => { replacedInText++; return keep.name })
   )
 
-  // scene.location: нормализованное совпадение → имя keep
-  const sceneLocPatches = new Map<string, string>()
+  // scene.location / путь «location.sublocation»: нормализованное совпадение → имя keep.
+  // keep.name с точкой разбиваем обратно на location.sublocation.
+  const sceneLocPatches = new Map<string, { location: string; sublocation?: string }>()
   const dropNorm = norm(drop.name)
+  const splitKeep = () => {
+    const dot = keep.name.indexOf('.')
+    return dot > 0
+      ? { location: keep.name.slice(0, dot), sublocation: keep.name.slice(dot + 1) }
+      : { location: keep.name, sublocation: undefined as string | undefined }
+  }
   scenes.forEach((sc) => {
     if (sc.location && norm(sc.location) === dropNorm) {
-      sceneLocPatches.set(sc.id, keep.name)
+      const k = splitKeep()
+      sceneLocPatches.set(sc.id, { location: k.location, sublocation: k.sublocation ?? sc.sublocation })
+    } else if (sc.location && sc.sublocation && norm(`${sc.location}.${sc.sublocation}`) === dropNorm) {
+      sceneLocPatches.set(sc.id, splitKeep())
     }
   })
 

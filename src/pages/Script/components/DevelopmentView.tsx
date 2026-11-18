@@ -11,6 +11,7 @@ import { extractSceneHtml } from './sceneHtmlOps'
 import { SceneTextEditor } from './SceneDetailModal'
 import { findCharDuplicates, type DupPair } from './charMerge'
 import { findLocDuplicates, type LocDupPair } from './locMerge'
+import ContextMenu from '../../Home/ContextMenu'
 
 const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
   main:      { l: 'Главная',        c: '#fb923c' },
@@ -65,9 +66,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [scenesList, setScenesList] = useState<{ title: string; color: string; sceneIds: string[] } | null>(null)
   const [noScenesOnly, setNoScenesOnly] = useState(false)
   const [dupPairs, setDupPairs] = useState<DupPair[] | null>(null)
-  // Ручное слияние: ПКМ «Объединить с…» → выбор цели → модал имени
-  const [mergeSource, setMergeSource] = useState<DevCharacter | null>(null)
-  const [mergeConfirm, setMergeConfirm] = useState<{ a: DevCharacter; b: DevCharacter } | null>(null)
+  // Ручное слияние (персонажи и локации): ПКМ «Объединить с…» → выбор цели → модал имени
+  const [mergeSource, setMergeSource] = useState<{ kind: 'chars' | 'locs'; id: string; name: string } | null>(null)
+  const [mergeConfirm, setMergeConfirm] = useState<{ kind: 'chars' | 'locs'; a: { id: string; name: string }; b: { id: string; name: string } } | null>(null)
   const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
   const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
   const [groupLocs, setGroupLocs] = useState(true) // группировка «ЛОКАЦИЯ.ПОДЛОКАЦИЯ»
@@ -391,7 +392,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                 </button>
                 <span style={{ fontSize: 12, color: textSecondary }}>{filteredChars.length} из {dev.characters.length}</span>
               </div>
-              {mergeSource && (
+              {mergeSource?.kind === 'chars' && (
                 <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px]"
                   style={{ background: 'rgba(129,140,248,0.12)', border: '1px dashed rgba(129,140,248,0.5)', color: '#a5b4fc' }}>
                   <Users size={13} />
@@ -420,17 +421,19 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                           background: cardBg, border: `1px solid ${border}`, borderTop: `2px solid ${t.c}`,
                           opacity: dragItemId === c.id ? 0.4 : 1,
                           cursor: sortBy === 'manual' ? 'grab' : 'pointer',
-                          outline: mergeSource ? `2px ${c.id === mergeSource.id ? 'solid' : 'dashed'} rgba(129,140,248,0.6)` : undefined,
+                          outline: mergeSource?.kind === 'chars' ? `2px ${c.id === mergeSource.id ? 'solid' : 'dashed'} rgba(129,140,248,0.6)` : undefined,
                         }}
                         onClick={() => {
                           if (mergeSource) {
-                            if (c.id !== mergeSource.id) setMergeConfirm({ a: mergeSource, b: c })
+                            if (mergeSource.kind === 'chars' && c.id !== mergeSource.id) {
+                              setMergeConfirm({ kind: 'chars', a: mergeSource, b: { id: c.id, name: c.name } })
+                            }
                             return
                           }
                           setEditChar(c)
                         }}
                       >
-                        {mergeSource && c.id === mergeSource.id && (
+                        {mergeSource?.kind === 'chars' && c.id === mergeSource.id && (
                           <div className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#818cf8' }}>
                             объединяем этот — кликните второго
                           </div>
@@ -513,6 +516,16 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                 </button>
                 <span style={{ fontSize: 12, color: textSecondary }}>{filteredLocs.length} из {dev.locations.length}</span>
               </div>
+              {mergeSource?.kind === 'locs' && (
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px]"
+                  style={{ background: 'rgba(52,211,153,0.1)', border: '1px dashed rgba(52,211,153,0.5)', color: '#6ee7b7' }}>
+                  <MapPin size={13} />
+                  <span>Объединение: кликните по локации, с которой слить «{mergeSource.name}»</span>
+                  <button onClick={() => setMergeSource(null)} className="ml-auto flex items-center gap-1 hover:opacity-80" style={{ color: '#6ee7b7' }}>
+                    <X size={12} /> Отмена
+                  </button>
+                </div>
+              )}
               {filteredLocs.length === 0 ? (
                 <Empty text={dev.locations.length ? 'Ничего не найдено по фильтрам' : 'Пусто — добавь или импортируй из текста'} isDark={isDark} />
               ) : (
@@ -530,9 +543,23 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                         background: cardBg, border: `1px solid ${border}`, borderTop: '2px solid #34d399',
                         opacity: dragItemId === l.id ? 0.4 : 1,
                         cursor: sortBy === 'manual' ? 'grab' : 'pointer',
+                        outline: mergeSource?.kind === 'locs' ? `2px ${l.id === mergeSource.id ? 'solid' : 'dashed'} rgba(52,211,153,0.6)` : undefined,
                       }}
-                      onClick={() => setEditLoc(l)}
+                      onClick={() => {
+                        if (mergeSource) {
+                          if (mergeSource.kind === 'locs' && l.id !== mergeSource.id) {
+                            setMergeConfirm({ kind: 'locs', a: mergeSource, b: { id: l.id, name: l.name } })
+                          }
+                          return
+                        }
+                        setEditLoc(l)
+                      }}
                     >
+                      {mergeSource?.kind === 'locs' && l.id === mergeSource.id && (
+                        <div className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#34d399' }}>
+                          объединяем эту — кликните вторую
+                        </div>
+                      )}
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="text-sm font-bold" style={{ color: textPrimary }}>{l.name}</div>
                         <div className="text-right shrink-0">
@@ -681,53 +708,35 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
         </div>
       )}
 
-      {/* ── Контекстное меню «В папку» ── */}
-      {folderCtx && (
-        <>
-          <div className="fixed inset-0 z-[80]" onClick={() => setFolderCtx(null)} onContextMenu={(e) => { e.preventDefault(); setFolderCtx(null) }} />
-          <div
-            className="fixed z-[85] rounded-xl py-1 min-w-[160px]"
-            style={{
-              left: Math.min(folderCtx.x, window.innerWidth - 200), top: Math.min(folderCtx.y, window.innerHeight - 200),
-              background: isDark ? '#1b1b30' : '#fff', border: `1px solid ${border}`, boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
-            }}
-          >
-            <div className="px-3 py-1.5 text-[10px] font-bold uppercase" style={{ color: textSecondary }}>В папку</div>
-            {folders.filter((f) => f.kind === folderCtx.kind).map((f) => (
-              <button
-                key={f.id}
-                onClick={() => { toggleItemInFolder(f.id, folderCtx.itemId); setFolderCtx(null) }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left transition-all hover:bg-white/5"
-                style={{ color: textPrimary }}
-              >
-                <Folder size={11} style={{ color: f.color, fill: f.itemIds.includes(folderCtx.itemId) ? f.color : `${f.color}40` }} />
-                <span className="flex-1">{f.name}</span>
-                {f.itemIds.includes(folderCtx.itemId) && <span style={{ color: f.color }}>✓</span>}
-              </button>
-            ))}
-            {folders.filter((f) => f.kind === folderCtx.kind).length === 0 && (
-              <div className="px-3 py-1.5 text-[10px]" style={{ color: textSecondary }}>Нет папок — создайте в сайдбаре</div>
-            )}
-            {folderCtx.kind === 'chars' && onMergeCharacters && (() => {
-              const src = dev.characters.find((c) => c.id === folderCtx.itemId)
-              if (!src || dev.characters.length < 2) return null
-              return (
-                <>
-                  <div className="my-1 border-t" style={{ borderColor: border }} />
-                  <button
-                    onClick={() => { setMergeSource(src); setFolderCtx(null) }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left transition-all hover:bg-white/5"
-                    style={{ color: '#818cf8' }}
-                  >
-                    <Users size={11} />
-                    <span className="flex-1">Объединить с…</span>
-                  </button>
-                </>
-              )
-            })()}
-          </div>
-        </>
-      )}
+      {/* ── Контекстное меню «В папку» / «Объединить с…» — единый вид через ContextMenu ── */}
+      {folderCtx && (() => {
+        const list = folderCtx.kind === 'chars' ? dev.characters : dev.locations
+        const src = list.find((c) => c.id === folderCtx.itemId)
+        const canMerge = src && list.length >= 2 && (folderCtx.kind === 'chars' ? onMergeCharacters : onMergeLocations)
+        return (
+          <ContextMenu
+            x={folderCtx.x}
+            y={folderCtx.y}
+            onClose={() => setFolderCtx(null)}
+            header="В папку"
+            items={[
+              ...folders.filter((f) => f.kind === folderCtx.kind).map((f) => ({
+                label: f.name,
+                icon: <Folder size={12} style={{ color: f.color, fill: f.itemIds.includes(folderCtx.itemId) ? f.color : `${f.color}40` }} />,
+                checked: f.itemIds.includes(folderCtx.itemId),
+                onClick: () => toggleItemInFolder(f.id, folderCtx.itemId),
+              })),
+              ...(folders.filter((f) => f.kind === folderCtx.kind).length === 0
+                ? [{ label: 'Нет папок — создайте в сайдбаре', disabled: true, onClick: () => {} }] : []),
+              ...(canMerge && src ? [{
+                label: 'Объединить с…',
+                icon: <Users size={12} />,
+                onClick: () => setMergeSource({ kind: folderCtx.kind, id: src.id, name: src.name }),
+              }] : []),
+            ]}
+          />
+        )
+      })()}
 
       {/* ── Выборка сцен персонажа/локации ── */}
       {scenesList && (
@@ -754,11 +763,13 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
             style={{ background: cardBg, border: `1px solid ${border}` }}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <div className="text-sm font-bold" style={{ color: textPrimary }}>Объединить персонажей</div>
+              <div className="text-sm font-bold" style={{ color: textPrimary }}>
+                Объединить {mergeConfirm.kind === 'chars' ? 'персонажей' : 'локации'}
+              </div>
               <button onClick={() => setMergeConfirm(null)} style={{ color: textSecondary }}><X size={16} /></button>
             </div>
             <p className="text-[11px] leading-snug" style={{ color: textSecondary }}>
-              «{mergeConfirm.a.name}» и «{mergeConfirm.b.name}» сольются в одного — замены пройдут в справочнике,
+              «{mergeConfirm.a.name}» и «{mergeConfirm.b.name}» сольются в один объект — замены пройдут в справочнике,
               сценах и тексте сценария. Какое имя оставить?
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -769,7 +780,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                 <button
                   key={keep.id}
                   onClick={() => {
-                    onMergeCharacters?.(keep.id, drop.id)
+                    if (mergeConfirm.kind === 'chars') onMergeCharacters?.(keep.id, drop.id)
+                    else onMergeLocations?.(keep.id, drop.id)
                     setMergeConfirm(null)
                     setMergeSource(null)
                   }}

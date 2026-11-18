@@ -54,7 +54,7 @@ describe('nameBoundaryRegex', () => {
 
 describe('mergeCharacters', () => {
   const scenes: Scene[] = [
-    { id: 's1', projectId: 'p', number: '1', type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', cast: ['ИВАН ПЕТРОВ', 'МАША'], pages: 1 },
+    { id: 's1', projectId: 'p', number: '1', type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', cast: ['ИВАН ПЕТРОВ', 'МАША'], dialogCharacters: ['ИВАН ПЕТРОВ'], pages: 1 },
     { id: 's2', projectId: 'p', number: '2', type: 'ИНТ', location: 'ДОМ', time: 'ДЕНЬ', cast: ['ИВАН'], pages: 1 },
   ]
 
@@ -82,7 +82,7 @@ describe('mergeCharacters', () => {
     })
     expect(r.replacedInText).toBe(1)
     expect(r.contentsPatched[0]).toContain('ИВАН вошёл')
-    expect(r.sceneCastPatches.get('s1')).toEqual(['ИВАН', 'МАША'])
+    expect(r.sceneCastPatches.get('s1')).toEqual({ cast: ['ИВАН', 'МАША'], dialogCharacters: ['ИВАН'] })
     expect(r.sceneCastPatches.has('s2')).toBe(false)
   })
 
