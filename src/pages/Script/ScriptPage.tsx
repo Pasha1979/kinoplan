@@ -19,6 +19,7 @@ import { spliceSceneHtml } from './components/SceneEditModal'
 import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor, setEditorContentNoHistory } from './components/sceneHtmlOps'
 import { mergeCharacters, nameBoundaryRegex, norm } from './components/charMerge'
 import { mergeLocations } from './components/locMerge'
+import { deleteCharacterEverywhere, deleteLocationEverywhere } from './components/devDelete'
 import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './components/boardUndo'
 import type { Scene } from '../../types/scene'
 import SceneNavigator from '../../components/SceneNavigator'
@@ -555,6 +556,99 @@ export default function ScriptPage() {
     showToast(`«${oldName}» → «${name}» · замен в тексте: ${replaced}`, 'success')
   }, [project, episodeScripts, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
 
+  // Удаление персонажа: имя убирается из составов сцен в тексте всех серий
+  // и метаданных сцен — иначе авто-синк библии «воскресит» карточку.
+  // removeDialogues=true — стираются и реплики (character + remark/dialog).
+  const handleDeleteCharacter = useCallback((id: string, removeDialogues: boolean) => {
+    if (!project) return
+    const dev = project.development ?? { characters: [], locations: [], synopsis: {} }
+    const char = dev.characters.find((c) => c.id === id)
+    if (!char) return
+
+    pushUndo({
+      kind: 'merge',
+      development: dev,
+      scripts: episodeScripts.map((ep) => ({ id: ep.id, content: ep.content, scenes: ep.scenes })),
+    })
+
+    const r = deleteCharacterEverywhere({
+      characters: dev.characters, folders: dev.folders, id,
+      scenes: allScenes,
+      contents: episodeScripts.map((ep) => ep.content || ''),
+      removeDialogues,
+    })
+
+    episodeScripts.forEach((ep, i) => {
+      const patched = r.contentsPatched[i]
+      const scenesPatch = (ep.scenes ?? []).map((sc) => {
+        const p = r.sceneCastPatches.get(sc.id)
+        return p ? { ...sc, cast: p.cast, dialogCharacters: p.dialogCharacters } : sc
+      })
+      const scenesChanged = scenesPatch.some((s, idx) => s !== (ep.scenes ?? [])[idx])
+      if (patched !== (ep.content || '') || scenesChanged) {
+        updateScript(ep.id, {
+          ...(patched !== (ep.content || '') ? { content: patched } : {}),
+          ...(scenesChanged ? { scenes: scenesPatch } : {}),
+        })
+        if (ep.id === currentScript?.id && editorInstance && patched !== (ep.content || '')) {
+          setEditorContentNoHistory(editorInstance, patched)
+        }
+      }
+    })
+
+    useNormalizedProjectStore.getState().updateProject(project.id, {
+      development: { ...dev, characters: r.characters, folders: r.folders },
+    })
+    showToast(
+      `«${char.name}» удалён · сцен затронуто: ${r.touchedScenes}${r.removedReplicas ? ` · реплик стёрто: ${r.removedReplicas}` : ''}`,
+      'success',
+    )
+  }, [project, episodeScripts, allScenes, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
+
+  // Удаление локации: название убирается из шапок сцен в тексте всех серий
+  // («ИНТ. ДОМ — ДЕНЬ» → «ИНТ. — ДЕНЬ») и полей сцен — авто-синк не вернёт её.
+  const handleDeleteLocation = useCallback((id: string) => {
+    if (!project) return
+    const dev = project.development ?? { characters: [], locations: [], synopsis: {} }
+    const loc = dev.locations.find((l) => l.id === id)
+    if (!loc) return
+
+    pushUndo({
+      kind: 'merge',
+      development: dev,
+      scripts: episodeScripts.map((ep) => ({ id: ep.id, content: ep.content, scenes: ep.scenes })),
+    })
+
+    const r = deleteLocationEverywhere({
+      locations: dev.locations, folders: dev.folders, id,
+      scenes: allScenes,
+      contents: episodeScripts.map((ep) => ep.content || ''),
+    })
+
+    episodeScripts.forEach((ep, i) => {
+      const patched = r.contentsPatched[i]
+      const scenesPatch = (ep.scenes ?? []).map((sc) => {
+        const p = r.sceneLocPatches.get(sc.id)
+        return p ? { ...sc, location: p.location, sublocation: p.sublocation } : sc
+      })
+      const scenesChanged = scenesPatch.some((s, idx) => s !== (ep.scenes ?? [])[idx])
+      if (patched !== (ep.content || '') || scenesChanged) {
+        updateScript(ep.id, {
+          ...(patched !== (ep.content || '') ? { content: patched } : {}),
+          ...(scenesChanged ? { scenes: scenesPatch } : {}),
+        })
+        if (ep.id === currentScript?.id && editorInstance && patched !== (ep.content || '')) {
+          setEditorContentNoHistory(editorInstance, patched)
+        }
+      }
+    })
+
+    useNormalizedProjectStore.getState().updateProject(project.id, {
+      development: { ...dev, locations: r.locations, folders: r.folders },
+    })
+    showToast(`«${loc.name}» удалена · шапок исправлено: ${r.headersPatched}`, 'success')
+  }, [project, episodeScripts, allScenes, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
+
   // Группы карточек по сериям (фаза 5)
   // На одну серию может быть несколько скриптов (версии) — объединяем группы,
   // иначе Object.fromEntries затирает группы более поздними пустыми скриптами
@@ -1025,6 +1119,8 @@ export default function ScriptPage() {
             onMergeLocations={handleMergeLocations}
             onRenameCharacter={(id, name) => handleRenameDevItem('chars', id, name)}
             onRenameLocation={(id, name) => handleRenameDevItem('locs', id, name)}
+            onDeleteCharacter={handleDeleteCharacter}
+            onDeleteLocation={handleDeleteLocation}
             onDevelopmentChange={(dev) => {
               if (project?.id) {
                 useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })

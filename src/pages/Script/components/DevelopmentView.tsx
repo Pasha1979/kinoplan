@@ -9,8 +9,9 @@ import type {
 } from '../../../types/development'
 import { extractSceneHtml } from './sceneHtmlOps'
 import { SceneTextEditor } from './SceneDetailModal'
-import { findCharDuplicates, type DupPair } from './charMerge'
+import { findCharDuplicates, norm, type DupPair } from './charMerge'
 import { findLocDuplicates, type LocDupPair } from './locMerge'
+import { countDialogues } from './devDelete'
 import ContextMenu from '../../Home/ContextMenu'
 import { useUiStore } from '../../../store/uiStore'
 
@@ -50,12 +51,17 @@ interface DevelopmentViewProps {
   onRenameCharacter?: (id: string, newName: string) => void
   /** переименование локации — название заменяется в шапках и scene.location */
   onRenameLocation?: (id: string, newName: string) => void
+  /** удаление персонажа — имя убирается из составов сцен в тексте;
+   *  removeDialogues=true стирает и реплики */
+  onDeleteCharacter?: (id: string, removeDialogues: boolean) => void
+  /** удаление локации — название убирается из шапок сцен в тексте */
+  onDeleteLocation?: (id: string) => void
 }
 
 const uid = () => `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const emptyDev: ProjectDevelopment = { characters: [], locations: [], synopsis: {}, folders: [] }
 
-function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters, onMergeLocations, onRenameCharacter, onRenameLocation }: DevelopmentViewProps) {
+function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters, onMergeLocations, onRenameCharacter, onRenameLocation, onDeleteCharacter, onDeleteLocation }: DevelopmentViewProps) {
   const [tab, setTab] = useState<'chars' | 'locs' | 'synopsis' | 'episodes'>('chars')
   const [editChar, setEditChar] = useState<DevCharacter | 'new' | null>(null)
   const [editLoc, setEditLoc] = useState<DevLocation | 'new' | null>(null)
@@ -77,6 +83,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   // Переименование через ПКМ — меняет имя и в тексте сценария
   const [renameTarget, setRenameTarget] = useState<{ kind: 'chars' | 'locs'; id: string; name: string } | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  // Удаление с пропихом в текст: подтверждение со счётчиками и выбором действия
+  const [deleteTarget, setDeleteTarget] = useState<{ kind: 'chars' | 'locs'; id: string; name: string; scenes: number; replicas: number } | null>(null)
   const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
   const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
   const groupLocs = useUiStore((s) => s.devLocGrouping)
@@ -863,6 +871,68 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
         </div>
       )}
 
+      {/* ── Модал удаления — сценарий зависит от упоминаний в тексте ── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setDeleteTarget(null)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-3"
+            style={{ background: cardBg, border: `1px solid ${border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-bold" style={{ color: textPrimary }}>
+                Удалить {deleteTarget.kind === 'chars' ? 'персонажа' : 'локацию'} «{deleteTarget.name}»?
+              </div>
+              <button onClick={() => setDeleteTarget(null)} style={{ color: textSecondary }}><X size={16} /></button>
+            </div>
+            <p className="text-[11px] leading-snug" style={{ color: textSecondary }}>
+              {deleteTarget.kind === 'chars' ? (
+                deleteTarget.replicas > 0
+                  ? <>Встречается в {deleteTarget.scenes} сценах, у персонажа <b>{deleteTarget.replicas} реплик</b>. Если удалить только карточку — реплики останутся в тексте и персонаж вернётся при авто-синке.</>
+                  : <>Встречается в {deleteTarget.scenes} сценах. Имя будет убрано из составов сцен в тексте и справочника.</>
+              ) : (
+                <>Встречается в {deleteTarget.scenes} сценах. Название будет убрано из шапок этих сцен в тексте (шапка станет «ИНТ. — ДЕНЬ», валидация подсветит).</>
+              )}
+            </p>
+            <div className="flex flex-col gap-2">
+              {deleteTarget.kind === 'chars' && deleteTarget.replicas > 0 ? (
+                <button
+                  onClick={() => { onDeleteCharacter?.(deleteTarget.id, true); setDeleteTarget(null) }}
+                  className="px-3 py-2 rounded-lg text-[12px] font-semibold text-left"
+                  style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}>
+                  Удалить и реплики — стереть {deleteTarget.replicas} реплик из текста
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (deleteTarget.kind === 'chars') onDeleteCharacter?.(deleteTarget.id, false)
+                    else onDeleteLocation?.(deleteTarget.id)
+                    setDeleteTarget(null)
+                  }}
+                  className="px-3 py-2 rounded-lg text-[12px] font-semibold text-left"
+                  style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}>
+                  {deleteTarget.kind === 'chars' ? 'Удалить — убрать из составов сцен' : 'Удалить — убрать из шапок сцен'}
+                </button>
+              )}
+              {((deleteTarget.kind === 'chars' && onMergeCharacters) || (deleteTarget.kind === 'locs' && onMergeLocations)) && (
+                <button
+                  onClick={() => {
+                    setMergeSource({ kind: deleteTarget.kind, id: deleteTarget.id, name: deleteTarget.name })
+                    setDeleteTarget(null)
+                  }}
+                  className="px-3 py-2 rounded-lg text-[12px] font-semibold text-left"
+                  style={{ background: 'rgba(129,140,248,0.12)', color: '#a5b4fc', border: '1px solid rgba(129,140,248,0.35)' }}>
+                  Сначала объединить с… — слить в другого объекта
+                </button>
+              )}
+              <button onClick={() => setDeleteTarget(null)}
+                className="px-3 py-1.5 rounded-lg text-[12px]" style={{ color: textSecondary }}>
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Модал дублей ── */}
       {dupPairs !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}
@@ -1022,11 +1092,23 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           allCharacters={dev.characters}
           onClose={() => setEditChar(null)}
           onDelete={editChar === 'new' ? undefined : () => {
-            const cid = (editChar as DevCharacter).id
-            setDev({ characters: dev.characters.filter((c) => c.id !== cid), folders: folders.map((f) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== cid) })) })
-            setEditChar(null)
+            const c = editChar as DevCharacter
+            const scenesN = charSceneIds(c).length
+            const replicas = countDialogues(Object.values(contentsByEpisode), c.name)
+            if (scenesN === 0 && replicas === 0) {
+              setDev({ characters: dev.characters.filter((x) => x.id !== c.id), folders: folders.map((f) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== c.id) })) })
+              setEditChar(null)
+            } else {
+              setEditChar(null)
+              setDeleteTarget({ kind: 'chars', id: c.id, name: c.name, scenes: scenesN, replicas })
+            }
           }}
           onSave={(c) => {
+            // Смена имени в модале — тот же пропих, что «Переименовать…»:
+            // иначе в тексте останется старое имя и авто-синк создаст дубль
+            if (editChar !== 'new' && norm(c.name) !== norm((editChar as DevCharacter).name)) {
+              onRenameCharacter?.(c.id, c.name)
+            }
             const exists = dev.characters.some((x) => x.id === c.id)
             setDev({ characters: exists ? dev.characters.map((x) => (x.id === c.id ? c : x)) : [...dev.characters, c] })
             setEditChar(null)
@@ -1049,11 +1131,20 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           locSceneIds={editLoc === 'new' ? [] : locSceneIds(editLoc)}
           onClose={() => setEditLoc(null)}
           onDelete={editLoc === 'new' ? undefined : () => {
-            const lid = (editLoc as DevLocation).id
-            setDev({ locations: dev.locations.filter((l) => l.id !== lid), folders: folders.map((f) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== lid) })) })
-            setEditLoc(null)
+            const l = editLoc as DevLocation
+            const scenesN = locSceneIds(l).length
+            if (scenesN === 0) {
+              setDev({ locations: dev.locations.filter((x) => x.id !== l.id), folders: folders.map((f) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== l.id) })) })
+              setEditLoc(null)
+            } else {
+              setEditLoc(null)
+              setDeleteTarget({ kind: 'locs', id: l.id, name: l.name, scenes: scenesN, replicas: 0 })
+            }
           }}
           onSave={(l) => {
+            if (editLoc !== 'new' && norm(l.name) !== norm((editLoc as DevLocation).name)) {
+              onRenameLocation?.(l.id, l.name)
+            }
             const exists = dev.locations.some((x) => x.id === l.id)
             setDev({ locations: exists ? dev.locations.map((x) => (x.id === l.id ? l : x)) : [...dev.locations, l] })
             setEditLoc(null)
