@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import {
   DndContext, closestCorners, PointerSensor, KeyboardSensor,
   useSensor, useSensors, DragOverlay,
@@ -13,15 +14,17 @@ import { X, Clock, Bookmark } from 'lucide-react'
 import type { Scene } from '../types/scene'
 import { formatDuration } from '../utils/sceneTiming'
 
+export interface OutlineLine { type: string; text: string }
+
 interface OutlineViewProps {
   scenes: Scene[]
+  /** тела сцен (строки блоков без шапки) — тот же порядок, что у scenes */
+  bodies: OutlineLine[][]
   isDark: boolean
   /** «шапки+синопсис» — показывать строку описания */
   withSynopsis: boolean
   onToggleSynopsis: () => void
   onClose: () => void
-  /** двойной клик — прыжок к сцене в текст */
-  onSceneJump: (sceneId: string) => void
   onReorder: (fromIndex: number, toIndex: number) => void
 }
 
@@ -29,18 +32,39 @@ const TYPE_COLOR: Record<string, string> = {
   'ИНТ': '#818cf8', 'ЭКСТ': '#34d399', 'ЭКСТ.': '#34d399',
 }
 
+/** Стили строки блока развёрнутой сцены — упрощённое сценарное форматирование */
+function lineStyle(type: string, textPrimary: string, textSecondary: string): CSSProperties {
+  const base: CSSProperties = { fontFamily: "'Courier Prime', 'Courier New', monospace", fontSize: 12, lineHeight: 1.5 }
+  switch (type) {
+    case 'sceneCharacter':
+      return { ...base, marginLeft: 160, fontWeight: 700, textTransform: 'uppercase', color: textPrimary }
+    case 'sceneDialog':
+      return { ...base, marginLeft: 80, maxWidth: 420, color: textPrimary }
+    case 'sceneParen':
+      return { ...base, marginLeft: 120, color: textSecondary }
+    case 'sceneCast':
+      return { ...base, color: textSecondary, fontStyle: 'italic' }
+    case 'sceneTransition':
+      return { ...base, textAlign: 'right', textTransform: 'uppercase', color: textSecondary }
+    default: // sceneAction и прочее
+      return { ...base, color: textPrimary }
+  }
+}
+
 function OutlineRow({
-  scene, isActive, isDark, withSynopsis, textPrimary, textSecondary,
-  onSelect, onJump,
+  scene, body, isActive, isExpanded, isDark, withSynopsis, textPrimary, textSecondary,
+  onSelect, onToggleExpand,
 }: {
   scene: Scene
+  body: OutlineLine[]
   isActive: boolean
+  isExpanded: boolean
   isDark: boolean
   withSynopsis: boolean
   textPrimary: string
   textSecondary: string
   onSelect: () => void
-  onJump: () => void
+  onToggleExpand: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: scene.id })
   const syn = scene.synopsis || scene.autoSynopsis || ''
@@ -51,7 +75,7 @@ function OutlineRow({
       {...attributes}
       {...listeners}
       onClick={onSelect}
-      onDoubleClick={onJump}
+      onDoubleClick={onToggleExpand}
       className="flex flex-col px-4 py-2 cursor-grab select-none border-l-2 transition-colors"
       style={{
         transform: CSS.Transform.toString(transform),
@@ -83,9 +107,20 @@ function OutlineRow({
           )}
         </span>
       </div>
-      {withSynopsis && syn && (
+      {withSynopsis && syn && !isExpanded && (
         <div className="text-[11px] leading-snug mt-0.5 pl-8 truncate" style={{ color: textSecondary, fontStyle: isAuto ? 'italic' : undefined }}>
           {isAuto ? `${syn} · авто` : syn}
+        </div>
+      )}
+      {isExpanded && (
+        <div className="mt-1.5 pl-8 pr-4 py-2 rounded-md" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}>
+          {body.length === 0 ? (
+            <div style={{ ...lineStyle('sceneAction', textPrimary, textSecondary), fontStyle: 'italic', color: textSecondary }}>— пустая сцена —</div>
+          ) : body.map((line, i) => (
+            <div key={i} style={lineStyle(line.type, textPrimary, textSecondary)}>
+              {line.text || ' '}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -94,10 +129,11 @@ function OutlineRow({
 
 /** T-136: «Каркас сцен» — документ, свёрнутый до шапок (± синопсис).
  *  View-only; перестановка — драг или Alt+↑/↓ по выделенной строке;
- *  двойной клик — прыжок к сцене в текст. */
-export default function OutlineView({ scenes, isDark, withSynopsis, onToggleSynopsis, onClose, onSceneJump, onReorder }: OutlineViewProps) {
+ *  двойной клик — развернуть/свернуть сцену прямо в каркасе. */
+export default function OutlineView({ scenes, bodies, isDark, withSynopsis, onToggleSynopsis, onClose, onReorder }: OutlineViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const textPrimary = isDark ? '#e2e8f0' : '#1f2937'
   const textSecondary = isDark ? '#94a3b8' : '#6b7280'
   const sensors = useSensors(
@@ -137,9 +173,10 @@ export default function OutlineView({ scenes, isDark, withSynopsis, onToggleSyno
           const next = Math.max(0, Math.min(scenes.length - 1, idx + (e.key === 'ArrowUp' ? -1 : 1)))
           setSelectedId(scenes[next]?.id ?? null)
         } else if (e.key === 'Enter' && selectedId) {
-          onSceneJump(selectedId)
+          setExpandedId((prev) => (prev === selectedId ? null : selectedId))
         } else if (e.key === 'Escape') {
-          onClose()
+          if (expandedId) setExpandedId(null)
+          else onClose()
         }
       }}
     >
@@ -186,18 +223,19 @@ export default function OutlineView({ scenes, isDark, withSynopsis, onToggleSyno
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={({ active }) => setActiveId(active.id as string)} onDragEnd={handleDragEnd}>
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-              {scenes.map((scene) => (
+              {scenes.map((scene, i) => (
                 <OutlineRow
                   key={scene.id}
                   scene={scene}
-  
+                  body={bodies[i] || []}
                   isActive={selectedId === scene.id}
+                  isExpanded={expandedId === scene.id}
                   isDark={isDark}
                   withSynopsis={withSynopsis}
                   textPrimary={textPrimary}
                   textSecondary={textSecondary}
                   onSelect={() => setSelectedId(scene.id)}
-                  onJump={() => onSceneJump(scene.id)}
+                  onToggleExpand={() => setExpandedId((prev) => (prev === scene.id ? null : scene.id))}
                 />
               ))}
             </SortableContext>
@@ -218,7 +256,7 @@ export default function OutlineView({ scenes, isDark, withSynopsis, onToggleSyno
 
       {/* Подсказка */}
       <div className="px-5 py-2 text-[10px] shrink-0" style={{ color: textSecondary, borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}` }}>
-        Двойной клик — к сцене в тексте · ↑/↓ — выбор · Alt+↑/↓ — переместить сцену · драг — перестановка · Esc — выход
+        Двойной клик — развернуть сцену в каркасе · ↑/↓ — выбор · Alt+↑/↓ — переместить сцену · драг — перестановка · Esc — свернуть/выйти
       </div>
     </div>
   )

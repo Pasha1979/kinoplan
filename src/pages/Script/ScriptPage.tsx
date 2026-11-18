@@ -168,6 +168,19 @@ export default function ScriptPage() {
 
   // Навигация по сцене: в режиме split — направляем в активную панель,
   // иначе — стандартное поведение через оригинальный хендлер
+  // T-136: тела сцен для каркаса — строки из документа редактора, сцены в том же порядке, что в `scenes`
+  const outlineBodies = useMemo(() => {
+    if (!editorInstance || !outlineMode) return []
+    const bodies: { type: string; text: string }[][] = []
+    editorInstance.state.doc.forEach((node) => {
+      if (node.type.name === 'sceneHeader') { bodies.push([]); return }
+      if (bodies.length === 0) return // контент до первой шапки не показываем
+      bodies[bodies.length - 1].push({ type: node.type.name, text: node.textContent })
+    })
+    return bodies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorInstance, outlineMode, scenes])
+
   const handleSceneClickRouted = useCallback((sceneId: string) => {
     if (splitScreen.isActive) {
       // Композит «id|номер» — тот же формат, что setFocusSceneId в handleSceneClick
@@ -1066,7 +1079,7 @@ export default function ScriptPage() {
             {/* ─── Split Screen container ─── */}
             <div
               ref={splitScreen.isActive ? splitScreen.containerRef : undefined}
-              className="flex-1 h-full flex overflow-hidden"
+              className="flex-1 h-full flex overflow-hidden relative"
               style={focusMode.isFocused ? { maxWidth: 860, margin: '0 auto', width: '100%' } : undefined}
             >
               {/* Левая / единственная панель */}
@@ -1263,23 +1276,20 @@ export default function ScriptPage() {
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* T-136: «Каркас сцен» — оверлей поверх редактора (документ не трогаем) */}
-            {outlineMode && (
-              <OutlineView
-                scenes={scenes}
-                isDark={isDark}
-                withSynopsis={outlineSynopsis}
-                onToggleSynopsis={toggleOutlineSynopsis}
-                onClose={() => setOutlineMode(false)}
-                onSceneJump={(sceneId) => {
-                  handleSceneClickRouted(sceneId)
-                  setOutlineMode(false)
-                }}
-                onReorder={handleSceneReorder}
-              />
-            )}
+              {/* T-136: «Каркас сцен» — оверлей поверх редактора, навигатор виден */}
+              {outlineMode && (
+                <OutlineView
+                  scenes={scenes}
+                  bodies={outlineBodies}
+                  isDark={isDark}
+                  withSynopsis={outlineSynopsis}
+                  onToggleSynopsis={toggleOutlineSynopsis}
+                  onClose={() => setOutlineMode(false)}
+                  onReorder={handleSceneReorder}
+                />
+              )}
+            </div>
           </div>
         )}
 
