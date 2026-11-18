@@ -356,7 +356,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
 
           {/* ── Персонажи ── */}
           {tab === 'chars' && (
-            <div className="space-y-4">
+            // клик в пустое место снимает режим «Объединить с…»
+            <div className="space-y-4" onClick={() => mergeSource?.kind === 'chars' && setMergeSource(null)}>
               <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
                 <button onClick={() => setEditChar('new')}
                   className="flex items-center rounded-lg font-semibold"
@@ -467,7 +468,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
 
           {/* ── Локации ── */}
           {tab === 'locs' && (
-            <div className="space-y-4">
+            // клик в пустое место снимает режим «Объединить с…»
+            <div className="space-y-4" onClick={() => mergeSource?.kind === 'locs' && setMergeSource(null)}>
               <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
                 <button onClick={() => setEditLoc('new')}
                   className="flex items-center rounded-lg font-semibold"
