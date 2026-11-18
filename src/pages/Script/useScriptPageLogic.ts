@@ -50,7 +50,19 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   }, [scripts, project])
 
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null)
-  const [activeTab, setActiveTab] = useState<ScriptTab>('text')
+  // T-175: «Продолжить работу» — вкладка, заданная карточкой проекта, берётся один раз
+  const [activeTab, setActiveTab] = useState<ScriptTab>(() => {
+    const pending = useUiStore.getState().pendingScriptTab
+    if (pending) {
+      useUiStore.getState().setPendingScriptTab(null)
+      return pending as ScriptTab
+    }
+    return 'text'
+  })
+  // Запоминаем последнюю вкладку сценария на проект
+  useEffect(() => {
+    if (currentProjectId) useUiStore.getState().setLastScriptTab(currentProjectId, activeTab)
+  }, [activeTab, currentProjectId])
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [, setSceneCount] = useState(0)
   const [scriptStats, setScriptStats] = useState({ scenes: 0, pages: 0, duration: 0 })

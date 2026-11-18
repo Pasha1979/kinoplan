@@ -309,6 +309,14 @@ export default function HomePage() {
     navigate(`/project/${project.id}`)
   }
 
+  // T-175: «Продолжить» — сценарий на последней вкладке проекта
+  const handleContinue = (project: Project) => {
+    updateLastOpenedAt(project.id)
+    const last = useUiStore.getState().lastScriptTabByProject[project.id]
+    useUiStore.getState().setPendingScriptTab(last || 'text')
+    navigate(`/project/${project.id}/script`)
+  }
+
   const handleDelete = async (id: string) => {
     await projectService.deleteProjectWithUndo(id)
   }
@@ -690,6 +698,7 @@ export default function HomePage() {
                           onDelete={() => cardDelete(project)}
                           onExport={() => cardExport(project)}
                           onToggleFavorite={() => cardFav(project)}
+                          onContinue={() => handleContinue(project)}
                           cardHeight={cardHeight || undefined}
                           onContextMenu={(e) => {
                             e.preventDefault()
@@ -722,6 +731,7 @@ export default function HomePage() {
                     onDelete={() => cardDelete(project)}
                     onExport={() => cardExport(project)}
                     onToggleFavorite={() => cardFav(project)}
+                          onContinue={() => handleContinue(project)}
                     cardHeight={cardHeight || undefined}
                     onContextMenu={(e) => {
                       e.preventDefault()

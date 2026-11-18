@@ -37,6 +37,10 @@ interface UiStore {
   devLocGrouping: boolean
   /** цвет значка закладки сцены */
   bookmarkColor: string
+  /** T-175: последняя вкладка сценария на проект («Продолжить работу») */
+  lastScriptTabByProject: Record<string, string>
+  /** вкладка, с которой открыть ScriptPage при следующем переходе */
+  pendingScriptTab: string | null
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
@@ -54,6 +58,8 @@ interface UiStore {
   toggleDevBibleAutoSync: () => void
   toggleDevLocGrouping: () => void
   setBookmarkColor: (c: string) => void
+  setLastScriptTab: (projectId: string, tab: string) => void
+  setPendingScriptTab: (tab: string | null) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -74,6 +80,8 @@ export const useUiStore = create<UiStore>()(
       devBibleAutoSync: true,
       devLocGrouping: true,
       bookmarkColor: '#ef4444',
+      lastScriptTabByProject: {},
+      pendingScriptTab: null,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -123,6 +131,13 @@ export const useUiStore = create<UiStore>()(
         set((state) => ({ devLocGrouping: !state.devLocGrouping })),
 
       setBookmarkColor: (c) => set({ bookmarkColor: c }),
+
+      setLastScriptTab: (projectId, tab) =>
+        set((state) => ({
+          lastScriptTabByProject: { ...state.lastScriptTabByProject, [projectId]: tab },
+        })),
+
+      setPendingScriptTab: (tab) => set({ pendingScriptTab: tab }),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

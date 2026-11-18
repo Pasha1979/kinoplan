@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Keyboard, Lightbulb, AlignLeft, Info } from 'lucide-react'
+import { X, Keyboard, Lightbulb, AlignLeft, Info, Search } from 'lucide-react'
 
 interface HelpModalProps {
   isDark: boolean
@@ -493,6 +493,11 @@ const TIPS: { title: string; body: string; tag?: string }[] = [
     body: 'ПКМ по проблеме валидации — окно с объяснением: «Сейчас в тексте» vs «После исправления». «Исправить» применяет авто-фикс, «Пропустить» скрывает проблему навсегда (сохраняется в сценарии). Кнопка «Исправить все (N)» чинит все авто-исправимые проблемы разом. НАТ — каноническое обозначение экстерьера, ЭКСТ предложит заменить на НАТ.',
   },
   {
+    tag: 'Интерфейс',
+    title: 'Поиск по справке и «Продолжить работу»',
+    body: 'В шапке этого окна — поле поиска: фильтрует и горячие клавиши, и подсказки. На карточке проекта (главная) кнопка ▶ «Продолжить» открывает сценарий на вкладке, где вы остановились; там же строка статистики — сцены, страницы и хронометраж по всем сериям.',
+  },
+  {
     tag: 'Валидация',
     title: 'Группировка одинаковых проблем',
     body: 'ПКМ по проблеме → «Сгруппировать одинаковые (N)» — все ошибки одного типа (например, «не указаны действующие лица» во всех сценах) собираются в сворачиваемую карточку группы. ПКМ по группе: «Пропустить все» скрывает всю группу разом, «Отменить группировку» возвращает список. Тот же пункт есть и в окне деталей проблемы.',
@@ -574,10 +579,23 @@ function KeyBadge({ k }: { k: string }) {
 }
 
 export default function HelpModal({ isDark, onClose, context }: HelpModalProps) {
+  // T-186: поиск по справке — фильтрует подсказки и горячие клавиши
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const matchTip = (t: { title: string; body: string }) =>
+    !q || t.title.toLowerCase().includes(q) || t.body.toLowerCase().includes(q)
   // Подсказки только для открытой вкладки (тег → страница)
-  const visibleTips = context
+  const visibleTips = (context
     ? TIPS.filter((t) => (TAG_PAGES[t.tag || ''] || 'text') === context)
     : TIPS
+  ).filter(matchTip)
+  const visibleShortcuts = q
+    ? SHORTCUTS.map((g) => ({
+        ...g,
+        items: g.items.filter((i) =>
+          i.desc.toLowerCase().includes(q) || g.group.toLowerCase().includes(q) || i.keys.join(' ').toLowerCase().includes(q)),
+      })).filter((g) => g.items.length > 0)
+    : SHORTCUTS
   // На не-текстовых вкладках открываем сразу «Подсказки» (shortcuts/formatting — только редактора)
   const isEditorTab = !context || context === 'text'
   const [activeTab, setActiveTab] = useState<Tab>(isEditorTab ? 'shortcuts' : 'tips')
@@ -623,6 +641,28 @@ export default function HelpModal({ isDark, onClose, context }: HelpModalProps) 
             <span style={{ fontSize: 16, fontWeight: 700, color: textPrimary }}>
               Помощь{context && PAGE_LABELS[context] ? ` · ${PAGE_LABELS[context]}` : ''}
             </span>
+            {/* T-186: поиск по справке */}
+            <div style={{ position: 'relative' }}>
+              <Search size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: textMuted, pointerEvents: 'none' }} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Поиск…"
+                style={{
+                  width: 160, padding: '4px 24px 4px 26px', fontSize: 12,
+                  borderRadius: 8, border: `1px solid ${border}`, outline: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textPrimary,
+                }}
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 0, display: 'flex' }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -677,7 +717,12 @@ export default function HelpModal({ isDark, onClose, context }: HelpModalProps) 
           {/* ── Горячие клавиши ── */}
           {activeTab === 'shortcuts' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {SHORTCUTS.map(group => (
+              {visibleShortcuts.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '30px 0', fontSize: 13, color: textMuted }}>
+                  Ничего не найдено по «{query}»
+                </div>
+              )}
+              {visibleShortcuts.map(group => (
                 <div key={group.group}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: textMuted, marginBottom: 10 }}>
                     {group.group}

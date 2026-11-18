@@ -1,6 +1,7 @@
-import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download, Star } from 'lucide-react'
+import { Film, Tv, Megaphone, Music, Folder, Calendar, Clock, Trash2, Download, Star, Play } from 'lucide-react'
 import type { Project } from '../../types/project'
 import { formatRelativeTime } from '../../utils/relativeTime'
+import { useScriptStore } from '../../store/scriptStore'
 
 export const TYPE_LABELS: Record<Project['type'], string> = {
   serial: 'Сериал',
@@ -61,11 +62,28 @@ interface ProjectCardProps {
   onExport?: () => void
   onToggleFavorite?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
+  /** T-175: «Продолжить работу» — открыть сценарий на последней вкладке */
+  onContinue?: () => void
   cardHeight?: number
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, cardHeight }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onExport, onToggleFavorite, onContextMenu, onContinue, cardHeight }: ProjectCardProps) {
   const overallProgress = getOverallProgress(project)
+
+  // T-161: статистика сценария по всем сериям проекта
+  const scripts = useScriptStore((s) => s.scripts)
+  const stats = (() => {
+    let scenes = 0, pages = 0, duration = 0
+    for (const sc of scripts) {
+      if (sc.projectId !== project.id) continue
+      for (const s of sc.scenes || []) {
+        scenes += 1
+        pages += s.pages || 0
+        duration += s.manualDuration ?? s.duration ?? 0
+      }
+    }
+    return scenes > 0 ? { scenes, pages, duration } : null
+  })()
 
   return (
     <div className="group relative" style={cardHeight ? { height: cardHeight } : undefined}>
@@ -152,6 +170,13 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         </div>
       </div>
 
+      {/* T-161: статистика сценария */}
+      {stats && (
+        <div className="text-[10px] text-gray-400 mb-2 -mt-0.5">
+          {stats.scenes} сцен · {stats.pages.toFixed(1)} стр · ~{Math.round(stats.duration / 60)} мин
+        </div>
+      )}
+
       {/* Полоса общей готовности */}
       <div className="mb-2">
         <ProgressBar value={overallProgress} color="bg-gradient-to-r from-orange-500 to-red-500" />
@@ -190,6 +215,18 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
 
       {/* Кнопки действий */}
       <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onContinue && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onContinue()
+            }}
+            className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500/20"
+            title="Продолжить — открыть сценарий на последней вкладке"
+          >
+            <Play size={14} />
+          </button>
+        )}
         {onExport && (
           <button
             onClick={(e) => {
