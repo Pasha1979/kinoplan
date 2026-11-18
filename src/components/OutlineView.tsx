@@ -13,6 +13,7 @@ import { X, Clock, Bookmark } from 'lucide-react'
 import type { Scene } from '../types/scene'
 import { formatDuration } from '../utils/sceneTiming'
 import { SceneTextEditor } from '../pages/Script/components/SceneDetailModal'
+import { useUiStore } from '../store/uiStore'
 
 interface OutlineViewProps {
   scenes: Scene[]
@@ -53,6 +54,7 @@ function OutlineRow({
   onToggleExpand: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: scene.id })
+  const bookmarkColor = useUiStore((s) => s.bookmarkColor)
   const syn = scene.synopsis || scene.autoSynopsis || ''
   const isAuto = !scene.synopsis && !!scene.autoSynopsis
   return (
@@ -81,7 +83,7 @@ function OutlineRow({
           {scene.type}. {scene.location}{scene.sublocation ? `.${scene.sublocation}` : ''} — {scene.time}
         </span>
         {scene.isBookmarked && (
-          <Bookmark size={11} fill="currentColor" className="shrink-0" style={{ color: '#ef4444' }} />
+          <Bookmark size={11} fill="currentColor" className="shrink-0" style={{ color: bookmarkColor }} />
         )}
         <span className="ml-auto flex items-center gap-3 shrink-0 text-[11px]" style={{ color: textSecondary }}>
           {scene.cast && scene.cast.length > 0 && (

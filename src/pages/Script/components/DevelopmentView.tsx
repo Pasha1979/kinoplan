@@ -12,6 +12,7 @@ import { SceneTextEditor } from './SceneDetailModal'
 import { findCharDuplicates, type DupPair } from './charMerge'
 import { findLocDuplicates, type LocDupPair } from './locMerge'
 import ContextMenu from '../../Home/ContextMenu'
+import { useUiStore } from '../../../store/uiStore'
 
 const CHAR_TYPES: Record<DevCharacterType, { l: string; c: string }> = {
   main:      { l: 'Главная',        c: '#fb923c' },
@@ -78,7 +79,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const [renameValue, setRenameValue] = useState('')
   const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
   const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
-  const [groupLocs, setGroupLocs] = useState(true) // группировка «ЛОКАЦИЯ.ПОДЛОКАЦИЯ»
+  const groupLocs = useUiStore((s) => s.devLocGrouping)
+  const setGroupLocs = useUiStore((s) => s.toggleDevLocGrouping)
 
   const dev = development ?? emptyDev
   const folders = dev.folders ?? []
@@ -511,7 +513,7 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                   Без сцен
                 </button>
                 <button
-                  onClick={() => setGroupLocs(!groupLocs)}
+                  onClick={() => setGroupLocs()}
                   className="rounded-full font-medium transition-all"
                   style={{
                     padding: '6px 12px',

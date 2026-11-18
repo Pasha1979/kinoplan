@@ -16,6 +16,9 @@ import {
   Users,
   Layout,
   Keyboard,
+  List,
+  MapPin,
+  Bookmark,
 } from 'lucide-react'
 import type { ScriptFormat, TimingSystem } from '../../../store/scriptStore'
 import { useScriptStore } from '../../../store/scriptStore'
@@ -115,6 +118,14 @@ export default function TimingSettingsModal({
   const toggleA4Mode = useUiStore((s) => s.toggleA4Mode)
   const navigatorActGrouping = useUiStore((s) => s.navigatorActGrouping)
   const toggleNavigatorActGrouping = useUiStore((s) => s.toggleNavigatorActGrouping)
+  const outlineSynopsis = useUiStore((s) => s.outlineSynopsis)
+  const toggleOutlineSynopsis = useUiStore((s) => s.toggleOutlineSynopsis)
+  const devBibleAutoSync = useUiStore((s) => s.devBibleAutoSync)
+  const toggleDevBibleAutoSync = useUiStore((s) => s.toggleDevBibleAutoSync)
+  const devLocGrouping = useUiStore((s) => s.devLocGrouping)
+  const toggleDevLocGrouping = useUiStore((s) => s.toggleDevLocGrouping)
+  const bookmarkColor = useUiStore((s) => s.bookmarkColor)
+  const setBookmarkColor = useUiStore((s) => s.setBookmarkColor)
   const smartTypeAcceptKey = useUiStore((s) => s.smartTypeAcceptKey)
   const setSmartTypeAcceptKey = useUiStore((s) => s.setSmartTypeAcceptKey)
 
@@ -437,6 +448,100 @@ export default function TimingSettingsModal({
                   }}
                 />
               </button>
+            </div>
+
+            {/* Каркас сцен — синопсис по умолчанию */}
+            <div className="flex items-center justify-between p-4 rounded-xl mt-3" style={{ background: sectionBg, border: `1px solid ${borderColor}` }}>
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0" style={{ background: 'rgba(99,102,241,0.1)', color: accentLight }}>
+                  <List size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: textPrimary }}>Каркас сцен — синопсис</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
+                    {outlineSynopsis ? 'По умолчанию «Шапки + синопсис»' : 'По умолчанию только шапки'}
+                  </div>
+                </div>
+              </div>
+              <button onClick={toggleOutlineSynopsis} className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
+                style={{ background: outlineSynopsis ? accent : isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db' }}
+                aria-checked={outlineSynopsis} role="switch">
+                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: outlineSynopsis ? '24px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+              </button>
+            </div>
+
+            {/* Авто-синхронизация библии */}
+            <div className="flex items-center justify-between p-4 rounded-xl mt-3" style={{ background: sectionBg, border: `1px solid ${borderColor}` }}>
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0" style={{ background: 'rgba(99,102,241,0.1)', color: accentLight }}>
+                  <Users size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: textPrimary }}>Авто-синхронизация библии</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
+                    Новые персонажи и локации из текста сами появляются в Разработке
+                  </div>
+                </div>
+              </div>
+              <button onClick={toggleDevBibleAutoSync} className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
+                style={{ background: devBibleAutoSync ? accent : isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db' }}
+                aria-checked={devBibleAutoSync} role="switch">
+                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: devBibleAutoSync ? '24px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+              </button>
+            </div>
+
+            {/* Группировка локаций */}
+            <div className="flex items-center justify-between p-4 rounded-xl mt-3" style={{ background: sectionBg, border: `1px solid ${borderColor}` }}>
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0" style={{ background: 'rgba(99,102,241,0.1)', color: accentLight }}>
+                  <MapPin size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: textPrimary }}>Группировка локаций</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
+                    Подлокации «ДОМ.ЗАЛ» под родителем в Разработке (кнопка «Группы» по умолчанию)
+                  </div>
+                </div>
+              </div>
+              <button onClick={toggleDevLocGrouping} className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
+                style={{ background: devLocGrouping ? accent : isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db' }}
+                aria-checked={devLocGrouping} role="switch">
+                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: devLocGrouping ? '24px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+              </button>
+            </div>
+
+            {/* Цвет закладки */}
+            <div className="flex items-center justify-between p-4 rounded-xl mt-3" style={{ background: sectionBg, border: `1px solid ${borderColor}` }}>
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0" style={{ background: 'rgba(99,102,241,0.1)', color: accentLight }}>
+                  <Bookmark size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: textPrimary }}>Цвет закладки</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
+                    Значок 🔖 на сценах в навигаторе, карточках и каркасе
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {[
+                  { c: '#ef4444', l: 'Красный' },
+                  { c: '#f59e0b', l: 'Жёлтый' },
+                  { c: '#3b82f6', l: 'Синий' },
+                ].map(({ c, l }) => (
+                  <button
+                    key={c}
+                    onClick={() => setBookmarkColor(c)}
+                    title={l}
+                    className="w-7 h-7 rounded-full transition-all"
+                    style={{
+                      background: c,
+                      border: bookmarkColor === c ? `2px solid ${isDark ? '#fff' : '#111'}` : '2px solid transparent',
+                      boxShadow: bookmarkColor === c ? `0 0 0 2px ${c}66` : 'none',
+                    }}
+                  />
+                ))}
+              </div>
             </div>
 
             <div

@@ -31,6 +31,12 @@ interface UiStore {
   outlineMode: boolean
   /** показывать синопсис в каркасе */
   outlineSynopsis: boolean
+  /** авто-синхронизация библии Разработки с текстом сценария */
+  devBibleAutoSync: boolean
+  /** группировка локаций «родитель.подлокация» в Разработке */
+  devLocGrouping: boolean
+  /** цвет значка закладки сцены */
+  bookmarkColor: string
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
@@ -45,6 +51,9 @@ interface UiStore {
   toggleOutlineMode: () => void
   setOutlineMode: (v: boolean) => void
   toggleOutlineSynopsis: () => void
+  toggleDevBibleAutoSync: () => void
+  toggleDevLocGrouping: () => void
+  setBookmarkColor: (c: string) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -62,6 +71,9 @@ export const useUiStore = create<UiStore>()(
       navigatorActGrouping: true,
       outlineMode: false,
       outlineSynopsis: true,
+      devBibleAutoSync: true,
+      devLocGrouping: true,
+      bookmarkColor: '#ef4444',
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -103,6 +115,14 @@ export const useUiStore = create<UiStore>()(
 
       toggleOutlineSynopsis: () =>
         set((state) => ({ outlineSynopsis: !state.outlineSynopsis })),
+
+      toggleDevBibleAutoSync: () =>
+        set((state) => ({ devBibleAutoSync: !state.devBibleAutoSync })),
+
+      toggleDevLocGrouping: () =>
+        set((state) => ({ devLocGrouping: !state.devLocGrouping })),
+
+      setBookmarkColor: (c) => set({ bookmarkColor: c }),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

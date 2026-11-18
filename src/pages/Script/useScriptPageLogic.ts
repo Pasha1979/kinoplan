@@ -355,7 +355,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     [allScenes],
   )
   useEffect(() => {
-    if (!currentProjectId) return
+    if (!currentProjectId || !useUiStore.getState().devBibleAutoSync) return
     const timer = setTimeout(() => {
       const proj = useNormalizedProjectStore.getState().projects[currentProjectId]
       if (!proj) return

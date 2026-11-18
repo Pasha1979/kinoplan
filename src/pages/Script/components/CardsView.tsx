@@ -6,6 +6,7 @@ import { filterByCardType, matchesCardQuery, buildAutoSynopsis, groupByEpisode, 
 import SceneDetailModal from './SceneDetailModal'
 import SceneStatusMenu, { TAG_COLORS } from './SceneStatusMenu'
 import { extractSceneHtml } from './sceneHtmlOps'
+import { useUiStore } from '../../../store/uiStore'
 
 type SceneWithEp = Scene & { _episode?: number }
 
@@ -208,6 +209,7 @@ function tracePath(pts: { x: number; y: number }[]): { d: string; mx: number; my
 }
 
 function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onSceneClick, onUpdateScene, onOpenSceneEditor, onMoveScenes, actMarkers, onMarkerSet, groupsByEpisode = {}, onGroupsChange, onUndo, undoCount = 0, sceneLinks = [], onLinksChange, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, draftStatuses, onDraftStatusesChange, onDeleteDraftStatus }: CardsViewProps) {
+  const bookmarkColor = useUiStore((s) => s.bookmarkColor)
   const textPrimary = isDark ? '#e5e7eb' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const cardBg = isDark ? '#13132a' : '#ffffff'
@@ -787,7 +789,7 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                           <span className="text-[13px] font-bold" style={{ color: TYPE_COLOR[sc.type] || '#94a3b8' }}>{sc.number}</span>
                           {sc.isBookmarked && (
                             <span className="flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded-full font-bold"
-                              style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
+                              style={{ background: `${bookmarkColor}26`, color: bookmarkColor }}
                               title={sc.bookmarkLabel || 'Закладка'}>
                               <Bookmark size={8} fill="currentColor" />
                               {sc.bookmarkLabel && <span className="truncate max-w-[70px]">{sc.bookmarkLabel}</span>}
