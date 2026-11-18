@@ -347,6 +347,74 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
     [episodeScripts],
   )
 
+  // Авто-синк библии Разработки с текстом: новые локации/персонажи появляются сами,
+  // sceneIds пересчитываются; НЕ удаляем — переименованное автором имя остаётся
+  // «не в сценах» и сливается вручную через «Объединить с…».
+  const allScenesSig = useMemo(
+    () => allScenes.map((s) => `${s.id}:${s.location}|${(s.cast || []).join(',')}|${(s.dialogCharacters || []).join(',')}`).join('§'),
+    [allScenes],
+  )
+  useEffect(() => {
+    if (!currentProjectId) return
+    const timer = setTimeout(() => {
+      const proj = useNormalizedProjectStore.getState().projects[currentProjectId]
+      if (!proj) return
+      const dev = proj.development
+      const locNames = new Map<string, string[]>()
+      const charNames = new Map<string, string[]>()
+      allScenes.forEach((sc) => {
+        const loc = (sc.location || '').trim().toUpperCase()
+        if (loc) {
+          const a = locNames.get(loc) ?? []
+          if (!a.includes(sc.id)) a.push(sc.id)
+          locNames.set(loc, a)
+        }
+        ;[...(sc.cast || []), ...(sc.dialogCharacters || [])].forEach((n) => {
+          const k = n.trim().toUpperCase()
+          if (!k) return
+          const a = charNames.get(k) ?? []
+          if (!a.includes(sc.id)) a.push(sc.id)
+          charNames.set(k, a)
+        })
+      })
+      const sameIds = (a?: string[], b?: string[]) =>
+        a?.length === b?.length && (a ?? []).every((x) => (b ?? []).includes(x))
+
+      let locsChanged = false
+      const locations = (dev?.locations ?? []).map((l) => {
+        const key = l.name.toUpperCase()
+        const ids = locNames.get(key)
+        if (!ids) return l
+        locNames.delete(key)
+        return sameIds(l.sceneIds, ids) ? l : (locsChanged = true, { ...l, sceneIds: ids })
+      })
+      locNames.forEach((ids, name) => {
+        locations.push({ id: crypto.randomUUID(), name, sceneIds: ids })
+        locsChanged = true
+      })
+
+      let charsChanged = false
+      const characters = (dev?.characters ?? []).map((c) => {
+        const key = c.name.toUpperCase()
+        const ids = charNames.get(key)
+        if (!ids) return c
+        charNames.delete(key)
+        return sameIds(c.sceneIds, ids) ? c : (charsChanged = true, { ...c, sceneIds: ids })
+      })
+      charNames.forEach((ids, name) => {
+        characters.push({ id: crypto.randomUUID(), name, type: 'secondary', sceneIds: ids })
+        charsChanged = true
+      })
+
+      if (locsChanged || charsChanged) {
+        useNormalizedProjectStore.getState().updateProject(proj.id, {
+          development: { ...(dev ?? { characters: [], locations: [], synopsis: {} }), locations, characters },
+        })
+      }
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [allScenesSig, currentProjectId, allScenes])
+
   // Очистка таймаута автосохранения при размонтировании
   useEffect(() => {
     return () => {
