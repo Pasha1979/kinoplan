@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import type { Scene } from '../../../types/scene'
 import type {
-  DevCharacter, DevCharacterType, DevLocation, DevRelationship, DevRelationType, DevSynopsis, ProjectDevelopment,
+  DevCharacter, DevCharacterType, DevFolder, DevLocation, DevRelationship, DevRelationType, DevSynopsis, ProjectDevelopment,
 } from '../../../types/development'
 import { extractSceneHtml } from './sceneHtmlOps'
 import { SceneTextEditor } from './SceneDetailModal'
@@ -145,6 +145,30 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const locSceneIds = (l: DevLocation) => l.sceneIds ?? locNamesInText.get(l.name.toUpperCase()) ?? []
   const charSceneCount = (c: DevCharacter) => charSceneIds(c).length
   const locSceneCount = (l: DevLocation) => locSceneIds(l).length
+
+  // «Удалить…» — из контекст-меню или карточки: «сирота» без упоминаний стирается молча,
+  // иначе открывается диалог-предупреждение (реплики/шапки/составы сцен)
+  const requestDelete = (kind: 'chars' | 'locs', item: DevCharacter | DevLocation) => {
+    const withoutItem = (f: DevFolder) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== item.id) })
+    if (kind === 'chars') {
+      const c = item as DevCharacter
+      const scenesN = charSceneIds(c).length
+      const replicas = countDialogues(Object.values(contentsByEpisode), c.name)
+      if (scenesN === 0 && replicas === 0) {
+        setDev({ characters: dev.characters.filter((x) => x.id !== c.id), folders: folders.map(withoutItem) })
+      } else {
+        setDeleteTarget({ kind, id: c.id, name: c.name, scenes: scenesN, replicas })
+      }
+    } else {
+      const l = item as DevLocation
+      const scenesN = locSceneIds(l).length
+      if (scenesN === 0) {
+        setDev({ locations: dev.locations.filter((x) => x.id !== l.id), folders: folders.map(withoutItem) })
+      } else {
+        setDeleteTarget({ kind, id: l.id, name: l.name, scenes: scenesN, replicas: 0 })
+      }
+    }
+  }
 
   /* Порядок появления = индекс первой сцены в массиве scenes */
   const sceneOrder = useMemo(() => {
@@ -757,6 +781,12 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                 icon: <Users size={12} />,
                 onClick: () => setMergeSource({ kind: folderCtx.kind, id: src.id, name: src.name }),
               }] : []),
+              ...(src ? [{
+                label: 'Удалить…',
+                icon: <Trash2 size={12} />,
+                danger: true,
+                onClick: () => requestDelete(folderCtx.kind, src),
+              }] : []),
             ]}
           />
         )
@@ -1092,16 +1122,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           allCharacters={dev.characters}
           onClose={() => setEditChar(null)}
           onDelete={editChar === 'new' ? undefined : () => {
-            const c = editChar as DevCharacter
-            const scenesN = charSceneIds(c).length
-            const replicas = countDialogues(Object.values(contentsByEpisode), c.name)
-            if (scenesN === 0 && replicas === 0) {
-              setDev({ characters: dev.characters.filter((x) => x.id !== c.id), folders: folders.map((f) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== c.id) })) })
-              setEditChar(null)
-            } else {
-              setEditChar(null)
-              setDeleteTarget({ kind: 'chars', id: c.id, name: c.name, scenes: scenesN, replicas })
-            }
+            requestDelete('chars', editChar as DevCharacter)
+            setEditChar(null)
           }}
           onSave={(c) => {
             // Смена имени в модале — тот же пропих, что «Переименовать…»:
@@ -1131,15 +1153,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
           locSceneIds={editLoc === 'new' ? [] : locSceneIds(editLoc)}
           onClose={() => setEditLoc(null)}
           onDelete={editLoc === 'new' ? undefined : () => {
-            const l = editLoc as DevLocation
-            const scenesN = locSceneIds(l).length
-            if (scenesN === 0) {
-              setDev({ locations: dev.locations.filter((x) => x.id !== l.id), folders: folders.map((f) => ({ ...f, itemIds: f.itemIds.filter((x) => x !== l.id) })) })
-              setEditLoc(null)
-            } else {
-              setEditLoc(null)
-              setDeleteTarget({ kind: 'locs', id: l.id, name: l.name, scenes: scenesN, replicas: 0 })
-            }
+            requestDelete('locs', editLoc as DevLocation)
+            setEditLoc(null)
           }}
           onSave={(l) => {
             if (editLoc !== 'new' && norm(l.name) !== norm((editLoc as DevLocation).name)) {
