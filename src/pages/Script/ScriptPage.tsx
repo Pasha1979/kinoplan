@@ -675,6 +675,15 @@ export default function ScriptPage() {
     void flushWrites('kinoplan-scripts')
   }, [currentScript?.id, currentScript?.dismissedIssues, updateScript])
 
+  // Массовый «пропустить» для группы одинаковых ошибок валидации
+  const handleDismissIssues = useCallback((issueIds: string[]) => {
+    if (!currentScript?.id || issueIds.length === 0) return
+    const cur = new Set(currentScript.dismissedIssues || [])
+    issueIds.forEach((id) => cur.add(id))
+    updateScript(currentScript.id, { dismissedIssues: [...cur] })
+    void flushWrites('kinoplan-scripts')
+  }, [currentScript?.id, currentScript?.dismissedIssues, updateScript])
+
   // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1316,6 +1325,7 @@ export default function ScriptPage() {
           onApplyFix={handleApplyIssueFix}
           dismissedIssueIds={currentScript?.dismissedIssues || []}
           onDismissIssue={handleDismissIssue}
+          onDismissIssues={handleDismissIssues}
           scenes={scenes}
           characters={scriptCharacters}
           timingSystem={currentScript?.timingSystem || 'page'}

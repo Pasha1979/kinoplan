@@ -19,6 +19,8 @@ import type { Scene } from '../../../types/scene'
 import type { Character } from '../../../store/scriptStore'
 import type { TimingSystem } from '../../../types/scene'
 import { validateFormatBlocks, type ValidationIssue, type ErrorSeverity } from '../../../utils/formatValidation'
+import ContextMenu from '../../Home/ContextMenu'
+import { Layers } from 'lucide-react'
 
 export type { ValidationIssue }
 
@@ -37,6 +39,8 @@ interface ScriptRightPanelProps {
   dismissedIssueIds?: string[]
   /** Пропустить проблему (скрыть осознанно) */
   onDismissIssue?: (issueId: string) => void
+  /** Пропустить сразу группу одинаковых проблем */
+  onDismissIssues?: (issueIds: string[]) => void
   // Scene & character quality
   scenes: Scene[]
   characters: Character[]
@@ -191,11 +195,14 @@ function ScriptRightPanel({
   onIssueClick,
   dismissedIssueIds = [],
   onDismissIssue,
+  onDismissIssues,
 }: ScriptRightPanelProps) {
   const [activeTab, setActiveTab] = useState<'validation' | 'notes' | 'versions'>(
     'validation'
   )
   const [fixPopup, setFixPopup] = useState<{ issue: ValidationIssue; x: number; y: number } | null>(null)
+  const [groupRules, setGroupRules] = useState<Set<string>>(new Set())
+  const [groupPopup, setGroupPopup] = useState<{ ruleKey: string; members: ValidationIssue[]; x: number; y: number } | null>(null)
 
   /* ── Validation data ── */
   const formatIssues = useFormatValidation(blocks, format)
@@ -204,6 +211,19 @@ function ScriptRightPanel({
   const timingIssues = useTimingValidation(scenes, timingSystem)
 
   const dismissedSet = useMemo(() => new Set(dismissedIssueIds), [dismissedIssueIds])
+
+  /** Ключ правила валидации: одинаковые ошибки = один ключ.
+   *  `scene-<uuid>-cast` → `cast` · `fmt-<block>-num` → `num` · `char-dup-X` → `char-dup` */
+  const ruleKeyOf = (i: ValidationIssue): string => {
+    if (i.sceneId) return i.id.replace(`${i.sceneId}-`, '')
+    const parts = i.id.split('-')
+    return i.category === 'character' ? parts.slice(0, -1).join('-') : parts[parts.length - 1]
+  }
+
+  /** Число единомышленников проблемы (для кнопки «сгруппировать») */
+  const siblingsOf = (issue: ValidationIssue, pool: ValidationIssue[]) =>
+    pool.filter((j) => ruleKeyOf(j) === ruleKeyOf(issue))
+
   const allIssues = [
     ...formatIssues,
     ...sceneIssues,
@@ -394,6 +414,72 @@ function ScriptRightPanel({
     )
   }
 
+  /* ── Group row — свёрнутая группа одинаковых проблем ── */
+  function GroupRow({ members }: { members: ValidationIssue[] }) {
+    const [open, setOpen] = useState(false)
+    const first = members[0]
+    const sevColor = severityColor(first.severity)
+    const label = first.message.replace(/^Сцена [^:]+:\s*/, '')
+    return (
+      <div
+        className="rounded-lg overflow-hidden"
+        style={{
+          background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff',
+          border: `1px solid ${border}`,
+        }}
+      >
+        <div
+          className="flex items-start gap-2 p-2 cursor-pointer"
+          onClick={() => setOpen(!open)}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setGroupPopup({ ruleKey: ruleKeyOf(first), members, x: e.clientX, y: e.clientY })
+          }}
+          title="Клик — развернуть · ПКМ — действия с группой"
+        >
+          <Layers size={12} className="mt-0.5 shrink-0" style={{ color: sevColor }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] leading-tight" style={{ color: textPrimary }}>
+              {label}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: textSecondary }}>
+              {members.length} одинаковых
+            </p>
+          </div>
+          {open ? <ChevronUp size={12} style={{ color: textSecondary }} /> : <ChevronDown size={12} style={{ color: textSecondary }} />}
+        </div>
+        {open && (
+          <div className="px-2 pb-2 space-y-1.5">
+            {members.map((issue) => <IssueRow key={issue.id} issue={issue} />)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  /** Рендер списка проблем секции с учётом включённых группировок */
+  const renderIssues = (list: ValidationIssue[]) => {
+    const grouped = new Map<string, ValidationIssue[]>()
+    const rows: ValidationIssue[] = []
+    list.forEach((i) => {
+      const k = ruleKeyOf(i)
+      if (groupRules.has(k)) {
+        const arr = grouped.get(k) ?? []
+        arr.push(i)
+        grouped.set(k, arr)
+      } else {
+        rows.push(i)
+      }
+    })
+    return (
+      <>
+        {rows.map((issue) => <IssueRow key={issue.id} issue={issue} />)}
+        {[...grouped.entries()].map(([k, members]) => <GroupRow key={k} members={members} />)}
+      </>
+    )
+  }
+
   /* ── Placeholder tabs ── */
   const PlaceholderTab = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
     <div className="flex-1 flex items-center justify-center px-4">
@@ -570,9 +656,7 @@ function ScriptRightPanel({
             title="Форматирование"
             count={formatIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {formatIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
-              <IssueRow key={issue.id} issue={issue} />
-            ))}
+            {renderIssues(formatIssues.filter((i) => !dismissedSet.has(i.id)))}
           </Section>
 
           <Section
@@ -580,9 +664,7 @@ function ScriptRightPanel({
             title="Сцены"
             count={sceneIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {sceneIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
-              <IssueRow key={issue.id} issue={issue} />
-            ))}
+            {renderIssues(sceneIssues.filter((i) => !dismissedSet.has(i.id)))}
           </Section>
 
           <Section
@@ -590,9 +672,7 @@ function ScriptRightPanel({
             title="Персонажи"
             count={characterIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {characterIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
-              <IssueRow key={issue.id} issue={issue} />
-            ))}
+            {renderIssues(characterIssues.filter((i) => !dismissedSet.has(i.id)))}
           </Section>
 
           <Section
@@ -600,9 +680,7 @@ function ScriptRightPanel({
             title="Хронометраж"
             count={timingIssues.filter((i) => !dismissedSet.has(i.id)).length}
           >
-            {timingIssues.filter((i) => !dismissedSet.has(i.id)).map((issue) => (
-              <IssueRow key={issue.id} issue={issue} />
-            ))}
+            {renderIssues(timingIssues.filter((i) => !dismissedSet.has(i.id)))}
           </Section>
         </div>
       )}
@@ -772,11 +850,75 @@ function ScriptRightPanel({
                     Пропустить — больше не показывать
                   </button>
                 )}
+                {/* Группировка одинаковых ошибок */}
+                {(() => {
+                  const key = ruleKeyOf(issue)
+                  const siblings = siblingsOf(issue, allIssues)
+                  if (groupRules.has(key)) {
+                    return (
+                      <button
+                        onClick={() => {
+                          setGroupRules((prev) => { const n = new Set(prev); n.delete(key); return n })
+                          setFixPopup(null)
+                        }}
+                        className="w-full mt-1.5 py-1.5 rounded-xl text-[11px] transition-all flex items-center justify-center gap-1.5"
+                        style={{ color: '#818cf8' }}
+                      >
+                        <Layers size={11} /> Отменить группировку
+                      </button>
+                    )
+                  }
+                  if (siblings.length < 2) return null
+                  return (
+                    <button
+                      onClick={() => {
+                        setGroupRules((prev) => new Set(prev).add(key))
+                        setFixPopup(null)
+                      }}
+                      className="w-full mt-1.5 py-1.5 rounded-xl text-[11px] transition-all flex items-center justify-center gap-1.5"
+                      style={{ color: '#818cf8' }}
+                    >
+                      <Layers size={11} /> Сгруппировать одинаковые ({siblings.length})
+                    </button>
+                  )
+                })()}
               </div>
             </div>
           </>
         )
       })()}
+
+      {/* Контекстное меню группы одинаковых ошибок */}
+      {groupPopup && (
+        <ContextMenu
+          x={groupPopup.x}
+          y={groupPopup.y}
+          onClose={() => setGroupPopup(null)}
+          header={
+            <span>
+              {groupPopup.members[0].message.replace(/^Сцена [^:]+:\s*/, '')}
+              <span style={{ opacity: 0.6 }}> · {groupPopup.members.length} шт.</span>
+            </span>
+          }
+          items={[
+            {
+              label: `Пропустить все — больше не показывать (${groupPopup.members.length})`,
+              onClick: () => {
+                if (onDismissIssues) onDismissIssues(groupPopup.members.map((i) => i.id))
+                else groupPopup.members.forEach((i) => onDismissIssue?.(i.id))
+                setGroupPopup(null)
+              },
+            },
+            {
+              label: 'Отменить группировку',
+              onClick: () => {
+                setGroupRules((prev) => { const n = new Set(prev); n.delete(groupPopup.ruleKey); return n })
+                setGroupPopup(null)
+              },
+            },
+          ]}
+        />
+      )}
     </div>
   )
 }
