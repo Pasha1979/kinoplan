@@ -1,7 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import {
   Users, MapPin, FileText, ListTree, Plus, Trash2, Sparkles, X,
-  Search, FolderPlus, Folder, ArrowUpDown, ChevronDown,
+  Search, FolderPlus, Folder, ArrowUpDown, ChevronDown, Type,
 } from 'lucide-react'
 import type { Scene } from '../../../types/scene'
 import type {
@@ -45,12 +45,16 @@ interface DevelopmentViewProps {
   onMergeCharacters?: (keepId: string, dropId: string) => void
   /** слияние локаций — название заменяется в шапках и scene.location */
   onMergeLocations?: (keepId: string, dropId: string) => void
+  /** переименование персонажа — имя заменяется в тексте, составах и справочнике */
+  onRenameCharacter?: (id: string, newName: string) => void
+  /** переименование локации — название заменяется в шапках и scene.location */
+  onRenameLocation?: (id: string, newName: string) => void
 }
 
 const uid = () => `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const emptyDev: ProjectDevelopment = { characters: [], locations: [], synopsis: {}, folders: [] }
 
-function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters, onMergeLocations }: DevelopmentViewProps) {
+function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development, onDevelopmentChange, onSceneClick, contentsByEpisode = {}, scriptFormat = 'russian', onSaveSceneHtml, onMergeCharacters, onMergeLocations, onRenameCharacter, onRenameLocation }: DevelopmentViewProps) {
   const [tab, setTab] = useState<'chars' | 'locs' | 'synopsis' | 'episodes'>('chars')
   const [editChar, setEditChar] = useState<DevCharacter | 'new' | null>(null)
   const [editLoc, setEditLoc] = useState<DevLocation | 'new' | null>(null)
@@ -69,6 +73,9 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   // Ручное слияние (персонажи и локации): ПКМ «Объединить с…» → выбор цели → модал имени
   const [mergeSource, setMergeSource] = useState<{ kind: 'chars' | 'locs'; id: string; name: string } | null>(null)
   const [mergeConfirm, setMergeConfirm] = useState<{ kind: 'chars' | 'locs'; a: { id: string; name: string }; b: { id: string; name: string } } | null>(null)
+  // Переименование через ПКМ — меняет имя и в тексте сценария
+  const [renameTarget, setRenameTarget] = useState<{ kind: 'chars' | 'locs'; id: string; name: string } | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const [locNoScenesOnly, setLocNoScenesOnly] = useState(false)
   const [locDupPairs, setLocDupPairs] = useState<LocDupPair[] | null>(null)
   const [groupLocs, setGroupLocs] = useState(true) // группировка «ЛОКАЦИЯ.ПОДЛОКАЦИЯ»
@@ -730,6 +737,11 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
               })),
               ...(folders.filter((f) => f.kind === folderCtx.kind).length === 0
                 ? [{ label: 'Нет папок — создайте в сайдбаре', disabled: true, onClick: () => {} }] : []),
+              ...(src ? [{
+                label: 'Переименовать…',
+                icon: <Type size={12} />,
+                onClick: () => { setRenameTarget({ kind: folderCtx.kind, id: src.id, name: src.name }); setRenameValue(src.name) },
+              }] : []),
               ...(canMerge && src ? [{
                 label: 'Объединить с…',
                 icon: <Users size={12} />,
@@ -795,6 +807,55 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
                   <div className="text-[10px] mt-1" style={{ color: textSecondary }}>«{drop.name}» исчезнет</div>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Модал переименования — замена идёт и в тексте сценария ── */}
+      {renameTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setRenameTarget(null)}>
+          <div className="w-full max-w-xs rounded-2xl p-5 space-y-3"
+            style={{ background: cardBg, border: `1px solid ${border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-bold" style={{ color: textPrimary }}>
+              Переименовать {renameTarget.kind === 'chars' ? 'персонажа' : 'локацию'}
+            </div>
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (renameTarget.kind === 'chars') onRenameCharacter?.(renameTarget.id, renameValue)
+                  else onRenameLocation?.(renameTarget.id, renameValue)
+                  setRenameTarget(null)
+                }
+                if (e.key === 'Escape') setRenameTarget(null)
+              }}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              style={{ background: fieldBg, border: `1px solid ${border}`, color: textPrimary }}
+              data-testid="rename-dev-input"
+            />
+            <p className="text-[10px] leading-snug" style={{ color: textSecondary }}>
+              Имя заменится в справочнике, в сценах и в тексте сценария всех серий.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setRenameTarget(null)}
+                className="px-3 py-1.5 rounded-lg text-[12px]" style={{ color: textSecondary }}>
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  if (renameTarget.kind === 'chars') onRenameCharacter?.(renameTarget.id, renameValue)
+                  else onRenameLocation?.(renameTarget.id, renameValue)
+                  setRenameTarget(null)
+                }}
+                className="px-3 py-1.5 rounded-lg text-[12px] font-semibold"
+                style={{ background: 'rgba(129,140,248,0.2)', color: '#a5b4fc', border: '1px solid rgba(129,140,248,0.4)' }}>
+                Переименовать
+              </button>
             </div>
           </div>
         </div>

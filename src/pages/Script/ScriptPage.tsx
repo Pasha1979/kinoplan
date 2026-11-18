@@ -17,7 +17,7 @@ import DevelopmentView from './components/DevelopmentView'
 import SceneEditModal from './components/SceneEditModal'
 import { spliceSceneHtml } from './components/SceneEditModal'
 import { extractSceneHtml, insertSceneHtml, renumberHeaders, replaceSceneInEditor, setEditorContentNoHistory } from './components/sceneHtmlOps'
-import { mergeCharacters } from './components/charMerge'
+import { mergeCharacters, nameBoundaryRegex, norm } from './components/charMerge'
 import { mergeLocations } from './components/locMerge'
 import { restoreMove, renumberScenesArr, type BoardUndoEntry } from './components/boardUndo'
 import type { Scene } from '../../types/scene'
@@ -481,6 +481,68 @@ export default function ScriptPage() {
     showToast(`«${drop.name}» → «${keep.name}» · замен в тексте: ${r.replacedInText}`, 'success')
   }, [project, episodeScripts, allScenes, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
 
+  // Переименование объекта библии через ПКМ: имя меняется в тексте всех серий
+  // и полях сцен — как merge, но объект сохраняет id и метаданные.
+  const handleRenameDevItem = useCallback((kind: 'chars' | 'locs', id: string, rawName: string) => {
+    if (!project) return
+    const dev = project.development ?? { characters: [], locations: [], synopsis: {} }
+    const name = rawName.trim().toUpperCase()
+    const item = (kind === 'chars' ? dev.characters : dev.locations).find((x) => x.id === id)
+    if (!item || !name || item.name === name) return
+    const oldName = item.name
+
+    pushUndo({
+      kind: 'merge',
+      development: dev,
+      scripts: episodeScripts.map((ep) => ({ id: ep.id, content: ep.content, scenes: ep.scenes })),
+    })
+
+    const re = nameBoundaryRegex(oldName)
+    const dot = name.indexOf('.')
+    const newLoc = dot > 0 ? name.slice(0, dot) : name
+    const newSub = dot > 0 ? name.slice(dot + 1) : undefined
+    const oldNorm = norm(oldName)
+    let replaced = 0
+
+    episodeScripts.forEach((ep) => {
+      const patched = (ep.content || '').replace(re, () => { replaced++; return name })
+      const scenesPatch = (ep.scenes ?? []).map((sc) => {
+        if (kind === 'chars') {
+          const hit = sc.cast?.includes(oldName) || sc.dialogCharacters?.includes(oldName)
+          return hit
+            ? { ...sc,
+                cast: (sc.cast ?? []).map((n) => (n === oldName ? name : n)),
+                dialogCharacters: (sc.dialogCharacters ?? []).map((n) => (n === oldName ? name : n)) }
+            : sc
+        }
+        if (sc.location && norm(sc.location) === oldNorm) {
+          return { ...sc, location: newLoc, sublocation: newSub ?? sc.sublocation }
+        }
+        if (sc.location && sc.sublocation && norm(`${sc.location}.${sc.sublocation}`) === oldNorm) {
+          return { ...sc, location: newLoc, sublocation: newSub }
+        }
+        return sc
+      })
+      const scenesChanged = scenesPatch.some((s, i) => s !== (ep.scenes ?? [])[i])
+      if (patched !== (ep.content || '') || scenesChanged) {
+        updateScript(ep.id, {
+          ...(patched !== (ep.content || '') ? { content: patched } : {}),
+          ...(scenesChanged ? { scenes: scenesPatch } : {}),
+        })
+        if (ep.id === currentScript?.id && editorInstance && patched !== (ep.content || '')) {
+          setEditorContentNoHistory(editorInstance, patched)
+        }
+      }
+    })
+
+    useNormalizedProjectStore.getState().updateProject(project.id, {
+      development: kind === 'chars'
+        ? { ...dev, characters: dev.characters.map((c) => (c.id === id ? { ...c, name } : c)) }
+        : { ...dev, locations: dev.locations.map((l) => (l.id === id ? { ...l, name } : l)) },
+    })
+    showToast(`«${oldName}» → «${name}» · замен в тексте: ${replaced}`, 'success')
+  }, [project, episodeScripts, currentScript?.id, editorInstance, updateScript, pushUndo, showToast])
+
   // Группы карточек по сериям (фаза 5)
   // На одну серию может быть несколько скриптов (версии) — объединяем группы,
   // иначе Object.fromEntries затирает группы более поздними пустыми скриптами
@@ -940,6 +1002,8 @@ export default function ScriptPage() {
             onSaveSceneHtml={handleSaveSceneHtml}
             onMergeCharacters={handleMergeCharacters}
             onMergeLocations={handleMergeLocations}
+            onRenameCharacter={(id, name) => handleRenameDevItem('chars', id, name)}
+            onRenameLocation={(id, name) => handleRenameDevItem('locs', id, name)}
             onDevelopmentChange={(dev) => {
               if (project?.id) {
                 useNormalizedProjectStore.getState().updateProject(project.id, { development: dev })
