@@ -30,7 +30,7 @@ export function wrapAsWordDoc(bodyHtml: string, title: string): string {
   return [
     '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">',
     `<head><meta charset="utf-8"><title>${title}</title>`,
-    '<style>@page { size: A4; margin: 2cm 2cm 2cm 3cm; }</style></head>',
+    '<style>@page { size: A4; margin: 2.5cm 2.5cm 1.25cm 3.75cm; }</style></head>',
     `<body>${bodyHtml}</body></html>`,
   ].join('')
 }
@@ -153,8 +153,8 @@ export function buildPrintableHtml(
 <meta charset="utf-8">
 <title>${script.title || 'Сценарий'}</title>
 <style>
-  @page { size: A4; margin: 2cm 2cm 2cm 3cm; }
-  body { font-family: "Courier New", Courier, monospace; font-size: 12pt; line-height: 1.5; color: #000; margin: 0; }
+  @page { size: A4; margin: 2.5cm 2.5cm 1.25cm 3.75cm; }
+  body { font-family: "Courier New", Courier, monospace; font-size: 12pt; line-height: 1.125; color: #000; margin: 0; }
   .title-page { text-align: center; padding-top: 30%; page-break-after: always; }
   .title-page h1 { font-size: 20pt; text-transform: uppercase; }
   .page-break { page-break-after: always; }

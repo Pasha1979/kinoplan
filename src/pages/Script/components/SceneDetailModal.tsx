@@ -195,7 +195,7 @@ export function SceneTextEditor({ initialHtml, sceneNumber, scriptFormat, isDark
           style={{
             background: '#ffffff', color: '#1a1a1a',
             fontFamily: '"Courier New", Courier, monospace',
-            fontSize: 12.5, padding: '16px 20px', minHeight: 80,
+            fontSize: '12pt', lineHeight: 1.125, padding: '16px 20px', minHeight: 80,
           }}
         >
           <EditorContent

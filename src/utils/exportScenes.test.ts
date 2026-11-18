@@ -51,7 +51,7 @@ describe('buildPrintableHtml', () => {
   it('содержит @page A4 и поля КИТ', async () => {
     const { buildPrintableHtml } = await import('./exportScenes')
     const html = buildPrintableHtml(script, scenes, null)
-    expect(html).toContain('@page { size: A4; margin: 2cm 2cm 2cm 3cm; }')
+    expect(html).toContain('@page { size: A4; margin: 2.5cm 2.5cm 1.25cm 3.75cm; }')
     expect(html).toContain('ДОМ')
   })
 

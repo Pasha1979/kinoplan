@@ -33,7 +33,7 @@ export function convertToWordCompatibleHtml(
     'style',
     'font-family: "Courier New", Courier, monospace; ' +
       'font-size: 12pt; ' +
-      'line-height: 1.5; ' +
+      'line-height: 1.125; ' +
       'max-width: 21cm; ' +
       'margin: 0 auto;'
   )

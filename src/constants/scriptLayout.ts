@@ -27,29 +27,32 @@ export interface ScriptLayout {
 
 // Отступы — только marginTop («space before»), marginBottom всегда 0:
 // граница между блоками считается один раз, экран = счётчик = экспорт.
-// Пустая строка Word = 1 line-height = 24px (12pt × 1.5).
-// Header: 2 пустые строки (48px) как в FD/КИТ; action/character/transition: 1 (24px);
+// Строка = 18px (12pt × 1.125 — одинарный интерлиньяж Courier, ~54–55 строк/стр
+// как в Final Draft «Normal»; правило «1 стр ≈ 1 мин» держится именно на этом).
+// Header: 2 пустые строки (36px) как в FD/КИТ; action/character/transition: 1 (18px);
 // внутри связки персонаж→(з/к)→диалог — 0 (без пустой строки).
 export const SCRIPT_LAYOUT: Record<'russian' | 'hollywood', ScriptLayout> = {
-  // Русский формат — по стандарту КИТ Сценарист
+  // Русский формат — по стандарту КИТ Сценарист (отступы от полей текста)
   russian: {
-    header: { marginTop: '48px', marginBottom: '0' },
+    header: { marginTop: '36px', marginBottom: '0' },
     cast: { marginTop: '0', marginBottom: '0' },
-    action: { marginTop: '24px', marginBottom: '0' },
-    character: { marginTop: '24px', marginBottom: '0', characterIndent: '6.75cm' },
+    action: { marginTop: '18px', marginBottom: '0' },
+    character: { marginTop: '18px', marginBottom: '0', characterIndent: '6.75cm' },
     dialog: { marginTop: '0', marginBottom: '0', leftIndent: '3.75cm', rightIndent: '3.75cm' },
     parenthetical: { marginTop: '0', marginBottom: '0', leftIndent: '5.5cm', rightIndent: '4.5cm' },
-    transition: { marginTop: '24px', marginBottom: '0' },
+    transition: { marginTop: '18px', marginBottom: '0' },
   },
-  // Голливудский формат — US industry standard (дюймы → см)
+  // Голливудский формат — Final Draft / US industry standard.
+  // FD задаёт отступы от КРАЯ листа (имя 3.7″, диалог 2.5″–6.0″, ремарка 3.1″);
+  // левое поле 1.5″ → переведено в отступы от поля текста.
   hollywood: {
-    header: { marginTop: '48px', marginBottom: '0' },
+    header: { marginTop: '36px', marginBottom: '0' },
     cast: { marginTop: '0', marginBottom: '0' },
-    action: { marginTop: '24px', marginBottom: '0' },
-    character: { marginTop: '24px', marginBottom: '0', characterIndent: '9.3cm' },
-    dialog: { marginTop: '0', marginBottom: '0', leftIndent: '6.35cm', rightIndent: '2.5cm' },
-    parenthetical: { marginTop: '0', marginBottom: '0', leftIndent: '7.8cm', rightIndent: '2.5cm' },
-    transition: { marginTop: '24px', marginBottom: '0' },
+    action: { marginTop: '18px', marginBottom: '0' },
+    character: { marginTop: '18px', marginBottom: '0', characterIndent: '5.59cm' },   // 3.7″ − 1.5″ = 2.2″
+    dialog: { marginTop: '0', marginBottom: '0', leftIndent: '2.54cm', rightIndent: '3.81cm' }, // 2.5″−1.5″=1″ / правая до 6.0″
+    parenthetical: { marginTop: '0', marginBottom: '0', leftIndent: '4.06cm', rightIndent: '4.83cm' }, // 3.1″−1.5″=1.6″ / до 5.6″
+    transition: { marginTop: '18px', marginBottom: '0' },
   },
 }
 

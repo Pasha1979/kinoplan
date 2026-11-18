@@ -8,8 +8,9 @@ import { SCRIPT_LAYOUT, type ScriptLayout } from './scriptLayout'
 
 const upper = 'font-weight: 600; text-transform: uppercase'
 // Word игнорирует line-height на div-обёртке — только на самом абзаце (T-92).
-// 18pt = 12pt × 1.5 = наши 24px: счётчик не меняется, .doc чтит интервал.
-const lh = 'line-height: 18pt'
+// 13.5pt = 12pt × 1.125 = наши 18px — одинарный интерлиньяж по стандарту
+// (FD «Normal»: 6 строк/дюйм → 54–55 строк/стр). Счётчик и .doc едины.
+const lh = 'line-height: 13.5pt'
 
 function styles(l: ScriptLayout): Record<string, string> {
   return {

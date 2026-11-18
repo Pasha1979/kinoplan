@@ -26,9 +26,9 @@ describe('calculateSceneTiming', () => {
   })
 
   it('should calculate pages from character count if pages is undefined', () => {
-    const charCount = 1800
+    const charCount = 2000
     const result = calculateSceneTiming({ charCount }, 'page', 1.0)
-    expect(result.pages).toBe(1.0) // 1800 / 1800 = 1.0
+    expect(result.pages).toBe(1.0) // 2000 / 2000 = 1.0
   })
 
   it('should return 0 duration for manual system', () => {

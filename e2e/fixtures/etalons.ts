@@ -20,11 +20,10 @@ export interface Etalon {
   id: string
   title: string
   html: string
-  /** Замер Word через COM (перемерено 14.11.2026 после добавления @page
-   *  в gen-etalons.mjs — раньше Word мерил со своими дефолтными полями 3/1.5см,
-   *  числа совпали): страниц и 0-based индексы блоков, с которых начинается
-   *  новая страница. Экспорт: Courier New 12pt, line-height 18pt,
-   *  @page A4 2/2/2/3cm — та же геометрия, что у модели PageCounter. */
+  /** Замер Word через COM (перемерено после перехода на стандарт КИТ/FD:
+   *  Courier New 12pt, line-height 13.5pt — одинарный интерлиньяж,
+   *  @page A4 2.5/2.5/1.25/3.75cm): страниц и 0-based индексы блоков,
+   *  с которых начинается новая страница — та же геометрия, что у PageCounter. */
   word: { pages: number; breakStartBlocks: number[] }
 }
 
@@ -58,7 +57,7 @@ const etalon1: Etalon = {
 const etalon2: Etalon = {
   id: 'long-scene',
   title: 'Эталон 2 — длинная сцена (2+ стр.)',
-  word: { pages: 6, breakStartBlocks: [13, 26, 39, 52, 65] },
+  word: { pages: 4, breakStartBlocks: [18, 36, 54] },
   html:
     header('1. ИНТ. ЗАВОДСКОЙ ЦЕХ - НОЧЬ') +
     Array.from({ length: 70 }, (_, i) =>
@@ -70,7 +69,7 @@ const etalon2: Etalon = {
 const etalon3: Etalon = {
   id: 'dialogue',
   title: 'Эталон 3 — диалоговый',
-  word: { pages: 2, breakStartBlocks: [21] },
+  word: { pages: 2, breakStartBlocks: [29] },
   html: [
     header('1. ИНТ. КАФЕ - ДЕНЬ'),
     action('За столиком ИВАН и МАРЬЯ. На улице дождь.'),
@@ -95,7 +94,7 @@ const ACTION_PARA =
 const etalon4: Etalon = {
   id: 'action-prose',
   title: 'Эталон 4 — экшен-описательный',
-  word: { pages: 2, breakStartBlocks: [7] },
+  word: { pages: 1, breakStartBlocks: [] },
   html: [
     header('1. ИНТ. СКЛАД - НОЧЬ'),
     action(ACTION_PARA),

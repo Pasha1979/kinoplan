@@ -7,7 +7,7 @@
  */
 
 import { SCRIPT_STYLES } from '../constants/scriptStyles'
-import { A4_WIDTH_MM, A4_HEIGHT_MM, PAGE_MARGIN_TOP_BOTTOM_MM, MIN_SCENE_PAGES } from '../constants/scriptConstants'
+import { A4_WIDTH_MM, A4_HEIGHT_MM, PAGE_MARGIN_TOP_MM, PAGE_MARGIN_BOTTOM_MM, MIN_SCENE_PAGES } from '../constants/scriptConstants'
 import { paginateBlocks, type MeasuredBlock, type PageBreakInfo } from './pagination'
 
 /**
@@ -48,7 +48,7 @@ function applyScriptStyles(html: string, format: 'russian' | 'hollywood' = 'russ
   wrapper.setAttribute('style',
     'font-family: "Courier Prime", "Courier New", Courier, monospace; ' +
     'font-size: 12pt; ' +
-    'line-height: 1.5;'
+    'line-height: 1.125;'
   )
 
   return wrapper.outerHTML
@@ -80,11 +80,11 @@ export class PageCounter {
       top: 0;
       left: 0;
       width: ${A4_WIDTH_MM}mm;
-      padding: 2cm 2cm 2cm 3cm;
+      padding: 2.5cm 2.5cm 1.25cm 3.75cm;
       box-sizing: border-box;
       font-family: "Courier Prime", "Courier New", Courier, monospace;
       font-size: 12pt;
-      line-height: 1.5;
+      line-height: 1.125;
       opacity: 0;
       pointer-events: none;
       word-wrap: break-word;
@@ -107,7 +107,7 @@ export class PageCounter {
     // --- total pages (via scrollHeight, same as before) ---
     const contentHeightPx = this.container!.scrollHeight
     const contentHeightMm = contentHeightPx / this.mmToPx
-    const usablePageHeightMm = A4_HEIGHT_MM - PAGE_MARGIN_TOP_BOTTOM_MM * 2
+    const usablePageHeightMm = A4_HEIGHT_MM - PAGE_MARGIN_TOP_MM - PAGE_MARGIN_BOTTOM_MM
     // Честный подсчёт: страницы в нашей канонической вёрстке (SCRIPT_STYLES),
     // теми же стилями что и экспорт — без подгоночного коэффициента под Word
     const rawPages = contentHeightMm / usablePageHeightMm
@@ -130,7 +130,7 @@ export class PageCounter {
       }
     })
     const lineHeightPx = children[0]
-      ? parseFloat(window.getComputedStyle(children[0]).lineHeight) || 24
+      ? parseFloat(window.getComputedStyle(children[0]).lineHeight) || 18
       : 24
     const usablePageHeightPx = usablePageHeightMm * this.mmToPx
     const { breaks } = paginateBlocks(measured, usablePageHeightPx, lineHeightPx)
@@ -155,7 +155,7 @@ export class PageCounter {
     wrapper.setAttribute('style',
       'font-family: "Courier Prime", "Courier New", Courier, monospace; ' +
       'font-size: 12pt; ' +
-      'line-height: 1.5; ' +
+      'line-height: 1.125; ' +
       'max-width: 21cm; ' +
       'margin: 0 auto;'
     )

@@ -180,7 +180,7 @@ export function ScriptEditorView({
             // T-59: «лист A4» — белая бумага на холсте, геометрия как у PageCounter
             width: '210mm',
             minHeight: '297mm',
-            padding: '2cm 2cm 2cm 3cm',
+            padding: '2.5cm 2.5cm 1.25cm 3.75cm',
             background: '#ffffff',
             color: '#1a1a1a',
             boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.12)',
@@ -201,7 +201,7 @@ export function ScriptEditorView({
             style={{
               fontFamily,
               fontSize: `${fontSize}pt`,
-              lineHeight: '1.5',
+              lineHeight: '1.125',
               wordWrap: 'break-word',
               overflowWrap: 'break-word',
             }}

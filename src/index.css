@@ -457,13 +457,13 @@ body {
 ──────────────────────────────────────────────────────────────────── */
 .tiptap-editor [data-page-break] {
   position: relative;
-  margin-top: 24px; /* Небольшой, безопасный отступ, чтобы линия не наезжала на текст */
+  margin-top: 18px; /* Одна строка — как канонический отступ между блоками */
 }
 
 .tiptap-editor [data-page-break]::before {
   content: '--- РАЗРЫВ: ' attr(data-page-break) ' ---';
   position: absolute;
-  top: -12px; /* Центрируем линию в отступе 24px */
+  top: -9px; /* Центрируем линию в отступе 18px */
   left: 0;
   right: 0;
   text-align: center;
@@ -502,7 +502,7 @@ body {
   left: var(--dialog-left-indent);
   font-family: "Courier Prime", "Courier New", Courier, monospace;
   font-size: 12pt;
-  line-height: 1.5;
+  line-height: 1.125;
   color: #94a3b8;
   pointer-events: none;
   z-index: 5;
