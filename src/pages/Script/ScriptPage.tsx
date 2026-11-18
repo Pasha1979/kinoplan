@@ -168,18 +168,11 @@ export default function ScriptPage() {
 
   // Навигация по сцене: в режиме split — направляем в активную панель,
   // иначе — стандартное поведение через оригинальный хендлер
-  // T-136: тела сцен для каркаса — строки из документа редактора, сцены в том же порядке, что в `scenes`
-  const outlineBodies = useMemo(() => {
-    if (!editorInstance || !outlineMode) return []
-    const bodies: { type: string; text: string }[][] = []
-    editorInstance.state.doc.forEach((node) => {
-      if (node.type.name === 'sceneHeader') { bodies.push([]); return }
-      if (bodies.length === 0) return // контент до первой шапки не показываем
-      bodies[bodies.length - 1].push({ type: node.type.name, text: node.textContent })
-    })
-    return bodies
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorInstance, outlineMode, scenes])
+  // T-136: фрагмент HTML сцены для встроенного редактора каркаса — из живого документа
+  const getOutlineSceneHtml = useCallback((sc: Scene, index: number) => {
+    const html = editorInstance ? editorInstance.getHTML() : (currentScript?.content || '')
+    return extractSceneHtml(html, sc.number, index, sc.id)
+  }, [editorInstance, currentScript?.content])
 
   const handleSceneClickRouted = useCallback((sceneId: string) => {
     if (splitScreen.isActive) {
@@ -1281,7 +1274,9 @@ export default function ScriptPage() {
               {outlineMode && (
                 <OutlineView
                   scenes={scenes}
-                  bodies={outlineBodies}
+                  getSceneHtml={getOutlineSceneHtml}
+                  onSaveSceneHtml={handleSaveSceneHtml}
+                  scriptFormat={scriptFormat}
                   isDark={isDark}
                   withSynopsis={outlineSynopsis}
                   onToggleSynopsis={toggleOutlineSynopsis}
