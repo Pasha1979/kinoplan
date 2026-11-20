@@ -75,6 +75,8 @@ test('round-trip: экспорт → импорт проекта сохраня�
   const projectCard = page.getByText(projectName, { exact: false }).first()
   await expect(projectCard).toBeVisible()
   await projectCard.click({ button: 'right' })
+  // Ждём маунта контекст-меню — иначе клик по пункту может прийти в гонку с открытием
+  await page.waitForSelector('[data-popover]', { timeout: 5000 })
   const downloadPromise = page.waitForEvent('download')
   await page.getByText('Экспорт', { exact: true }).click()
   const download = await downloadPromise

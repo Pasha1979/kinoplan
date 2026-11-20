@@ -43,6 +43,13 @@ export function usePopoverPosition(x: number, y: number) {
 
 /** Закрытие по клику вне, Escape и скроллу */
 export function usePopoverClose(onClose: () => void) {
+  // Грейс-период: скролл-события диспетчатся асинхронно и могут прийти
+  // уже после маунта меню (инициированные до открытия) — их игнорируем,
+  // иначе меню мгновенно самозакрывается (флаки e2e и у пользователей).
+  const mountedAt = useRef(0)
+  useEffect(() => {
+    mountedAt.current = performance.now()
+  }, [])
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement
@@ -51,13 +58,20 @@ export function usePopoverClose(onClose: () => void) {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
+    const onScroll = (e: Event) => {
+      const target = e.target as HTMLElement
+      // скролл внутри самого поповера его не закрывает
+      if (target?.closest?.('[data-popover]')) return
+      if (performance.now() - mountedAt.current < 250) return
+      onClose()
+    }
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('keydown', onKeyDown)
-    document.addEventListener('scroll', onClose, true)
+    document.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('scroll', onClose, true)
+      document.removeEventListener('scroll', onScroll, true)
     }
   }, [onClose])
 }

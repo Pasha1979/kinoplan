@@ -75,7 +75,13 @@ test('undo: перетаскивание сцены отменяется ато�
   await expect(cardDom).toBeVisible()
   await expect(cardStreet).toBeVisible()
 
-  // dnd-kit PointerSensor (distance: 8) — перетаскиваем сцену 2 над сценой 1 мышью
+  // dnd-kit PointerSensor (distance: 8) — перетаскиваем сцену 2 над сценой 1 мышью.
+  // Карточки навигатора могут пересоздаваться при ререндере (sceneId-транзакция,
+  // автосейв) — boundingBox ждём с ретраями, иначе ловим null.
+  await expect(async () => {
+    expect(await cardStreet.boundingBox()).toBeTruthy()
+    expect(await cardDom.boundingBox()).toBeTruthy()
+  }).toPass({ timeout: 5000 })
   const src = await cardStreet.boundingBox()
   const dst = await cardDom.boundingBox()
   expect(src && dst).toBeTruthy()
