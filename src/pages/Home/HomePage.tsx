@@ -297,6 +297,15 @@ export default function HomePage() {
     projectService.getProjects()
   }, [])
 
+  // F1 — справка по главной странице
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'F1') { e.preventDefault(); setShowHelp(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const handleCreate = async (data: Partial<Project>) => {
     const created = await projectService.createProject(data)
     setShowModal(false)
@@ -457,7 +466,7 @@ export default function HomePage() {
                 ? 'text-gray-400 hover:text-white hover:bg-white/8'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
             }`}
-            title="Помощь по этой странице">
+            title="Помощь (F1)">
             <HelpCircle size={18} />
           </button>
           <button

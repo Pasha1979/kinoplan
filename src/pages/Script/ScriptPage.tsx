@@ -793,6 +793,11 @@ export default function ScriptPage() {
         e.preventDefault()
         search.open(true)
       }
+      // F1 — помощь по текущей вкладке (работает и на пустом экране)
+      if (e.key === 'F1') {
+        e.preventDefault()
+        setShowHelpModal(true)
+      }
       // Escape — выход из Focus Mode (только если поиск закрыт)
       if (e.key === 'Escape' && focusMode.isFocused && !search.isOpen) {
         focusMode.exit()

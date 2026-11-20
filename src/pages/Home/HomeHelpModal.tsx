@@ -1,6 +1,7 @@
 import { LayoutGrid, FolderOpen, SlidersHorizontal, IdCard, MousePointerClick } from 'lucide-react'
 import HelpModalBase, { KeyBadge } from '../../components/HelpModalBase'
 import type { HelpColors } from '../../components/HelpModalBase'
+import { filterByQuery } from '../../help/search'
 
 interface HomeHelpModalProps {
   isDark: boolean
@@ -203,12 +204,15 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
     <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: c.textMuted, marginTop: 14, marginBottom: 10 }}>{text}</div>
   )
 
-  const renderTab = (tabId: string, c: HelpColors) => {
+  const renderTab = (tabId: string, c: HelpColors, q: string) => {
+    const fq = <T,>(arr: T[], texts: (item: T) => (string | undefined)[]) => filterByQuery(arr, q, texts)
+    const byText = <T extends { title?: string; name?: string; body?: string; desc?: string; details?: string[] }>(items: T[]): T[] =>
+      fq(items, (i) => [i.title, i.name, i.body, i.desc, ...(i.details || [])])
     /* ─── Обзор ─── */
     if (tabId === 'overview') {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {OVERVIEW.map((item, i) => card(c, item.title, item.body, undefined, i))}
+          {byText(OVERVIEW).map((item, i) => card(c, item.title, item.body, undefined, i))}
         </div>
       )
     }
@@ -217,7 +221,7 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
     if (tabId === 'tabs') {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {TABS_INFO.map((tab, i) => (
+          {byText(TABS_INFO).map((tab, i) => (
             <div
               key={i}
               style={{
@@ -246,17 +250,17 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
         <div>
           {groupLabel(c, 'Поиск')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {SEARCH_INFO.map((item, i) => card(c, item.title, item.body, undefined, i))}
+            {byText(SEARCH_INFO).map((item, i) => card(c, item.title, item.body, undefined, i))}
           </div>
 
           {groupLabel(c, 'Сортировка — 5 вариантов')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {SORT_INFO.map((item, i) => card(c, item.name, item.body, undefined, i))}
+            {byText(SORT_INFO).map((item, i) => card(c, item.name, item.body, undefined, i))}
           </div>
 
           {groupLabel(c, 'Фильтры')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {FILTERS_INFO.map((item, i) => card(c, item.name, item.body, undefined, i))}
+            {byText(FILTERS_INFO).map((item, i) => card(c, item.name, item.body, undefined, i))}
           </div>
         </div>
       )
@@ -268,12 +272,12 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
         <div>
           {groupLabel(c, 'Элементы карточки')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {CARD_PARTS.map((item, i) => card(c, item.name, item.body, undefined, i))}
+            {byText(CARD_PARTS).map((item, i) => card(c, item.name, item.body, undefined, i))}
           </div>
 
           {groupLabel(c, 'Контекстное меню — правый клик')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {MENU_INFO.map((item, i) => card(c, item.name, item.body, undefined, i))}
+            {byText(MENU_INFO).map((item, i) => card(c, item.name, item.body, undefined, i))}
           </div>
         </div>
       )
@@ -290,7 +294,7 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
             overflow: 'hidden',
           }}
         >
-          {ACTIONS.map((item, i) => (
+          {filterByQuery(ACTIONS, q, (i2) => [i2.action, i2.result]).map((item, i) => (
             <div
               key={i}
               style={{
@@ -310,7 +314,7 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
 
         {groupLabel(c, 'Важно знать')}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {NOTES.map((item, i) => card(c, item.title, item.body, undefined, i))}
+          {byText(NOTES).map((item, i) => card(c, item.title, item.body, undefined, i))}
           {card(c, 'Клавиатура', 'Карточку можно открыть клавишами Enter или Space, когда она в фокусе — перемещайтесь по карточкам клавишей Tab.', undefined, 'kbd')}
         </div>
         <div style={{ marginTop: 12 }}>
@@ -322,12 +326,23 @@ export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
     )
   }
 
+  const countMatches = (tabId: string, q: string): number => {
+    const f = <T extends { title?: string; name?: string; body?: string; desc?: string; details?: string[] }>(items: T[]) =>
+      filterByQuery(items, q, (i) => [i.title, i.name, i.body, i.desc, ...(i.details || [])]).length
+    if (tabId === 'overview') return f(OVERVIEW)
+    if (tabId === 'tabs') return f(TABS_INFO)
+    if (tabId === 'filters') return f(SEARCH_INFO) + f(SORT_INFO) + f(FILTERS_INFO)
+    if (tabId === 'card') return f(CARD_PARTS) + f(MENU_INFO)
+    return f(ACTIONS.map(a => ({ name: a.action, body: a.result }))) + f(NOTES)
+  }
+
   return (
     <HelpModalBase
       isDark={isDark}
       title="Помощь — Главная страница"
       tabs={TABS}
       renderTab={renderTab}
+      countMatches={countMatches}
       onClose={onClose}
     />
   )

@@ -1,10 +1,12 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import pkg from './package.json'
 
 // DESKTOP READY: Конфигурация подготовлена для сборки под Electron/Tauri (base: './')
 export default defineConfig({
   base: './',
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
     include: ['pouchdb-browser'],

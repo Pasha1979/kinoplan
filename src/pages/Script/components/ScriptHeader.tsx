@@ -314,14 +314,14 @@ function ScriptHeader({
         >
           <Settings size={15} />
         </button>
-        {/* Кнопка Помощь — заглушка, потом мини-обучение */}
+        {/* Кнопка Помощь — контекстная справка по текущей вкладке */}
         <button
           onClick={onHelp}
           className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
           style={{ color: textSecondary }}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-          title="Помощь"
+          title="Помощь (F1)"
         >
           <HelpCircle size={15} />
         </button>

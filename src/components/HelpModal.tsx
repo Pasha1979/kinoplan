@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { X, Keyboard, Lightbulb, AlignLeft, Info, Search } from 'lucide-react'
+import { Keyboard, Lightbulb, AlignLeft } from 'lucide-react'
+import HelpModalBase, { KeyBadge } from './HelpModalBase'
+import type { HelpColors } from './HelpModalBase'
+import { filterByQuery } from '../help/search'
 
 interface HelpModalProps {
   isDark: boolean
@@ -20,13 +22,12 @@ const PAGE_LABELS: Record<string, string> = {
   text: 'Текст', title: 'Титул', statistics: 'Статистика', cards: 'Карточки', development: 'Разработка',
 }
 
-type Tab = 'shortcuts' | 'tips' | 'formatting' | 'about'
+type Tab = 'shortcuts' | 'tips' | 'formatting'
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'shortcuts',  label: 'Горячие клавиши', icon: <Keyboard size={14} /> },
   { id: 'tips',       label: 'Подсказки',        icon: <Lightbulb size={14} /> },
   { id: 'formatting', label: 'Форматирование',   icon: <AlignLeft size={14} /> },
-  { id: 'about',      label: 'О программе',      icon: <Info size={14} /> },
 ]
 
 const SHORTCUTS: { group: string; color?: string; items: { keys: string[]; desc: string; note?: string }[] }[] = [
@@ -566,403 +567,162 @@ const BLOCK_TYPES: { name: string; shortcut: string; example: string; auto: stri
   },
 ]
 
-function KeyBadge({ k }: { k: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        padding: '1px 7px',
-        borderRadius: 5,
-        fontSize: 11,
-        fontFamily: 'ui-monospace, monospace',
-        fontWeight: 600,
-        background: 'rgba(99,102,241,0.12)',
-        border: '1px solid rgba(99,102,241,0.3)',
-        color: '#818cf8',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {k}
-    </span>
-  )
-}
-
 export default function HelpModal({ isDark, onClose, context }: HelpModalProps) {
-  // T-186: поиск по справке — фильтрует подсказки и горячие клавиши
-  const [query, setQuery] = useState('')
-  const q = query.trim().toLowerCase()
-  const matchTip = (t: { title: string; body: string }) =>
-    !q || t.title.toLowerCase().includes(q) || t.body.toLowerCase().includes(q)
   // Подсказки только для открытой вкладки (тег → страница)
-  const visibleTips = (context
+  const tipsForContext = context
     ? TIPS.filter((t) => (TAG_PAGES[t.tag || ''] || 'text') === context)
     : TIPS
-  ).filter(matchTip)
-  const visibleShortcuts = q
-    ? SHORTCUTS.map((g) => ({
-        ...g,
-        items: g.items.filter((i) =>
-          i.desc.toLowerCase().includes(q) || g.group.toLowerCase().includes(q) || i.keys.join(' ').toLowerCase().includes(q)),
-      })).filter((g) => g.items.length > 0)
-    : SHORTCUTS
   // На не-текстовых вкладках открываем сразу «Подсказки» (shortcuts/formatting — только редактора)
   const isEditorTab = !context || context === 'text'
-  const [activeTab, setActiveTab] = useState<Tab>(isEditorTab ? 'shortcuts' : 'tips')
-  const visibleTabs = isEditorTab ? TABS : TABS.filter((t) => t.id === 'tips' || t.id === 'about')
+  const visibleTabs = isEditorTab ? TABS : TABS.filter((t) => t.id === 'tips')
 
-  const bg         = isDark ? '#1e1e2e' : '#ffffff'
-  const bgSecondary= isDark ? '#252535' : '#f8f9fc'
-  const border     = isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb'
-  const textPrimary= isDark ? '#f1f5f9' : '#111827'
-  const textMuted  = isDark ? '#9ca3af' : '#6b7280'
+  const countMatches = (tabId: string, q: string): number => {
+    if (tabId === 'shortcuts') {
+      return SHORTCUTS.reduce((n, g) => n + filterByQuery(g.items, q,
+        (i) => [i.desc, g.group, i.keys.join(' ')]).length, 0)
+    }
+    if (tabId === 'tips') return filterByQuery(tipsForContext, q, (t) => [t.title, t.body, t.tag]).length
+    if (tabId === 'formatting') {
+      const lock = filterByQuery(['Замок формата Tab не меняет тип блока автоопределение отключено ручное форматирование'], q, (s) => [s]).length
+      return filterByQuery(BLOCK_TYPES, q, (b) => [b.name, b.example, b.auto]).length + lock
+    }
+    return 0
+  }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.55)' }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        style={{
-          background: bg,
-          border: `1px solid ${border}`,
-          borderRadius: 14,
-          width: 680,
-          maxWidth: '95vw',
-          maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
-        }}
-      >
-        {/* Шапка */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px 0',
-            borderBottom: `1px solid ${border}`,
-            paddingBottom: 0,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 0 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: textPrimary }}>
-              Помощь{context && PAGE_LABELS[context] ? ` · ${PAGE_LABELS[context]}` : ''}
-            </span>
-            {/* T-186: поиск по справке */}
-            <div style={{ position: 'relative' }}>
-              <Search size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: textMuted, pointerEvents: 'none' }} />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Поиск…"
-                style={{
-                  width: 160, padding: '4px 24px 4px 26px', fontSize: 12,
-                  borderRadius: 8, border: `1px solid ${border}`, outline: 'none',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: textPrimary,
-                }}
-              />
-              {query && (
-                <button
-                  onClick={() => setQuery('')}
-                  style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 0, display: 'flex' }}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: textMuted,
-              padding: 4,
-              borderRadius: 6,
-              marginBottom: 4,
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Табы */}
-        <div style={{ display: 'flex', gap: 2, padding: '0 20px', borderBottom: `1px solid ${border}` }}>
-          {visibleTabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '10px 14px',
-                fontSize: 13,
-                fontWeight: activeTab === tab.id ? 600 : 400,
-                color: activeTab === tab.id ? '#818cf8' : textMuted,
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === tab.id ? '2px solid #818cf8' : '2px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'color 0.15s',
-                marginBottom: -1,
-              }}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Контент */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px' }}>
-
-          {/* ── Горячие клавиши ── */}
-          {activeTab === 'shortcuts' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {visibleShortcuts.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '30px 0', fontSize: 13, color: textMuted }}>
-                  Ничего не найдено по «{query}»
-                </div>
-              )}
-              {visibleShortcuts.map(group => (
-                <div key={group.group}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: textMuted, marginBottom: 10 }}>
-                    {group.group}
-                  </div>
-                  <div
-                    style={{
-                      background: bgSecondary,
-                      borderRadius: 10,
-                      border: `1px solid ${border}`,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {group.items.map((item, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 14px',
-                          borderBottom: i < group.items.length - 1 ? `1px solid ${border}` : 'none',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                          <span style={{ fontSize: 13, color: textPrimary }}>{item.desc}</span>
-                          {item.note && (
-                            <span style={{ fontSize: 10, color: group.color || textMuted, background: group.color ? `${group.color}22` : 'transparent', border: group.color ? `1px solid ${group.color}55` : 'none', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>{item.note}</span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0, marginLeft: 16 }}>
-                          {item.keys.map((k, ki) => (
-                            <span key={ki} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <KeyBadge k={k} />
-                              {ki < item.keys.length - 1 && <span style={{ fontSize: 10, color: textMuted }}>+</span>}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+  const renderTab = (tabId: string, c: HelpColors, q: string) => {
+    /* ── Горячие клавиши ── */
+    if (tabId === 'shortcuts') {
+      const visible = SHORTCUTS
+        .map((g) => ({ ...g, items: filterByQuery(g.items, q, (i) => [i.desc, g.group, i.keys.join(' ')]) }))
+        .filter((g) => g.items.length > 0)
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {visible.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '30px 0', fontSize: 13, color: c.textMuted }}>
+              Ничего не найдено по «{q}»
             </div>
           )}
-
-          {/* ── Подсказки ── */}
-          {activeTab === 'tips' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {visibleTips.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 0', fontSize: 13, color: textMuted }}>
-                  Подсказки для этого раздела появятся по мере добавления функций
-                </div>
-              )}
-              {visibleTips.map((tip, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: bgSecondary,
-                    borderRadius: 10,
-                    border: `1px solid ${border}`,
-                    padding: '13px 16px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    {tip.tag && (
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.25)', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap' }}>{tip.tag}</span>
-                    )}
-                    <span style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>{tip.title}</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: textMuted, lineHeight: 1.65 }}>{tip.body}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── Форматирование ── */}
-          {activeTab === 'formatting' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p style={{ fontSize: 13, color: textMuted, lineHeight: 1.6, margin: 0 }}>
-                Каждый абзац — отдельный тип блока. Переключайте клавишей <KeyBadge k="Tab" /> или <KeyBadge k="Shift+Tab" />. Большинство типов определяется автоматически.
-              </p>
-              <div
-                style={{
-                  background: bgSecondary,
-                  borderRadius: 10,
-                  border: `1px solid ${border}`,
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Заголовок таблицы */}
-                <div style={{ display: 'grid', gridTemplateColumns: '130px 60px 1fr', gap: 0, padding: '7px 14px', borderBottom: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: textMuted }}>Тип блока</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: textMuted }}>Tab</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: textMuted }}>Пример</span>
-                </div>
-                {BLOCK_TYPES.map((bt, i) => (
+          {visible.map(group => (
+            <div key={group.group}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: c.textMuted, marginBottom: 10 }}>
+                {group.group}
+              </div>
+              <div style={{ background: c.bgSecondary, borderRadius: 10, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+                {group.items.map((item, i) => (
                   <div
                     key={i}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '130px 60px 1fr',
-                      gap: 0,
-                      padding: '10px 14px',
-                      borderBottom: i < BLOCK_TYPES.length - 1 ? `1px solid ${border}` : 'none',
-                      alignItems: 'start',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 14px',
+                      borderBottom: i < group.items.length - 1 ? `1px solid ${c.border}` : 'none',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: bt.color, flexShrink: 0, display: 'inline-block' }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: textPrimary }}>{bt.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <span style={{ fontSize: 13, color: c.textPrimary }}>{item.desc}</span>
+                      {item.note && (
+                        <span style={{ fontSize: 10, color: group.color || c.textMuted, background: group.color ? `${group.color}22` : 'transparent', border: group.color ? `1px solid ${group.color}55` : 'none', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>{item.note}</span>
+                      )}
                     </div>
-                    <span style={{ fontSize: 11, color: textMuted, fontFamily: 'ui-monospace, monospace' }}>{bt.shortcut}</span>
-                    <div>
-                      <div style={{ fontSize: 12, fontFamily: 'ui-monospace, monospace', color: bt.color, marginBottom: 3 }}>{bt.example}</div>
-                      <div style={{ fontSize: 11, color: textMuted, lineHeight: 1.5 }}>{bt.auto}</div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0, marginLeft: 16 }}>
+                      {item.keys.map((k, ki) => (
+                        <span key={ki} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <KeyBadge k={k} />
+                          {ki < item.keys.length - 1 && <span style={{ fontSize: 10, color: c.textMuted }}>+</span>}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 12, color: textMuted, lineHeight: 1.6 }}>
-                <strong style={{ color: textPrimary }}>Замок формата (🔒)</strong> — кнопка в шапке. Когда активен, Tab не меняет тип блока, автоопределение отключено. Удобно при ручном форматировании.
-              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    /* ── Подсказки ── */
+    if (tabId === 'tips') {
+      const visible = filterByQuery(tipsForContext, q, (t) => [t.title, t.body, t.tag])
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {visible.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 0', fontSize: 13, color: c.textMuted }}>
+              Подсказки для этого раздела появятся по мере добавления функций
             </div>
           )}
-
-          {/* ── О программе ── */}
-          {activeTab === 'about' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div
-                style={{
-                  background: bgSecondary,
-                  borderRadius: 10,
-                  border: `1px solid ${border}`,
-                  padding: '18px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
-                }}
-              >
-                <div style={{ fontSize: 20, fontWeight: 800, color: textPrimary }}>KinoPlan</div>
-                <div style={{ fontSize: 13, color: textMuted }}>Редактор сценариев с автоформатированием и хронометражом</div>
-                <div style={{ fontSize: 12, color: textMuted, marginTop: 4 }}>
-                  <span style={{ color: textPrimary, fontWeight: 600 }}>Версия:</span> 0.1.0-beta
-                </div>
+          {visible.map((tip, i) => (
+            <div
+              key={i}
+              style={{ background: c.bgSecondary, borderRadius: 10, border: `1px solid ${c.border}`, padding: '13px 16px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                {tip.tag && (
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.25)', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap' }}>{tip.tag}</span>
+                )}
+                <span style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary }}>{tip.title}</span>
               </div>
-
-              {[
-                {
-                  section: 'Редактор',
-                  items: [
-                    { done: true,  text: 'Tiptap/ProseMirror редактор с кастомными типами блоков' },
-                    { done: true,  text: 'Автоопределение типов блоков при наборе (Tab, Enter)' },
-                    { done: true,  text: 'Автокапс шапок сцен и имён персонажей' },
-                    { done: true,  text: 'Автонумерация сцен (фильм и сериал)' },
-                    { done: true,  text: 'Замок формата — фиксация типа блока' },
-                    { done: true,  text: 'Drag-and-drop перестановка сцен' },
-                    { done: true,  text: 'Авто-добавление персонажей в состав сцены (cast)' },
-                    { done: true,  text: 'Умная вставка: автораспознавание screenplay-текста' },
-                    { done: true,  text: 'Автоформатирование — кнопка «Формат» с предпросмотром' },
-                    { done: true,  text: 'Пресеты клавиатуры: KinoPlan / Final Draft / КИТ' },
-                    { done: true,  text: 'Авто-типографика при наборе (--→—, "→«», (з/к)→(З/К))' },
-                    { done: true,  text: 'Typewriter-режим — курсор по центру экрана' },
-                    { done: true,  text: 'Редакционные статусы сцен + свои статусы и готовность %' },
-                  ],
-                },
-                {
-                  section: 'Поиск и Multi-cursor',
-                  items: [
-                    { done: true,  text: 'Поиск по всему сценарию с подсветкой (Ctrl+F)' },
-                    { done: true,  text: 'Замена текста: текущее совпадение или все сразу' },
-                    { done: true,  text: 'Фильтрация поиска по типам блоков' },
-                    { done: true,  text: 'Дебаунс поиска для больших документов (150 мс)' },
-                    { done: true,  text: 'Multi-cursor редактирование (Ctrl+D) — до 50 мест' },
-                    { done: true,  text: 'Ввод/удаление во всех выделениях одной транзакцией' },
-                    { done: true,  text: 'Визуальная подсветка multi-cursor + счётчик в статусбаре' },
-                  ],
-                },
-                {
-                  section: 'SmartType и подсказки',
-                  items: [
-                    { done: true,  text: 'SmartType: автодополнение в шапке (ИНТ., локации, время)' },
-                    { done: true,  text: 'SmartType: автодополнение имён персонажей' },
-                    { done: true,  text: 'Учёт частоты использования — часто применяемое выше' },
-                  ],
-                },
-                {
-                  section: 'Хронометраж',
-                  items: [
-                    { done: true,  text: 'Расчёт страниц по символам или точный (A4)' },
-                    { done: true,  text: 'Жанровый коэффициент (0.5–2.0)' },
-                    { done: true,  text: 'Хронометраж каждой сцены и сценария целиком' },
-                    { done: true,  text: 'Правая панель: список сцен с хронометражом и составом' },
-                    { done: true,  text: 'Навигация по сценам — клик → прокрутка к сцене' },
-                  ],
-                },
-                {
-                  section: 'Интерфейс',
-                  items: [
-                    { done: true,  text: 'Тёмная и светлая темы' },
-                    { done: true,  text: 'Focus Mode — полноэкранный режим без отвлечений' },
-                    { done: true,  text: 'Split Screen — два независимых окна редактора с перетаскиваемым divider' },
-                    { done: true,  text: 'Автосохранение в localStorage' },
-                    { done: true,  text: 'Экспорт выбранных сцен в .doc и PDF' },
-                    { done: false, text: 'Совместная работа / облако (в планах)' },
-                  ],
-                },
-              ].map(({ section, items }) => (
-                <div
-                  key={section}
-                  style={{
-                    background: bgSecondary,
-                    borderRadius: 10,
-                    border: `1px solid ${border}`,
-                    padding: '14px 16px',
-                  }}
-                >
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: textMuted, marginBottom: 10 }}>{section}</div>
-                  {items.map((f, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '3px 0', fontSize: 13, color: f.done ? textPrimary : textMuted }}>
-                      <span style={{ color: f.done ? '#10b981' : isDark ? '#374151' : '#d1d5db', fontSize: 14, flexShrink: 0, marginTop: 1 }}>{f.done ? '✓' : '○'}</span>
-                      {f.text}
-                    </div>
-                  ))}
-                </div>
-              ))}
+              <div style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65 }}>{tip.body}</div>
             </div>
-          )}
+          ))}
+        </div>
+      )
+    }
 
+    /* ── Форматирование ── */
+    const visibleBlocks = filterByQuery(BLOCK_TYPES, q, (b) => [b.name, b.example, b.auto])
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.6, margin: 0 }}>
+          Каждый абзац — отдельный тип блока. Переключайте клавишей <KeyBadge k="Tab" /> или <KeyBadge k="Shift+Tab" />. Большинство типов определяется автоматически.
+        </p>
+        <div style={{ background: c.bgSecondary, borderRadius: 10, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '130px 60px 1fr', gap: 0, padding: '7px 14px', borderBottom: `1px solid ${c.border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: c.textMuted }}>Тип блока</span>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: c.textMuted }}>Tab</span>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: c.textMuted }}>Пример</span>
+          </div>
+          {visibleBlocks.map((bt, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '130px 60px 1fr',
+                gap: 0,
+                padding: '10px 14px',
+                borderBottom: i < visibleBlocks.length - 1 ? `1px solid ${c.border}` : 'none',
+                alignItems: 'start',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: bt.color, flexShrink: 0, display: 'inline-block' }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: c.textPrimary }}>{bt.name}</span>
+              </div>
+              <span style={{ fontSize: 11, color: c.textMuted, fontFamily: 'ui-monospace, monospace' }}>{bt.shortcut}</span>
+              <div>
+                <div style={{ fontSize: 12, fontFamily: 'ui-monospace, monospace', color: bt.color, marginBottom: 3 }}>{bt.example}</div>
+                <div style={{ fontSize: 11, color: c.textMuted, lineHeight: 1.5 }}>{bt.auto}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+          <strong style={{ color: c.textPrimary }}>Замок формата (🔒)</strong> — кнопка в шапке. Когда активен, Tab не меняет тип блока, автоопределение отключено. Удобно при ручном форматировании.
         </div>
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <HelpModalBase
+      isDark={isDark}
+      title={`Помощь${context && PAGE_LABELS[context] ? ` · ${PAGE_LABELS[context]}` : ''}`}
+      tabs={visibleTabs}
+      defaultTab={isEditorTab ? 'shortcuts' : 'tips'}
+      renderTab={renderTab}
+      countMatches={countMatches}
+      onClose={onClose}
+    />
   )
 }
