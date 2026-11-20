@@ -381,7 +381,7 @@ export default function HomePage() {
       icon: <Trash2 size={14} />,
       danger: true,
       onClick: () => {
-        if (confirm(`Удалить проект "${contextMenu.project.name}"? Это действие нельзя отменить.`)) {
+        if (confirm(`Удалить проект "${contextMenu.project.name}"? 10 секунд можно отменить в уведомлении.`)) {
           void handleDelete(contextMenu.project.id)
         }
       },

@@ -242,7 +242,7 @@ export default function ProjectCard({ project, onClick, onDelete, onExport, onTo
         <button
           onClick={(e) => {
             e.stopPropagation()
-            if (confirm(`Удалить проект "${project.name}"? Это действие нельзя отменить.`)) {
+            if (confirm(`Удалить проект "${project.name}"? 10 секунд можно отменить в уведомлении.`)) {
               onDelete()
             }
           }}

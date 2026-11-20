@@ -19,6 +19,7 @@ export const TEXT_ACTIONS: HelpActionGroup[] = [
       { keys: ['Tab'],           label: 'Следующий тип блока по кругу' },
       { keys: ['Shift', 'Tab'],  label: 'Предыдущий тип блока' },
       { keys: ['Enter'],         label: 'Новая строка; тип определяется автоматически по контексту' },
+      { keys: ['Shift', 'Enter'],label: 'Мягкий перенос — новая строка без смены типа блока' },
       { keys: ['Ctrl', 'B'],     label: 'Жирный текст' },
       { keys: ['Ctrl', 'I'],     label: 'Курсив' },
       { keys: ['Ctrl', 'U'],     label: 'Подчёркнутый текст' },
@@ -43,6 +44,7 @@ export const TEXT_ACTIONS: HelpActionGroup[] = [
     group: 'Поиск и замена',
     items: [
       { keys: ['Ctrl', 'F'],     label: 'Открыть поиск по сценарию' },
+      { keys: ['Ctrl', 'H'],     label: 'Открыть поиск сразу с заменой' },
       { keys: ['Enter'],         label: 'Следующее совпадение (в режиме поиска)' },
       { keys: ['Shift', 'Enter'],label: 'Предыдущее совпадение (в режиме поиска)' },
       { keys: ['Escape'],        label: 'Закрыть поиск / сбросить выделение' },
@@ -56,6 +58,7 @@ export const TEXT_ACTIONS: HelpActionGroup[] = [
       { keys: ['клик панели'],  label: 'Сделать панель активной (синяя полоска сверху)' },
       { keys: ['клик сцены'],   label: 'Переход к сцене — идёт в активную панель' },
       { keys: ['тяни divider'],  label: 'Изменить ширину панелей (25–75%)' },
+      { keys: ['селектор серии'], label: 'Правая панель: выбор серии — независимо от левой (для сериалов)' },
       { keys: ['⊞⊞'],              label: 'Выключить Split Screen', note: 'выход' },
     ],
   },
@@ -111,7 +114,8 @@ export const TEXT_ACTIONS: HelpActionGroup[] = [
     group: 'SmartType — автодополнение',
     items: [
       { keys: ['↑', '↓'],          label: 'Навигация по подсказкам' },
-      { keys: ['Enter'],            label: 'Принять выделенную подсказку' },
+      { keys: ['Enter'],            label: 'Принять выделенную подсказку', note: 'или Tab — настраивается в ⚙ → Редактор' },
+      { keys: ['Tab'],              label: 'Принять подсказку, если выбрано в настройках' },
       { keys: ['Escape'],           label: 'Закрыть список подсказок' },
     ],
   },
