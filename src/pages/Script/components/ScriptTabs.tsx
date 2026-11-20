@@ -8,7 +8,7 @@ interface ScriptTabsProps {
   onTabChange: (tab: ScriptTab) => void
 }
 
-const TABS: { id: ScriptTab; label: string; icon: typeof FileText }[] = [
+export const TABS: { id: ScriptTab; label: string; icon: typeof FileText }[] = [
   { id: 'text', label: 'ТЕКСТ', icon: FileText },
   { id: 'title', label: 'ТИТУЛ', icon: BookOpen },
   { id: 'breakdown', label: 'РАЗБИВКА', icon: Hash },
