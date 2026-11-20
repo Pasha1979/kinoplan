@@ -5,6 +5,7 @@ import { useNormalizedProjectStore } from '../../store/useProjectStore'
 import { projectService } from '../../services/projectService'
 import { useScriptStore } from '../../store/scriptStore'
 import { renumberSceneNumbers } from '../../utils/sceneNumbering'
+import { syncBibleWithScenes } from './components/bibleSync'
 import { useToastStore } from '../../store/toastStore'
 import type { ScriptFormat, TimingSystem, Scene } from '../../store/scriptStore'
 import type { TimeOfDay } from '../../types/scene'
@@ -372,62 +373,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
       const proj = useNormalizedProjectStore.getState().projects[currentProjectId]
       if (!proj) return
       const dev = proj.development
-      const locNames = new Map<string, string[]>()
-      const charNames = new Map<string, string[]>()
-      allScenes.forEach((sc) => {
-        const loc = (sc.location || '').trim().toUpperCase()
-        const sub = (sc.sublocation || '').trim().toUpperCase()
-        if (loc) {
-          // родительская локация — все сцены включая подлокации
-          const a = locNames.get(loc) ?? []
-          if (!a.includes(sc.id)) a.push(sc.id)
-          locNames.set(loc, a)
-          // полный путь «ЛОКАЦИЯ.ПОДЛОКАЦИЯ» — только свои сцены
-          if (sub) {
-            const full = `${loc}.${sub}`
-            const fa = locNames.get(full) ?? []
-            if (!fa.includes(sc.id)) fa.push(sc.id)
-            locNames.set(full, fa)
-          }
-        }
-        ;[...(sc.cast || []), ...(sc.dialogCharacters || [])].forEach((n) => {
-          const k = n.trim().toUpperCase()
-          if (!k) return
-          const a = charNames.get(k) ?? []
-          if (!a.includes(sc.id)) a.push(sc.id)
-          charNames.set(k, a)
-        })
-      })
-      const sameIds = (a?: string[], b?: string[]) =>
-        a?.length === b?.length && (a ?? []).every((x) => (b ?? []).includes(x))
-
-      let locsChanged = false
-      const locations = (dev?.locations ?? []).map((l) => {
-        const key = l.name.toUpperCase()
-        const ids = locNames.get(key)
-        if (!ids) return l
-        locNames.delete(key)
-        return sameIds(l.sceneIds, ids) ? l : (locsChanged = true, { ...l, sceneIds: ids })
-      })
-      locNames.forEach((ids, name) => {
-        locations.push({ id: crypto.randomUUID(), name, sceneIds: ids })
-        locsChanged = true
-      })
-
-      let charsChanged = false
-      const characters = (dev?.characters ?? []).map((c) => {
-        const key = c.name.toUpperCase()
-        const ids = charNames.get(key)
-        if (!ids) return c
-        charNames.delete(key)
-        return sameIds(c.sceneIds, ids) ? c : (charsChanged = true, { ...c, sceneIds: ids })
-      })
-      charNames.forEach((ids, name) => {
-        characters.push({ id: crypto.randomUUID(), name, type: 'secondary', sceneIds: ids })
-        charsChanged = true
-      })
-
-      if (locsChanged || charsChanged) {
+      const { locations, characters, changed } = syncBibleWithScenes(dev, allScenes)
+      if (changed) {
         useNormalizedProjectStore.getState().updateProject(proj.id, {
           development: { ...(dev ?? { characters: [], locations: [], synopsis: {} }), locations, characters },
         })

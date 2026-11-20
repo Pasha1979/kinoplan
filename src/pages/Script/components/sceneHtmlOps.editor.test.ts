@@ -3,7 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { SceneHeader, SceneCast, SceneAction, SceneCharacter, SceneDialog, SceneTransition, SceneParenthetical } from '../../../components/tiptap'
-import { replaceSceneInEditor, setEditorContentNoHistory } from './sceneHtmlOps'
+import { replaceSceneInEditor, setEditorContentNoHistory, extractSceneHtml } from './sceneHtmlOps'
+import { spliceSceneHtml } from './SceneEditModal'
 
 const exts = [
   StarterKit.configure({
@@ -72,6 +73,45 @@ describe('replaceSceneInEditor (T-99)', () => {
     expect(replaceSceneInEditor(editor, 'uuid-nope', '<p>x</p>', '99')).toBe(false)
     expect(editor.getHTML()).toContain('Сцена 2.')
     editor.destroy()
+  })
+})
+
+// T-136/ЧАСТЬ 4: инлайн-правка сцены в «каркасе» сохраняется в контент.
+// Путь OutlineView: extractSceneHtml → встроенный редактор → getHTML →
+// onSaveSceneHtml → replaceSceneInEditor (открытая серия) / spliceSceneHtml (другая серия)
+describe('каркас: правка сцены → контент обновлён', () => {
+  it('extract → правка → replace по UUID: документ обновлён, соседи целы', () => {
+    const editor = mkEditor(DOC)
+    // то же, что getOutlineSceneHtml в ScriptPage
+    const frag = extractSceneHtml(editor.getHTML(), '2', 1, 'uuid-2')
+    expect(frag).toContain('Сцена 2.')
+    expect(frag).toContain('data-scene-id="uuid-2"')
+    // «правка» во встроенном редакторе: дописан блок в конец сцены
+    const edited = frag + '<div data-type="scene-action">ДОБАВЛЕНО ИЗ КАРКАСА.</div>'
+    // то же, что handleSaveSceneHtml для открытой серии
+    expect(replaceSceneInEditor(editor, 'uuid-2', edited, '2')).toBe(true)
+    const html = editor.getHTML()
+    expect(html).toContain('ДОБАВЛЕНО ИЗ КАРКАСА.')
+    expect(html).toContain('Сцена 1.')
+    expect(html).toContain('Сцена 3.')
+    expect(html).toContain('data-scene-id="uuid-2"')
+    editor.destroy()
+  })
+
+  it('другая серия (строковый путь): spliceSceneHtml обновляет content', () => {
+    const frag = extractSceneHtml(DOC, '2', 1, 'uuid-2')
+    const edited = frag + '<div data-type="scene-action">ИЗ КАРКАСА-2.</div>'
+    const next = spliceSceneHtml(DOC, '2', 1, edited, 'uuid-2')
+    expect(next).toContain('ИЗ КАРКАСА-2.')
+    expect(next).toContain('Сцена 1.')
+    expect(next).toContain('Сцена 3.')
+    expect(next).toContain('data-scene-id="uuid-2"')
+  })
+
+  it('extract по номеру без sceneId (fallback) тоже находит сцену', () => {
+    const noIds = DOC.replace(/ data-scene-id="[^"]*"/g, '')
+    const frag = extractSceneHtml(noIds, '2', 1)
+    expect(frag).toContain('Сцена 2.')
   })
 })
 

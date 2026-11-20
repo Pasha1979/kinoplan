@@ -60,23 +60,25 @@ test('регрессия: одна короткая сцена → 0.4 стр. (
   expect(pages).toBeLessThan(0.6)
 })
 
-// Геометрия сведена к модели «space before» (FD/КИТ): пустая строка = 24px
-// (line-height 1.5), перед шапкой 2 строки (48px), внутри персонаж→диалог — 0.
-// ~40 строк полуторного интервала на страницу A4 = канон КИТ.
-test('регрессия: 40 ремарок (перенос в ~2 строки) → 3.1 стр. (app-значение)', async ({ page }) => {
+// Геометрия «space before» по стандарту (FD/КИТ, одинарный интерлиньяж):
+// строка = 18px (12pt × 1.125), пустая строка = 18px, перед шапкой 2 строки
+// (36px), внутри персонаж→диалог — 0. ~54.5 строк на страницу A4 = канон.
+// Значения перемерены после перевода на одинарный интервал (было 3.1/9.0
+// при полуторном интерлиньяже 24px).
+test('регрессия: 40 ремарок (перенос в ~2 строки) → 2.4 стр. (app-значение)', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages M ${Date.now()}`)
   await pasteScript(page, scene(1, 40))
   const pages = await readPages(page)
-  expect(pages).toBeGreaterThan(2.9)
-  expect(pages).toBeLessThan(3.3)
+  expect(pages).toBeGreaterThan(2.2)
+  expect(pages).toBeLessThan(2.6)
 })
 
-test('регрессия: 120 ремарок в двух сценах → 9.0 стр. (app-значение)', async ({ page }) => {
+test('регрессия: 120 ремарок в двух сценах → 6.8 стр. (app-значение)', async ({ page }) => {
   await openFreshEditor(page, `E2E Pages L ${Date.now()}`)
   await pasteScript(page, `${scene(1, 60)}\n\n${scene(2, 60)}`)
   const pages = await readPages(page)
-  expect(pages).toBeGreaterThan(8.7)
-  expect(pages).toBeLessThan(9.3)
+  expect(pages).toBeGreaterThan(6.5)
+  expect(pages).toBeLessThan(7.1)
 })
 
 test('T-16: длинная реплика разрывается с маркером (ПРОДОЛЖЕНИЕ)', async ({ page }) => {

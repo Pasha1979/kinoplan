@@ -111,6 +111,30 @@ describe('deleteLocationEverywhere', () => {
     expect(r.sceneLocPatches.size).toBe(1)
   })
 
+  it('шапка БЕЗ «— ВРЕМЯ»: локация тоже очищается', () => {
+    const noTime = [
+      '<div data-type="scene-header" data-scene-id="s1">1. ИНТ. ДОМ ВЕДОВ</div>',
+      '<div data-type="scene-action">Текст.</div>',
+    ].join('')
+    const r = deleteLocationEverywhere({
+      locations: [loc('1', 'ДОМ ВЕДОВ')], folders: [], id: '1', scenes, contents: [noTime],
+    })
+    expect(r.headersPatched).toBe(1)
+    expect(r.contentsPatched[0]).toContain('1. ИНТ.</div>')
+    expect(r.contentsPatched[0]).not.toContain('ДОМ ВЕДОВ')
+  })
+
+  it('шапка без времени И без локации не переписывается зря', () => {
+    const bare = [
+      '<div data-type="scene-header" data-scene-id="s1">1. ИНТ.</div>',
+    ].join('')
+    const r = deleteLocationEverywhere({
+      locations: [loc('1', 'ДОМ ВЕДОВ')], folders: [], id: '1', scenes, contents: [bare],
+    })
+    expect(r.headersPatched).toBe(0)
+    expect(r.contentsPatched[0]).toBe(bare)
+  })
+
   it('локация без сцен: только справочник', () => {
     const r = deleteLocationEverywhere({
       locations: [loc('1', 'ЛЕС')], folders: [], id: '1', scenes, contents: [HTML],

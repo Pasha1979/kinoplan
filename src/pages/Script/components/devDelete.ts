@@ -178,11 +178,11 @@ export function deleteLocationEverywhere(params: {
       const sid = el.getAttribute('data-scene-id') || ''
       if (!sceneLocPatches.has(sid) || !isType(el, 'scene-header', 'sceneHeader')) return
       const m = (el.textContent || '').trim().match(HEADER_RE)
-      // группы: 1 — «N. ИНТ. », 2 — локация, 3 — «— ВРЕМЯ» (хвост обязателен)
-      if (!m || !m[3]) return
+      // группы: 1 — «N. ИНТ. », 2 — локация, 3 — «— ВРЕМЯ» (может отсутствовать)
+      if (!m) return
       const locText = newLocById.get(sid) || ''
-      el.textContent = `${m[1]}${locText ? `${locText} ` : ''}${m[3].trim()}`.replace(/\s+/g, ' ').trim()
-      headersPatched++
+      const next = `${m[1]}${locText ? `${locText} ` : ''}${(m[3] || '').trim()}`.replace(/\s+/g, ' ').trim()
+      if (next !== (el.textContent || '').trim()) { el.textContent = next; headersPatched++ }
     })
     return doc.body.innerHTML
   })

@@ -100,13 +100,13 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
   const fieldBg = isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5'
 
-  /* ── Карты из текста: имя → сцены ── */
+  /* ── Карты из текста: имя → сцены (ключи — norm(), как в charMerge/авто-синке) ── */
   const charNamesInText = useMemo(() => {
     const map = new Map<string, string[]>()
     scenes.forEach((sc) => {
       const names = [...(sc.cast || []), ...(sc.dialogCharacters || [])]
       names.forEach((n) => {
-        const key = n.trim().toUpperCase()
+        const key = norm(n)
         if (!key) return
         const cur = map.get(key) ?? []
         if (!cur.includes(sc.id)) cur.push(sc.id)
@@ -124,8 +124,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
       map.set(key, cur)
     }
     scenes.forEach((sc) => {
-      const loc = (sc.location || '').trim().toUpperCase()
-      const sub = (sc.sublocation || '').trim().toUpperCase()
+      const loc = norm(sc.location || '')
+      const sub = norm(sc.sublocation || '')
       if (!loc) return
       add(loc, sc.id) // родитель — все сцены с подлокациями
       if (sub) add(`${loc}.${sub}`, sc.id) // полный путь — только свои
@@ -141,8 +141,8 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
   }, [scenes])
   const durOf = (ids: string[]) => ids.reduce((a, id) => a + (sceneDur.get(id) ?? 0), 0)
 
-  const charSceneIds = (c: DevCharacter) => c.sceneIds ?? charNamesInText.get(c.name.toUpperCase()) ?? []
-  const locSceneIds = (l: DevLocation) => l.sceneIds ?? locNamesInText.get(l.name.toUpperCase()) ?? []
+  const charSceneIds = (c: DevCharacter) => c.sceneIds ?? charNamesInText.get(norm(c.name)) ?? []
+  const locSceneIds = (l: DevLocation) => l.sceneIds ?? locNamesInText.get(norm(l.name)) ?? []
   const charSceneCount = (c: DevCharacter) => charSceneIds(c).length
   const locSceneCount = (l: DevLocation) => locSceneIds(l).length
 
@@ -181,11 +181,11 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
 
   /* ── Импорт ── */
   const importChars = () => {
-    const existing = new Set(dev.characters.map((c) => c.name.toUpperCase()))
+    const existing = new Set(dev.characters.map((c) => norm(c.name)))
     const fresh: DevCharacter[] = [...dev.characters]
     charNamesInText.forEach((sceneIds, name) => {
       if (existing.has(name)) {
-        const cur = fresh.find((c) => c.name.toUpperCase() === name)
+        const cur = fresh.find((c) => norm(c.name) === name)
         if (cur) cur.sceneIds = sceneIds
       } else {
         fresh.push({ id: uid(), name, type: 'secondary', sceneIds })
@@ -194,11 +194,11 @@ function DevelopmentView({ isDark, scenes, isSerial, episodesCount, development,
     setDev({ characters: fresh })
   }
   const importLocs = () => {
-    const existing = new Set(dev.locations.map((l) => l.name.toUpperCase()))
+    const existing = new Set(dev.locations.map((l) => norm(l.name)))
     const fresh: DevLocation[] = [...dev.locations]
     locNamesInText.forEach((sceneIds, name) => {
       if (existing.has(name)) {
-        const cur = fresh.find((l) => l.name.toUpperCase() === name)
+        const cur = fresh.find((l) => norm(l.name) === name)
         if (cur) cur.sceneIds = sceneIds
       } else {
         fresh.push({ id: uid(), name, sceneIds })

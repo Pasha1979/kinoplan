@@ -117,6 +117,7 @@ export function duplicateScene(editor: Ed, pos: number): boolean {
   })
   if (!nodes.length) return false
   tr.insert(hit.range.end, nodes)
+  renumberStructural(tr)
   tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(hit.range.end + 2, tr.doc.content.size))))
   viewOf(editor).dispatch(tr.scrollIntoView())
   return true
@@ -144,7 +145,8 @@ export function splitScene(editor: Ed, pos: number): boolean {
     state.schema.text(withNumber(header.textContent, nextLetteredNumber(hit.range.number))),
   )
   const tr = state.tr.insert(blockPos, newHeader)
-  tr.setSelection(TextSelection.near(tr.doc.resolve(blockPos + newHeader.nodeSize + 1)))
+  renumberStructural(tr)
+  tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(blockPos + newHeader.nodeSize + 1, tr.doc.content.size))))
   viewOf(editor).dispatch(tr.scrollIntoView())
   return true
 }
@@ -166,6 +168,7 @@ export function mergeScenes(editor: Ed, pos: number, dir: 'prev' | 'next'): bool
   const afterHeader = doc.nodeAt(headerEnd)
   if (afterHeader && afterHeader.type.name === 'sceneCast') delTo += afterHeader.nodeSize
   tr.delete(other.start, delTo)
+  renumberStructural(tr)
   viewOf(editor).dispatch(tr.scrollIntoView())
   return true
 }
@@ -175,6 +178,7 @@ export function deleteScene(editor: Ed, pos: number): boolean {
   const hit = sceneAtPos(stateOf(editor).doc, pos)
   if (!hit) return false
   const tr = stateOf(editor).tr.delete(hit.range.start, hit.range.end)
+  renumberStructural(tr)
   tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(hit.range.start, tr.doc.content.size))))
   viewOf(editor).dispatch(tr.scrollIntoView())
   return true
@@ -206,12 +210,16 @@ export function insertSceneFromHtml(e: Ed, pos: number, sceneHtml: string): bool
   const dom = new window.DOMParser().parseFromString(numbered, 'text/html')
   const slice = PMDOMParser.fromSchema(state.schema).parseSlice(dom.body)
   const tr = state.tr.insert(hit.range.end, slice.content)
+  renumberStructural(tr)
   tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(hit.range.end + 2, tr.doc.content.size))))
   viewOf(e).dispatch(tr.scrollIntoView())
   return true
 }
 
-/** Перенумеровать все шапки в транзакции (литеры сохраняются, основные идут подряд). */
+/** Перенумеровать все шапки в транзакции (литеры сохраняются, основные идут подряд).
+ *  Правки применяются с конца документа к началу: insertText в позиции поздних
+ *  шапок не сдвигает собранные ранее позиции ранних — переход «9.»→«10.»
+ *  (смена длины номера) не ломает остальные шапки. */
 function renumberHeadersInTr(tr: Transaction, isSerial: boolean, episode: number) {
   const headers: { pos: number; num: string }[] = []
   let p = 0
@@ -221,15 +229,37 @@ function renumberHeadersInTr(tr: Transaction, isSerial: boolean, episode: number
   })
   const next = renumberSceneNumbers(headers.map((h) => h.num), isSerial, episode)
   const prefixRe = new RegExp(`^(${SCENE_NUMBER})\\.\\s*`)
-  headers.forEach((h, i) => {
-    if (h.num === next[i]) return
+  for (let i = headers.length - 1; i >= 0; i--) {
+    const h = headers[i]
+    if (h.num === next[i]) continue
     const node = tr.doc.nodeAt(h.pos)
-    if (!node) return
+    if (!node) continue
     const m = node.textContent.match(prefixRe)
     const cut = m ? m[0].length : 0
     // pos+1 — начало текста внутри узла шапки
     tr.insertText(`${next[i]}. `, h.pos + 1, h.pos + 1 + cut)
-  })
+  }
+}
+
+/** Серийность и серия выводятся из номеров документа: «1-5» → сериал, серия 1. */
+function serialInfoOf(nums: string[]): { isSerial: boolean; episode: number } {
+  for (const n of nums) {
+    const m = stripNote(n).trim().match(/^(\d+)-(\d+)/)
+    if (m) return { isSerial: true, episode: parseInt(m[1], 10) }
+  }
+  return { isSerial: false, episode: 0 }
+}
+
+/**
+ * Перенумерация после структурной операции (merge/delete/duplicate/split/insert) —
+ * в той же транзакции, undo атомарен. Убирает дырки и гарантирует уникальность:
+ * литеры уплотняются по порядку документа, второй «5-А» не образуется.
+ */
+function renumberStructural(tr: Transaction) {
+  const nums: string[] = []
+  tr.doc.forEach((node) => { if (isHeader(node)) nums.push(numberOf(node)) })
+  const { isSerial, episode } = serialInfoOf(nums)
+  renumberHeadersInTr(tr, isSerial, episode)
 }
 
 /** Переместить сцену под курсором на шаг вверх/вниз по списку сцен (с перенумерацией). */
