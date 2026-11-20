@@ -1,24 +1,9 @@
-import { LayoutGrid, FolderOpen, SlidersHorizontal, IdCard, MousePointerClick } from 'lucide-react'
-import HelpModalBase, { KeyBadge } from '../../components/HelpModalBase'
-import type { HelpColors } from '../../components/HelpModalBase'
-import { filterByQuery } from '../../help/search'
+/** Данные справки Главной — выделено из HomeHelpModal (тексты без потерь) */
 
-interface HomeHelpModalProps {
-  isDark: boolean
-  onClose: () => void
-}
-
-const TABS = [
-  { id: 'overview', label: 'Обзор',              icon: <LayoutGrid size={14} /> },
-  { id: 'tabs',     label: 'Вкладки',            icon: <FolderOpen size={14} /> },
-  { id: 'filters',  label: 'Поиск и фильтры',    icon: <SlidersHorizontal size={14} /> },
-  { id: 'card',     label: 'Карточка проекта',   icon: <IdCard size={14} /> },
-  { id: 'actions',  label: 'Все действия',       icon: <MousePointerClick size={14} /> },
-]
 
 /* ─── 1. Обзор ─── */
 
-const OVERVIEW: { title: string; body: string }[] = [
+export const OVERVIEW: { title: string; body: string }[] = [
   {
     title: 'Что это за страница',
     body: 'Главная страница КиноПлан — стартовый экран со списком всех ваших проектов. Отсюда вы попадаете внутрь любого проекта, создаёте новые, импортируете готовые из файлов и управляете списком: сортируете, фильтруете, архивируете.',
@@ -47,7 +32,7 @@ const OVERVIEW: { title: string; body: string }[] = [
 
 /* ─── 2. Вкладки ─── */
 
-const TABS_INFO: { name: string; desc: string; details: string[] }[] = [
+export const TABS_INFO: { name: string; desc: string; details: string[] }[] = [
   {
     name: 'Все',
     desc: 'Основной список — все проекты, кроме архивных.',
@@ -90,7 +75,7 @@ const TABS_INFO: { name: string; desc: string; details: string[] }[] = [
 
 /* ─── 3. Поиск и фильтры ─── */
 
-const SEARCH_INFO: { title: string; body: string }[] = [
+export const SEARCH_INFO: { title: string; body: string }[] = [
   {
     title: 'Поиск',
     body: 'Поле «Найти проект...» фильтрует список по названию мгновенно, по мере набора. Регистр букв не важен. Поиск работает на всех вкладках — в том числе внутри архива.',
@@ -105,7 +90,7 @@ const SEARCH_INFO: { title: string; body: string }[] = [
   },
 ]
 
-const SORT_INFO: { name: string; body: string }[] = [
+export const SORT_INFO: { name: string; body: string }[] = [
   { name: 'Сначала изменённые', body: 'По умолчанию: недавно редактированные проекты сверху.' },
   { name: 'По названию (А–Я)',  body: 'Алфавитный порядок с учётом русского языка.' },
   { name: 'По дате создания',   body: 'Новые проекты сверху, старые внизу.' },
@@ -113,7 +98,7 @@ const SORT_INFO: { name: string; body: string }[] = [
   { name: 'Свой порядок',       body: 'Включает ручное перетаскивание карточек мышью. Порядок сохраняется навсегда. Работает только на вкладке «Все» без активного поиска и фильтров.' },
 ]
 
-const FILTERS_INFO: { name: string; body: string }[] = [
+export const FILTERS_INFO: { name: string; body: string }[] = [
   { name: 'Тип',     body: 'Сериал, полный метр, реклама, клип или другое. Показывает проекты только выбранного формата.' },
   { name: 'Статус',  body: 'Пре-продакшн, в съёмке, пост-продакшн или завершён. Фильтр по стадии производства.' },
   { name: 'Теги',    body: 'Появляется автоматически, когда у хотя бы одного проекта есть теги. Показывает проекты с выбранной меткой. Теги ставятся через правый клик → «Теги…».' },
@@ -121,7 +106,7 @@ const FILTERS_INFO: { name: string; body: string }[] = [
 
 /* ─── 4. Карточка проекта ─── */
 
-const CARD_PARTS: { name: string; body: string }[] = [
+export const CARD_PARTS: { name: string; body: string }[] = [
   { name: 'Иконка и название',      body: 'Иконка типа проекта (📺 сериал, 🎬 фильм, 📢 реклама, 🎵 клип, 📁 другое) и название. Под названием — тип и теги (до трёх, остальные сворачиваются в «+N»).' },
   { name: 'Звёздочка',              body: '⭐ в правом верхнем углу — избранное. Жёлтая = в избранном. Клик переключает состояние.' },
   { name: 'Бейдж статуса',          body: 'Цветная метка стадии: «Пре-продакшн» (синяя), «В съёмке» (оранжевая), «Пост-продакшн» (фиолетовая), «Завершён» (зелёная).' },
@@ -132,7 +117,7 @@ const CARD_PARTS: { name: string; body: string }[] = [
   { name: 'Контекстное меню',       body: 'Правый клик по карточке — меню действий: открыть, избранное, теги, дублировать, экспорт, архив, удалить.' },
 ]
 
-const MENU_INFO: { name: string; body: string }[] = [
+export const MENU_INFO: { name: string; body: string }[] = [
   { name: 'Открыть',            body: 'Переход внутрь проекта — то же, что клик по карточке.' },
   { name: 'В избранное',        body: 'Добавляет или снимает звёздочку избранного.' },
   { name: 'Теги…',              body: 'Открывает редактор тегов: введите метку и нажмите Enter. Существующие теги удаляются крестиком. Дубликаты не создаются.' },
@@ -144,7 +129,7 @@ const MENU_INFO: { name: string; body: string }[] = [
 
 /* ─── 5. Действия ─── */
 
-const ACTIONS: { action: string; result: string }[] = [
+export const ACTIONS: { action: string; result: string }[] = [
   { action: 'Клик по карточке',              result: 'Открыть проект' },
   { action: 'Enter / Space на карточке',     result: 'Открыть проект (с клавиатуры)' },
   { action: '⭐ на карточке',                result: 'Избранное вкл/выкл' },
@@ -158,7 +143,7 @@ const ACTIONS: { action: string; result: string }[] = [
   { action: '«☀️/🌙» в шапке',               result: 'Переключить тёмную/светлую тему' },
 ]
 
-const NOTES: { title: string; body: string }[] = [
+export const NOTES: { title: string; body: string }[] = [
   {
     title: 'Условия перетаскивания',
     body: 'Drag-and-drop карточек работает только когда: вкладка «Все», сортировка «Свой порядок», нет текста в поиске и нет активных фильтров. Иначе порядок был бы неоднозначным.',
@@ -176,174 +161,3 @@ const NOTES: { title: string; body: string }[] = [
     body: 'Удаление проекта стирает также все черновики его сценариев. Действие нельзя отменить — поэтому всегда спрашивает подтверждение. Если проект нужно просто убрать с глаз — используйте архив.',
   },
 ]
-
-/* ─── Компонент ─── */
-
-export default function HomeHelpModal({ isDark, onClose }: HomeHelpModalProps) {
-  const card = (c: HelpColors, title: React.ReactNode, body: string, tag?: string, key?: React.Key) => (
-    <div
-      key={key}
-      style={{
-        background: c.bgSecondary,
-        borderRadius: 10,
-        border: `1px solid ${c.border}`,
-        padding: '13px 16px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        {tag && (
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.25)', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap' }}>{tag}</span>
-        )}
-        <span style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary }}>{title}</span>
-      </div>
-      <div style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65 }}>{body}</div>
-    </div>
-  )
-
-  const groupLabel = (c: HelpColors, text: string) => (
-    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: c.textMuted, marginTop: 14, marginBottom: 10 }}>{text}</div>
-  )
-
-  const renderTab = (tabId: string, c: HelpColors, q: string) => {
-    const fq = <T,>(arr: T[], texts: (item: T) => (string | undefined)[]) => filterByQuery(arr, q, texts)
-    const byText = <T extends { title?: string; name?: string; body?: string; desc?: string; details?: string[] }>(items: T[]): T[] =>
-      fq(items, (i) => [i.title, i.name, i.body, i.desc, ...(i.details || [])])
-    /* ─── Обзор ─── */
-    if (tabId === 'overview') {
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {byText(OVERVIEW).map((item, i) => card(c, item.title, item.body, undefined, i))}
-        </div>
-      )
-    }
-
-    /* ─── Вкладки ─── */
-    if (tabId === 'tabs') {
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {byText(TABS_INFO).map((tab, i) => (
-            <div
-              key={i}
-              style={{
-                background: c.bgSecondary,
-                borderRadius: 10,
-                border: `1px solid ${c.border}`,
-                padding: '13px 16px',
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary, marginBottom: 4 }}>{tab.name}</div>
-              <div style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65, marginBottom: 8 }}>{tab.desc}</div>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {tab.details.map((d, di) => (
-                  <li key={di} style={{ fontSize: 12, color: c.textMuted, lineHeight: 1.7 }}>{d}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )
-    }
-
-    /* ─── Поиск и фильтры ─── */
-    if (tabId === 'filters') {
-      return (
-        <div>
-          {groupLabel(c, 'Поиск')}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {byText(SEARCH_INFO).map((item, i) => card(c, item.title, item.body, undefined, i))}
-          </div>
-
-          {groupLabel(c, 'Сортировка — 5 вариантов')}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {byText(SORT_INFO).map((item, i) => card(c, item.name, item.body, undefined, i))}
-          </div>
-
-          {groupLabel(c, 'Фильтры')}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {byText(FILTERS_INFO).map((item, i) => card(c, item.name, item.body, undefined, i))}
-          </div>
-        </div>
-      )
-    }
-
-    /* ─── Карточка проекта ─── */
-    if (tabId === 'card') {
-      return (
-        <div>
-          {groupLabel(c, 'Элементы карточки')}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {byText(CARD_PARTS).map((item, i) => card(c, item.name, item.body, undefined, i))}
-          </div>
-
-          {groupLabel(c, 'Контекстное меню — правый клик')}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {byText(MENU_INFO).map((item, i) => card(c, item.name, item.body, undefined, i))}
-          </div>
-        </div>
-      )
-    }
-
-    /* ─── Все действия ─── */
-    return (
-      <div>
-        <div
-          style={{
-            background: c.bgSecondary,
-            borderRadius: 10,
-            border: `1px solid ${c.border}`,
-            overflow: 'hidden',
-          }}
-        >
-          {filterByQuery(ACTIONS, q, (i2) => [i2.action, i2.result]).map((item, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 16,
-                padding: '10px 14px',
-                borderBottom: i < ACTIONS.length - 1 ? `1px solid ${c.border}` : 'none',
-              }}
-            >
-              <span style={{ fontSize: 13, color: c.textPrimary }}>{item.action}</span>
-              <span style={{ fontSize: 12, color: c.textMuted, textAlign: 'right' }}>{item.result}</span>
-            </div>
-          ))}
-        </div>
-
-        {groupLabel(c, 'Важно знать')}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {byText(NOTES).map((item, i) => card(c, item.title, item.body, undefined, i))}
-          {card(c, 'Клавиатура', 'Карточку можно открыть клавишами Enter или Space, когда она в фокусе — перемещайтесь по карточкам клавишей Tab.', undefined, 'kbd')}
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <span style={{ fontSize: 12, color: c.textMuted }}>
-            Подсказка: <KeyBadge k="Escape" /> закрывает любое всплывающее окно на этой странице.
-          </span>
-        </div>
-      </div>
-    )
-  }
-
-  const countMatches = (tabId: string, q: string): number => {
-    const f = <T extends { title?: string; name?: string; body?: string; desc?: string; details?: string[] }>(items: T[]) =>
-      filterByQuery(items, q, (i) => [i.title, i.name, i.body, i.desc, ...(i.details || [])]).length
-    if (tabId === 'overview') return f(OVERVIEW)
-    if (tabId === 'tabs') return f(TABS_INFO)
-    if (tabId === 'filters') return f(SEARCH_INFO) + f(SORT_INFO) + f(FILTERS_INFO)
-    if (tabId === 'card') return f(CARD_PARTS) + f(MENU_INFO)
-    return f(ACTIONS.map(a => ({ name: a.action, body: a.result }))) + f(NOTES)
-  }
-
-  return (
-    <HelpModalBase
-      isDark={isDark}
-      title="Помощь — Главная страница"
-      tabs={TABS}
-      renderTab={renderTab}
-      countMatches={countMatches}
-      onClose={onClose}
-    />
-  )
-}

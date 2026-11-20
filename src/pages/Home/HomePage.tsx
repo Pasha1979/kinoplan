@@ -14,7 +14,7 @@ import FilterDropdown from './FilterDropdown'
 import SortableCard from './SortableCard'
 import ContextMenu from './ContextMenu'
 import TagEditor from './TagEditor'
-import HomeHelpModal from './HomeHelpModal'
+import HelpModal from '../../components/HelpModal'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../types/project'
 
@@ -779,7 +779,8 @@ export default function HomePage() {
 
       {/* Помощь по странице */}
       {showHelp && (
-        <HomeHelpModal
+        <HelpModal
+          pageId="home"
           isDark={theme === 'dark'}
           onClose={() => setShowHelp(false)}
         />
