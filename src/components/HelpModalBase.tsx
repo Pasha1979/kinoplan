@@ -95,11 +95,16 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
     return () => document.removeEventListener('keydown', onKey, true)
   }, [onClose])
 
-  // Автопереключение: на активной вкладке 0 совпадений, а на других есть → туда
+  // Автопереключение: на активной вкладке 0 совпадений, а на других есть → туда.
+  // Только при смене запроса — ручной клик по вкладке не перебиваем.
+  const lastAutoQueryRef = useRef('')
   useEffect(() => {
-    if (!countMatches || !query.trim()) return
-    if (countMatches(activeTab, query) > 0) return
-    const first = tabs.find((t) => countMatches(t.id, query) > 0)
+    if (!countMatches) return
+    const q = query.trim()
+    if (q === lastAutoQueryRef.current) return
+    lastAutoQueryRef.current = q
+    if (!q || countMatches(activeTab, q) > 0) return
+    const first = tabs.find((t) => countMatches(t.id, q) > 0)
     if (first) setActiveTab(first.id)
   }, [query, activeTab, tabs, countMatches])
 
@@ -141,6 +146,7 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
             padding: '16px 20px 0',
             borderBottom: `1px solid ${border}`,
             paddingBottom: 0,
+            flexShrink: 0,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 0 }}>
@@ -190,7 +196,7 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
         </div>
 
         {/* Табы — скроллятся по горизонтали на узких экранах */}
-        <div style={{ display: 'flex', gap: 2, padding: '0 20px', borderBottom: `1px solid ${border}`, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 2, padding: '0 20px', borderBottom: `1px solid ${border}`, overflowX: 'auto', flexShrink: 0 }}>
           {tabs.map(tab => {
             const hits = query.trim() && countMatches ? countMatches(tab.id, query) : 0
             return (
@@ -228,12 +234,12 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
         </div>
 
         {/* Контент */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px', minHeight: 0 }}>
           {renderTab(activeTab, { bgSecondary, border, textPrimary, textMuted }, query)}
         </div>
 
         {/* Футер */}
-        <div style={{ padding: '8px 20px', borderTop: `1px solid ${border}`, textAlign: 'right' }}>
+        <div style={{ padding: '8px 20px', borderTop: `1px solid ${border}`, textAlign: 'right', flexShrink: 0 }}>
           <span style={{ fontSize: 11, color: textMuted }}>
             KinoPlan v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}
           </span>
