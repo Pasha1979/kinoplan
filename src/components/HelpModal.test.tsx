@@ -66,4 +66,35 @@ describe('HelpModal — контекст страницы', () => {
     const hits = await screen.findAllByText(/закладк/i, {}, { timeout: 2000 })
     expect(hits.length).toBeGreaterThan(0)
   })
+
+  it('запоминает последнюю вкладку и прокрутку при переоткрытии', () => {
+    const { unmount } = render(<HelpModal isDark onClose={vi.fn()} pageId="text" />)
+    const dialog = screen.getByRole('dialog')
+    const scrollEl = dialog.querySelector<HTMLElement>('[style*="overflow-y"]')!
+    fireEvent.click(screen.getByText('Возможности'))
+    scrollEl.scrollTop = 120
+    fireEvent.scroll(scrollEl)
+    unmount()
+
+    render(<HelpModal isDark onClose={vi.fn()} pageId="text" />)
+    // вкладка восстановлена — «Типы блоков» рендерится только на «Возможностях»
+    expect(screen.getByText('Типы блоков')).toBeTruthy()
+    expect(screen.getByRole('dialog').querySelector<HTMLElement>('[style*="overflow-y"]')!.scrollTop).toBe(120)
+  })
+
+  it('ручной клик по вкладке без совпадений не выдёргивается автопереключением', async () => {
+    render(<HelpModal isDark onClose={vi.fn()} pageId="text" />)
+    fireEvent.change(screen.getByPlaceholderText('Поиск…'), { target: { value: 'закладк' } })
+    await screen.findAllByText(/закладк/i)
+    // уходим на вкладку с нулём совпадений — нас не должно вернуть
+    fireEvent.click(screen.getByText('Обзор'))
+    expect(screen.queryByText(/закладк/i)).toBeNull()
+  })
+
+  it('deep-link: якорь открывает вкладку с элементом и ставит data-help-anchor', () => {
+    render(<HelpModal isDark onClose={vi.fn()} pageId="text" anchor="smarttype-accept" />)
+    const el = document.querySelector('[data-help-anchor="smarttype-accept"]')
+    expect(el).toBeTruthy()
+    expect(el!.textContent).toMatch(/Enter или Tab/)
+  })
 })

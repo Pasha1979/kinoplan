@@ -41,6 +41,8 @@ interface UiStore {
   lastScriptTabByProject: Record<string, string>
   /** вкладка, с которой открыть ScriptPage при следующем переходе */
   pendingScriptTab: string | null
+  /** последняя вкладка и позиция прокрутки справки на каждой странице */
+  helpMemory: Record<string, { tab: string; scroll: number }>
   toggleTheme: () => void
   toggleSidebar: () => void
   toggleA4Mode: () => void
@@ -60,6 +62,7 @@ interface UiStore {
   setBookmarkColor: (c: string) => void
   setLastScriptTab: (projectId: string, tab: string) => void
   setPendingScriptTab: (tab: string | null) => void
+  setHelpMemory: (pageId: string, tab: string, scroll: number) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -82,6 +85,7 @@ export const useUiStore = create<UiStore>()(
       bookmarkColor: '#ef4444',
       lastScriptTabByProject: {},
       pendingScriptTab: null,
+      helpMemory: {},
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -138,6 +142,11 @@ export const useUiStore = create<UiStore>()(
         })),
 
       setPendingScriptTab: (tab) => set({ pendingScriptTab: tab }),
+
+      setHelpMemory: (pageId, tab, scroll) =>
+        set((state) => ({
+          helpMemory: { ...state.helpMemory, [pageId]: { tab, scroll } },
+        })),
     }),
     { name: 'kinoplan-ui', storage: createJSONStorage(() => pouchStorage) }
   )

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
+import { useUiStore } from '../store/uiStore'
 
 export interface HelpTab {
   id: string
@@ -22,6 +23,10 @@ interface HelpModalBaseProps {
   renderTab: (tabId: string, colors: HelpColors, query: string) => React.ReactNode
   /** число совпадений поиска на вкладке — бейдж на табе + автопереключение */
   countMatches?: (tabId: string, query: string) => number
+  /** ключ памяти (pageId) — запоминаем последнюю вкладку и прокрутку */
+  memoryKey?: string
+  /** якорь deep-link: открыть на вкладке с этим элементом и прокрутить к нему */
+  anchor?: string
   onClose: () => void
 }
 
@@ -51,12 +56,50 @@ export function KeyBadge({ k }: { k: string }) {
 
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
-export default function HelpModalBase({ isDark, title = 'Помощь', tabs, defaultTab, renderTab, countMatches, onClose }: HelpModalBaseProps) {
-  const [activeTab, setActiveTab] = useState<string>(defaultTab ?? tabs[0]?.id ?? '')
+export default function HelpModalBase({ isDark, title = 'Помощь', tabs, defaultTab, renderTab, countMatches, memoryKey, anchor, onClose }: HelpModalBaseProps) {
+  // Память справки: последняя вкладка и прокрутка на этой странице.
+  // Deep-link (anchor) приоритетнее памяти.
+  const saved = !anchor && memoryKey ? useUiStore.getState().helpMemory[memoryKey] : undefined
+  const [activeTab, setActiveTab] = useState<string>(
+    saved?.tab && tabs.some(t => t.id === saved.tab) ? saved.tab : (defaultTab ?? tabs[0]?.id ?? ''))
   const [query, setQuery] = useState('')
   const dialogRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const restoreFocusRef = useRef<Element | null>(null)
+  const activeTabRef = useRef(activeTab)
+  activeTabRef.current = activeTab
+  const scrollRef = useRef(saved?.scroll ?? 0)
+
+  // Восстановление прокрутки при открытии
+  useEffect(() => {
+    if (scrollRef.current && contentRef.current) {
+      contentRef.current.scrollTop = scrollRef.current
+    }
+  }, [])
+
+  // Deep-link: прокрутка к якорю и короткая подсветка
+  useEffect(() => {
+    if (!anchor || !dialogRef.current) return
+    const raf = requestAnimationFrame(() => {
+      const el = dialogRef.current?.querySelector<HTMLElement>(`[data-help-anchor="${anchor}"]`)
+      if (!el) return
+      el.scrollIntoView({ block: 'center' })
+      const prev = el.style.outline
+      el.style.outline = '2px solid #818cf8'
+      el.style.borderRadius = (el.style.borderRadius || '10px')
+      setTimeout(() => { el.style.outline = prev }, 1600)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [anchor])
+
+  // Сохранение вкладки и прокрутки при закрытии
+  useEffect(() => {
+    if (!memoryKey) return
+    return () => {
+      useUiStore.getState().setHelpMemory(memoryKey, activeTabRef.current, scrollRef.current)
+    }
+  }, [memoryKey])
 
   // Начальный фокус → поле поиска; запоминаем триггер для возврата фокуса
   useEffect(() => {
@@ -202,7 +245,7 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { scrollRef.current = 0; setActiveTab(tab.id) }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -234,7 +277,10 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
         </div>
 
         {/* Контент */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px', minHeight: 0 }}>
+        <div
+          ref={contentRef}
+          onScroll={(e) => { scrollRef.current = e.currentTarget.scrollTop }}
+          style={{ flex: 1, overflowY: 'auto', padding: '20px 20px', minHeight: 0 }}>
           {renderTab(activeTab, { bgSecondary, border, textPrimary, textMuted }, query)}
         </div>
 
