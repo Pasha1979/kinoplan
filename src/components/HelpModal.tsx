@@ -11,6 +11,8 @@ interface HelpModalProps {
   onClose: () => void
   /** страница, по которой показываем справку */
   pageId: string
+  /** якорь deep-link (openHelp) — открыть на вкладке элемента и подсветить */
+  anchor?: string
 }
 
 const TAB_DEFS = [
@@ -22,7 +24,9 @@ const TAB_DEFS = [
 
 function ItemCard({ item, c }: { item: HelpItem; c: HelpColors }) {
   return (
-    <div style={{ background: c.bgSecondary, borderRadius: 10, border: `1px solid ${c.border}`, padding: '13px 16px' }}>
+    <div
+      data-help-anchor={item.anchor}
+      style={{ background: c.bgSecondary, borderRadius: 10, border: `1px solid ${c.border}`, padding: '13px 16px' }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary, marginBottom: 6 }}>{item.title}</div>
       <div style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65 }}>{item.body}</div>
       {item.details && item.details.length > 0 && (
@@ -82,6 +86,7 @@ function ActionGroupView({ g, c, q }: { g: HelpActionGroup; c: HelpColors; q: st
         {items.map((item, i) => (
           <div
             key={i}
+            data-help-anchor={item.anchor}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px',
               borderBottom: i < items.length - 1 ? `1px solid ${c.border}` : 'none',
@@ -137,11 +142,21 @@ function countIn(page: PageHelp, tabId: string, q: string): number {
   return 0
 }
 
-export default function HelpModal({ isDark, onClose, pageId }: HelpModalProps) {
+/** Вкладка, в которой лежит якорь — для deep-link */
+function tabOfAnchor(page: PageHelp, anchor: string): string | undefined {
+  if (page.overview.some((i) => i.anchor === anchor)) return 'overview'
+  if (page.actions.some((g) => g.items.some((i) => i.anchor === anchor))) return 'actions'
+  if (page.features.some((g) => g.items.some((i) => i.anchor === anchor))) return 'features'
+  if (page.notes.some((i) => i.anchor === anchor)) return 'notes'
+  return undefined
+}
+
+export default function HelpModal({ isDark, onClose, pageId, anchor }: HelpModalProps) {
   const page = getPageHelp(pageId)
   // Вкладка с пустой секцией скрывается; «Обзор» есть всегда
   const tabs = TAB_DEFS.filter((t) =>
     t.id === 'overview' ? page.overview.length > 0 : countIn(page, t.id, '') > 0)
+  const anchorTab = anchor ? tabOfAnchor(page, anchor) : undefined
 
   const renderTab = (tabId: string, c: HelpColors, q: string) => {
     if (tabId === 'actions') {
@@ -182,6 +197,9 @@ export default function HelpModal({ isDark, onClose, pageId }: HelpModalProps) {
       tabs={tabs}
       renderTab={renderTab}
       countMatches={(tabId, q) => countIn(page, tabId, q)}
+      memoryKey={page.pageId}
+      defaultTab={anchorTab}
+      anchor={anchorTab ? anchor : undefined}
       onClose={onClose}
     />
   )

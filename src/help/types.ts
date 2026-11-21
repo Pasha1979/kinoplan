@@ -9,6 +9,8 @@ export interface HelpItem {
   body: string
   /** сворачиваемые «Подробности» — список пунктов */
   details?: string[]
+  /** якорь для deep-link openHelp(pageId, anchor) */
+  anchor?: string
 }
 
 /** Одна строка вкладки «Клавиши и действия»: действие → результат */
@@ -21,6 +23,8 @@ export interface HelpAction {
   result?: string
   /** мелкая метка («вход», «выход»…) */
   note?: string
+  /** якорь для deep-link openHelp(pageId, anchor) */
+  anchor?: string
 }
 
 export interface HelpActionGroup {

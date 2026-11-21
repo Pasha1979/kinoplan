@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Settings, Film, Search, Upload, Star, ArrowUpDown, X, FolderOpen, Tag, Copy, Download, Archive, ArchiveRestore, Trash2, HelpCircle } from 'lucide-react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
@@ -15,6 +15,7 @@ import SortableCard from './SortableCard'
 import ContextMenu from './ContextMenu'
 import TagEditor from './TagEditor'
 import HelpModal from '../../components/HelpModal'
+import { useHelpRequest } from '../../help/openHelp'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../types/project'
 
@@ -56,6 +57,9 @@ export default function HomePage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [tagEditor, setTagEditor] = useState<{ x: number; y: number; project: Project } | null>(null)
   const [showHelp, setShowHelp] = useState(false)
+  const [helpRequest, setHelpRequest] = useState<{ pageId: string; anchor?: string } | null>(null)
+  // Deep-link: openHelp(pageId, anchor) из любого места приложения
+  useHelpRequest(useCallback((req) => { setHelpRequest(req); setShowHelp(true) }, []))
   const [cardWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem('kinoplan_card_width'))
     return saved >= 180 && saved <= 640 ? saved : 403 // дефолт выбран пользователем
@@ -780,9 +784,10 @@ export default function HomePage() {
       {/* Помощь по странице */}
       {showHelp && (
         <HelpModal
-          pageId="home"
+          pageId={helpRequest?.pageId ?? 'home'}
+          anchor={helpRequest?.anchor}
           isDark={theme === 'dark'}
-          onClose={() => setShowHelp(false)}
+          onClose={() => { setShowHelp(false); setHelpRequest(null) }}
         />
       )}
 

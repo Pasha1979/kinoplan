@@ -35,6 +35,7 @@ import type { Editor } from '@tiptap/react'
 import SearchBar from '../../components/SearchBar'
 import { useScriptSearch } from '../../hooks/useScriptSearch'
 import HelpModal from '../../components/HelpModal'
+import { useHelpRequest } from '../../help/openHelp'
 import FocusModeOverlay from '../../components/FocusModeOverlay'
 import { useFocusMode } from '../../hooks/useFocusMode'
 import { useSplitScreen } from '../../hooks/useSplitScreen'
@@ -155,6 +156,9 @@ export default function ScriptPage() {
     return () => { editorInstance.off('selectionUpdate', update); editorInstance.off('update', update) }
   }, [editorInstance])
   const [showHelpModal, setShowHelpModal] = useState(false)
+  const [helpRequest, setHelpRequest] = useState<{ pageId: string; anchor?: string } | null>(null)
+  // Deep-link: openHelp(pageId, anchor) из любого места приложения
+  useHelpRequest(useCallback((req) => { setHelpRequest(req); setShowHelpModal(true) }, []))
   const [showAutoFormatModal, setShowAutoFormatModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [formatRawText, setFormatRawText] = useState('')
@@ -1485,9 +1489,10 @@ export default function ScriptPage() {
       {/* Модальное окно помощи */}
       {showHelpModal && (
         <HelpModal
-          pageId={activeTab}
+          pageId={helpRequest?.pageId ?? activeTab}
+          anchor={helpRequest?.anchor}
           isDark={isDark}
-          onClose={() => setShowHelpModal(false)}
+          onClose={() => { setShowHelpModal(false); setHelpRequest(null) }}
         />
       )}
 

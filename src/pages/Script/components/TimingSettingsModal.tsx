@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { openHelp } from '../../../help/openHelp'
 import {
   X,
   Settings,
@@ -258,6 +259,7 @@ export default function TimingSettingsModal({
               <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: textPrimary }}>
                 Хронометраж
               </span>
+              <button onClick={() => openHelp('text', 'timing')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: accentLight, fontSize: 11, marginLeft: 'auto' }}>Подробнее</button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {timingOptions.map((option) => {
@@ -460,6 +462,8 @@ export default function TimingSettingsModal({
                   <div className="text-sm font-semibold" style={{ color: textPrimary }}>Каркас сцен — синопсис</div>
                   <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
                     {outlineSynopsis ? 'По умолчанию «Шапки + синопсис»' : 'По умолчанию только шапки'}
+                    {' · '}
+                    <button onClick={() => openHelp('text', 'outline')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: accentLight, fontSize: 11 }}>Подробнее</button>
                   </div>
                 </div>
               </div>
@@ -597,6 +601,8 @@ export default function TimingSettingsModal({
                   <div className="text-sm font-semibold" style={{ color: textPrimary }}>Принимать подсказку</div>
                   <div className="text-[11px] mt-0.5" style={{ color: textSecondary }}>
                     Какой клавишей выбирать вариант SmartType
+                    {' · '}
+                    <button onClick={() => openHelp('text', 'smarttype-accept')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: accentLight, fontSize: 11 }}>Подробнее</button>
                   </div>
                 </div>
               </div>
