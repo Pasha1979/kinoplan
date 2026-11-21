@@ -45,14 +45,18 @@ describe('HelpModal — механика', () => {
 })
 
 describe('HelpModal — контекст страницы', () => {
-  it('на «Карточках» нет вкладки «Клавиши и действия» и клавиш редактора', () => {
+  it('на «Карточках» есть свои действия, но нет клавиш редактора', () => {
     render(<HelpModal isDark onClose={vi.fn()} pageId="cards" />)
     expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('Помощь · Карточки')
-    expect(screen.queryByText('Клавиши и действия')).toBeNull()
+    // «Клавиши и действия» есть — действия доски
+    fireEvent.click(screen.getByText('Клавиши и действия'))
+    expect(screen.getByText(/Мультивыбор карточек/)).toBeTruthy()
+    expect(screen.getByText(/Зум доски/)).toBeTruthy()
     // а контент карточек — есть (на вкладке «Возможности»)
     fireEvent.click(screen.getByText('Возможности'))
     expect(screen.getByText(/Папки-группы/)).toBeTruthy()
     expect(screen.queryByText(/Multi-cursor/)).toBeNull()
+    expect(screen.queryByText('Ctrl+F')).toBeNull()
   })
 
   it('на «Тексте» вкладка «Клавиши и действия» есть', () => {
