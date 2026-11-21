@@ -36,6 +36,7 @@ import SearchBar from '../../components/SearchBar'
 import { useScriptSearch } from '../../hooks/useScriptSearch'
 import HelpModal from '../../components/HelpModal'
 import { useHelpRequest } from '../../help/openHelp'
+import { runHotkeyDispatch } from '../../hotkeys/registry'
 import FocusModeOverlay from '../../components/FocusModeOverlay'
 import { useFocusMode } from '../../hooks/useFocusMode'
 import { useSplitScreen } from '../../hooks/useSplitScreen'
@@ -782,35 +783,16 @@ export default function ScriptPage() {
     void flushWrites('kinoplan-scripts')
   }, [currentScript?.id, currentScript?.dismissedIssues, updateScript])
 
-  // Ctrl+S / Ctrl+F / Ctrl+H / Escape(Focus) — глобальные горячие клавиши
+  // Глобальные горячие клавиши — диспетчер по реестру (src/hotkeys/registry.ts)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
-        e.preventDefault()
-        handleSave()
-      }
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyF') {
-        e.preventDefault()
-        search.open(false)
-      }
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyH') {
-        e.preventDefault()
-        search.open(true)
-      }
-      // F1 — помощь по текущей вкладке (работает и на пустом экране)
-      if (e.key === 'F1') {
-        e.preventDefault()
-        setShowHelpModal(true)
-      }
-      // Escape — выход из Focus Mode (только если поиск закрыт)
-      if (e.key === 'Escape' && focusMode.isFocused && !search.isOpen) {
-        focusMode.exit()
-      }
-      // Escape — выход из Dialogue Mode (если поиск закрыт и нет фокус-режима)
-      if (e.key === 'Escape' && dialogueMode.isActive && !search.isOpen && !focusMode.isFocused) {
-        dialogueMode.exit()
-      }
-    }
+    const handleKeyDown = (e: KeyboardEvent) => runHotkeyDispatch(e, {
+      'script.save':          { run: handleSave },
+      'script.search':        { run: () => search.open(false) },
+      'script.replace':       { run: () => search.open(true) },
+      'script.help':          { run: () => setShowHelpModal(true) },
+      'script.exit-focus':    { when: () => focusMode.isFocused && !search.isOpen, run: focusMode.exit },
+      'script.exit-dialogue': { when: () => dialogueMode.isActive && !search.isOpen && !focusMode.isFocused, run: dialogueMode.exit },
+    })
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleSave, search.open, search.isOpen, focusMode.isFocused, focusMode.exit, dialogueMode.isActive, dialogueMode.exit])

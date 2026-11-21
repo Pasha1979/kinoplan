@@ -1,4 +1,5 @@
 import type { PageHelp } from './types'
+import { helpActionGroups } from '../hotkeys/registry'
 import {
   OVERVIEW, TABS_INFO, SEARCH_INFO, SORT_INFO, FILTERS_INFO,
   CARD_PARTS, MENU_INFO, ACTIONS, NOTES,
@@ -12,6 +13,8 @@ export const homeHelp: PageHelp = {
       group: 'Все действия',
       items: ACTIONS.map((a) => ({ label: a.action, result: a.result })),
     },
+    // реестровые клавиши (F1) — из единого реестра хоткеев
+    ...helpActionGroups('home'),
   ],
   features: [
     {

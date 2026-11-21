@@ -16,6 +16,7 @@ import ContextMenu from './ContextMenu'
 import TagEditor from './TagEditor'
 import HelpModal from '../../components/HelpModal'
 import { useHelpRequest } from '../../help/openHelp'
+import { runHotkeyDispatch } from '../../hotkeys/registry'
 import CreateProjectModal from './CreateProjectModal'
 import type { Project } from '../../types/project'
 
@@ -301,11 +302,11 @@ export default function HomePage() {
     projectService.getProjects()
   }, [])
 
-  // F1 — справка по главной странице
+  // F1 — справка по главной странице (диспетчер по реестру)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'F1') { e.preventDefault(); setShowHelp(true) }
-    }
+    const onKey = (e: KeyboardEvent) => runHotkeyDispatch(e, {
+      'home.help': { run: () => setShowHelp(true) },
+    })
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])

@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-20 22:42 · `main` · d895e96 help: фикс исчезающего меню вкладок + авто
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-21 13:04 · `main` · 711faf3 help: deep-links openHelp(page, anchor) + 
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

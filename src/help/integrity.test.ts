@@ -57,6 +57,19 @@ describe('help registry — целостность контента', () => {
     }
   })
 
+  it('якоря deep-link уникальны внутри каждой страницы', () => {
+    for (const id of PAGE_IDS) {
+      const p = HELP_PAGES[id]
+      const anchors = [
+        ...p.overview.map((i) => i.anchor),
+        ...p.actions.flatMap((g) => g.items.map((i) => i.anchor)),
+        ...p.features.flatMap((g) => g.items.map((i) => i.anchor)),
+        ...p.notes.map((i) => i.anchor),
+      ].filter(Boolean)
+      expect(new Set(anchors).size, `«${id}» — дубли якорей`).toBe(anchors.length)
+    }
+  })
+
   it('Разбивка — минимум 3 подсказки и таблица действий', () => {
     const tips = HELP_PAGES.breakdown.features.reduce((n, g) => n + g.items.length, 0)
     expect(tips).toBeGreaterThanOrEqual(3)
