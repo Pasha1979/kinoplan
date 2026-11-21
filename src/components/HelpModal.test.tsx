@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import HelpModal from './HelpModal'
 import { FOCUSABLE } from './HelpModalBase'
+import { useUiStore } from '../store/uiStore'
 
 beforeAll(() => {
   // jsdom: offsetParent всегда null — фокус-трап фильтрует по видимости, подменяем
@@ -101,6 +102,24 @@ describe('HelpModal — контекст страницы', () => {
     const el = document.querySelector('[data-help-anchor="smarttype-accept"]')
     expect(el).toBeTruthy()
     expect(el!.textContent).toMatch(/Enter или Tab/)
+  })
+
+  it('смена anchor при открытой модалке переключает вкладку и скроллит к якорю', async () => {
+    useUiStore.setState({ helpMemory: {} })
+    const scrollSpy = vi.fn()
+    const orig = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = scrollSpy
+    try {
+      const { rerender } = render(<HelpModal isDark onClose={vi.fn()} pageId="text" />)
+      // модалка открыта на «Обзор» — якоря на ней нет
+      expect(document.querySelector('[data-help-anchor="timing"]')).toBeNull()
+      rerender(<HelpModal isDark onClose={vi.fn()} pageId="text" anchor="timing" />)
+      // вкладка переключилась на «Возможности» — элемент якоря отрендерился
+      expect(await screen.findByText(/Как рассчитывается хронометраж/)).toBeTruthy()
+      await waitFor(() => expect(scrollSpy).toHaveBeenCalled())
+    } finally {
+      Element.prototype.scrollIntoView = orig
+    }
   })
 
   it('«Подробности» (summary) доступны с клавиатуры — входят в FOCUSABLE', () => {

@@ -105,6 +105,10 @@ export const HOTKEYS: HotkeyEntry[] = [
   { page: 'text', group: 'Focus Mode — полноэкранный режим', groupColor: '#10b981', keys: ['↑ мышь'], label: 'Навести мышь к верху экрана — появится плашка выхода' },
 
   // ─── Текст: режимы диалогов и POV ───
+  { page: 'text', group: 'Режимы диалогов и POV', keys: ['💬 в шапке'],
+    label: 'Выбор персонажа — подсветка его диалогов (Dialogue Mode)' },
+  { page: 'text', group: 'Режимы диалогов и POV', keys: ['👁 в списке'],
+    label: 'POV — показать только сцены персонажа' },
   { id: 'script.exit-dialogue', page: 'text', group: 'Режимы диалогов и POV',
     keys: ['Escape'], label: 'Выйти из режима диалогов/POV (если поиск закрыт и нет Focus Mode)',
     match: key('Escape'), preventDefault: false },
@@ -201,5 +205,6 @@ export function runHotkeyDispatch(e: KeyboardEvent, handlers: Record<string, Hot
     if (handler.when && !handler.when()) continue
     if (h.preventDefault !== false) e.preventDefault()
     handler.run()
+    return
   }
 }

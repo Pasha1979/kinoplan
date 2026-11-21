@@ -78,6 +78,11 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
     }
   }, [])
 
+  // Смена deep-link при уже открытой модалке — переход на вкладку нового якоря
+  useEffect(() => {
+    if (defaultTab) setActiveTab(defaultTab)
+  }, [defaultTab])
+
   // Deep-link: прокрутка к якорю и короткая подсветка
   useEffect(() => {
     if (!anchor || !dialogRef.current) return

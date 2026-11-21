@@ -70,6 +70,17 @@ describe('runHotkeyDispatch', () => {
     expect(dialogue).not.toHaveBeenCalled()
   })
 
+  it('первый совпавший обработчик — остальные не вызываются', () => {
+    const focus = vi.fn()
+    const dialogue = vi.fn()
+    runHotkeyDispatch(kev({ key: 'Escape' }), {
+      'script.exit-focus': { when: () => true, run: focus },
+      'script.exit-dialogue': { when: () => true, run: dialogue },
+    })
+    expect(focus).toHaveBeenCalledTimes(1)
+    expect(dialogue).not.toHaveBeenCalled()
+  })
+
   it('без обработчика id — тихо пропускает', () => {
     expect(() => runHotkeyDispatch(kev({ code: 'KeyF', ctrlKey: true }), {})).not.toThrow()
   })
