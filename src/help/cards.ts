@@ -1,4 +1,5 @@
 import type { PageHelp } from './types'
+import { helpActionGroups } from '../hotkeys/registry'
 import { CARDS_FEATURES } from './cards.tips'
 
 export const cardsHelp: PageHelp = {
@@ -13,7 +14,7 @@ export const cardsHelp: PageHelp = {
       body: 'Слева — сайдбар «Папки» сюжетных линий и навигатор. В центре — доска карточек, сгруппированная по сериям. Сверху — тулбар: поиск, фильтры, «Готовность: N%», кнопки «Связи», зум и «Отменить».',
     },
   ],
-  actions: [],
+  actions: helpActionGroups('cards'),
   features: CARDS_FEATURES,
   notes: [
     {

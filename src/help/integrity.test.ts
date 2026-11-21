@@ -70,6 +70,13 @@ describe('help registry — целостность контента', () => {
     }
   })
 
+  it('«Клавиши и действия» непусты у cards/development/statistics/title', () => {
+    for (const id of ['cards', 'development', 'statistics', 'title'] as PageId[]) {
+      const rows = HELP_PAGES[id].actions.reduce((n, g) => n + g.items.length, 0)
+      expect(rows, `«${id}» — пустая таблица действий`).toBeGreaterThan(0)
+    }
+  })
+
   it('Разбивка — минимум 3 подсказки и таблица действий', () => {
     const tips = HELP_PAGES.breakdown.features.reduce((n, g) => n + g.items.length, 0)
     expect(tips).toBeGreaterThanOrEqual(3)

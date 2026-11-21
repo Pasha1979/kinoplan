@@ -73,12 +73,13 @@ test.describe('контекстная справка', () => {
     await page.keyboard.press('F1')
     await expect(dialog(page)).toBeVisible()
     await expect(dialog(page)).toHaveAttribute('aria-label', 'Помощь · Карточки')
-    // вкладки «Клавиши и действия» нет (пустая секция скрыта), клавиш редактора нет
-    await expect(dialog(page).getByText('Клавиши и действия')).toHaveCount(0)
+    // «Клавиши и действия» есть — действия доски карточек
+    await dialog(page).getByText('Клавиши и действия').click()
+    await expect(dialog(page).getByText('Мультивыбор карточек')).toBeVisible()
+    await expect(dialog(page).getByText('Зум доски 35–180%')).toBeVisible()
+    // клавиш редактора нет
     await expect(dialog(page).getByText('Ctrl+F')).toHaveCount(0)
-    // контент карточек присутствует
-    await dialog(page).getByText('Возможности').click()
-    await expect(dialog(page).getByText('Папки-группы — сюжетные линии')).toBeVisible()
+    await expect(dialog(page).getByText(/Multi-cursor/)).toHaveCount(0)
     await page.keyboard.press('Escape')
   })
 

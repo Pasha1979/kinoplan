@@ -1,4 +1,5 @@
 import type { PageHelp } from './types'
+import { helpActionGroups } from '../hotkeys/registry'
 import { TITLE_FEATURES } from './title.tips'
 
 export const titleHelp: PageHelp = {
@@ -13,7 +14,7 @@ export const titleHelp: PageHelp = {
       body: 'Слева — поля ввода данных титула. Справа — живой предпросмотр листа, как он попадёт на печать. В шапке предпросмотра — переключатель формата и кнопка «Печатать».',
     },
   ],
-  actions: [],
+  actions: helpActionGroups('title'),
   features: TITLE_FEATURES,
   notes: [
     {

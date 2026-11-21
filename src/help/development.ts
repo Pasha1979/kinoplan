@@ -1,4 +1,5 @@
 import type { PageHelp } from './types'
+import { helpActionGroups } from '../hotkeys/registry'
 import { DEVELOPMENT_FEATURES } from './development.tips'
 
 export const developmentHelp: PageHelp = {
@@ -13,7 +14,7 @@ export const developmentHelp: PageHelp = {
       body: 'Сверху — под-вкладки «Персонажи / Локации / Синопсис / Посерийник» и тулбар (поиск, фильтры, сортировка, «Группы», «Импорт из текста», «Найти дубли»). Слева — сайдбар папок. В центре — сетка карточек. Правая панель валидации здесь скрыта.',
     },
   ],
-  actions: [],
+  actions: helpActionGroups('development'),
   features: DEVELOPMENT_FEATURES,
   notes: [
     {

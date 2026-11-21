@@ -1,4 +1,5 @@
 import type { PageHelp } from './types'
+import { helpActionGroups } from '../hotkeys/registry'
 import { STATISTICS_FEATURES } from './statistics.tips'
 
 export const statisticsHelp: PageHelp = {
@@ -13,7 +14,7 @@ export const statisticsHelp: PageHelp = {
       body: 'В шапке — пилюли фильтра по сериям («Все / С1 / С2…») — вся аналитика пересчитывается под выбор. Ниже блоки: метрики и готовность серий, хронометраж по сценам с маркерами актов, темп, тепловая карта и «Инсайты и алерты».',
     },
   ],
-  actions: [],
+  actions: helpActionGroups('statistics'),
   features: STATISTICS_FEATURES,
   notes: [
     {
