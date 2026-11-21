@@ -33,14 +33,6 @@ export interface HelpActionGroup {
   items: HelpAction[]
 }
 
-/** Группа подсказок вкладки «Возможности» */
-export interface HelpTip {
-  title: string
-  body: string
-  /** группа — блок данных страницы, которому принадлежит подсказка */
-  group: string
-}
-
 export interface HelpTipGroup {
   group: string
   color?: string

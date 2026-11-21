@@ -169,12 +169,12 @@ export default function HelpModal({ isDark, onClose, pageId, anchor }: HelpModal
     if (tabId === 'features') {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {page.blockTypes && (
+          {page.blockTypes && filterByQuery(page.blockTypes, q, (b) => [b.name, b.example, b.auto]).length > 0 && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: c.textMuted, marginTop: 6, marginBottom: 10 }}>
                 Типы блоков
               </div>
-              <BlockTypesTable types={page.blockTypes} c={c} isDark={isDark} />
+              <BlockTypesTable types={filterByQuery(page.blockTypes, q, (b) => [b.name, b.example, b.auto])} c={c} isDark={isDark} />
             </div>
           )}
           {page.features.map((g) => <FeatureGroupView key={g.group} g={g} c={c} q={q} />)}
