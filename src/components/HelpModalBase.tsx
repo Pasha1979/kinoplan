@@ -54,7 +54,7 @@ export function KeyBadge({ k }: { k: string }) {
   )
 }
 
-const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+export const FOCUSABLE = 'button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'
 
 export default function HelpModalBase({ isDark, title = 'Помощь', tabs, defaultTab, renderTab, countMatches, memoryKey, anchor, onClose }: HelpModalBaseProps) {
   // Память справки: последняя вкладка и прокрутка на этой странице.
@@ -150,6 +150,11 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
     const first = tabs.find((t) => countMatches(t.id, q) > 0)
     if (first) setActiveTab(first.id)
   }, [query, activeTab, tabs, countMatches])
+
+  // Ноль совпадений на всех вкладках — покажем пустое состояние вместо пустой области
+  const totalHits = query.trim() && countMatches
+    ? tabs.reduce((n, t) => n + countMatches(t.id, query), 0)
+    : null
 
   const bg         = isDark ? '#1e1e2e' : '#ffffff'
   const bgSecondary= isDark ? '#252535' : '#f8f9fc'
@@ -281,7 +286,11 @@ export default function HelpModalBase({ isDark, title = 'Помощь', tabs, de
           ref={contentRef}
           onScroll={(e) => { scrollRef.current = e.currentTarget.scrollTop }}
           style={{ flex: 1, overflowY: 'auto', padding: '20px 20px', minHeight: 0 }}>
-          {renderTab(activeTab, { bgSecondary, border, textPrimary, textMuted }, query)}
+          {totalHits === 0 ? (
+            <div style={{ color: textMuted, fontSize: 13, padding: '24px 4px', textAlign: 'center' }}>
+              Ничего не найдено по «{query}»
+            </div>
+          ) : renderTab(activeTab, { bgSecondary, border, textPrimary, textMuted }, query)}
         </div>
 
         {/* Футер */}

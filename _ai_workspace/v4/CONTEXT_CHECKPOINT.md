@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-21 13:04 · `main` · 711faf3 help: deep-links openHelp(page, anchor) + 
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-21 13:09 · `main` · dc676ba brain: T-226 выполнена — три идеи помощи р
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

@@ -952,13 +952,23 @@ export default function ScriptPage() {
 
   if (view === 'empty') {
     return (
-      <ScriptEmptyState
-        isDark={isDark}
-        projectName={project?.name}
-        colors={colors}
-        onImportClick={handleImportDocx}
-        onCreateClick={() => navigate(`/project/${project?.id}/script/create`)}
-      />
+      <>
+        <ScriptEmptyState
+          isDark={isDark}
+          projectName={project?.name}
+          colors={colors}
+          onImportClick={handleImportDocx}
+          onCreateClick={() => navigate(`/project/${project?.id}/script/create`)}
+        />
+        {showHelpModal && (
+          <HelpModal
+            pageId={helpRequest?.pageId ?? 'text'}
+            anchor={helpRequest?.anchor}
+            isDark={isDark}
+            onClose={() => { setShowHelpModal(false); setHelpRequest(null) }}
+          />
+        )}
+      </>
     )
   }
 

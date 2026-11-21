@@ -116,7 +116,7 @@ function ActionGroupView({ g, c, q }: { g: HelpActionGroup; c: HelpColors; q: st
 }
 
 function FeatureGroupView({ g, c, q }: { g: HelpTipGroup; c: HelpColors; q: string }) {
-  const items = filterByQuery(g.items, q, (i) => [i.title, i.body, g.group])
+  const items = filterByQuery(g.items, q, (i) => [i.title, i.body, g.group, ...(i.details ?? [])])
   if (!items.length) return null
   return (
     <div>
@@ -132,13 +132,13 @@ function FeatureGroupView({ g, c, q }: { g: HelpTipGroup; c: HelpColors; q: stri
 
 function countIn(page: PageHelp, tabId: string, q: string): number {
   const fq = <T,>(arr: T[], texts: (i: T) => (string | undefined)[]) => filterByQuery(arr, q, texts).length
-  if (tabId === 'overview') return fq(page.overview, (i) => [i.title, i.body])
+  if (tabId === 'overview') return fq(page.overview, (i) => [i.title, i.body, ...(i.details ?? [])])
   if (tabId === 'actions') return page.actions.reduce((n, g) => n + fq(g.items, (i) => [i.label, i.result, (i.keys || []).join(' '), i.note, g.group]), 0)
   if (tabId === 'features') {
-    return page.features.reduce((n, g) => n + fq(g.items, (i) => [i.title, i.body, g.group]), 0)
+    return page.features.reduce((n, g) => n + fq(g.items, (i) => [i.title, i.body, g.group, ...(i.details ?? [])]), 0)
       + fq(page.blockTypes || [], (b) => [b.name, b.example, b.auto])
   }
-  if (tabId === 'notes') return fq(page.notes, (i) => [i.title, i.body])
+  if (tabId === 'notes') return fq(page.notes, (i) => [i.title, i.body, ...(i.details ?? [])])
   return 0
 }
 
@@ -182,7 +182,7 @@ export default function HelpModal({ isDark, onClose, pageId, anchor }: HelpModal
       )
     }
     const items = tabId === 'notes' ? page.notes : page.overview
-    const visible = filterByQuery(items, q, (i) => [i.title, i.body])
+    const visible = filterByQuery(items, q, (i) => [i.title, i.body, ...(i.details ?? [])])
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {visible.map((item, i) => <ItemCard key={i} item={item} c={c} />)}

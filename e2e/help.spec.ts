@@ -45,6 +45,28 @@ test.describe('контекстная справка', () => {
     await expect(dialog(page)).toHaveCount(0)
   })
 
+  test('Сценарий: F1 на пустом экране открывает справку, Escape закрывает', async ({ page }) => {
+    // Проект без сценария — view='empty', раньше модалка не рендерилась
+    await page.goto('/')
+    const newBtn = page.getByText('Новый проект').or(page.getByText('Создать первый проект'))
+    await expect(newBtn.first()).toBeVisible()
+    await newBtn.first().click()
+    await page.getByPlaceholder(/Например/).fill(`E2E HelpEmpty ${Date.now()}`)
+    await page.getByRole('button', { name: 'Создать проект' }).click()
+    await page.waitForURL(/\/project\//)
+    await page.waitForTimeout(600)
+    await page.getByText('Сценарий', { exact: false }).first().click()
+    await page.waitForURL(/\/script/)
+    // ждём маунт пустого состояния — иначе F1 уходит до регистрации обработчика
+    await page.getByRole('heading', { name: 'Добавьте сценарий' }).waitFor()
+
+    await page.keyboard.press('F1')
+    await expect(dialog(page)).toBeVisible()
+    await expect(dialog(page)).toHaveAttribute('aria-label', 'Помощь · Текст')
+    await page.keyboard.press('Escape')
+    await expect(dialog(page)).toHaveCount(0)
+  })
+
   test('Карточки: справка без клавиш редактора', async ({ page }) => {
     await createProjectAndOpenScript(page)
     await page.getByRole('button', { name: 'КАРТОЧКИ' }).click()

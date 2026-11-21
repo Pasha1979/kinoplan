@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import HelpModal from './HelpModal'
+import { FOCUSABLE } from './HelpModalBase'
 
 beforeAll(() => {
   // jsdom: offsetParent всегда null — фокус-трап фильтрует по видимости, подменяем
@@ -96,5 +97,29 @@ describe('HelpModal — контекст страницы', () => {
     const el = document.querySelector('[data-help-anchor="smarttype-accept"]')
     expect(el).toBeTruthy()
     expect(el!.textContent).toMatch(/Enter или Tab/)
+  })
+
+  it('«Подробности» (summary) доступны с клавиатуры — входят в FOCUSABLE', () => {
+    render(<HelpModal isDark onClose={vi.fn()} pageId="cards" />)
+    fireEvent.click(screen.getByText('Возможности'))
+    const dialog = screen.getByRole('dialog')
+    const summary = dialog.querySelector('summary')
+    expect(summary).toBeTruthy()
+    const focusables = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)]
+    expect(focusables).toContain(summary)
+  })
+
+  it('поиск находит текст «Подробностей»', async () => {
+    render(<HelpModal isDark onClose={vi.fn()} pageId="cards" />)
+    // «Пустая папка удаляется сама» — есть только в details подсказки «Папки-группы»
+    fireEvent.change(screen.getByPlaceholderText('Поиск…'), { target: { value: 'пустая папка' } })
+    const hits = await screen.findAllByText(/Папки-группы/, {}, { timeout: 2000 })
+    expect(hits.length).toBeGreaterThan(0)
+  })
+
+  it('ноль совпадений — «Ничего не найдено» вместо пустой области', () => {
+    render(<HelpModal isDark onClose={vi.fn()} pageId="text" />)
+    fireEvent.change(screen.getByPlaceholderText('Поиск…'), { target: { value: 'кщьфывцу' } })
+    expect(screen.getByText(/Ничего не найдено по «кщьфывцу»/)).toBeTruthy()
   })
 })
