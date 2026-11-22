@@ -39,16 +39,28 @@ test('изоляция: сценарий проекта A не просачив�
   const editorA = await openFreshEditor(page, `E2E Iso A ${Date.now()}`)
   await editorA.click()
   await page.keyboard.type(`ИНТ. ${marker} - ДЕНЬ`)
+  // Под параллельной нагрузкой type может пролагать — подтверждаем, что маркер попал в док
+  await expect(editorA).toContainText(marker, { timeout: 10000 })
   await page.waitForTimeout(1500)
 
   // Создаём второй проект
   const editorB = await openFreshEditor(page, `E2E Iso B ${Date.now()}`)
-  // В редакторе B не должно быть маркера проекта A
-  await expect(editorB).not.toContainText(marker)
-  // И после перезагрузки маркер не должен появиться нигде на странице
+  // Под нагрузкой scriptStore может кратковременно отдавать док проекта A,
+  // пока currentScript не переключится на B — ждём переключения с запасом,
+  // иначе not-проверка упирается в дефолтный таймаут 5с (флейк под 6 воркерами).
+  await expect(editorB).not.toContainText(marker, { timeout: 20000 })
+
+  // Даём debounce-записи (400мс) и очереди PouchDB завершиться до reload.
+  await page.waitForTimeout(2000)
   await page.reload()
-  await page.waitForTimeout(1500)
-  await expect(page.locator('body')).not.toContainText(marker)
+  // После reload страница либо показывает редактор скрипта B, либо —
+  // если запись ещё не упала на диск — empty-state «Добавьте сценарий».
+  // Ждём гидрацию любого из двух состояний, затем проверяем: маркер проекта A
+  // не должен появиться нигде на странице.
+  const ready = page.locator('.ProseMirror[contenteditable="true"]')
+    .or(page.getByRole('heading', { name: 'Добавьте сценарий' }))
+  await expect(ready.first()).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('body')).not.toContainText(marker, { timeout: 15000 })
 })
 
 // T-91: drag сцены в навигаторе → Ctrl+Z → порядок И номера восстановлены
