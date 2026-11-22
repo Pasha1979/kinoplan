@@ -154,7 +154,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
   // Обёртка блока — применяет позицию из макета; в editMode — drag/resize
-  const LayoutBox = ({ k, children }: { k: string; children: React.ReactNode }) => {
+  const LayoutBox = ({ k, className, children }: { k: string; className?: string; children: React.ReactNode }) => {
     const s = layout[k] ?? { dx: 0, dy: 0 }
     const boxRef = useRef<HTMLDivElement>(null)
     const dragRef = useRef<{ mode: 'move' | 'resize'; startX: number; startY: number; orig: LayoutEntry } | null>(null)
@@ -203,6 +203,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
       <div
         ref={boxRef}
         data-layout-box={k}
+        className={className ?? 'h-full'}
         style={{
           // Пиксельные смещения/размеры макета — только в режиме конструктора.
           // APPLIED_LAYOUT заточен под экран, на котором его собирали: на других
@@ -314,10 +315,10 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   }
 
   const Section = ({ title, icon, right, fill, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; fill?: boolean; children: React.ReactNode }) => (
-    <div className={`rounded-xl p-5 transition-all ${fill ? 'h-full flex flex-col' : ''}`}
+    <div className="rounded-xl p-4 transition-all h-full flex flex-col"
       style={{ background: cardBg, border: `1px solid ${border}` }}
       onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 shrink-0">
         <div style={{ color: textSecondary }}>{icon}</div>
         <span className="text-xs font-semibold flex-1" style={{ color: textPrimary }}>{title}</span>
         {right}
@@ -327,13 +328,15 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   )
 
   const MetricCard = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) => (
-    <div className="rounded-xl p-5 transition-all"
+    <div className="rounded-xl px-4 py-3 transition-all h-full flex items-center gap-3"
       style={{ background: cardBg, border: `1px solid ${border}` }}
       onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
-      <div className="flex items-center gap-2 mb-1.5" style={{ color: '#fb923c' }}>{icon}</div>
-      <div className="text-xl font-bold" style={{ color: textPrimary }}>{value}</div>
-      <div className="text-[11px]" style={{ color: textSecondary }}>{label}</div>
-      {sub && <div className="text-[10px] mt-0.5" style={{ color: textSecondary }}>{sub}</div>}
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ color: '#fb923c', background: 'rgba(249,115,22,0.12)' }}>{icon}</div>
+      <div className="min-w-0">
+        <div className="text-xl font-bold leading-tight" style={{ color: textPrimary }}>{value}</div>
+        <div className="text-[11px] leading-tight" style={{ color: textSecondary }}>{label}</div>
+        {sub && <div className="text-[10px] mt-0.5 truncate" style={{ color: textSecondary }}>{sub}</div>}
+      </div>
     </div>
   )
 
@@ -448,8 +451,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   const showLocTip = (el: HTMLElement, key: string) => showTip(el, key, locCharStats.get(key))
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
-      <div className="w-full space-y-8">
+    <div className="flex-1 overflow-y-auto p-4 md:p-5" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
+      <div className="w-full max-w-[1500px] mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold" style={{ color: textPrimary }}>Статистика сценария</h2>
@@ -515,38 +518,35 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
 
         <>
         {/* Карточки метрик */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <LayoutBox k="m-scenes"><MetricCard icon={<Film size={16} />} label="Сцен" value={empty ? '—' : stats.totalScenes} sub={empty ? 'сцен пока нет' : `${stats.locations.length} локаций`} /></LayoutBox>
           <LayoutBox k="m-pages"><MetricCard icon={<FileText size={16} />} label="Страниц" value={empty ? '—' : stats.totalPages.toFixed(1)} sub={empty ? 'появится со сценами' : `${stats.totalWords.toLocaleString('ru-RU')} слов`} /></LayoutBox>
           <LayoutBox k="m-time"><MetricCard icon={<Clock size={16} />} label="Хронометраж" value={empty ? '—' : fmtDuration(stats.totalDurationSec)} sub={empty ? 'появится со сценами' : `~${fmtDuration(stats.avgDurationSec)} на сцену`} /></LayoutBox>
           <LayoutBox k="m-chars"><MetricCard icon={<Users size={16} />} label="Персонажей" value={empty ? '—' : stats.totalCharacters} sub={empty ? 'появятся со сценами' : `${stats.speakingCharacters} с репликами`} /></LayoutBox>
-          {isSerial && (
-            <LayoutBox k="m-series">
-              <div className="rounded-xl p-5 transition-all h-full flex flex-col"
-                style={{ background: cardBg, border: `1px solid ${border}` }}
-                onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
-                <div className="flex items-center gap-2 mb-1.5" style={{ color: '#fb923c' }}><Film size={16} /></div>
-                <div className="text-[11px]" style={{ color: textSecondary }}>Готовность серий</div>
-                <div className="space-y-1 mt-2 flex-1 overflow-y-auto pr-1">
-                  {seriesReadiness.map((r) => (
-                    <div key={r.n} className="flex items-center gap-1.5" title={`Серия ${r.n}: ${fmtDuration(r.sec)}${episodeDuration ? ` из ${fmtDuration(episodeDuration * 60)}` : ' написано'}`}>
-                      <span className="w-5 text-[10px] shrink-0" style={{ color: textSecondary }}>С{r.n}</span>
-                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
-                        <div className="h-full rounded-full" style={{ width: `${r.pct ?? 0}%`, background: r.sec > 0 ? '#fb923c' : 'transparent' }} />
-                      </div>
-                      <span className="w-14 text-right text-[9px] whitespace-nowrap shrink-0" style={{ color: textPrimary }}>
-                        {fmtDuration(r.sec)}{episodeDuration ? `/${fmtDuration(episodeDuration * 60)}` : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </LayoutBox>
-          )}
         </div>
 
-        {/* Распределения */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {isSerial && (
+          <LayoutBox k="m-series">
+            <Section title="Готовность серий" icon={<Film size={14} />}>
+              <div className="grid gap-x-6 gap-y-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                {seriesReadiness.map((r) => (
+                  <div key={r.n} className="flex items-center gap-1.5" title={`Серия ${r.n}: ${fmtDuration(r.sec)}${episodeDuration ? ` из ${fmtDuration(episodeDuration * 60)}` : ' написано'}`}>
+                    <span className="w-6 text-[10px] shrink-0" style={{ color: textSecondary }}>С{r.n}</span>
+                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                      <div className="h-full rounded-full" style={{ width: `${r.pct ?? 0}%`, background: r.sec > 0 ? '#fb923c' : 'transparent' }} />
+                    </div>
+                    <span className="w-20 text-right text-[10px] whitespace-nowrap shrink-0" style={{ color: textPrimary }}>
+                      {fmtDuration(r.sec)}{episodeDuration ? `/${fmtDuration(episodeDuration * 60)}` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </LayoutBox>
+        )}
+
+        {/* Состав: ИНТ/ЭКСТ · время суток · диалог · дни */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <LayoutBox k="s-intext"><Section title="ИНТ / ЭКСТ" icon={<Film size={14} />}>
             {empty ? <Empty text="Здесь будет баланс интерьерных и натурных сцен" /> :
             <div className="flex items-center gap-4">
@@ -632,8 +632,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         </div>
 
         {/* Хронометраж по сценам + топ персонажей + локации */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <LayoutBox k="s-timings"><Section fill title="Хронометраж по сценам" icon={<Clock size={14} />}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr_1fr] gap-3">
+          <LayoutBox k="s-timings" className="h-[340px] lg:h-[400px]"><Section fill title="Хронометраж по сценам" icon={<Clock size={14} />}>
             {empty ? <Empty text="Здесь будет хронометраж каждой сцены с маркерами актов" /> :
             <div ref={timingsRef} className="space-y-1.5 h-full overflow-y-auto pr-1">
               {stats.sceneTimings.map((s, i) => (
@@ -679,7 +679,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>}
           </Section></LayoutBox>
 
-          <LayoutBox k="s-chars"><Section fill title="Топ персонажей" icon={<Users size={14} />} right={
+          <LayoutBox k="s-chars" className="h-[340px] lg:h-[400px]"><Section fill title="Топ персонажей" icon={<Users size={14} />} right={
             <div className="flex gap-0.5">
               {([['scenes', 'сцены'], ['duration', 'хроно']] as const).map(([v, l]) => (
                 <button
@@ -712,7 +712,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
             </div>}
           </Section></LayoutBox>
 
-          <LayoutBox k="s-locs"><Section fill title="Локации" icon={<MapPin size={14} />}>
+          <LayoutBox k="s-locs" className="h-[340px] lg:h-[400px]"><Section fill title="Локации" icon={<MapPin size={14} />}>
             {empty ? <Empty text="Здесь будут локации и подлокации с количеством сцен" /> :
             <div className="space-y-1.5 h-full overflow-y-auto pr-1">
               {stats.locations.map((l) => {
@@ -762,13 +762,13 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
 
         {/* Темп по сценам — доля диалога vs действия */}
         {(
-          <LayoutBox k="s-tempo"><Section fill title="Темп по сценам" icon={<MessageSquare size={14} />} right={
+          <LayoutBox k="s-tempo"><Section title="Темп по сценам" icon={<MessageSquare size={14} />} right={
             <span className="text-[9px]" style={{ color: textSecondary }}>
               <span style={{ color: '#f97316' }}>■</span> диалог&nbsp;&nbsp;<span style={{ color: '#818cf8' }}>■</span> действие
             </span>
           }>
             {tempoBySeries.size === 0 ? <Empty text="Здесь будет темп сцен — баланс диалога и действия" /> :
-            <div className="h-full overflow-y-auto overscroll-contain pr-1">
+            <div className="max-h-56 overflow-y-auto overscroll-contain pr-1">
               {[...tempoBySeries.entries()].map(([series, items]) => (
                 <div key={series}>
                   {tempoBySeries.size > 1 && (
@@ -802,9 +802,9 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
         )}
 
         {/* Тепловая карта персонажей — кто в каких сценах */}
-        <LayoutBox k="s-heatmap"><Section fill title="Активность персонажей по сценам" icon={<Users size={14} />}>
+        <LayoutBox k="s-heatmap"><Section title="Активность персонажей по сценам" icon={<Users size={14} />}>
           {empty ? <Empty text="Здесь будет тепловая карта персонажей по сценам — кто где появляется" /> : <>
-          <div className="overflow-auto pb-1" style={{ maxHeight: '100%' }}>
+          <div className="overflow-auto pb-1" style={{ maxHeight: 360 }}>
             <div className="inline-grid gap-x-[3px] gap-y-[3px]" style={{ gridTemplateColumns: `110px repeat(${filteredScenes.length}, minmax(14px, 1fr))` }}>
               {/* Шапка — номера сцен */}
               <div />
