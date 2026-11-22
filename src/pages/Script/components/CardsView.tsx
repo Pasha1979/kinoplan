@@ -6,6 +6,7 @@ import { filterByCardType, matchesCardQuery, buildAutoSynopsis, groupByEpisode, 
 import SceneDetailModal from './SceneDetailModal'
 import SceneStatusMenu, { TAG_COLORS } from './SceneStatusMenu'
 import { extractSceneHtml } from './sceneHtmlOps'
+import StoryDayBadge from '../../../components/StoryDayBadge'
 import { useUiStore } from '../../../store/uiStore'
 
 type SceneWithEp = Scene & { _episode?: number }
@@ -830,8 +831,9 @@ function CardsView({ isDark, scenes, blocks, isSerial, episodesCount = 8, onScen
                           <Clock size={10} /> {fmtDuration(dur)} · {sc.pages?.toFixed(1)} стр
                         </span>
                       </div>
-                      <div className="text-[11px] font-semibold mb-1 truncate" style={{ color: textPrimary }}>
-                        {sc.type}. {sc.location}{sc.sublocation ? `.${sc.sublocation}` : ''} — {sc.time}
+                      <div className="text-[11px] font-semibold mb-1 flex items-center gap-1.5 min-w-0" style={{ color: textPrimary }}>
+                        <span className="truncate">{sc.type}. {sc.location}{sc.sublocation ? `.${sc.sublocation}` : ''} — {sc.time}</span>
+                        <StoryDayBadge mode={sc.mode} storyDay={sc.storyDay} isDark={isDark} />
                       </div>
                       {synopsis && (
                         <div className="text-[10px] leading-snug mb-2" style={{

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
   MessageSquare, AlignLeft, Info, ChevronDown, ChevronRight,
-  Move, Scaling, Settings2, RotateCcw, Check,
+  Move, Scaling, Settings2, RotateCcw, Check, CalendarDays,
 } from 'lucide-react'
 import { useScriptStats, type ScriptStatsAlert } from '../../../hooks/useScriptStats'
 import { useScriptStore } from '../../../store/scriptStore'
@@ -583,6 +583,45 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
               <p className="text-[10px]" style={{ color: textSecondary }}>
                 Блоки персонажей и реплик vs блоки действия
               </p>
+            </div>}
+          </Section></LayoutBox>
+
+          <LayoutBox k="s-days"><Section title="Сценарные дни" icon={<CalendarDays size={14} />}>
+            {stats.storyDayCount === 0 && stats.specialDayScenes === 0 ? <Empty text="Здесь будет счёт сценарных дней и спец-маркеров" /> :
+            <div className="space-y-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold" style={{ color: textPrimary }}>{stats.storyDayCount}</span>
+                <span className="text-[11px]" style={{ color: textSecondary }}>
+                  {stats.storyDayCount === 1 ? 'сценарный день' : stats.storyDayCount < 5 ? 'сценарных дня' : 'сценарных дней'}
+                </span>
+              </div>
+              <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                {stats.storyDays.map((d) => (
+                  <div key={d.day} className="flex items-center gap-2 text-[11px]">
+                    <span className="w-8 shrink-0 font-medium" style={{ color: '#34d399' }}>Д{d.day}</span>
+                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+                      <div className="h-full rounded-full" style={{ width: `${(d.count / Math.max(1, ...stats.storyDays.map((x) => x.count))) * 100}%`, background: '#34d399' }} />
+                    </div>
+                    <span className="w-14 text-right shrink-0" style={{ color: textSecondary }}>
+                      {d.count} сц · {fmtDuration(d.durationSec)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {stats.specialDayScenes > 0 && (
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]" style={{ color: '#a78bfa' }}>
+                  {stats.flashbacks > 0 && <span>Флешбеков: {stats.flashbacks}</span>}
+                  {stats.flashforwards > 0 && <span>Флешфорвардов: {stats.flashforwards}</span>}
+                  {stats.specialDayScenes - stats.flashbacks - stats.flashforwards > 0 && (
+                    <span>Прочих спец: {stats.specialDayScenes - stats.flashbacks - stats.flashforwards}</span>
+                  )}
+                </div>
+              )}
+              {stats.unassignedDayScenes > 0 && (
+                <p className="text-[10px]" style={{ color: textSecondary }}>
+                  Без дня: {stats.unassignedDayScenes} {stats.unassignedDayScenes === 1 ? 'сцена' : 'сцен'}
+                </p>
+              )}
             </div>}
           </Section></LayoutBox>
         </div>

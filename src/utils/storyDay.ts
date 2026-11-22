@@ -276,3 +276,29 @@ export function fixTimeSlot(slot: string, p: TimeSlotParse, fix: SlotFix): strin
     }
   }
 }
+
+/** T-227: включены ли сценарные дни для проекта.
+ *  undefined → по умолчанию: serial/film — вкл, остальные — выкл. */
+export function storyDaysEnabled(
+  p: { type?: string; storyDays?: boolean } | null | undefined,
+): boolean {
+  if (p?.storyDays !== undefined) return p.storyDays
+  return p?.type === 'serial' || p?.type === 'film'
+}
+
+/** Подпись бейджа сценарного дня для навигатора/карточек/каркаса.
+ *  «Сырое» значение: ДЕНЬ 32, ДЕНЬ −3, ФЛЕШБЕК, ДЕНЬ Х. */
+export function storyDayBadgeLabel(
+  sc: { mode?: string; storyDay?: { raw: string } | null },
+): string | null {
+  const sd = sc.storyDay
+  if (!sd) return null
+  const mode = (sc.mode || '').trim().toUpperCase()
+  if (mode && sd.raw.toUpperCase() !== mode) {
+    // «ДЕНЬ 32» — режим + день; маркер без режима («ФЛЕШБЕК») — как есть
+    return /^(ФЛЕШБЕК|ФЛЕШФОРВАРД|ФБ|ФФ|FLASHBACK|FLASHFORWARD|FB|FF)$/i.test(sd.raw)
+      ? sd.raw.toUpperCase()
+      : `${mode} ${sd.raw}`
+  }
+  return /^[0-9+-]|^[хx]/i.test(sd.raw) ? `ДЕНЬ ${sd.raw}` : sd.raw.toUpperCase()
+}

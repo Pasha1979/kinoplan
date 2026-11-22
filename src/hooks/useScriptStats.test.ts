@@ -174,3 +174,35 @@ describe('темп по sceneId (T-103)', () => {
     expect(result.current.tempo[2].actionChars).toBe(4)
   })
 })
+
+describe('сценарные дни (T-227)', () => {
+  const scenes = [
+    sc({ id: 'd1a', number: '1-1', mode: 'ДЕНЬ', storyDay: { kind: 'normal', value: 1, raw: '1' }, duration: 60 }),
+    sc({ id: 'd1b', number: '1-2', mode: 'НОЧЬ', storyDay: { kind: 'normal', value: 1, raw: '1' }, duration: 30 }),
+    sc({ id: 'd2a', number: '1-3', mode: 'УТРО', storyDay: { kind: 'normal', value: 2, raw: '2' }, duration: 45 }),
+    sc({ id: 'fb', number: '1-4', mode: 'ДЕНЬ', storyDay: { kind: 'special', value: null, raw: 'ФЛЕШБЕК' } }),
+    sc({ id: 'ff', number: '1-5', mode: 'ДЕНЬ', storyDay: { kind: 'special', value: null, raw: 'ФФ' } }),
+    sc({ id: 'x', number: '1-6', mode: 'ДЕНЬ', storyDay: { kind: 'special', value: null, raw: 'Х' } }),
+    sc({ id: 'none', number: '1-7', mode: 'ДЕНЬ' }),
+    sc({ id: 'del', number: '1-8', mode: 'ДЕНЬ', storyDay: { kind: 'normal', value: 3, raw: '3' }, isOmitted: true }),
+  ]
+
+  it('обычные дни в счётчике, спец отдельно, УДАЛЕНА пропускается', () => {
+    const { result } = renderHook(() => useScriptStats(scenes, [], 0, false))
+    const st = result.current
+    expect(st.storyDayCount).toBe(2)
+    expect(st.storyDays.map((d) => [d.day, d.count])).toEqual([[1, 2], [2, 1]])
+    expect(st.flashbacks).toBe(1)
+    expect(st.flashforwards).toBe(1)
+    expect(st.specialDayScenes).toBe(3)   // ФБ + ФФ + Х
+    expect(st.unassignedDayScenes).toBe(1) // только сцена без дня
+    expect(st.storyDays.find((d) => d.day === 1)?.durationSec).toBe(90)
+  })
+
+  it('пустой набор — нули без падений', () => {
+    const { result } = renderHook(() => useScriptStats([], [], 0, false))
+    expect(result.current.storyDayCount).toBe(0)
+    expect(result.current.storyDays).toEqual([])
+    expect(result.current.specialDayScenes).toBe(0)
+  })
+})

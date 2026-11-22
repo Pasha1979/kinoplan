@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight, Download } from 'lucide-react'
+import { Sun, Moon, Bell, Lock, Globe, Database, Trash2, ChevronRight, Download, CalendarDays } from 'lucide-react'
 import { useUiStore } from '../../store/uiStore'
 import { useNormalizedProjectStore } from '../../store/useProjectStore'
+import { storyDaysEnabled } from '../../utils/storyDay'
 import { useToastStore } from '../../store/toastStore'
 import { projectService } from '../../services/projectService'
 import { browserFS } from '../../adapters/BrowserFS'
@@ -30,11 +31,12 @@ function ComingSoonRow({ icon, label, isDark }: { icon: React.ReactNode; label: 
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useUiStore()
-  const { currentProjectId, projects } = useNormalizedProjectStore()
+  const { currentProjectId, projects, updateProject } = useNormalizedProjectStore()
   const showToast = useToastStore((s) => s.showToast)
   const [isExporting, setIsExporting] = useState(false)
   const isDark = theme === 'dark'
   const currentProject = currentProjectId ? projects[currentProjectId] : null
+  const storyDaysOn = storyDaysEnabled(currentProject)
 
   // T-104: резервное копирование — реальный экспорт текущего проекта в JSON
   const handleBackup = async () => {
@@ -123,6 +125,43 @@ export default function SettingsPage() {
         >
           <ComingSoonRow icon={<Bell size={18} />} label="Push-уведомления" isDark={isDark} />
           <ComingSoonRow icon={<Bell size={18} />} label="Email-уведомления" isDark={isDark} />
+        </div>
+
+        {/* ─── Сценарий ─── */}
+        <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-1"
+          style={{ color: sectionLabel }}>Сценарий</p>
+
+        <div className="rounded-2xl overflow-hidden mb-6"
+          style={{ background: cardBg, border: `1px solid ${border}` }}
+        >
+          <div className="flex items-center justify-between px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span style={{ color: textSecondary }}><CalendarDays size={18} /></span>
+              <div>
+                <p className="text-sm font-medium" style={{ color: textPrimary }}>Сценарные дни</p>
+                <p className="text-xs mt-0.5" style={{ color: textSecondary }}>
+                  {currentProject
+                    ? (storyDaysOn
+                      ? 'Вкл — бейджи дней, подсказки и проверки в редакторе'
+                      : 'Выкл — дни не проверяются и не подсказываются')
+                    : 'Нет открытого проекта'}
+                </p>
+              </div>
+            </div>
+            <button
+              data-testid="story-days-toggle"
+              onClick={() => currentProject && updateProject(currentProject.id, { storyDays: !storyDaysOn })}
+              disabled={!currentProject}
+              className="relative w-11 h-6 rounded-full transition-colors disabled:opacity-40"
+              style={{ background: storyDaysOn ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db') }}
+              title={storyDaysOn ? 'Выключить сценарные дни' : 'Включить сценарные дни'}
+            >
+              <span
+                className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ left: storyDaysOn ? 22 : 2 }}
+              />
+            </button>
+          </div>
         </div>
 
         {/* ─── Данные ─── */}

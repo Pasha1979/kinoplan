@@ -12,6 +12,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { X, Clock, Bookmark } from 'lucide-react'
 import type { Scene } from '../types/scene'
 import { formatDuration } from '../utils/sceneTiming'
+import StoryDayBadge from './StoryDayBadge'
 import { SceneTextEditor } from '../pages/Script/components/SceneDetailModal'
 import { useUiStore } from '../store/uiStore'
 
@@ -82,6 +83,7 @@ function OutlineRow({
         <span className="text-[13px] font-semibold truncate" style={{ color: textPrimary }}>
           {scene.type}. {scene.location}{scene.sublocation ? `.${scene.sublocation}` : ''} — {scene.time}
         </span>
+        <StoryDayBadge mode={scene.mode} storyDay={scene.storyDay} isDark={isDark} compact />
         {scene.isBookmarked && (
           <Bookmark size={11} fill="currentColor" className="shrink-0" style={{ color: bookmarkColor }} />
         )}

@@ -56,6 +56,13 @@ export interface ScriptStats {
   pavCount: number
   // Время суток
   timeOfDay: NamedCount[]
+  // T-227: сценарные дни
+  storyDays: StoryDayStat[]
+  storyDayCount: number
+  flashbacks: number
+  flashforwards: number
+  specialDayScenes: number
+  unassignedDayScenes: number
   // Диалог/действие
   dialogBlocks: number
   actionBlocks: number
@@ -72,6 +79,12 @@ export interface ScriptStats {
   tempo: SceneTempoStat[]
   // Алерты
   alerts: ScriptStatsAlert[]
+}
+
+export interface StoryDayStat {
+  day: number
+  count: number
+  durationSec: number
 }
 
 export interface SceneTempoStat {
@@ -134,6 +147,30 @@ export function useScriptStats(
     const timeOfDay = [...todMap.entries()]
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
+
+    // Сценарные дни — обычные дни в счётчике, спец-маркеры отдельно.
+    // УДАЛЕНА-сцены пропускаем (не участвуют в днях и статистике).
+    const dayMap = new Map<number, { count: number; durationSec: number }>()
+    let flashbacks = 0, flashforwards = 0, otherSpecial = 0, unassignedDayScenes = 0
+    scenes.forEach((sc) => {
+      if (sc.isOmitted) return
+      const sd = sc.storyDay
+      if (!sd) { unassignedDayScenes++; return }
+      if (sd.kind === 'normal' && sd.value != null) {
+        const e = dayMap.get(sd.value) || { count: 0, durationSec: 0 }
+        e.count++
+        e.durationSec += sc.manualDuration ?? sc.duration ?? 0
+        dayMap.set(sd.value, e)
+      } else {
+        const raw = sd.raw.toUpperCase()
+        if (/ФЛЕШБЕК|FLASHBACK|^ФБ$|^FB$/.test(raw)) flashbacks++
+        else if (/ФЛЕШФОРВАРД|FLASHFORWARD|^ФФ$|^FF$/.test(raw)) flashforwards++
+        else otherSpecial++
+      }
+    })
+    const storyDays: StoryDayStat[] = [...dayMap.entries()]
+      .map(([day, v]) => ({ day, ...v }))
+      .sort((a, b) => a.day - b.day)
 
     // Диалог/действие — по объёму текста (символы), не по числу блоков:
     // одна длинная ремарка ≠ одной короткой реплике
@@ -459,6 +496,12 @@ export function useScriptStats(
       intExtCount,
       pavCount,
       timeOfDay,
+      storyDays,
+      storyDayCount: storyDays.length,
+      flashbacks,
+      flashforwards,
+      specialDayScenes: flashbacks + flashforwards + otherSpecial,
+      unassignedDayScenes,
       dialogBlocks,
       actionBlocks,
       dialogRatio,

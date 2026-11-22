@@ -23,6 +23,7 @@ import {
   nextSceneIndex, scenesOfSeries,
 } from '../utils/sceneFilters'
 import { calculateSceneTiming, formatDuration } from '../utils/sceneTiming'
+import StoryDayBadge from './StoryDayBadge'
 import { useUiStore } from '../store/uiStore'
 import { draftStatusById, allDraftStatuses } from '../utils/draftStatus'
 
@@ -403,6 +404,7 @@ function SceneCard({
                 ВЫЧ
               </span>
             )}
+            <StoryDayBadge mode={scene.mode} storyDay={scene.storyDay} isDark={isDark} />
             {/* I-150: закладка — жёлтый значок + имя */}
             {scene.isBookmarked && (
               <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded shrink-0"

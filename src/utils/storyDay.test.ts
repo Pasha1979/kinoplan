@@ -6,6 +6,8 @@ import {
   isDayBoundary,
   suggestDayNumber,
   fixTimeSlot,
+  storyDaysEnabled,
+  storyDayBadgeLabel,
 } from './storyDay'
 import { extractScenesFromDocument } from './sceneExtractor'
 import { validateFormatBlocks } from './formatValidation'
@@ -395,5 +397,38 @@ describe('dayChoices — быстрые варианты SmartType', () => {
     expect(dayChoices('УТРО', { mode: 'НОЧЬ', value: 5 })).toEqual(['6', '7', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
     expect(dayChoices('НОЧЬ', { mode: 'ДЕНЬ', value: 5 })).toEqual(['5', '6', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
     expect(dayChoices('ДЕНЬ', null)).toEqual(['1', '2', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
+  })
+})
+
+describe('storyDaysEnabled — переключатель', () => {
+  it('по умолчанию: serial/film вкл, clip/ad/other выкл', () => {
+    expect(storyDaysEnabled({ type: 'serial' })).toBe(true)
+    expect(storyDaysEnabled({ type: 'film' })).toBe(true)
+    expect(storyDaysEnabled({ type: 'clip' })).toBe(false)
+    expect(storyDaysEnabled({ type: 'ad' })).toBe(false)
+    expect(storyDaysEnabled(null)).toBe(false)
+    expect(storyDaysEnabled(undefined)).toBe(false)
+  })
+  it('явный storyDays перекрывает дефолт типа', () => {
+    expect(storyDaysEnabled({ type: 'serial', storyDays: false })).toBe(false)
+    expect(storyDaysEnabled({ type: 'clip', storyDays: true })).toBe(true)
+  })
+})
+
+describe('storyDayBadgeLabel — подпись бейджа', () => {
+  it('режим + обычный день → «ДЕНЬ 32», «НОЧЬ 1»', () => {
+    expect(storyDayBadgeLabel({ mode: 'ДЕНЬ', storyDay: { raw: '32' } })).toBe('ДЕНЬ 32')
+    expect(storyDayBadgeLabel({ mode: 'НОЧЬ', storyDay: { raw: '1' } })).toBe('НОЧЬ 1')
+  })
+  it('день без режима → «ДЕНЬ 32»; маркер без режима → «ФЛЕШБЕК»', () => {
+    expect(storyDayBadgeLabel({ storyDay: { raw: '32' } })).toBe('ДЕНЬ 32')
+    expect(storyDayBadgeLabel({ storyDay: { raw: 'ФЛЕШБЕК' } })).toBe('ФЛЕШБЕК')
+    expect(storyDayBadgeLabel({ storyDay: { raw: 'Х' } })).toBe('ДЕНЬ Х')
+    expect(storyDayBadgeLabel({ storyDay: { raw: '-3' } })).toBe('ДЕНЬ -3')
+  })
+  it('маркер при режиме → только маркер; без storyDay → null', () => {
+    expect(storyDayBadgeLabel({ mode: 'ДЕНЬ', storyDay: { raw: 'ФЛЕШБЕК' } })).toBe('ФЛЕШБЕК')
+    expect(storyDayBadgeLabel({ mode: 'ДЕНЬ', storyDay: null })).toBeNull()
+    expect(storyDayBadgeLabel({})).toBeNull()
   })
 })

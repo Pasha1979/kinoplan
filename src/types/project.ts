@@ -78,6 +78,8 @@ export interface Project {
   isFavorite?: boolean         // Избранный проект
   isArchived?: boolean         // Проект в архиве (скрыт из основных списков)
   sortOrder?: number           // Ручной порядок сортировки (drag-and-drop)
+  // T-227: сценарные дни — undefined = по умолчанию (вкл: serial/film, выкл: остальные)
+  storyDays?: boolean
   tags?: string[]              // Теги проекта
   // Статистика (заглушки — заполнятся из модулей)
   scriptProgress: number     // 0-100%

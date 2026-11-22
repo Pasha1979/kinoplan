@@ -37,6 +37,8 @@ import { RU_TO_EN_REPLACEMENTS, EN_TO_RU_REPLACEMENTS } from '../utils/formatRul
 export interface UseScriptEditorLogicOptions {
   format?: ScriptFormat
   projectType: ProjectType
+  /** T-227: явный переключатель сценарных дней (undefined → по типу проекта) */
+  storyDays?: boolean
   projectId?: string
   currentSeries: number
   fontFamily: string
@@ -92,6 +94,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     format: _format,
     projectId,
     projectType,
+    storyDays,
     currentSeries,
     fontFamily,
     fontSize,
@@ -133,7 +136,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     projectId,
     // Сценарные дни (serial/film по умолч.): быстрые варианты после «РЕЖИМ »
     dayChoices: (mode: string) =>
-      projectTypeRef.current === 'serial' || projectTypeRef.current === 'film'
+      (storyDaysRef.current ?? (projectTypeRef.current === 'serial' || projectTypeRef.current === 'film'))
         ? dayChoicesFor(mode, lastOrdinaryDayRef.current)
         : [],
   })
@@ -166,6 +169,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const lastOrdinaryDayRef = useRef<{ mode: string; value: number } | null>(null)
 
   const projectTypeRef = useRef(projectType)
+  const storyDaysRef = useRef(storyDays)
   const autoExtractCharactersRef = useRef(autoExtractCharacters)
   const enterPreset = useUiStore((s) => s.enterPreset)
   const enterPresetRef = useRef(enterPreset)
@@ -179,9 +183,10 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     onActiveSceneChangeRef.current = onActiveSceneChange
     currentSeriesRef.current = currentSeries
     projectTypeRef.current = projectType
+    storyDaysRef.current = storyDays
     autoExtractCharactersRef.current = autoExtractCharacters
     enterPresetRef.current = enterPreset
-  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, autoExtractCharacters, enterPreset, onActiveSceneChange])
+  }, [timingSystem, genreCoefficient, onScenesChange, onStatsChange, currentSeries, projectType, storyDays, autoExtractCharacters, enterPreset, onActiveSceneChange])
 
   // Флаг защиты от двойной авто-замены
   const isReplacingRef = useRef(false)
@@ -758,7 +763,7 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           // Сценарные дни: после режима — пробел (SmartType сам предложит день);
           // иначе классика — режим + '.' → авто-переход к составу
           const storyDaysOn =
-            projectTypeRef.current === 'serial' || projectTypeRef.current === 'film'
+            storyDaysRef.current ?? (projectTypeRef.current === 'serial' || projectTypeRef.current === 'film')
           const textToInsert = suggestion.insertText
             ?? (isDotted
               ? suggestion.text.split('.').pop()!

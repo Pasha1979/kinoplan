@@ -42,6 +42,7 @@ import { useFocusMode } from '../../hooks/useFocusMode'
 import { useSplitScreen } from '../../hooks/useSplitScreen'
 import { useDialogueMode } from '../../hooks/useDialogueMode'
 import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
+import { storyDaysEnabled } from '../../utils/storyDay'
 import FormatModal from './components/FormatModal'
 import ScriptBreakdown from '../../components/ScriptBreakdown'
 import { browserFS } from '../../adapters/BrowserFS'
@@ -848,6 +849,8 @@ export default function ScriptPage() {
     location: s.location,
     sublocation: s.sublocation,
     time: s.time,
+    mode: s.mode,
+    storyDay: s.storyDay,
     pages: s.pages || 0,
     charCount: s.charCount,
     cast: s.cast,
@@ -1212,6 +1215,7 @@ export default function ScriptPage() {
                   key={currentScript?.id || 'no-script'}
                   format={scriptFormat}
                   projectType={project?.type || 'film'}
+                  storyDays={storyDaysEnabled(project)}
                   projectId={project?.id}
                   currentSeries={currentSeries}
                   fontFamily="'Courier Prime', 'Courier New', monospace"
@@ -1350,6 +1354,7 @@ export default function ScriptPage() {
                       key={`right-${rightScript?.id || 'none'}`}
                       format={scriptFormat}
                       projectType={project?.type || 'film'}
+                      storyDays={storyDaysEnabled(project)}
                       projectId={project?.id}
                       currentSeries={splitScreen.rightSeries}
                       fontFamily="'Courier Prime', 'Courier New', monospace"
@@ -1419,7 +1424,7 @@ export default function ScriptPage() {
           textSecondary={textSecondary}
           blocks={blocks}
           format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
-          storyDays={project?.type === 'serial' || project?.type === 'film'}
+          storyDays={storyDaysEnabled(project)}
           enableAutoFix={enableAutoFix}
           onApplyFix={handleApplyIssueFix}
           dismissedIssueIds={currentScript?.dismissedIssues || []}

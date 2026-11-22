@@ -8,6 +8,8 @@ import { MemoizedScriptEditorView } from './ScriptEditorView'
 interface ScriptEditorTiptapProps {
   format?: ScriptFormat
   projectType: ProjectType
+  /** T-227: явный переключатель сценарных дней */
+  storyDays?: boolean
   projectId?: string
   currentSeries: number
   fontFamily: string
