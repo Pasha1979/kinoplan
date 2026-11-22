@@ -202,11 +202,16 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     return (
       <div
         ref={boxRef}
+        data-layout-box={k}
         style={{
-          transform: `translate(${s.dx}px, ${s.dy}px)`,
-          width: s.w,
-          height: s.h,
-          overflow: s.h ? 'hidden' : 'visible',
+          // Пиксельные смещения/размеры макета — только в режиме конструктора.
+          // APPLIED_LAYOUT заточен под экран, на котором его собирали: на других
+          // разрешениях translate(dx,dy) и фиксированные w/h перекрывают блоки.
+          // В обычном режиме блоки лежат в адаптивной сетке — перекрытий нет.
+          transform: editMode ? `translate(${s.dx}px, ${s.dy}px)` : undefined,
+          width: editMode ? s.w : undefined,
+          height: editMode ? s.h : undefined,
+          overflow: editMode && s.h ? 'hidden' : 'visible',
           position: 'relative',
           zIndex: editMode ? 20 : undefined,
           outline: editMode ? `1px dashed ${isDark ? 'rgba(251,146,60,0.5)' : 'rgba(234,88,12,0.45)'}` : undefined,

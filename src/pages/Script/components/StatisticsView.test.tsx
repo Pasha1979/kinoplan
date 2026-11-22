@@ -79,4 +79,21 @@ describe('StatisticsView', () => {
     expect(screen.getAllByText('Темп по сценам').length).toBeGreaterThan(0)
     expect(screen.getAllByText('1-1').length).toBeGreaterThan(0)
   })
+
+  it('макетные смещения не применяются вне конструктора — блоки не перекрываются ни на каком экране', () => {
+    // Сохранённая раскладка с пиксельными смещениями не должна влиять на обычный режим
+    localStorage.setItem('statsLayout_dev', JSON.stringify({ 's-tempo': { dx: 100, dy: 200, w: 500, h: 300 } }))
+    const { container } = render(<StatisticsView {...props} />)
+    const boxes = container.querySelectorAll('[data-layout-box]')
+    expect(boxes.length).toBeGreaterThan(0)
+    boxes.forEach((b) => {
+      const style = (b as HTMLElement).style
+      expect(style.transform).toBe('')
+      expect(style.width).toBe('')
+      expect(style.height).toBe('')
+    })
+    // И запечённый APPLIED_LAYOUT (s-heatmap: dy -734px) тоже не применяется
+    const heatmap = container.querySelector('[data-layout-box="s-heatmap"]') as HTMLElement
+    expect(heatmap.style.transform).toBe('')
+  })
 })
