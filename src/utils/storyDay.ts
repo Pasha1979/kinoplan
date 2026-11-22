@@ -25,6 +25,17 @@ const MORNISH = new Set(['РАССВЕТ', 'УТРО', 'ДЕНЬ', 'DAWN', 'MORN
 
 const MODE_SRC = DAY_MODE_WORDS.join('|')
 const MODE_G = new RegExp(`(?<![А-ЯЁа-яёA-Za-z0-9])(${MODE_SRC})(?![А-ЯЁа-яёA-Za-z0-9])`, 'gi')
+// D: разорванные режимы «ДЕН Ь», «НОЧ Ь», «УТР О» — сливаем в слово
+const SPLIT_MODE_G = new RegExp(
+  `(?<![А-ЯЁа-яёA-Za-z0-9])(?:${
+    DAY_MODE_WORDS.filter((w) => w.length >= 3)
+      .map((w) => `${w.slice(0, -1)}\\s+${w.slice(-1)}`)
+      .join('|')
+  })(?![А-ЯЁа-яёA-Za-z0-9])`,
+  'gi',
+)
+const normalizeSplitModes = (s: string) =>
+  s.replace(SPLIT_MODE_G, (mm) => mm.replace(/\s+/g, ''))
 const NUM_G = /(?<![0-9A-Za-zА-Яа-яЁё])[+\-−]?[0-9]+(?![0-9A-Za-zА-Яа-яЁё])/g
 const XDAY_G = /(?<![А-ЯЁа-яёA-Za-z0-9])[ХХXx](?![А-ЯЁа-яёA-Za-z0-9])/g
 const FLASH_G = /(?<![А-ЯЁа-яёA-Za-z])(ФЛЕШФОРВАРД|ФЛЕШБЕК|FLASHFORWARD|FLASHBACK|ФФ|ФБ|FF|FB)(?![А-ЯЁа-яёA-Za-z])/gi
@@ -35,8 +46,9 @@ const FLASH_NUMBER_RE = /-(ФБ|ФФ|FB|FF)\s*(?:\([^)]*\))?$/i
 
 // Общий regex шапки сцены — единый источник для экстрактора и валидатора
 import { SCENE_NUMBER } from './sceneNumber'
-export const SCENE_TYPE_TOKEN = 'ИНТ-ЭКСТ\\.?|ИНТ-НАТ\\.?|ИНТ\\.?|ЭКСТ\\.?|ПАВ\\.?|НАТ\\/ИНТ\\.?|ИНТ\\/НАТ\\.?|НАТ\\.?'
-export const SCENE_HEADER_RE = new RegExp(`^(${SCENE_NUMBER})\\.\\s*(${SCENE_TYPE_TOKEN})\\s+(.+)$`, 'i')
+// Тип: «НАТ  ИНТ» (двойной), «ИНТ .» (пробел перед точкой) — терпим
+export const SCENE_TYPE_TOKEN = '(?:ИНТ-ЭКСТ|ИНТ-НАТ|НАТ\\/ИНТ|ИНТ\\/НАТ|ИНТ|ЭКСТ|ПАВ|НАТ)(?:\\s+(?:ИНТ|ЭКСТ|НАТ|ПАВ)(?![А-ЯЁа-яёA-Za-z]))?\\s*\\.?'
+export const SCENE_HEADER_RE = new RegExp(`^(${SCENE_NUMBER})\\s*\\.\\s*(${SCENE_TYPE_TOKEN})\\s+(.+)$`, 'i')
 
 export interface ModeToken { word: string; start: number; end: number }
 export interface DayToken { raw: string; start: number; end: number; value: number | null; kind: StoryDayKind }
@@ -82,7 +94,7 @@ function mkNumToken(raw: string, start: number, end: number): DayToken {
 
 /** Парсит «временной слот» шапки: режим(ы), день(и), флеш-маркер, хвост. */
 export function parseTimeSlot(slot: string, sceneNumber?: string): TimeSlotParse {
-  let text = slot
+  let text = normalizeSplitModes(slot)
   let omitted = false
   const om = text.match(OMITTED_RE)
   if (om) { omitted = true; text = text.slice(0, text.length - om[0].trimEnd().length).replace(/[\s.,(]+$/, '') }
@@ -205,6 +217,7 @@ export function parseHeaderTail(text: string, sceneNumber?: string): HeaderTailP
   }
   body = body.trim()
   const suffix = text.slice(body.length)
+  body = normalizeSplitModes(body)
 
   // 1) Тире/дефис-разделитель: «ЛОКАЦИЯ — ДЕНЬ 32»
   const dashParts = body.split(/\s*[—–]\s*|\s+-\s+/)

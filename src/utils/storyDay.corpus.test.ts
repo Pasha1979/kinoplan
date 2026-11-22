@@ -101,3 +101,51 @@ describe('корпус реальных шапок — ЧАСТЬ 1', () => {
     expect(p.tail.issues).toEqual([])
   })
 })
+
+describe('корпус реальных шапок — ЧАСТЬ 2 (грязные типы/номера/режимы)', () => {
+  it('3: «У БАРА "НОСТАЛЬГИЯ". ДЕНЬ НОЧЬ 32» — double-mode, кавычки целы', () => {
+    const p = parse('14-29. НАТ. У БАРА "НОСТАЛЬГИЯ".  ДЕНЬ   НОЧЬ  32.')
+    expect(p.tail.issues.map((i) => i.code)).toEqual(['double-mode'])
+    expect(p.tail.issues[0].options).toEqual(['ДЕНЬ', 'НОЧЬ'])
+    expect(p.tail.day?.value).toBe(32)
+    expect(p.tail.location).toContain('"НОСТАЛЬГИЯ"')
+  })
+
+  it('6: «14-67 . НАТ  ИНТ . … ДЕНЬ 33» — двойной тип + пробелы у точек', () => {
+    const p = parse('14-67 .  НАТ  ИНТ .  УЛИЦЫ ВЕРОНОВО . ФИТНЕС КЛУБ  ДЕНЬ 33.')
+    expect(p.tail.mode).toBe('ДЕНЬ')
+    expect(p.tail.day?.value).toBe(33)
+  })
+
+  it('7: «14-42-БОБ. … НОЧЬ ДЕНЬ 32» — -БОБ распознан + double-mode', () => {
+    const p = parse('14-42-БОБ. НАТ. ДОРОГА ТВЕРЬ.  НОЧЬ  ДЕНЬ  32.')
+    expect(p.number).toContain('БОБ')
+    expect(p.tail.issues.map((i) => i.code)).toEqual(['double-mode'])
+    expect(p.tail.day?.value).toBe(32)
+  })
+
+  it('8: «ДЕН Ь 1» — разорванный режим нормализуется в ДЕНЬ', () => {
+    const p = parse('1-37. ИНТ. КВАРТИРА АРТЕМА.КУХНЯ.  ДЕН Ь  1.')
+    expect(p.tail.mode).toBe('ДЕНЬ')
+    expect(p.tail.day?.value).toBe(1)
+    expect(p.tail.issues).toEqual([])
+  })
+
+  it('9: «1.a. НАТ. …» — lowercase литера', () => {
+    const p = parse('1.a.  НАТ. МОСКВА.ЦЕНТР. ДЕНЬ 1.')
+    expect(p.number.toLowerCase()).toContain('1.a')
+    expect(p.tail.day?.value).toBe(1)
+  })
+
+  it('10: «1-2 4 -1.» — пробелы внутри номера', () => {
+    const p = parse('1-2 4 -1. НАТ.  У  ГАРАЖ ЕЙ . ДЕНЬ 1.')
+    expect(p.tail.day?.value).toBe(1)
+    expect(p.tail.mode).toBe('ДЕНЬ')
+  })
+
+  it('11: «1-14 + 1-15.» — комбинированный номер', () => {
+    const p = parse('1-14 + 1-15.  ИНТ .  ОФИС ФЛОРЕАЛЬ .  У ПЕРЕГОВОРКИ .  ДЕНЬ  2.')
+    expect(p.tail.day?.value).toBe(2)
+    expect(p.tail.mode).toBe('ДЕНЬ')
+  })
+})
