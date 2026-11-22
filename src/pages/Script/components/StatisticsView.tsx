@@ -1,4 +1,4 @@
-import { memo, useState, Fragment, useRef, useMemo, useEffect } from 'react'
+import { memo, useState, Fragment, useRef, useMemo, useEffect, createContext, useContext, forwardRef, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Film, FileText, Clock, Users, MapPin, AlertTriangle,
@@ -52,6 +52,291 @@ const APPLIED_LAYOUT: Record<string, LayoutEntry> = {
   'm-chars': { dx: -471.2, dy: 0.8, w: 171.2, h: 86.8 },
   'm-series': { dx: 1144, dy: 38.4, w: 290.2, h: 415 },
 }
+
+// ── Общие компоненты на уровне модуля ────────────────────────────────────────
+// ВАЖНО: объявлять их внутри StatisticsView нельзя — каждый setState пересоздавал
+// бы тип компонента, React ремаунтил всё поддерево (лаги, сброс скролла).
+interface StatsCtxValue {
+  isDark: boolean
+  cardBg: string
+  border: string
+  textPrimary: string
+  textSecondary: string
+  muted: string
+  layout: Record<string, LayoutEntry>
+  setLayout: React.Dispatch<React.SetStateAction<Record<string, LayoutEntry>>>
+  editMode: boolean
+  onSceneClick?: (sceneId: string) => void
+}
+const StatsCtx = createContext<StatsCtxValue>(null as unknown as StatsCtxValue)
+const useStatsCtx = () => useContext(StatsCtx)
+
+const cardHoverStyle = (e: React.MouseEvent<HTMLDivElement>) => {
+  e.currentTarget.style.borderColor = 'rgba(249,115,22,0.5)'
+  e.currentTarget.style.boxShadow = '0 0 0 1px rgba(249,115,22,0.2), 0 4px 16px rgba(249,115,22,0.08)'
+}
+const cardLeaveStyle = (border: string) => (e: React.MouseEvent<HTMLDivElement>) => {
+  e.currentTarget.style.borderColor = border
+  e.currentTarget.style.boxShadow = 'none'
+}
+
+const LayoutBox = ({ k, className, children }: { k: string; className?: string; children: React.ReactNode }) => {
+  const { layout, setLayout, editMode, isDark } = useStatsCtx()
+  const s = layout[k] ?? { dx: 0, dy: 0 }
+  const boxRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ mode: 'move' | 'resize'; startX: number; startY: number; orig: LayoutEntry } | null>(null)
+
+  const onHandleDown = (mode: 'move' | 'resize') => (e: React.PointerEvent) => {
+    if (!editMode) return
+    e.preventDefault()
+    e.stopPropagation()
+    const el = boxRef.current
+    const orig: LayoutEntry = {
+      dx: s.dx, dy: s.dy,
+      w: s.w ?? el?.offsetWidth,
+      h: s.h ?? el?.offsetHeight,
+    }
+    dragRef.current = { mode, startX: e.clientX, startY: e.clientY, orig }
+    const onMove = (ev: PointerEvent) => {
+      const d = dragRef.current
+      if (!d) return
+      const ddx = ev.clientX - d.startX
+      const ddy = ev.clientY - d.startY
+      setLayout((prev) => {
+        const cur = prev[k] ?? { dx: 0, dy: 0 }
+        if (d.mode === 'move') {
+          return { ...prev, [k]: { ...cur, dx: d.orig.dx + ddx, dy: d.orig.dy + ddy } }
+        }
+        return {
+          ...prev,
+          [k]: {
+            ...cur,
+            w: Math.max(160, (d.orig.w ?? 200) + ddx),
+            h: Math.max(56, (d.orig.h ?? 120) + ddy),
+          },
+        }
+      })
+    }
+    const onUp = () => {
+      dragRef.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  return (
+    <div
+      ref={boxRef}
+      data-layout-box={k}
+      className={className ?? 'h-full'}
+      style={{
+        // Пиксельные смещения/размеры макета — только в режиме конструктора.
+        // В обычном режиме блоки лежат в адаптивной сетке — перекрытий нет.
+        transform: editMode ? `translate(${s.dx}px, ${s.dy}px)` : undefined,
+        width: editMode ? s.w : undefined,
+        height: editMode ? s.h : undefined,
+        overflow: editMode && s.h ? 'hidden' : 'visible',
+        position: 'relative',
+        zIndex: editMode ? 20 : undefined,
+        outline: editMode ? `1px dashed ${isDark ? 'rgba(251,146,60,0.5)' : 'rgba(234,88,12,0.45)'}` : undefined,
+        borderRadius: 12,
+      }}
+    >
+      {children}
+      {editMode && (
+        <>
+          <button
+            onPointerDown={onHandleDown('move')}
+            title="Переместить блок"
+            className="absolute flex items-center justify-center rounded-md transition-colors"
+            style={{
+              top: 6, right: 6, width: 22, height: 22, zIndex: 30,
+              background: 'rgba(249,115,22,0.9)', color: '#fff', cursor: 'grab',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+            }}
+          >
+            <Move size={12} />
+          </button>
+          <button
+            onPointerDown={onHandleDown('resize')}
+            title="Изменить размер"
+            className="absolute flex items-center justify-center rounded-md transition-colors"
+            style={{
+              bottom: 6, right: 6, width: 22, height: 22, zIndex: 30,
+              background: 'rgba(99,102,241,0.9)', color: '#fff', cursor: 'nwse-resize',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+            }}
+          >
+            <Scaling size={12} />
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+const Donut = ({ parts, total }: { parts: { label: string; count: number; color: string }[]; total: number }) => {
+  const { isDark, textPrimary } = useStatsCtx()
+  const R = 40, C = 2 * Math.PI * R
+  let offset = 0
+  return (
+    <svg width="110" height="110" viewBox="0 0 110 110" className="shrink-0">
+      <circle cx="55" cy="55" r={R} fill="none" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'} strokeWidth="14" />
+      {parts.map((p) => {
+        const frac = p.count / total
+        const len = frac * C
+        const el = (
+          <circle key={p.label} cx="55" cy="55" r={R} fill="none"
+            stroke={p.color} strokeWidth="14"
+            strokeDasharray={`${len} ${C - len}`}
+            strokeDashoffset={-offset}
+            transform="rotate(-90 55 55)" />
+        )
+        offset += len
+        return el
+      })}
+      <text x="55" y="59" textAnchor="middle" fontSize="16" fontWeight="700" fill={textPrimary}>
+        {total}
+      </text>
+    </svg>
+  )
+}
+
+const Bar = ({ label, value, max, color }: { label: string; value: number; max: number; color: string }) => {
+  const { isDark, textPrimary, textSecondary } = useStatsCtx()
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-20 text-[11px] truncate" style={{ color: textSecondary }}>{label}</span>
+      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
+        <div className="h-full rounded-full" style={{ width: `${max ? (value / max) * 100 : 0}%`, background: color }} />
+      </div>
+      <span className="w-8 text-right text-[11px] font-medium" style={{ color: textPrimary }}>{value}</span>
+    </div>
+  )
+}
+
+const Section = ({ title, icon, right, fill, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; fill?: boolean; children: React.ReactNode }) => {
+  const { cardBg, border, textPrimary, textSecondary } = useStatsCtx()
+  return (
+    <div className="rounded-xl p-4 transition-colors h-full flex flex-col"
+      style={{ background: cardBg, border: `1px solid ${border}` }}
+      onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle(border)}>
+      <div className="flex items-center gap-2 mb-3 shrink-0">
+        <div style={{ color: textSecondary }}>{icon}</div>
+        <span className="text-xs font-semibold flex-1" style={{ color: textPrimary }}>{title}</span>
+        {right}
+      </div>
+      {fill ? <div className="flex-1 min-h-0">{children}</div> : children}
+    </div>
+  )
+}
+
+const MetricCard = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) => {
+  const { cardBg, border, textPrimary, textSecondary } = useStatsCtx()
+  return (
+    <div className="rounded-xl px-4 py-3 transition-colors h-full flex items-center gap-3"
+      style={{ background: cardBg, border: `1px solid ${border}` }}
+      onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle(border)}>
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ color: '#fb923c', background: 'rgba(249,115,22,0.12)' }}>{icon}</div>
+      <div className="min-w-0">
+        <div className="text-xl font-bold leading-tight" style={{ color: textPrimary }}>{value}</div>
+        <div className="text-[11px] leading-tight" style={{ color: textSecondary }}>{label}</div>
+        {sub && <div className="text-[10px] mt-0.5 truncate" style={{ color: textSecondary }}>{sub}</div>}
+      </div>
+    </div>
+  )
+}
+
+const AlertRow = ({ alert }: { alert: ScriptStatsAlert }) => {
+  const { muted, border, textPrimary, onSceneClick } = useStatsCtx()
+  return (
+    <div
+      onClick={alert.sceneId && onSceneClick ? () => onSceneClick(alert.sceneId!) : undefined}
+      className="flex items-start gap-2 p-2.5 rounded-lg"
+      style={{
+        background: muted,
+        border: `1px solid ${border}`,
+        cursor: alert.sceneId && onSceneClick ? 'pointer' : 'default',
+      }}
+      title={alert.sceneId ? 'Перейти к сцене' : undefined}
+    >
+      {alert.severity === 'warning'
+        ? <AlertTriangle size={13} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+        : <Info size={13} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />}
+      <span className="text-[11px] leading-tight" style={{ color: textPrimary }}>{alert.message}</span>
+    </div>
+  )
+}
+
+const Empty = ({ text }: { text: string }) => {
+  const { muted, textSecondary } = useStatsCtx()
+  return (
+    <div className="py-6 text-center text-[11px] rounded-lg" style={{ color: textSecondary, background: muted }}>
+      {text}
+    </div>
+  )
+}
+
+// Всплывашка живёт в собственном состоянии и управляется императивно:
+// наведение на строку НЕ перерисовывает всю статистику (раньше — лаги скролла).
+interface LocTipHandle {
+  show: (el: HTMLElement, title: string, m?: Map<string, number>) => void
+  hide: () => void
+}
+const LocTip = forwardRef<LocTipHandle, object>((_p, ref) => {
+  const { isDark, border, textPrimary, textSecondary } = useStatsCtx()
+  const [tip, setTip] = useState<{ x: number; y: number; title: string; items: [string, number][] } | null>(null)
+  useImperativeHandle(ref, () => ({
+    show: (el, title, m) => {
+      if (!m?.size) return setTip(null)
+      const r = el.getBoundingClientRect()
+      setTip({
+        x: r.right + 8,
+        y: Math.min(r.top, window.innerHeight - 260),
+        title,
+        items: [...m.entries()].sort((a, b) => b[1] - a[1]),
+      })
+    },
+    hide: () => setTip(null),
+  }), [])
+  useEffect(() => {
+    if (!tip) return
+    const hide = () => setTip(null)
+    window.addEventListener('scroll', hide, true)
+    return () => window.removeEventListener('scroll', hide, true)
+  }, [tip])
+  if (!tip) return null
+  return createPortal(
+    <div
+      className="rounded-lg p-2.5"
+      style={{
+        position: 'fixed',
+        left: tip.x,
+        top: tip.y,
+        background: isDark ? '#1e1e3a' : '#ffffff',
+        border: `1px solid ${border}`,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        zIndex: 9999,
+        minWidth: 160,
+        maxHeight: 240,
+        overflowY: 'auto',
+        pointerEvents: 'none',
+      }}
+    >
+      <div className="text-[10px] font-bold mb-1.5" style={{ color: '#fb923c' }}>{tip.title}</div>
+      {tip.items.map(([name, count]) => (
+        <div key={name} className="flex justify-between gap-4 text-[10px]">
+          <span style={{ color: textSecondary }}>{name}</span>
+          <span style={{ color: textPrimary }}>{count} сц</span>
+        </div>
+      ))}
+    </div>,
+    document.body,
+  )
+})
+LocTip.displayName = 'LocTip'
 
 function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, isSerial, episodesCount, episodeDuration }: StatisticsViewProps) {
   const [activeSeries, setActiveSeries] = useState<number | 'all'>('all')
@@ -153,110 +438,13 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   }
   const [charSort, setCharSort] = useState<'scenes' | 'duration'>('scenes')
 
-  // Обёртка блока — применяет позицию из макета; в editMode — drag/resize
-  const LayoutBox = ({ k, className, children }: { k: string; className?: string; children: React.ReactNode }) => {
-    const s = layout[k] ?? { dx: 0, dy: 0 }
-    const boxRef = useRef<HTMLDivElement>(null)
-    const dragRef = useRef<{ mode: 'move' | 'resize'; startX: number; startY: number; orig: LayoutEntry } | null>(null)
-
-    const onHandleDown = (mode: 'move' | 'resize') => (e: React.PointerEvent) => {
-      if (!editMode) return
-      e.preventDefault()
-      e.stopPropagation()
-      const el = boxRef.current
-      const orig: LayoutEntry = {
-        dx: s.dx, dy: s.dy,
-        w: s.w ?? el?.offsetWidth,
-        h: s.h ?? el?.offsetHeight,
-      }
-      dragRef.current = { mode, startX: e.clientX, startY: e.clientY, orig }
-      const onMove = (ev: PointerEvent) => {
-        const d = dragRef.current
-        if (!d) return
-        const ddx = ev.clientX - d.startX
-        const ddy = ev.clientY - d.startY
-        setLayout((prev) => {
-          const cur = prev[k] ?? { dx: 0, dy: 0 }
-          if (d.mode === 'move') {
-            return { ...prev, [k]: { ...cur, dx: d.orig.dx + ddx, dy: d.orig.dy + ddy } }
-          }
-          return {
-            ...prev,
-            [k]: {
-              ...cur,
-              w: Math.max(160, (d.orig.w ?? 200) + ddx),
-              h: Math.max(56, (d.orig.h ?? 120) + ddy),
-            },
-          }
-        })
-      }
-      const onUp = () => {
-        dragRef.current = null
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', onUp)
-      }
-      window.addEventListener('pointermove', onMove)
-      window.addEventListener('pointerup', onUp)
-    }
-
-    return (
-      <div
-        ref={boxRef}
-        data-layout-box={k}
-        className={className ?? 'h-full'}
-        style={{
-          // Пиксельные смещения/размеры макета — только в режиме конструктора.
-          // APPLIED_LAYOUT заточен под экран, на котором его собирали: на других
-          // разрешениях translate(dx,dy) и фиксированные w/h перекрывают блоки.
-          // В обычном режиме блоки лежат в адаптивной сетке — перекрытий нет.
-          transform: editMode ? `translate(${s.dx}px, ${s.dy}px)` : undefined,
-          width: editMode ? s.w : undefined,
-          height: editMode ? s.h : undefined,
-          overflow: editMode && s.h ? 'hidden' : 'visible',
-          position: 'relative',
-          zIndex: editMode ? 20 : undefined,
-          outline: editMode ? `1px dashed ${isDark ? 'rgba(251,146,60,0.5)' : 'rgba(234,88,12,0.45)'}` : undefined,
-          borderRadius: 12,
-        }}
-      >
-        {children}
-        {editMode && (
-          <>
-            <button
-              onPointerDown={onHandleDown('move')}
-              title="Переместить блок"
-              className="absolute flex items-center justify-center rounded-md transition-colors"
-              style={{
-                top: 6, right: 6, width: 22, height: 22, zIndex: 30,
-                background: 'rgba(249,115,22,0.9)', color: '#fff', cursor: 'grab',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-              }}
-            >
-              <Move size={12} />
-            </button>
-            <button
-              onPointerDown={onHandleDown('resize')}
-              title="Изменить размер"
-              className="absolute flex items-center justify-center rounded-md transition-colors"
-              style={{
-                bottom: 6, right: 6, width: 22, height: 22, zIndex: 30,
-                background: 'rgba(99,102,241,0.9)', color: '#fff', cursor: 'nwse-resize',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-              }}
-            >
-              <Scaling size={12} />
-            </button>
-          </>
-        )}
-      </div>
-    )
-  }
-
   const cardBg = isDark ? '#13132a' : '#ffffff'
   const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
   const textPrimary = isDark ? '#f1f5f9' : '#111827'
   const textSecondary = isDark ? '#9ca3af' : '#6b7280'
   const muted = isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'
+  const ctx = useMemo<StatsCtxValue>(() => ({ isDark, cardBg, border, textPrimary, textSecondary, muted, layout, setLayout, editMode, onSceneClick }),
+    [isDark, cardBg, border, textPrimary, textSecondary, muted, layout, editMode, onSceneClick])
 
   // Donut для ИНТ/ЭКСТ
   const intExtTotal = stats.intCount + stats.extCount + stats.intExtCount + stats.pavCount
@@ -267,104 +455,8 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
     { label: 'ПАВ', count: stats.pavCount, color: '#34d399' },
   ].filter((p) => p.count > 0)
 
-  // SVG donut
-  const Donut = ({ parts, total }: { parts: { label: string; count: number; color: string }[]; total: number }) => {
-    const R = 40, C = 2 * Math.PI * R
-    let offset = 0
-    return (
-      <svg width="110" height="110" viewBox="0 0 110 110">
-        <circle cx="55" cy="55" r={R} fill="none" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'} strokeWidth="14" />
-        {parts.map((p) => {
-          const frac = p.count / total
-          const len = frac * C
-          const el = (
-            <circle key={p.label} cx="55" cy="55" r={R} fill="none"
-              stroke={p.color} strokeWidth="14"
-              strokeDasharray={`${len} ${C - len}`}
-              strokeDashoffset={-offset}
-              transform="rotate(-90 55 55)" />
-          )
-          offset += len
-          return el
-        })}
-        <text x="55" y="59" textAnchor="middle" fontSize="16" fontWeight="700" fill={textPrimary}>
-          {total}
-        </text>
-      </svg>
-    )
-  }
-
-  const Bar = ({ label, value, max, color }: { label: string; value: number; max: number; color: string }) => (
-    <div className="flex items-center gap-2">
-      <span className="w-20 text-[11px] truncate" style={{ color: textSecondary }}>{label}</span>
-      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
-        <div className="h-full rounded-full" style={{ width: `${max ? (value / max) * 100 : 0}%`, background: color }} />
-      </div>
-      <span className="w-8 text-right text-[11px] font-medium" style={{ color: textPrimary }}>{value}</span>
-    </div>
-  )
-
-  // Фирменная подсветка при наведении
-  const cardHoverStyle = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.borderColor = 'rgba(249,115,22,0.5)'
-    e.currentTarget.style.boxShadow = '0 0 0 1px rgba(249,115,22,0.2), 0 4px 16px rgba(249,115,22,0.08)'
-  }
-  const cardLeaveStyle = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.borderColor = border
-    e.currentTarget.style.boxShadow = 'none'
-  }
-
-  const Section = ({ title, icon, right, fill, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; fill?: boolean; children: React.ReactNode }) => (
-    <div className="rounded-xl p-4 transition-all h-full flex flex-col"
-      style={{ background: cardBg, border: `1px solid ${border}` }}
-      onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
-      <div className="flex items-center gap-2 mb-3 shrink-0">
-        <div style={{ color: textSecondary }}>{icon}</div>
-        <span className="text-xs font-semibold flex-1" style={{ color: textPrimary }}>{title}</span>
-        {right}
-      </div>
-      {fill ? <div className="flex-1 min-h-0">{children}</div> : children}
-    </div>
-  )
-
-  const MetricCard = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) => (
-    <div className="rounded-xl px-4 py-3 transition-all h-full flex items-center gap-3"
-      style={{ background: cardBg, border: `1px solid ${border}` }}
-      onMouseEnter={cardHoverStyle} onMouseLeave={cardLeaveStyle}>
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ color: '#fb923c', background: 'rgba(249,115,22,0.12)' }}>{icon}</div>
-      <div className="min-w-0">
-        <div className="text-xl font-bold leading-tight" style={{ color: textPrimary }}>{value}</div>
-        <div className="text-[11px] leading-tight" style={{ color: textSecondary }}>{label}</div>
-        {sub && <div className="text-[10px] mt-0.5 truncate" style={{ color: textSecondary }}>{sub}</div>}
-      </div>
-    </div>
-  )
-
-  const AlertRow = ({ alert }: { alert: ScriptStatsAlert }) => (
-    <div
-      onClick={alert.sceneId && onSceneClick ? () => onSceneClick(alert.sceneId!) : undefined}
-      className="flex items-start gap-2 p-2.5 rounded-lg transition-all"
-      style={{
-        background: muted,
-        border: `1px solid ${border}`,
-        cursor: alert.sceneId && onSceneClick ? 'pointer' : 'default',
-      }}
-      title={alert.sceneId ? 'Перейти к сцене' : undefined}
-    >
-      {alert.severity === 'warning'
-        ? <AlertTriangle size={13} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
-        : <Info size={13} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />}
-      <span className="text-[11px] leading-tight" style={{ color: textPrimary }}>{alert.message}</span>
-    </div>
-  )
-
   // Пустой набор (серия не написана) — блоки остаются, контент = заглушка
   const empty = stats.totalScenes === 0
-  const Empty = ({ text }: { text: string }) => (
-    <div className="py-6 text-center text-[11px] rounded-lg" style={{ color: textSecondary, background: muted }}>
-      {text}
-    </div>
-  )
 
   const maxTod = Math.max(1, ...stats.timeOfDay.map((t) => t.count))
   const maxSceneDur = Math.max(1, ...stats.sceneTimings.map((s) => s.durationSec))
@@ -437,20 +529,12 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
   }, [filteredScenes])
 
   // Всплывашка: позиция + данные (общая для локаций и персонажей)
-  const [locTip, setLocTip] = useState<{ x: number; y: number; title: string; items: [string, number][] } | null>(null)
-  const showTip = (el: HTMLElement, title: string, m?: Map<string, number>) => {
-    if (!m?.size) return setLocTip(null)
-    const r = el.getBoundingClientRect()
-    setLocTip({
-      x: r.right + 8,
-      y: Math.min(r.top, window.innerHeight - 260),
-      title,
-      items: [...m.entries()].sort((a, b) => b[1] - a[1]),
-    })
-  }
+  const tipRef = useRef<LocTipHandle>(null)
+  const showTip = (el: HTMLElement, title: string, m?: Map<string, number>) => tipRef.current?.show(el, title, m)
   const showLocTip = (el: HTMLElement, key: string) => showTip(el, key, locCharStats.get(key))
 
   return (
+    <StatsCtx.Provider value={ctx}>
     <div className="flex-1 overflow-y-auto p-4 md:p-5" style={{ background: isDark ? '#0f0f20' : '#f5f5f5' }}>
       <div className="w-full max-w-[1500px] mx-auto space-y-4">
         <div className="flex items-center justify-between">
@@ -600,14 +684,14 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                   {stats.storyDayCount === 1 ? 'сценарный день' : stats.storyDayCount < 5 ? 'сценарных дня' : 'сценарных дней'}
                 </span>
               </div>
-              <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+              <div className="grid gap-x-4 gap-y-1 max-h-40 overflow-y-auto pr-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
                 {stats.storyDays.map((d) => (
                   <div key={d.day} className="flex items-center gap-2 text-[11px]">
                     <span className="w-8 shrink-0 font-medium" style={{ color: '#34d399' }}>Д{d.day}</span>
                     <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                       <div className="h-full rounded-full" style={{ width: `${(d.count / Math.max(1, ...stats.storyDays.map((x) => x.count))) * 100}%`, background: '#34d399' }} />
                     </div>
-                    <span className="w-14 text-right shrink-0" style={{ color: textSecondary }}>
+                    <span className="w-20 text-right shrink-0 whitespace-nowrap" style={{ color: textSecondary }}>
                       {d.count} сц · {fmtDuration(d.durationSec)}
                     </span>
                   </div>
@@ -701,7 +785,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 .map((ch) => (
                 <div key={ch.name} className="flex items-center gap-2"
                   onMouseEnter={(e) => showTip(e.currentTarget, ch.name, charLocStats.get(ch.name))}
-                  onMouseLeave={() => setLocTip(null)}>
+                  onMouseLeave={() => tipRef.current?.hide()}>
                   <span className="w-24 text-[11px] truncate" style={{ color: textSecondary }}>{ch.name}</span>
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                     <div className="h-full rounded-full" style={{ width: `${(ch.scenes / Math.max(1, stats.characters[0]?.scenes || 1)) * 100}%`, background: '#a78bfa' }} />
@@ -729,7 +813,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                       className="flex items-center gap-2 transition-all"
                       style={{ cursor: hasSub ? 'pointer' : 'default' }}
                       onMouseEnter={(e) => showLocTip(e.currentTarget, l.name)}
-                      onMouseLeave={() => setLocTip(null)}
+                      onMouseLeave={() => tipRef.current?.hide()}
                     >
                       <span className="w-3.5 shrink-0">
                         {hasSub && (expanded
@@ -745,7 +829,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                     {expanded && l.sublocations.map((s) => (
                       <div key={s.name} className="flex items-center gap-2 mt-1 ml-7"
                         onMouseEnter={(e) => showLocTip(e.currentTarget, `${l.name}.${s.name}`)}
-                        onMouseLeave={() => setLocTip(null)}>
+                        onMouseLeave={() => tipRef.current?.hide()}>
                         <span className="w-16 text-[10px] truncate" style={{ color: textSecondary }}>{s.name}</span>
                         <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb' }}>
                           <div className="h-full rounded-full" style={{ width: `${(s.count / maxLoc) * 100}%`, background: '#93c5fd' }} />
@@ -822,7 +906,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                 <Fragment key={ch.name}>
                   <div key={`n-${ch.name}`} className="text-[10px] truncate flex items-center" style={{ color: textPrimary }}
                     onMouseEnter={(e) => showTip(e.currentTarget, ch.name, charLocStats.get(ch.name))}
-                    onMouseLeave={() => setLocTip(null)}>
+                    onMouseLeave={() => tipRef.current?.hide()}>
                     {ch.name}
                   </div>
                   {filteredScenes.map((sc) => {
@@ -832,7 +916,7 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
                       <div
                         key={`${ch.name}-${sc.id}`}
                         onClick={inScene && onSceneClick ? () => onSceneClick(sc.id) : undefined}
-                        className="rounded-[2px] transition-all"
+                        className="rounded-[2px]"
                         style={{
                           height: 14,
                           background: speaks ? '#f97316' : inScene ? 'rgba(249,115,22,0.35)' : isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb',
@@ -868,37 +952,11 @@ function StatisticsView({ isDark, scenes, blocks, precisePages, onSceneClick, is
           <span className="text-[10px]">Статистика обновляется автоматически при наборе текста</span>
         </div>
 
-        {/* Всплывашка: персонажи в локации/подлокации */}
-        {locTip && createPortal(
-          <div
-            className="rounded-lg p-2.5"
-            style={{
-              position: 'fixed',
-              left: locTip.x,
-              top: locTip.y,
-              background: isDark ? '#1e1e3a' : '#ffffff',
-              border: `1px solid ${border}`,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              zIndex: 9999,
-              minWidth: 160,
-              maxHeight: 240,
-              overflowY: 'auto',
-              pointerEvents: 'none',
-            }}
-          >
-            <div className="text-[10px] font-bold mb-1.5" style={{ color: '#fb923c' }}>{locTip.title}</div>
-            {locTip.items.map(([name, count]) => (
-              <div key={name} className="flex justify-between gap-4 text-[10px]">
-                <span style={{ color: textSecondary }}>{name}</span>
-                <span style={{ color: textPrimary }}>{count} сц</span>
-              </div>
-            ))}
-          </div>,
-          document.body,
-        )}
+        <LocTip ref={tipRef} />
         </>
       </div>
     </div>
+    </StatsCtx.Provider>
   )
 }
 

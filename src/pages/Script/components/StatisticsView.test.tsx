@@ -80,6 +80,19 @@ describe('StatisticsView', () => {
     expect(screen.getAllByText('1-1').length).toBeGreaterThan(0)
   })
 
+  it('наведение на строку (тултип) не ремаунтит блоки — скролл списков не сбрасывается', () => {
+    const { container } = render(<StatisticsView {...props} />)
+    const timings = container.querySelector('[data-layout-box="s-timings"]') as HTMLElement
+    const listBefore = timings.querySelector('[data-scene-row]')!.parentElement!.parentElement!
+    const row = [...container.querySelectorAll('[data-layout-box="s-chars"] span')]
+      .find((e) => e.textContent === 'ИВАН')!.parentElement as HTMLElement
+    fireEvent.mouseEnter(row)
+    fireEvent.mouseLeave(row)
+    const listAfter = container.querySelector('[data-layout-box="s-timings"] [data-scene-row]')!.parentElement!.parentElement!
+    expect(listAfter).toBe(listBefore)
+    expect(listBefore.isConnected).toBe(true)
+  })
+
   it('макетные смещения не применяются вне конструктора — блоки не перекрываются ни на каком экране', () => {
     // Сохранённая раскладка с пиксельными смещениями не должна влиять на обычный режим
     localStorage.setItem('statsLayout_dev', JSON.stringify({ 's-tempo': { dx: 100, dy: 200, w: 500, h: 300 } }))
