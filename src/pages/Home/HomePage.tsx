@@ -41,6 +41,13 @@ const STATUS_OPTIONS = [
   ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })),
 ]
 
+// Обёртка блока: раньше применяла пиксельные смещения/размеры (APPLIED_LAYOUT), собранные
+// под один экран, — на других разрешениях блоки плыли и перекрывались. Теперь раскладка
+// только адаптивная (flex/grid), а компонент на уровне модуля — не ремаунтится при рендере.
+function LB({ className, style, children }: { id: string; className?: string; style?: React.CSSProperties; children: React.ReactNode }) {
+  return <div className={className} style={style}>{children}</div>
+}
+
 export default function HomePage() {
   const navigate = useNavigate()
   const { projects, isLoading, error, toggleFavorite, updateLastOpenedAt, updateProject, reorderProjects } = useNormalizedProjectStore()
@@ -69,92 +76,6 @@ export default function HomePage() {
     const saved = Number(localStorage.getItem('kinoplan_card_height'))
     return saved >= 140 && saved <= 700 ? saved : 210 // дефолт выбран пользователем
   })
-  // Режим макета: свободно двигать/растягивать блоки и отправить раскладку ассистенту
-  const [layoutMode] = useState(false)
-  const [layout, setLayout] = useState<Record<string, { dx: number; dy: number; w?: number; h?: number }>>({})
-
-  const startBlockDrag = (id: string) => (e: React.PointerEvent) => {
-    if (!layoutMode) return
-    e.preventDefault()
-    e.stopPropagation()
-    const startX = e.clientX, startY = e.clientY
-    const s = layout[id] ?? { dx: 0, dy: 0 }
-    const onMove = (ev: PointerEvent) =>
-      setLayout((l) => ({ ...l, [id]: { ...(l[id] ?? s), dx: s.dx + ev.clientX - startX, dy: s.dy + ev.clientY - startY } }))
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
-
-  const startBlockResize = (id: string) => (e: React.PointerEvent) => {
-    if (!layoutMode) return
-    e.preventDefault()
-    e.stopPropagation()
-    const el = (e.currentTarget as HTMLElement).parentElement
-    const startW = el?.offsetWidth ?? 0, startH = el?.offsetHeight ?? 0
-    const startX = e.clientX, startY = e.clientY
-    const onMove = (ev: PointerEvent) =>
-      setLayout((l) => ({
-        ...l,
-        [id]: { ...(l[id] ?? { dx: 0, dy: 0 }), w: Math.max(80, startW + ev.clientX - startX), h: Math.max(40, startH + ev.clientY - startY) },
-      }))
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
-
-  // Применённая раскладка пользователя из режима макета (dx/dy/размеры)
-  const APPLIED_LAYOUT: Record<string, { dx: number; dy: number; w?: number; h?: number }> = {
-    'tab-all': { dx: -124, dy: -24, w: 128.2, h: 46.8 },
-    'tab-fav': { dx: -123.2, dy: -25.6, w: 120.6, h: 42.4 },
-    'tab-recent': { dx: -121.6, dy: -25.6, w: 113.2, h: 43.2 },
-    'tab-archive': { dx: -120.8, dy: -25.6, w: 120.8, h: 43.2 },
-    search: { dx: 418.4, dy: -89.6, w: 412, h: 40 },
-    'btn-new': { dx: 134.4, dy: 88.8 },
-    'btn-import': { dx: 308.8, dy: 150.4 },
-    sort: { dx: 424, dy: -113.6, w: 192.6, h: 43.6 },
-    'filter-type': { dx: 424.8, dy: -112.8 },
-    'filter-status': { dx: 420.8, dy: -112.8 },
-    grid: { dx: -124.8, dy: -102.4, w: 1290.2, h: 604.6 },
-    'card-dummy-1': { dx: 0, dy: 0.8 },
-    'card-dummy-2': { dx: 4.8, dy: 0.8 },
-    'card-dummy-3': { dx: -4.8, dy: -4.8 },
-    'card-dummy-4': { dx: -4, dy: -3.2 },
-    'card-dummy-5': { dx: 2.4, dy: -3.2 },
-  }
-
-  // Обёртка блока в режиме макета
-  const LB = ({ id, className, style, children }: { id: string; className?: string; style?: React.CSSProperties; children: React.ReactNode }) => {
-    if (!layoutMode) {
-      const a = APPLIED_LAYOUT[id]
-      return (
-        <div
-          className={className}
-          style={{ ...style, ...(a ? { transform: `translate(${a.dx ?? 0}px, ${a.dy ?? 0}px)`, width: a.w, height: a.h } : {}) }}
-        >
-          {children}
-        </div>
-      )
-    }
-    const s = layout[id] ?? { dx: 0, dy: 0 }
-    return (
-      <div
-        className={`${className ?? ''} relative outline-2 outline-dashed outline-orange-500/60`}
-        style={{ ...style, transform: `translate(${s.dx}px, ${s.dy}px)`, width: s.w, height: s.h, zIndex: 30, overflow: 'visible' }}
-        onPointerDown={startBlockDrag(id)}
-      >
-        {children}
-        <div className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-orange-500/80 rounded-tl" onPointerDown={startBlockResize(id)} />
-      </div>
-    )
-  }
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
