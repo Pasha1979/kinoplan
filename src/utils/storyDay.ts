@@ -302,3 +302,111 @@ export function storyDayBadgeLabel(
   }
   return /^[0-9+-]|^[хx]/i.test(sd.raw) ? `ДЕНЬ ${sd.raw}` : sd.raw.toUpperCase()
 }
+
+// ─── Перенос и пересчёт дней (T-227 ЧАСТЬ 4) ────────────────────────────────
+
+const MODE_RANK: Record<string, number> = {
+  'РАССВЕТ': 0, 'УТРО': 1, 'ДЕНЬ': 2, 'ВЕЧЕР': 3, 'ЗАКАТ': 3, 'НОЧЬ': 4,
+}
+const rank = (m?: string) => MODE_RANK[(m || '').toUpperCase()] ?? 2
+const RANK_MODES = ['РАССВЕТ', 'УТРО', 'ДЕНЬ', 'ВЕЧЕР', 'НОЧЬ']
+const modesBetween = (a: number, b: number) => RANK_MODES.filter((m) => rank(m) >= a && rank(m) <= b)
+
+export interface DayCtx { mode?: string; storyDay?: { kind: string; value: number | null; raw: string } | null }
+export interface MoveAnalysis {
+  fits: boolean
+  /** варианты «привести к контексту»: режим + день */
+  variants: { mode: string; day: number }[]
+}
+
+/** Анализ переноса сцены между prev/next (ближайшие сцены с обычным днём). */
+export function analyzeSceneMove(moved: DayCtx, prev?: DayCtx | null, next?: DayCtx | null): MoveAnalysis {
+  const md = moved.storyDay
+  if (!md || md.kind !== 'normal' || md.value == null) return { fits: true, variants: [] }
+  const pv = prev?.storyDay?.kind === 'normal' ? prev!.storyDay!.value : null
+  const nv = next?.storyDay?.kind === 'normal' ? next!.storyDay!.value : null
+  const pm = prev?.mode, nm = next?.mode, mm = moved.mode
+
+  if (pv != null && nv != null) {
+    if (pv === nv) {
+      // внутри одного дня: день должен совпасть, режим — между prev и next
+      if (md.value === pv && (!mm || (rank(pm) <= rank(mm) && rank(mm) <= rank(nm)))) {
+        return { fits: true, variants: [] }
+      }
+      return { fits: false, variants: modesBetween(rank(pm), rank(nm)).map((mode) => ({ mode, day: pv })) }
+    }
+    if (pv < nv) {
+      // на границе дней: конец prev-дня или начало next-дня
+      const fitsPrev = md.value === pv && (!mm || rank(mm) >= rank(pm))
+      const fitsNext = md.value === nv && (!mm || rank(mm) <= rank(nm))
+      if (fitsPrev || fitsNext) return { fits: true, variants: [] }
+      const variants = [
+        ...modesBetween(rank(pm), 4).map((mode) => ({ mode, day: pv })),
+        ...modesBetween(0, rank(nm)).map((mode) => ({ mode, day: nv })),
+      ]
+      return { fits: false, variants }
+    }
+  }
+  if (pv != null && nv == null) {
+    if (md.value === pv && (!mm || rank(mm) >= rank(pm))) return { fits: true, variants: [] }
+    if (md.value > pv) return { fits: true, variants: [] } // дальше по хронологии — молча
+    return { fits: false, variants: modesBetween(rank(pm), 4).map((mode) => ({ mode, day: pv })) }
+  }
+  if (pv == null && nv != null) {
+    if (md.value === nv && (!mm || rank(mm) <= rank(nm))) return { fits: true, variants: [] }
+    if (md.value < nv) return { fits: true, variants: [] }
+    return { fits: false, variants: modesBetween(0, rank(nm)).map((mode) => ({ mode, day: nv })) }
+  }
+  return { fits: true, variants: [] }
+}
+
+export interface RenumberRow {
+  sceneId: string
+  number: string
+  /** сырой день до (null — не было), станет после (null — спец/без дня, не трогаем) */
+  from: string | null
+  to: number | null
+  missing: boolean // у сцены не было дня — токен не переписываем
+}
+
+/** План пересчёта по сезону: границы сохраняются, обычные дни → 1..N подряд. */
+export function planDayRenumber(
+  scenes: { id: string; number: string; mode?: string; storyDay?: { kind: string; value: number | null; raw: string } | null; isOmitted?: boolean }[],
+): RenumberRow[] {
+  const rows: RenumberRow[] = []
+  let counter = 0
+  let lastOrd: { mode: string; value: number } | null = null
+  for (const sc of scenes) {
+    if (sc.isOmitted) continue
+    const sd = sc.storyDay
+    if (!sd) {
+      rows.push({ sceneId: sc.id, number: sc.number, from: null, to: counter || null, missing: true })
+      continue
+    }
+    if (sd.kind !== 'normal' || sd.value == null) {
+      rows.push({ sceneId: sc.id, number: sc.number, from: sd.raw, to: null, missing: false })
+      continue
+    }
+    const boundary = !lastOrd || sd.value !== lastOrd.value
+      || isDayBoundary(lastOrd.mode, sc.mode || '')
+    if (boundary) counter++
+    rows.push({ sceneId: sc.id, number: sc.number, from: sd.raw, to: counter, missing: false })
+    lastOrd = { mode: sc.mode || '', value: sd.value }
+  }
+  return rows
+}
+
+/** Переписать слот «режим день» в хвосте шапки: новый режим+день.
+ *  Если дня не было — вставляет после режима; режима нет — добавляет оба. */
+export function rewriteHeaderDay(headerText: string, mode: string, day: number): string {
+  // Тайминг (мм:сс) — не день: срезаем до парсинга, возвращаем в конец
+  const tm = headerText.match(/\s*\(\d{1,2}:\d{2}(?::\d{2})?\)\s*\.?\s*$/)
+  const timing = tm ? ` ${tm[0].trim()}` : ''
+  const body = tm ? headerText.slice(0, headerText.length - tm[0].length) : headerText
+  const dash = body.lastIndexOf(' — ')
+  const head = dash >= 0 ? body.slice(0, dash) : body
+  const slot = dash >= 0 ? body.slice(dash + 3) : body
+  const p = parseTimeSlot(slot)
+  const tail = slot.slice(p.zoneEnd).replace(/^[\s.,;]+|[\s.,;]+$/g, '')
+  return `${head} — ${mode.toUpperCase()} ${day}.${tail ? ` ${tail}` : ''}${timing}`
+}

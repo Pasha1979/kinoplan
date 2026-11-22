@@ -432,3 +432,100 @@ describe('storyDayBadgeLabel — подпись бейджа', () => {
     expect(storyDayBadgeLabel({})).toBeNull()
   })
 })
+
+// ─── ЧАСТЬ 4: перенос и пересчёт ────────────────────────────────────────────
+import { analyzeSceneMove, planDayRenumber, rewriteHeaderDay } from './storyDay'
+
+const N = (v: number, raw = String(v)) => ({ kind: 'normal' as const, value: v, raw })
+const S = (raw: string) => ({ kind: 'special' as const, value: null, raw })
+
+describe('analyzeSceneMove — пример A', () => {
+  // [1-5 ДЕНЬ 1 | 1-6 НОЧЬ 1] ← переносим 1-8 (ДЕНЬ 2)
+  const prev = { mode: 'ДЕНЬ', storyDay: N(1) }
+  const next = { mode: 'НОЧЬ', storyDay: N(1) }
+  it('ДЕНЬ 2 между ДЕНЬ 1 и НОЧЬ 1 → конфликт, рекомендации день 1', () => {
+    const a = analyzeSceneMove({ mode: 'ДЕНЬ', storyDay: N(2) }, prev, next)
+    expect(a.fits).toBe(false)
+    expect(a.variants).toEqual([
+      { mode: 'ДЕНЬ', day: 1 },
+      { mode: 'ВЕЧЕР', day: 1 },
+      { mode: 'НОЧЬ', day: 1 },
+    ])
+  })
+  it('ДЕНЬ 1 или ВЕЧЕР 1 на том же месте → молча', () => {
+    expect(analyzeSceneMove({ mode: 'ДЕНЬ', storyDay: N(1) }, prev, next).fits).toBe(true)
+    expect(analyzeSceneMove({ mode: 'ВЕЧЕР', storyDay: N(1) }, prev, next).fits).toBe(true)
+  })
+})
+
+describe('analyzeSceneMove — пример B', () => {
+  // [1-5 ВЕЧЕР 1 | 1-6 НОЧЬ 1] ← переносим 1-8 (УТРО 2)
+  const prev = { mode: 'ВЕЧЕР', storyDay: N(1) }
+  const next = { mode: 'НОЧЬ', storyDay: N(1) }
+  it('УТРО 2 между ВЕЧЕР 1 и НОЧЬ 1 → конфликт, ВЕЧЕР/НОЧЬ 1', () => {
+    const a = analyzeSceneMove({ mode: 'УТРО', storyDay: N(2) }, prev, next)
+    expect(a.fits).toBe(false)
+    expect(a.variants).toEqual([
+      { mode: 'ВЕЧЕР', day: 1 },
+      { mode: 'НОЧЬ', day: 1 },
+    ])
+  })
+  it('спец-день и сцена без дня → всегда молча', () => {
+    expect(analyzeSceneMove({ mode: 'ДЕНЬ', storyDay: S('ФЛЕШБЕК') }, prev, next).fits).toBe(true)
+    expect(analyzeSceneMove({ mode: 'ДЕНЬ' }, prev, next).fits).toBe(true)
+  })
+  it('на границе дней: день соседа с подходящим режимом → молча', () => {
+    // [НОЧЬ 1 | УТРО 2]: УТРО 2 вписывается в начало дня 2
+    const p = { mode: 'НОЧЬ', storyDay: N(1) }
+    const n = { mode: 'УТРО', storyDay: N(2) }
+    expect(analyzeSceneMove({ mode: 'УТРО', storyDay: N(2) }, p, n).fits).toBe(true)
+    expect(analyzeSceneMove({ mode: 'НОЧЬ', storyDay: N(1) }, p, n).fits).toBe(true)
+    // ДЕНЬ 5 на границе → конфликт с вариантами обоих дней
+    const a = analyzeSceneMove({ mode: 'ДЕНЬ', storyDay: N(5) }, p, n)
+    expect(a.fits).toBe(false)
+    expect(a.variants.some((v) => v.day === 1)).toBe(true)
+    expect(a.variants.some((v) => v.day === 2)).toBe(true)
+  })
+})
+
+describe('planDayRenumber — пересчёт по сезону', () => {
+  it('дырки схлопываются 1..N, границы и спец сохраняются', () => {
+    const scenes = [
+      { id: 'a', number: '1-1', mode: 'ДЕНЬ', storyDay: N(5) },
+      { id: 'b', number: '1-2', mode: 'НОЧЬ', storyDay: N(5) },
+      { id: 'c', number: '1-3', mode: 'ДЕНЬ', storyDay: S('ФЛЕШБЕК') },
+      { id: 'd', number: '1-4', mode: 'УТРО', storyDay: N(12) },
+      { id: 'e', number: '1-5', mode: 'ДЕНЬ', storyDay: N(12) },
+      { id: 'f', number: '1-6', mode: 'ДЕНЬ', storyDay: N(40) },
+      { id: 'g', number: '1-7', mode: 'ДЕНЬ', isOmitted: true },
+      { id: 'h', number: '1-8', mode: 'ДЕНЬ' },
+    ]
+    const rows = planDayRenumber(scenes)
+    expect(rows.map((r) => r.to)).toEqual([1, 1, null, 2, 2, 3, 3])
+    expect(rows.find((r) => r.sceneId === 'c')!.from).toBe('ФЛЕШБЕК')
+    expect(rows.find((r) => r.sceneId === 'h')!.missing).toBe(true)
+  })
+  it('неявная граница: тот же день, но НОЧЬ→УТРО → новый', () => {
+    const scenes = [
+      { id: 'a', number: '1', mode: 'НОЧЬ', storyDay: N(1) },
+      { id: 'b', number: '2', mode: 'УТРО', storyDay: N(1) },
+      { id: 'c', number: '3', mode: 'ДЕНЬ', storyDay: N(1) },
+    ]
+    expect(planDayRenumber(scenes).map((r) => r.to)).toEqual([1, 2, 2])
+  })
+})
+
+describe('rewriteHeaderDay — перепись токена в шапке', () => {
+  it('режим+день меняются, хвост/тайминг целы', () => {
+    expect(rewriteHeaderDay('14-1. НАТ. УЛИЦЫ — ДЕНЬ 32. ОСИНА, ДИМКА (02:08)', 'НОЧЬ', 1))
+      .toBe('14-1. НАТ. УЛИЦЫ — НОЧЬ 1. ОСИНА, ДИМКА (02:08)')
+  })
+  it('дня не было → вставляется после режима', () => {
+    expect(rewriteHeaderDay('1-3. ИНТ. ДОМ — НОЧЬ. ИВАН', 'НОЧЬ', 5))
+      .toBe('1-3. ИНТ. ДОМ — НОЧЬ 5. ИВАН')
+  })
+  it('двойной режим/день схлопывается в канонический слот', () => {
+    expect(rewriteHeaderDay('1-9. ИНТ. ДОМ — НОЧЬ ДЕНЬ 32 33.', 'ВЕЧЕР', 2))
+      .toBe('1-9. ИНТ. ДОМ — ВЕЧЕР 2.')
+  })
+})

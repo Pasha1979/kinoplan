@@ -42,7 +42,8 @@ import { useFocusMode } from '../../hooks/useFocusMode'
 import { useSplitScreen } from '../../hooks/useSplitScreen'
 import { useDialogueMode } from '../../hooks/useDialogueMode'
 import DialogueCharacterPicker from '../../components/DialogueCharacterPicker'
-import { storyDaysEnabled } from '../../utils/storyDay'
+import { storyDaysEnabled, analyzeSceneMove, planDayRenumber, rewriteHeaderDay, type RenumberRow, type MoveAnalysis } from '../../utils/storyDay'
+import { MoveConflictDialog, RenumberDialog } from './components/StoryDayDialogs'
 import FormatModal from './components/FormatModal'
 import ScriptBreakdown from '../../components/ScriptBreakdown'
 import { browserFS } from '../../adapters/BrowserFS'
@@ -750,6 +751,53 @@ export default function ScriptPage() {
       .run()
   }, [editorInstance])
 
+  // T-227 Ч4: диалоги сценарных дней — конфликт переноса и пересчёт
+  const [moveConflict, setMoveConflict] = useState<null | {
+    scene: Scene; fromIndex: number; toIndex: number; analysis: MoveAnalysis
+  }>(null)
+  const [renumberPlan, setRenumberPlan] = useState<RenumberRow[] | null>(null)
+
+  /** Переписывает слот «режим день» в шапке сцены в живом документе (по sceneId). */
+  const applyDayRewrite = useCallback((sceneId: string, mode: string, day: number) => {
+    if (!editorInstance) return
+    const pos = posOfSceneId(editorInstance.state.doc, sceneId)
+    if (pos == null) return
+    const node = editorInstance.state.doc.nodeAt(pos)
+    if (!node) return
+    const textNode = editorInstance.schema.text(rewriteHeaderDay(node.textContent, mode, day))
+    editorInstance.chain().focus()
+      .insertContentAt({ from: pos + 1, to: pos + node.nodeSize - 1 }, textNode)
+      .run()
+  }, [editorInstance])
+
+  /** Перестановка сцены с проверкой сценарного дня: конфликт → диалог с рекомендацией. */
+  const requestSceneReorder = useCallback((fromIndex: number, toIndex: number) => {
+    const sc = scenes[fromIndex]
+    if (!sc || !storyDaysEnabled(project) || sc.storyDay?.kind !== 'normal' || sc.storyDay.value == null) {
+      handleSceneReorder(fromIndex, toIndex)
+      return
+    }
+    // Соседи по месту вставки — ближайшие сцены с обычным днём (спец/УДАЛЕНА не границы)
+    const rest = scenes.filter((s) => s.id !== sc.id && !s.isOmitted)
+    const isOrd = (s: Scene) => s.storyDay?.kind === 'normal' && s.storyDay.value != null
+    const prev = rest.slice(0, toIndex).reverse().find(isOrd) ?? null
+    const next = rest.slice(toIndex).find(isOrd) ?? null
+    const analysis = analyzeSceneMove(sc, prev, next)
+    if (analysis.fits) handleSceneReorder(fromIndex, toIndex)
+    else setMoveConflict({ scene: sc, fromIndex, toIndex, analysis })
+  }, [scenes, project, handleSceneReorder])
+
+  /** Пересчёт дней: применяет план — переписывает токены дня в шапках текущей серии. */
+  const applyRenumber = useCallback(() => {
+    if (!renumberPlan) return
+    for (const r of renumberPlan) {
+      if (r.to == null || r.missing) continue
+      const sc = scenes.find((s) => s.id === r.sceneId)
+      if (sc?.mode) applyDayRewrite(r.sceneId, sc.mode, r.to)
+    }
+    setRenumberPlan(null)
+  }, [renumberPlan, scenes, applyDayRewrite])
+
   // Сохранение отредактированного текста сцены из модала карточек (встроенный редактор)
   const handleSaveSceneHtml = useCallback((sc: Scene, html: string) => {
     const owner = episodeScripts.find((ep) => ep.scenes?.some((s) => s.id === sc.id))
@@ -1171,7 +1219,7 @@ export default function ScriptPage() {
               onSeriesPagesChange={setSeriesPages}
               totalPages={scriptStats.pages}
               onSceneClick={handleSceneClickRouted}
-              onSceneReorder={handleSceneReorder}
+              onSceneReorder={requestSceneReorder}
               activeSceneId={selectedScene?.id || ''}
               draftStatuses={project?.draftStatuses}
               onUpdateScene={handleUpdateScene}
@@ -1393,7 +1441,7 @@ export default function ScriptPage() {
                   withSynopsis={outlineSynopsis}
                   onToggleSynopsis={toggleOutlineSynopsis}
                   onClose={() => setOutlineMode(false)}
-                  onReorder={handleSceneReorder}
+                  onReorder={requestSceneReorder}
                 />
               )}
             </div>
@@ -1427,6 +1475,7 @@ export default function ScriptPage() {
           storyDays={storyDaysEnabled(project)}
           enableAutoFix={enableAutoFix}
           onApplyFix={handleApplyIssueFix}
+          onRenumberDays={storyDaysEnabled(project) ? () => setRenumberPlan(planDayRenumber(scenes)) : undefined}
           dismissedIssueIds={currentScript?.dismissedIssues || []}
           onDismissIssue={handleDismissIssue}
           onDismissIssues={handleDismissIssues}
@@ -1477,6 +1526,37 @@ export default function ScriptPage() {
       )}
 
       {/* Модальное окно экспорта сцен в .doc */}
+      {/* T-227 Ч4: конфликт дня при переносе + превью пересчёта */}
+      {moveConflict && (
+        <MoveConflictDialog
+          isDark={isDark}
+          scene={moveConflict.scene}
+          analysis={moveConflict.analysis}
+          onPickVariant={(v) => {
+            applyDayRewrite(moveConflict.scene.id, v.mode, v.day)
+            handleSceneReorder(moveConflict.fromIndex, moveConflict.toIndex)
+            setMoveConflict(null)
+          }}
+          onKeep={() => {
+            handleSceneReorder(moveConflict.fromIndex, moveConflict.toIndex)
+            setMoveConflict(null)
+          }}
+          onManual={() => {
+            handleSceneReorder(moveConflict.fromIndex, moveConflict.toIndex)
+            setMoveConflict(null)
+          }}
+          onCancel={() => setMoveConflict(null)}
+        />
+      )}
+      {renumberPlan && (
+        <RenumberDialog
+          isDark={isDark}
+          rows={renumberPlan}
+          scenesById={new Map(scenes.map((s) => [s.id, s]))}
+          onApply={applyRenumber}
+          onCancel={() => setRenumberPlan(null)}
+        />
+      )}
       {showExportModal && currentScript && (
         <ExportModal
           script={currentScript}

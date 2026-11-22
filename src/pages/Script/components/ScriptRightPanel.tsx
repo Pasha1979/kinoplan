@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Wand2,
   X,
+  CalendarDays,
 } from 'lucide-react'
 import type { Scene } from '../../../types/scene'
 import type { Character } from '../../../store/scriptStore'
@@ -136,6 +137,8 @@ interface ScriptRightPanelProps {
   storyDays?: boolean
   enableAutoFix: boolean
   onApplyFix?: (issue: ValidationIssue, suggestion?: string) => void
+  /** T-227 Ч4: открыть диалог пересчёта сценарных дней */
+  onRenumberDays?: () => void
   /** Клик по ошибке → переход к сцене */
   onIssueClick?: (issue: ValidationIssue) => void
   /** ID пропущенных автором проблем валидации */
@@ -301,6 +304,7 @@ function ScriptRightPanel({
   dismissedIssueIds = [],
   onDismissIssue,
   onDismissIssues,
+  onRenumberDays,
 }: ScriptRightPanelProps) {
   const [activeTab, setActiveTab] = useState<'validation' | 'notes' | 'versions'>(
     'validation'
@@ -629,6 +633,24 @@ function ScriptRightPanel({
             >
               <Wand2 size={13} />
               Исправить все ({fixableIssues.length})
+            </button>
+          )}
+
+          {/* T-227: пересчёт сценарных дней с превью */}
+          {storyDays && onRenumberDays && (
+            <button
+              data-testid="renumber-days-btn"
+              onClick={onRenumberDays}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all mt-2"
+              style={{
+                background: 'rgba(52,211,153,0.10)',
+                border: '1px solid rgba(52,211,153,0.3)',
+                color: '#34d399',
+              }}
+              title="Перенумеровать обычные дни подряд по сезону — с превью"
+            >
+              <CalendarDays size={13} />
+              Пересчитать дни
             </button>
           )}
 
