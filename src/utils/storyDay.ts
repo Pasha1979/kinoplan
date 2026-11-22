@@ -95,25 +95,21 @@ export function parseTimeSlot(slot: string, sceneNumber?: string): TimeSlotParse
   }
 
   const modes: ModeToken[] = []
-  const dayTokens: DayToken[] = []
-  const consumed: Array<{ start: number; end: number }> = []
   let m: RegExpExecArray | null
 
   MODE_G.lastIndex = 0
   while ((m = MODE_G.exec(text))) {
     modes.push({ word: m[1].toUpperCase(), start: m.index, end: m.index + m[0].length })
-    consumed.push({ start: m.index, end: m.index + m[0].length })
   }
   NUM_G.lastIndex = 0
+  const numCands: DayToken[] = []
   while ((m = NUM_G.exec(text))) {
-    // не считать числом дня число внутри режима/флеша (пересечений не будет — слова не цифры)
-    dayTokens.push(mkNumToken(m[0], m.index, m.index + m[0].length))
-    consumed.push({ start: m.index, end: m.index + m[0].length })
+    numCands.push(mkNumToken(m[0], m.index, m.index + m[0].length))
   }
   XDAY_G.lastIndex = 0
+  const xdayCands: DayToken[] = []
   while ((m = XDAY_G.exec(text))) {
-    dayTokens.push({ raw: m[0].toUpperCase() === 'X' ? 'Х' : m[0], start: m.index, end: m.index + m[0].length, value: null, kind: 'special' })
-    consumed.push({ start: m.index, end: m.index + m[0].length })
+    xdayCands.push({ raw: m[0].toUpperCase() === 'X' ? 'Х' : m[0], start: m.index, end: m.index + m[0].length, value: null, kind: 'special' })
   }
   FLASH_G.lastIndex = 0
   while ((m = FLASH_G.exec(text))) {
@@ -122,12 +118,38 @@ export function parseTimeSlot(slot: string, sceneNumber?: string): TimeSlotParse
     if (text[fs - 1] === '(' && text[fe] === ')') { fs -= 1; fe += 1; raw = `(${raw})` }
     const marker = /^(ФФ|ФЛЕШФОРВАРД|FF|FLASHFORWARD)$/i.test(m[1]) ? 'ФФ' : 'ФБ'
     flash = { marker, raw, start: fs, end: fe }
-    consumed.push({ start: fs, end: fe })
   }
 
-  dayTokens.sort((a, b) => a.start - b.start)
   modes.sort((a, b) => a.start - b.start)
-  const zoneEnd = consumed.length ? Math.max(...consumed.map(c => c.end)) : 0
+
+  // A: «зона дня» — числа вне её НЕ дни («ШКОЛА 25», «(14 СЕРИЯ ГР)», тайминг).
+  // Зона открывается первым токеном режима/маркера/Х либо числом на старте слота
+  // (голый день «…ДЕЖУРКА. 32») и продолжается пока между токенами только [\s.,;].
+  // Любой чужой символ (буква слова, «(», кавычка) — конец зоны.
+  const slotStart = text.search(/[^\s.,;]/)
+  const cands = [
+    ...modes.map((t) => ({ ...t, type: 'mode' as const })),
+    ...(flash ? [{ ...flash, type: 'flash' as const }] : []),
+    ...numCands.map((t) => ({ ...t, type: 'num' as const })),
+    ...xdayCands.map((t) => ({ ...t, type: 'xday' as const })),
+  ].sort((a, b) => a.start - b.start)
+
+  const dayTokens: DayToken[] = []
+  let zoneEnd = 0
+  let zoneOpen = false
+  for (const t of cands) {
+    if (!zoneOpen) {
+      if (t.type === 'num' && t.start !== slotStart) continue // число до зоны — не день
+      zoneOpen = true
+      zoneEnd = t.end
+      if (t.type === 'num' || t.type === 'xday') dayTokens.push(t)
+      continue
+    }
+    if (!/^[\s.,;]*$/.test(text.slice(zoneEnd, t.start))) break
+    zoneEnd = t.end
+    if (t.type === 'num' || t.type === 'xday') dayTokens.push(t)
+  }
+
   const tail = text.slice(zoneEnd).replace(/^[\s.,;]+/, '')
 
   // День: флеш-маркер приоритетнее числа; иначе первый числовой/Х токен
@@ -140,7 +162,12 @@ export function parseTimeSlot(slot: string, sceneNumber?: string): TimeSlotParse
 
   const issues: StoryDayIssue[] = []
   if (modes.length > 1) issues.push({ code: 'double-mode', options: modes.map(mm => mm.word) })
-  if (dayTokens.length > 1) issues.push({ code: 'double-day', options: dayTokens.map(d => d.raw) })
+  // C: два обычных дня — ошибка только когда НЕТ флеш-маркера;
+  // «НОЧЬ 32 33» при -ФБ → просто special, без double-day
+  const normalTokens = dayTokens.filter((t) => t.kind === 'normal')
+  if (!flash && normalTokens.length > 1) {
+    issues.push({ code: 'double-day', options: normalTokens.map((d) => d.raw) })
+  }
   if (!modes.length && dayTokens.length) issues.push({ code: 'day-without-mode' })
   if (modes.length && !day) issues.push({ code: 'missing-day' })
 
@@ -265,7 +292,8 @@ export function fixTimeSlot(slot: string, p: TimeSlotParse, fix: SlotFix): strin
       return collapse(zone.slice(0, t.start) + zone.slice(t.end)) + tail
     }
     case 'keep-day': {
-      const t = p.dayTokens[1 - fix.index]
+      const normals = p.dayTokens.filter((d) => d.kind === 'normal')
+      const t = normals[1 - fix.index] ?? p.dayTokens[1 - fix.index]
       return collapse(zone.slice(0, t.start) + zone.slice(t.end)) + tail
     }
     case 'add-mode':

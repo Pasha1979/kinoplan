@@ -204,6 +204,14 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
   const effectivePages = forcedPages ?? precisePagesFallback
   const hasPrecisePages = effectivePages > MIN_SCENE_PAGES
 
+  // Дубли номеров («1-13.» дважды) — id должен быть уникальным: суффикс -2, -3…
+  const seenIds = new Map<string, number>()
+  const uniqId = (base: string) => {
+    const n = (seenIds.get(base) || 0) + 1
+    seenIds.set(base, n)
+    return n === 1 ? base : `${base}-${n}`
+  }
+
   const scenes: ExtractedScene[] = rawScenes.map((raw) => {
     // Распределяем precisePages пропорционально charCount каждой сцены.
     // Если precisePages ещё не рассчитан (первый рендер) — fallback на charCount/CHARS_PER_PAGE.
@@ -226,7 +234,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     const autoSynopsis = [speakers, cut].filter(Boolean).join(' · ')
 
     return {
-      id: raw.sceneId ?? `scene-${raw.sceneNumber}`,
+      id: raw.sceneId ?? uniqId(`scene-${raw.sceneNumber}`),
       number: raw.sceneNumber,
       type: raw.sceneType,
       location: raw.location,
