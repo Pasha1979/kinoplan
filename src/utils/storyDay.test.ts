@@ -529,3 +529,56 @@ describe('rewriteHeaderDay — перепись токена в шапке', () 
       .toBe('1-9. ИНТ. ДОМ — ВЕЧЕР 2.')
   })
 })
+
+// ─── ЧАСТЬ 5: стресс — 96 сцен, 3 серии, грязные шапки ──────────────────────
+describe('стресс: 96 сцен × 3 серии — парсер и пересчёт не деградируют', () => {
+  const MODES = ['УТРО', 'ДЕНЬ', 'ВЕЧЕР', 'НОЧЬ']
+  const scenes: { id: string; number: string; mode: string; storyDay: ReturnType<typeof parseTimeSlot>['day']; isOmitted?: boolean; text: string }[] = []
+  for (let ep = 1; ep <= 3; ep++) {
+    let day = 0, prevMode = ''
+    for (let i = 1; i <= 32; i++) {
+      const mode = MODES[(i + ep) % 4]
+      if (!prevMode || isDayBoundary(prevMode, mode)) day++
+      prevMode = mode
+      const special = i % 16 === 0
+      const omitted = i % 17 === 0
+      const raw = special ? 'ФЛЕШБЕК' : String(day)
+      const text = `${ep}-${i}. ИНТ. ЛОКАЦИЯ${i} — ${mode}${special ? ' . ФЛЕШБЕК' : ` ${raw}`}. АКТЁР${i} (0${i % 10}:30)`
+      scenes.push({ id: `s${ep}-${i}`, number: `${ep}-${i}`, mode, storyDay: special ? { kind: 'special', value: null, raw } : { kind: 'normal', value: day, raw }, isOmitted: omitted, text })
+    }
+  }
+
+  it('все 96 шапок парсятся без ошибок и быстро', () => {
+    const t0 = performance.now()
+    const parsed = scenes.map((s) => parseHeaderTail(s.text.split(" ИНТ. ")[1], s.number))
+    const ms = performance.now() - t0
+    expect(ms).toBeLessThan(500)
+    parsed.forEach((p, i) => {
+      expect(p.mode).toBe(scenes[i].mode)
+      expect(p.day).not.toBeNull()
+      expect(p.issues.filter((x) => x.code !== 'missing-day')).toEqual([])
+    })
+  })
+
+  it('пересчёт 96 сцен: дни подряд по серии, спец сохранены', () => {
+    const t0 = performance.now()
+    for (let ep = 1; ep <= 3; ep++) {
+      const rows = planDayRenumber(scenes.filter((s) => s.number.startsWith(`${ep}-`)))
+      const normal = rows.filter((r) => r.to != null)
+      // подряд 1..N
+      const days = [...new Set(normal.map((r) => r.to))]
+      expect(days).toEqual(days.map((_, i) => i + 1))
+      // спец не перенумерованы
+      rows.filter((r) => r.from === 'ФЛЕШБЕК').forEach((r) => expect(r.to).toBeNull())
+    }
+    expect(performance.now() - t0).toBeLessThan(200)
+  })
+
+  it('analyzeSceneMove на 96 сценах не деградирует', () => {
+    const t0 = performance.now()
+    scenes.forEach((s, i) => {
+      analyzeSceneMove(s, scenes[i - 1], scenes[i + 1])
+    })
+    expect(performance.now() - t0).toBeLessThan(200)
+  })
+})
