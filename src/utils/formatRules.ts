@@ -62,6 +62,12 @@ export const RU_TO_EN_REPLACEMENTS: [RegExp, string][] = [
   [wordBoundary('ВЕЧЕР'), 'EVENING'],
   [wordBoundary('РАССВЕТ'), 'DAWN'],
   [wordBoundary('ЗАКАТ'), 'DUSK'],
+  // Сценарные дни: флеш-маркеры и «ДЕНЬ Х» — день сохраняется, режим переводится
+  [wordBoundary('ФЛЕШФОРВАРД'), 'FLASHFORWARD'],
+  [wordBoundary('ФЛЕШБЕК'), 'FLASHBACK'],
+  [wordBoundary('ФФ'), 'FF'],
+  [wordBoundary('ФБ'), 'FB'],
+  [wordBoundary('Х'), 'X'],
 ]
 
 export const EN_TO_RU_REPLACEMENTS: [RegExp, string][] = [
@@ -76,4 +82,9 @@ export const EN_TO_RU_REPLACEMENTS: [RegExp, string][] = [
   [wordBoundary('EVENING'), 'ВЕЧЕР'],
   [wordBoundary('DAWN'), 'РАССВЕТ'],
   [wordBoundary('DUSK'), 'ЗАКАТ'],
+  [wordBoundary('FLASHFORWARD'), 'ФЛЕШФОРВАРД'],
+  [wordBoundary('FLASHBACK'), 'ФЛЕШБЕК'],
+  [wordBoundary('FF'), 'ФФ'],
+  [wordBoundary('FB'), 'ФБ'],
+  [wordBoundary('X'), 'Х'],
 ]

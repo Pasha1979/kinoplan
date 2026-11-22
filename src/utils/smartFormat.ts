@@ -5,6 +5,15 @@ import type { ScreenplayBlock } from './parseScreenplayText'
 import {
   TIME_WORDS, TRANSITION_WORDS, NON_CHARACTER_WORDS, HEADER_RE, TIME_WORD_RE,
 } from './formatRules'
+import { DAY_TOKEN_SRC } from './storyDay'
+
+// «Контент после слова-режима»: сценарный день (32/Х/−3/ФЛЕШБЕК) — часть шапки, не контент.
+// Разделители — пробел или точка («ДЕНЬ 32. ОСИНА», «ДЕНЬ . ФЛЕШБЕК»).
+// Lookahead: не считаем контентом одинокий токен дня в конце строки («ДЕНЬ 32»).
+const AFTER_MODE_RE = new RegExp(
+  `(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)(?![\\s.]+(?:${DAY_TOKEN_SRC})[\\s.]*$)(?:[\\s.]+(?:${DAY_TOKEN_SRC}))?[\\s.]+(.+)`,
+  'i'
+)
 
 // Союзы и предлоги в нижнем регистре — признак текста действия, не реплики
 const LOWERCASE_CONJUNCTIONS = new Set([
@@ -110,9 +119,9 @@ export function needsSplitting(text: string): boolean {
     const match = trimmed.match(HEADER_RE)
     if (match && match.index && match.index > 0) return true
 
-    // Шапка + контент после time word на той же строке
+    // Шапка + контент после time word (+ день) на той же строке
     if (HEADER_RE.test(trimmed)) {
-      const headerEndMatch = trimmed.match(/(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)\s+(.+)/i)
+      const headerEndMatch = trimmed.match(AFTER_MODE_RE)
       if (headerEndMatch && headerEndMatch[1]) return true
     }
 
@@ -157,8 +166,9 @@ export function splitMergedText(text: string): string {
 
   // 5. Разделение шапки сцены от последующего контента после time word
   // С пробелом: "1. ИНТ. КВАРТИРА. ДЕНЬ ИВАН" → "1. ИНТ. КВАРТИРА. ДЕНЬ\nИВАН"
+  // День — часть шапки: "… ДЕНЬ 32. ОСИНА, ДИМКА" → "… ДЕНЬ 32.\nОСИНА, ДИМКА"
   result = result.replace(
-    new RegExp(`^((?:${SCENE_NUMBER}\\.\\s*)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.[^\\n]*?(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK))\\s+([^\\n]+)$`, 'gim'),
+    new RegExp(`^((?:${SCENE_NUMBER}\\.\\s*)?(?:ИНТ|ЭКСТ|ИНТ-ЭКСТ|ПАВ|НАТ)\\.[^\\n]*?(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)(?![\\s.]+(?:${DAY_TOKEN_SRC})[\\s.]*$)(?:[\\s.]+(?:${DAY_TOKEN_SRC}))?)[\\s.]+([^\\n]+)$`, 'gim'),
     '$1\n$2',
   )
   // 5b. Без пробела: "ДЕНЬЛЕНА" → "ДЕНЬ\nЛЕНА" (time word слит с контентом)
@@ -216,9 +226,9 @@ export function splitMergedText(text: string): string {
       continue
     }
 
-    // Шапка с time word — проверяем, есть ли контент после
+    // Шапка с time word — проверяем, есть ли контент после (день — часть шапки)
     if (HEADER_RE.test(trimmed)) {
-      const headerEndMatch = trimmed.match(/(?:ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|DAY|NIGHT|MORNING|EVENING|DAWN|DUSK)\s+(.+)/i)
+      const headerEndMatch = trimmed.match(AFTER_MODE_RE)
       if (headerEndMatch && headerEndMatch[1]) {
         const headerPart = trimmed.slice(0, trimmed.length - headerEndMatch[1].length).trim()
         pushBlock(headerPart)

@@ -213,6 +213,19 @@ export function parseHeaderTail(text: string, sceneNumber?: string): HeaderTailP
   return { ...p, omitted, location: body.trim(), zoneStart: body.length, slotText: '', suffix, timingSec }
 }
 
+/** Токен дня для regex-переиспользования (smartFormat/переход к составу). */
+export const DAY_TOKEN_SRC = '[+\\-−]?[0-9]+|[ХХXx]|ФЛЕШФОРВАРД|ФЛЕШБЕК|ФФ|ФБ|FLASHFORWARD|FLASHBACK|FF|FB'
+export const MODE_SRC_ALL = DAY_MODE_WORDS.join('|')
+
+/** Быстрые варианты дня для SmartType: тот же / следующий / флешбек / флешфорвард. */
+export function dayChoices(
+  mode: string,
+  last: { mode: string; value: number } | null,
+): string[] {
+  const rec = suggestDayNumber(last, mode)
+  return [String(rec), String(rec + 1), 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД']
+}
+
 // ─── Правило границы дня ────────────────────────────────────────────────────
 
 /** Новый обычный день: вечер/ночь прошлой сцены → утро/день текущей. */

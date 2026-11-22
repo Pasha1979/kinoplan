@@ -327,3 +327,73 @@ describe('validateFormatBlocks — сценарные дни', () => {
     expect(issues.find((i) => i.id.endsWith('-noday'))).toBeUndefined()
   })
 })
+
+// ─── ЧАСТЬ 2: автоформат / SmartType / RU↔EN ────────────────────────────────
+
+import { splitMergedText, needsSplitting } from './smartFormat'
+import { RU_TO_EN_REPLACEMENTS, EN_TO_RU_REPLACEMENTS } from './formatRules'
+import { dayChoices } from './storyDay'
+
+const applyAll = (s: string, rules: [RegExp, string][]) =>
+  rules.reduce((acc, [re, rep]) => acc.replace(new RegExp(re.source, re.flags), rep), s)
+
+describe('splitMergedText — день остаётся в шапке', () => {
+  it('«ДЕНЬ 32. ОСИНА, ДИМКА» → состав уходит на новую строку, день в шапке', () => {
+    const out = splitMergedText('14-1. НАТ. УЛИЦЫ. ДЕНЬ 32. ОСИНА, ДИМКА')
+    const lines = out.split('\n').map((l) => l.trim()).filter(Boolean)
+    expect(lines[0]).toContain('ДЕНЬ 32')
+    expect(lines.some((l) => l === '32')).toBe(false) // «32» не режется в контент
+    expect(lines.some((l) => l.includes('ОСИНА'))).toBe(true)
+  })
+
+  it('«ДЕНЬ 32» без контента — не делится', () => {
+    expect(needsSplitting('14-1. НАТ. УЛИЦЫ. ДЕНЬ 32')).toBe(false)
+    const out = splitMergedText('14-1. НАТ. УЛИЦЫ. ДЕНЬ 32')
+    expect(out).toContain('ДЕНЬ 32')
+  })
+
+  it('«ДЕНЬ . ФЛЕШБЕК» — маркер не режется', () => {
+    expect(needsSplitting('1-23. ИНТ. УЛИЦА. ДЕНЬ . ФЛЕШБЕК')).toBe(false)
+  })
+
+  it('«ДЕНЬ ИВАН» — имя после режима всё ещё делится', () => {
+    const out = splitMergedText('1. ИНТ. КВАРТИРА. ДЕНЬ ИВАН')
+    const lines = out.split('\n').map((l) => l.trim()).filter(Boolean)
+    expect(lines[0]).toContain('ДЕНЬ')
+    expect(lines[1]).toBe('ИВАН')
+  })
+
+  it('«ДЕНЬ 32 ОСИНА» — день + состав через пробел', () => {
+    const out = splitMergedText('1. ИНТ. КВАРТИРА. ДЕНЬ 32 ОСИНА')
+    const lines = out.split('\n').map((l) => l.trim()).filter(Boolean)
+    expect(lines[0]).toContain('ДЕНЬ 32')
+    expect(lines[1]).toBe('ОСИНА')
+  })
+})
+
+describe('RU↔EN — режим переводится, день сохраняется', () => {
+  it('«ДЕНЬ 32» → «DAY 32»; «НОЧЬ 1» → «НОЧЬ 1»', () => {
+    expect(applyAll('ДЕНЬ 32', RU_TO_EN_REPLACEMENTS)).toBe('DAY 32')
+    expect(applyAll('НОЧЬ 1', RU_TO_EN_REPLACEMENTS)).toBe('NIGHT 1')
+    expect(applyAll('DAY 32', EN_TO_RU_REPLACEMENTS)).toBe('ДЕНЬ 32')
+    expect(applyAll('NIGHT 1', EN_TO_RU_REPLACEMENTS)).toBe('НОЧЬ 1')
+  })
+
+  it('спец-маркеры: Х/ФЛЕШБЕК/ФБ/ФФ', () => {
+    expect(applyAll('ДЕНЬ Х', RU_TO_EN_REPLACEMENTS)).toBe('DAY X')
+    expect(applyAll('ДЕНЬ ФЛЕШБЕК', RU_TO_EN_REPLACEMENTS)).toBe('DAY FLASHBACK')
+    expect(applyAll('ДЕНЬ ФБ', RU_TO_EN_REPLACEMENTS)).toBe('DAY FB')
+    expect(applyAll('ДЕНЬ ФФ', RU_TO_EN_REPLACEMENTS)).toBe('DAY FF')
+    expect(applyAll('DAY FLASHBACK', EN_TO_RU_REPLACEMENTS)).toBe('ДЕНЬ ФЛЕШБЕК')
+    expect(applyAll('DAY FB', EN_TO_RU_REPLACEMENTS)).toBe('ДЕНЬ ФБ')
+    expect(applyAll('DAY X', EN_TO_RU_REPLACEMENTS)).toBe('ДЕНЬ Х')
+  })
+})
+
+describe('dayChoices — быстрые варианты SmartType', () => {
+  it('НОЧЬ прошлого дня → УТРО: следующий; ДЕНЬ → НОЧЬ: тот же', () => {
+    expect(dayChoices('УТРО', { mode: 'НОЧЬ', value: 5 })).toEqual(['6', '7', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
+    expect(dayChoices('НОЧЬ', { mode: 'ДЕНЬ', value: 5 })).toEqual(['5', '6', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
+    expect(dayChoices('ДЕНЬ', null)).toEqual(['1', '2', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
+  })
+})

@@ -123,7 +123,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         type: s.type,
         location: s.location,
         sublocation: s.sublocation,
-        timeOfDay: s.time ? todFromTime(s.time) : (existing?.timeOfDay || 'DAY'),
+        timeOfDay: s.mode || s.time ? todFromTime(s.mode || s.time) : (existing?.timeOfDay || 'DAY'),
         time: s.time,
         mode: s.mode,
         storyDay: s.storyDay,

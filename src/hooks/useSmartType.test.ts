@@ -212,3 +212,38 @@ describe('легальная латиница (T-112)', () => {
     expect(result.current.suggestions.map(s => s.text)).toContain('ПЁТР')
   })
 })
+
+describe('useSmartType — сценарные дни', () => {
+  const DAY_OPTS = {
+    ...OPTIONS,
+    dayChoices: () => ['6', '7', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'],
+  }
+
+  it('после «ДЕНЬ » открывает быстрые варианты дня', () => {
+    const { result } = renderHook(() => useSmartType(DAY_OPTS))
+    act(() => result.current.updateSuggestions('14-1. ИНТ. УЛИЦА. ДЕНЬ ', 23, 'scene_header'))
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.suggestions.map((s) => s.text)).toEqual(['6', '7', 'ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
+    expect(result.current.suggestions[0].insertText).toBe('6.') // принятие → переход к составу
+  })
+
+  it('частичный ввод фильтрует варианты («3» → цифровые не подходят → фолбэк обычного фильтра)', () => {
+    const { result } = renderHook(() => useSmartType(DAY_OPTS))
+    act(() => result.current.updateSuggestions('14-1. ИНТ. УЛИЦА. ДЕНЬ 7', 24, 'scene_header'))
+    // '7' точное совпадение исключено → day-подсказок нет, обычный фильтр по '7' пуст
+    expect(result.current.isOpen).toBe(false)
+  })
+
+  it('«Ф» после режима → флеш-варианты', () => {
+    const { result } = renderHook(() => useSmartType(DAY_OPTS))
+    act(() => result.current.updateSuggestions('14-1. ИНТ. УЛИЦА. ДЕНЬ Ф', 24, 'scene_header'))
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.suggestions.map((s) => s.text)).toEqual(['ФЛЕШБЕК', 'ФЛЕШФОРВАРД'])
+  })
+
+  it('без dayChoices — прежнее поведение (нет подсказок после режима)', () => {
+    const { result } = renderHook(() => useSmartType(OPTIONS))
+    act(() => result.current.updateSuggestions('14-1. ИНТ. УЛИЦА. ДЕНЬ ', 23, 'scene_header'))
+    expect(result.current.isOpen).toBe(false)
+  })
+})

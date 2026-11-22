@@ -17,6 +17,7 @@ import { useUiStore } from '../store/uiStore'
 import { typographyTransform } from '../utils/autoTypography'
 import { handleBracketInput, handleBracketBackspace } from '../utils/autoBrackets'
 import { allSceneRanges, moveScene } from '../utils/sceneOps'
+import { dayChoices as dayChoicesFor, DAY_TOKEN_SRC } from '../utils/storyDay'
 // localStorage больше не используется — контент хранится в scriptStore
 import { PageCounter } from '../services/pageCounter'
 import { type PageBreakInfo } from '../services/pagination'
@@ -130,6 +131,11 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     locations: smartTypeLocations || [],
     times: smartTypeTimes || [],
     projectId,
+    // Сценарные дни (serial/film по умолч.): быстрые варианты после «РЕЖИМ »
+    dayChoices: (mode: string) =>
+      projectTypeRef.current === 'serial' || projectTypeRef.current === 'film'
+        ? dayChoicesFor(mode, lastOrdinaryDayRef.current)
+        : [],
   })
   // Ref-обёртка для SmartType чтобы не менять зависимости useEffect/useEditor
   const smartTypeRef = useRef(smartType)
@@ -156,6 +162,9 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
   const onStatsChangeRef = useRef(onStatsChange)
   const onActiveSceneChangeRef = useRef(onActiveSceneChange)
   const currentSeriesRef = useRef(currentSeries)
+  // Последний обычный сценарный день в документе — для подсказки SmartType
+  const lastOrdinaryDayRef = useRef<{ mode: string; value: number } | null>(null)
+
   const projectTypeRef = useRef(projectType)
   const autoExtractCharactersRef = useRef(autoExtractCharacters)
   const enterPreset = useUiStore((s) => s.enterPreset)
@@ -746,10 +755,16 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
           const wordStartPos = selection.from - delLen
           const wordEndPos = selection.from
           
+          // Сценарные дни: после режима — пробел (SmartType сам предложит день);
+          // иначе классика — режим + '.' → авто-переход к составу
+          const storyDaysOn =
+            projectTypeRef.current === 'serial' || projectTypeRef.current === 'film'
           const textToInsert = suggestion.insertText
             ?? (isDotted
               ? suggestion.text.split('.').pop()!
-              : suggestion.type === 'time' ? suggestion.text + '.' : suggestion.text)
+              : suggestion.type === 'time'
+                ? suggestion.text + (storyDaysOn && currentNode?.type.name === 'sceneHeader' ? ' ' : '.')
+                : suggestion.type === 'day' ? suggestion.text + '.' : suggestion.text)
           
           const wasCharacterBlock = currentNode?.type.name === 'sceneCharacter'
 
@@ -1102,13 +1117,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
       st.closeSuggestions()
     }
 
-    // Авто-переход к составу: шапка завершена временем («ДЕНЬ.», «НОЧЬ.», «УТРО.»)
+    // Авто-переход к составу: шапка завершена временем/днём
+    // («ДЕНЬ.», «НОЧЬ.», «ДЕНЬ 32.», «ДЕНЬ Х.», «ДЕНЬ ФЛЕШБЕК.»)
     // Срабатывает и при ручном наборе, и при выборе подсказки SmartType
     if (currentType === 'sceneHeader' && !isReplacingRef.current) {
       const node = $from.node()
       const text = node?.textContent || ''
       const atEnd = $from.parentOffset === (node?.content.size ?? -1)
-      if (atEnd && /(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|РАННЕЕ УТРО|ПОЗДНЯЯ НОЧЬ)\.\s*$/i.test(text)) {
+      if (atEnd && new RegExp(`(ДЕНЬ|НОЧЬ|УТРО|ВЕЧЕР|РАССВЕТ|ЗАКАТ|РАННЕЕ УТРО|ПОЗДНЯЯ НОЧЬ)(?:[\\s.]+(?:${DAY_TOKEN_SRC}))?\\s*\\.\\s*$`, 'i').test(text)) {
         editorInstance.chain().splitBlock().setNode('sceneCast').run()
       }
     }
@@ -1415,6 +1431,14 @@ export function useScriptEditorLogic(options: UseScriptEditorLogicOptions) {
     })
     onScenesChangeRef.current?.(extractedScenes)
     onStatsChangeRef.current?.(stats)
+
+    // Последний обычный день для рекомендации SmartType (спец/УДАЛЕНА не считаются)
+    const lastOrd = [...extractedScenes].reverse().find(
+      (s) => !s.omitted && s.storyDay?.kind === 'normal' && s.storyDay.value != null && s.mode
+    )
+    lastOrdinaryDayRef.current = lastOrd
+      ? { mode: lastOrd.mode!, value: lastOrd.storyDay!.value! }
+      : null
 
     // Обучаем SmartType
     const allCast = new Set<string>()

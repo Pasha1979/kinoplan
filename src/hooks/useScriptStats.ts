@@ -125,10 +125,10 @@ export function useScriptStats(
       else pavCount++
     })
 
-    // Время суток
+    // Время суток — из очищенного режима (mode), иначе сырое время как написал автор
     const todMap = new Map<string, number>()
     scenes.forEach((sc) => {
-      const t = (sc.time || '').trim().toUpperCase().replace(/\.$/, '') || 'НЕ УКАЗАНО'
+      const t = sc.mode || (sc.time || '').trim().toUpperCase().replace(/\.$/, '') || 'НЕ УКАЗАНО'
       todMap.set(t, (todMap.get(t) || 0) + 1)
     })
     const timeOfDay = [...todMap.entries()]

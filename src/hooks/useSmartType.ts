@@ -48,7 +48,7 @@ function translitLayout(word: string): string {
 export interface SmartTypeSuggestion {
   id: string
   text: string
-  type: 'character' | 'location' | 'prop' | 'time' | 'scene_prefix'
+  type: 'character' | 'location' | 'prop' | 'time' | 'scene_prefix' | 'day'
   /** если задан — вставляется этот текст вместо text (напр. только подлокация) */
   insertText?: string
   frequency: number // сколько раз уже использовалось
@@ -63,6 +63,8 @@ export interface UseSmartTypeOptions {
   maxSuggestions?: number
   /** T-100: частоты хранятся per-project (smartType_frequency:{id}) */
   projectId?: string
+  /** Сценарные дни: быстрые варианты после слова-режима (тот же/след./ФБ/ФФ) */
+  dayChoices?: (mode: string) => string[]
 }
 
 const EMPTY_LIST: string[] = []
@@ -76,6 +78,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     minMatchLength = 2,
     maxSuggestions = 5,
     projectId,
+    dayChoices,
   } = options
 
   const [suggestions, setSuggestions] = useState<SmartTypeSuggestion[]>([])
@@ -205,7 +208,37 @@ export function useSmartType(options: UseSmartTypeOptions) {
   ) => {
     setCursorPosition(cursorPos)
     const currentWord = getCurrentWord(text, cursorPos)
-    
+
+    // Сценарные дни: курсор после «РЕЖИМ » (или набирает токен дня) →
+    // быстрые варианты тот же/след./флешбек/флешфорвард.
+    if (
+      dayChoices &&
+      (blockType === 'scene_header' || blockType === 'sceneHeader')
+    ) {
+      const before = text.substring(0, cursorPos)
+      const dm = before.match(
+        /(УТРО|ДЕНЬ|ВЕЧЕР|НОЧЬ|РАССВЕТ|ЗАКАТ|MORNING|DAY|EVENING|NIGHT|DAWN|DUSK)(\s+)([^\s,;]*)$/i
+      )
+      if (dm) {
+        const typed = dm[3].toUpperCase()
+        const list = dayChoices(dm[1].toUpperCase())
+          .filter((d) => d !== typed && d.startsWith(typed))
+          .map((d, i) => ({
+            id: `day_${i}`,
+            text: d,
+            insertText: `${d}.`, // принятие → «32.» → авто-переход к составу
+            type: 'day' as const,
+            frequency: 0,
+          }))
+        if (list.length) {
+          setSuggestions(list)
+          setIsOpen(true)
+          setActiveIndex(0)
+          return
+        }
+      }
+    }
+
     if (currentWord.length < minMatchLength) {
       setIsOpen(false)
       setSuggestions([])
@@ -263,7 +296,7 @@ export function useSmartType(options: UseSmartTypeOptions) {
     setSuggestions(filtered)
     setIsOpen(filtered.length > 0)
     setActiveIndex(0)
-  }, [allSuggestions, getCurrentWord, minMatchLength, maxSuggestions])
+  }, [allSuggestions, getCurrentWord, minMatchLength, maxSuggestions, dayChoices])
 
   // Выбрать подсказку
   const selectSuggestion = useCallback((
