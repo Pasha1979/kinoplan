@@ -132,8 +132,10 @@ interface ScriptRightPanelProps {
   // Format checking
   blocks: Array<{ id: string; type: string; content: string }>
   format: 'russian' | 'hollywood'
+  /** Сценарные дни: валидация режим+день в шапках (по типу проекта, Ч3 — переключатель) */
+  storyDays?: boolean
   enableAutoFix: boolean
-  onApplyFix?: (issue: ValidationIssue) => void
+  onApplyFix?: (issue: ValidationIssue, suggestion?: string) => void
   /** Клик по ошибке → переход к сцене */
   onIssueClick?: (issue: ValidationIssue) => void
   /** ID пропущенных автором проблем валидации */
@@ -153,9 +155,10 @@ interface ScriptRightPanelProps {
 /* ──────────────────────────────────────────────────────────────── */
 function useFormatValidation(
   blocks: Array<{ id: string; type: string; content: string }>,
-  format: 'russian' | 'hollywood'
+  format: 'russian' | 'hollywood',
+  storyDays: boolean
 ): ValidationIssue[] {
-  return useMemo(() => validateFormatBlocks(blocks, format), [blocks, format])
+  return useMemo(() => validateFormatBlocks(blocks, format, { storyDays }), [blocks, format, storyDays])
 }
 
 /* ──────────────────────────────────────────────────────────────── */
@@ -288,6 +291,7 @@ function ScriptRightPanel({
   textSecondary,
   blocks,
   format,
+  storyDays = false,
   enableAutoFix,
   onApplyFix,
   scenes,
@@ -306,7 +310,7 @@ function ScriptRightPanel({
   const [groupPopup, setGroupPopup] = useState<{ ruleKey: string; members: ValidationIssue[]; x: number; y: number } | null>(null)
 
   /* ── Validation data ── */
-  const formatIssues = useFormatValidation(blocks, format)
+  const formatIssues = useFormatValidation(blocks, format, storyDays)
   const sceneIssues = useSceneQualityValidation(scenes)
   const characterIssues = useCharacterValidation(characters)
   const timingIssues = useTimingValidation(scenes, timingSystem)
@@ -698,7 +702,8 @@ function ScriptRightPanel({
       {/* ── Попап «Подробнее об ошибке» (правый клик по проблеме) ── */}
       {fixPopup && (() => {
         const { issue, x, y } = fixPopup
-        const canFix = !!(issue.autoFixable && issue.suggestion && onApplyFix)
+        const variants = issue.suggestions?.length ? issue.suggestions : (issue.suggestion ? [issue.suggestion] : [])
+        const canFix = !!(issue.autoFixable && variants.length && onApplyFix)
         const left = Math.min(x, window.innerWidth - 340)
         const top = Math.min(y, window.innerHeight - 280)
         const sevColor = severityColor(issue.severity)
@@ -765,25 +770,42 @@ function ScriptRightPanel({
                 )}
 
                 {/* Станет */}
-                {issue.suggestion && (
+                {variants.length > 0 && (
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: textSecondary }}>
-                      После исправления
+                      {variants.length > 1 ? 'Варианты исправления' : 'После исправления'}
                     </p>
-                    <div
-                      className="rounded-lg px-2.5 py-2 text-[11px] font-mono leading-snug break-words"
-                      style={{
-                        background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.07)',
-                        border: `1px solid ${isDark ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.25)'}`,
-                        color: textPrimary,
-                      }}
-                    >
-                      {issue.suggestion}
+                    <div className="space-y-1.5">
+                      {variants.map((v, vi) => (
+                        <button
+                          key={vi}
+                          disabled={!canFix}
+                          onClick={() => {
+                            onApplyFix!(issue, v)
+                            setFixPopup(null)
+                          }}
+                          className="w-full text-left rounded-lg px-2.5 py-2 text-[11px] font-mono leading-snug break-words transition-all"
+                          style={{
+                            background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.07)',
+                            border: `1px solid ${isDark ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.25)'}`,
+                            color: textPrimary,
+                            cursor: canFix ? 'pointer' : 'default',
+                            opacity: canFix ? 1 : 0.85,
+                          }}
+                        >
+                          {variants.length > 1 && (
+                            <span className="block text-[9px] font-sans font-semibold uppercase tracking-wider mb-0.5" style={{ color: '#22c55e' }}>
+                              {canFix ? `Вариант ${vi + 1} — нажать чтобы применить` : `Вариант ${vi + 1}`}
+                            </span>
+                          )}
+                          {v}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {!issue.suggestion && (
+                {!issue.suggestion && variants.length === 0 && (
                   <p className="text-[11px] leading-snug" style={{ color: textSecondary }}>
                     Автоматического исправления для этого предупреждения нет — поправьте вручную в тексте сценария.
                   </p>
@@ -796,7 +818,7 @@ function ScriptRightPanel({
 
                 {/* Кнопки */}
                 <div className="flex items-center gap-2 pt-1">
-                  {canFix && (
+                  {canFix && variants.length <= 1 && (
                     <button
                       onClick={() => {
                         onApplyFix(issue)

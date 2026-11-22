@@ -1,5 +1,6 @@
 import { SCENE_NUMBER } from './sceneNumber'
 import { SCENE_HEADER_RE_RU, SCENE_HEADER_RE_EN, LOCATION_SYNONYMS } from './formatRules'
+import { SCENE_HEADER_RE, parseHeaderTail, fixTimeSlot, suggestDayNumber } from './storyDay'
 
 export type ErrorSeverity = 'error' | 'warning' | 'info'
 
@@ -9,6 +10,8 @@ export interface ValidationIssue {
   category: 'format' | 'scene' | 'character' | 'timing'
   message: string
   suggestion?: string
+  /** Варианты автофикса на выбор («оставить первый/второй») — для дней/режимов */
+  suggestions?: string[]
   autoFixable: boolean
   lineNumber?: number
   /** К какой сцене перейти по клику */
@@ -34,12 +37,16 @@ function nextSceneNumber(lastSceneNum: string, headerIndex: number): string {
  */
 export function validateFormatBlocks(
   blocks: Array<{ id: string; type: string; content: string }>,
-  format: 'russian' | 'hollywood'
+  format: 'russian' | 'hollywood',
+  options?: { storyDays?: boolean }
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   let lineNumber = 1
   let lastSceneNum = ''
   let headerIndex = 0
+  // Контекст сценарных дней для подсказок (последний обычный день/режим)
+  let lastDay: { mode: string; value: number } | null = null
+  let lastMode = ''
 
   blocks.forEach((block) => {
     const content = block.content.trim()
@@ -87,6 +94,91 @@ export function validateFormatBlocks(
           lineNumber,
           sceneNumber: lastSceneNum,
         })
+      }
+
+      // ── Сценарные дни (спека 08_СЦЕНАРНЫЕ_ДНИ.md): режим+день в шапке ──
+      if (options?.storyDays) {
+        const hm = content.match(SCENE_HEADER_RE)
+        if (hm) {
+          const p = parseHeaderTail(hm[3], hm[1])
+          const absZone = content.length - hm[3].length + p.zoneStart
+          const wrap = (fixedSlot: string) => content.slice(0, absZone) + fixedSlot + p.suffix
+          if (!p.omitted) {
+            for (const pi of p.issues) {
+              if (pi.code === 'double-mode') {
+                issues.push({
+                  id: `fmt-${block.id}-dmode`,
+                  severity: 'error',
+                  category: 'format',
+                  message: `Два режима времени в шапке: ${p.modes.map(t => t.word).join(' и ')} — оставьте один`,
+                  suggestions: p.modes.map((_, i) => wrap(fixTimeSlot(p.slotText, p, { type: 'keep-mode', index: i }))),
+                  autoFixable: true,
+                  content,
+                  lineNumber,
+                  sceneNumber: lastSceneNum,
+                })
+              } else if (pi.code === 'double-day') {
+                issues.push({
+                  id: `fmt-${block.id}-dday`,
+                  severity: 'error',
+                  category: 'format',
+                  message: `Два номера дня в шапке: ${p.dayTokens.map(t => t.raw).join(' и ')} — оставьте один`,
+                  suggestions: p.dayTokens.map((_, i) => wrap(fixTimeSlot(p.slotText, p, { type: 'keep-day', index: i }))),
+                  autoFixable: true,
+                  content,
+                  lineNumber,
+                  sceneNumber: lastSceneNum,
+                })
+              } else if (pi.code === 'day-without-mode') {
+                const mode = lastMode || 'ДЕНЬ'
+                issues.push({
+                  id: `fmt-${block.id}-nomode`,
+                  severity: 'warning',
+                  category: 'format',
+                  message: `Номер дня без режима времени — добавьте режим (например, ${mode})`,
+                  suggestion: wrap(fixTimeSlot(p.slotText, p, { type: 'add-mode', mode })),
+                  autoFixable: true,
+                  content,
+                  lineNumber,
+                  sceneNumber: lastSceneNum,
+                })
+              } else if (pi.code === 'missing-day') {
+                const n = suggestDayNumber(lastDay, p.mode)
+                issues.push({
+                  id: `fmt-${block.id}-noday`,
+                  severity: 'warning',
+                  category: 'format',
+                  message: `Не указан номер сценарного дня — по логике: ${n}`,
+                  suggestion: wrap(fixTimeSlot(p.slotText, p, { type: 'add-day', day: n })),
+                  autoFixable: true,
+                  content,
+                  lineNumber,
+                  sceneNumber: lastSceneNum,
+                })
+              }
+            }
+            // Шапка совсем без времени/дня (и без ошибок) — день обязателен
+            if (!p.day && p.issues.length === 0) {
+              const mode = lastMode || 'ДЕНЬ'
+              const n = suggestDayNumber(lastDay, mode)
+              issues.push({
+                id: `fmt-${block.id}-noday`,
+                severity: 'warning',
+                category: 'format',
+                message: `Не указан номер сценарного дня — по логике: ${n}`,
+                suggestion: `${content} — ${mode} ${n}`,
+                autoFixable: true,
+                content,
+                lineNumber,
+                sceneNumber: lastSceneNum,
+              })
+            }
+          }
+          if (!p.omitted && p.day?.kind === 'normal' && p.day.value != null) {
+            lastDay = { mode: p.mode, value: p.day.value }
+          }
+          if (!p.omitted && p.mode) lastMode = p.mode
+        }
       }
     }
 

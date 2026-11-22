@@ -716,8 +716,9 @@ export default function ScriptPage() {
   }, [currentScript?.id, updateScript, triggerAutoSave])
 
   // Применение авто-исправления из панели валидации: заменяем текст ноды блока
-  const handleApplyIssueFix = useCallback((issue: ValidationIssue) => {
-    if (!editorInstance || !issue.suggestion) return
+  const handleApplyIssueFix = useCallback((issue: ValidationIssue, suggestion?: string) => {
+    const fix = suggestion ?? issue.suggestion
+    if (!editorInstance || !fix) return
     const targetIdx = (issue.lineNumber ?? 0) - 1
     let from: number | null = null
     let to: number | null = null
@@ -740,7 +741,7 @@ export default function ScriptPage() {
       })
     }
     if (from == null || to == null) return
-    const textNode = editorInstance.schema.text(issue.suggestion)
+    const textNode = editorInstance.schema.text(fix)
     editorInstance
       .chain()
       .focus()
@@ -1418,6 +1419,7 @@ export default function ScriptPage() {
           textSecondary={textSecondary}
           blocks={blocks}
           format={scriptFormat === 'custom' ? 'russian' : scriptFormat}
+          storyDays={project?.type === 'serial' || project?.type === 'film'}
           enableAutoFix={enableAutoFix}
           onApplyFix={handleApplyIssueFix}
           dismissedIssueIds={currentScript?.dismissedIssues || []}

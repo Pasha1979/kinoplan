@@ -106,7 +106,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
   }, [])
 
   // При получении новых сцен из редактора — синхронизируем со всеми stores
-  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; cast: string[]; dialogCharacters?: string[]; autoSynopsis?: string; pages: number; charCount?: number; duration?: number }>) => {
+  const handleScenesChange = useCallback((newScenes: Array<{ id: string; number: string; type: string; location: string; sublocation?: string; time: string; mode?: string; storyDay?: Scene['storyDay']; omitted?: boolean; cast: string[]; dialogCharacters?: string[]; autoSynopsis?: string; pages: number; charCount?: number; duration?: number }>) => {
     if (!currentScriptId) return
 
     // Merge с существующими сценами из scriptStore: сохраняем metadata (synopsis, breakdownElements и т.д.)
@@ -125,6 +125,8 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         sublocation: s.sublocation,
         timeOfDay: s.time ? todFromTime(s.time) : (existing?.timeOfDay || 'DAY'),
         time: s.time,
+        mode: s.mode,
+        storyDay: s.storyDay,
         charCount: s.charCount,
         duration: s.duration,
         synopsis: existing?.synopsis || '',
@@ -133,7 +135,7 @@ export function useScriptPageLogic(opts?: { onBeforeSceneReorder?: (scriptId: st
         dialogCharacters: s.dialogCharacters || existing?.dialogCharacters || [],
         breakdownElements: existing?.breakdownElements || [],
         colorTag: existing?.colorTag,
-        isOmitted: existing?.isOmitted || false,
+        isOmitted: s.omitted || existing?.isOmitted || false,
         order: existing?.order ?? 0,
         autoSynopsis: (s as { autoSynopsis?: string }).autoSynopsis,
         isBookmarked: existing?.isBookmarked,

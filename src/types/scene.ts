@@ -45,6 +45,10 @@ export interface Scene {
   sublocation?: string // «Кабинет директора» (из «Школа.Кабинет директора»)
   timeOfDay?: TimeOfDay
   time: string // русское время суток ('ДЕНЬ', 'НОЧЬ'...) — для отображения
+  /** очищенный режим времени суток (УТРО/ДЕНЬ/…) — статистика, автозамены, переход к составу */
+  mode?: string
+  /** сценарный день (storyDay ≠ shootDayNumber): normal=1..N, special=0/−N/Х/ФБ/ФФ */
+  storyDay?: { kind: 'normal' | 'special'; value: number | null; raw: string } | null
   charCount?: number // символов в сцене
   duration?: number // секунд хронометража
   manualDuration?: number // ручной хронометраж из шапки (мм:сс) в секундах

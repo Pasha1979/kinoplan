@@ -1,6 +1,6 @@
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { calculateSceneTiming } from './sceneTiming'
-import { SCENE_NUMBER } from './sceneNumber'
+import { SCENE_HEADER_RE, parseHeaderTail, type StoryDay } from './storyDay'
 import { CHARS_PER_PAGE, MIN_SCENE_PAGES, MIN_SCENE_CHAR_COUNT } from '../constants/scriptConstants'
 import type { TimingSystem } from '../store/scriptStore'
 
@@ -10,7 +10,14 @@ export interface ExtractedScene {
   type: string
   location: string
   sublocation?: string
+  /** время как написал автор: «ДЕНЬ 32», «НОЧЬ 1», «ДЕНЬ Х» */
   time: string
+  /** нормализованный режим (УТРО/ДЕНЬ/…) для статистики и переходов */
+  mode?: string
+  /** сценарный день; ≠ shootDayNumber */
+  storyDay?: StoryDay | null
+  /** сцена помечена УДАЛЕНА — пропускается в днях/статистике */
+  omitted?: boolean
   cast: string[]
   dialogCharacters: string[] // персонажи, которые реально говорят в сцене
   /** I-176: авто-синопсис — говорящие + первое действие (если нет ручного synopsis) */
@@ -55,6 +62,9 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     location: string
     sublocation?: string
     time: string
+    mode?: string
+    storyDay?: StoryDay | null
+    omitted?: boolean
     cast: string[]
     dialogCharacters: string[]
     charCount: number
@@ -71,8 +81,8 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
     const headerText = node.textContent.trim()
 
     // Паттерн: "1-1. ИНТ. КВАРТИРА — ДЕНЬ" или "1. ЭКСТ. УЛИЦА — НОЧЬ" или "1. ИНТ. КВАРТИРА ПЕТИ. ДЕНЬ." или "2. ПАВ. Студия A утро."
-    // Также поддерживаем FilmToolz: НАТ. (натура = экстерьер), НАТ/ИНТ. (смешанный)
-    const headerMatch = headerText.match(new RegExp(`^(${SCENE_NUMBER})\\.\\s*(ИНТ-ЭКСТ\\.?|ИНТ-НАТ\\.?|ИНТ\\.?|ЭКСТ\\.?|ПАВ\\.?|НАТ\\/ИНТ\\.?|ИНТ\\/НАТ\\.?|НАТ\\.?)\\s+(.+)$`, 'i'))
+    // Также поддерживаем FilmToolz: НАТ. (натура = экстерьер), НАТ/ИНТ. (смешанный), литерные/ФБ-номера («14-16-ФБ», «1.a»)
+    const headerMatch = headerText.match(SCENE_HEADER_RE)
     if (!headerMatch) return
 
     const sceneNumber = headerMatch[1]
@@ -94,40 +104,14 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       sceneType = 'ИНТ'
     }
 
-    // Варианты времени суток
-    const timeWords = ['ДЕНЬ', 'НОЧЬ', 'УТРО', 'ВЕЧЕР', 'РАССВЕТ', 'ЗАКАТ']
-
-    // Вариант 1: разделитель — тире/—
-    // Вариант 2: время в конце строки через точку (КВАРТИРА ПЕТИ. ДЕНЬ.)
-    let location: string
-    let time: string
-
-    // Парсим ручной хронометраж (мм:сс) из шапки, например: "МАША, ПЕТЯ (01:30)"
-    let manualDuration: number | undefined
-    const timingMatch = locationAndTime.match(/\((\d{1,2}):(\d{2})\)\s*$/)
-    if (timingMatch) {
-      const mins = parseInt(timingMatch[1], 10)
-      const secs = parseInt(timingMatch[2], 10)
-      manualDuration = mins * 60 + secs
-      locationAndTime = locationAndTime.slice(0, locationAndTime.lastIndexOf(timingMatch[0])).trim()
-    }
-
-    const dashParts = locationAndTime.split(/\s*[—–]\s*/)
-    if (dashParts.length >= 2) {
-      location = dashParts[0].trim().replace(/\.$/, '').toUpperCase()
-      time = dashParts[dashParts.length - 1].trim().replace(/\.$/, '').toUpperCase()
-    } else {
-      // Ищем время суток в конце строки
-      const timePattern = new RegExp(`[.\\s](${timeWords.join('|')})\\.?$`, 'i')
-      const timeMatch = locationAndTime.match(timePattern)
-      if (timeMatch) {
-        time = timeMatch[1].toUpperCase()
-        location = locationAndTime.slice(0, locationAndTime.lastIndexOf(timeMatch[0])).trim().replace(/\.$/, '').toUpperCase()
-      } else {
-        location = locationAndTime.trim().replace(/\.$/, '').toUpperCase()
-        time = ''
-      }
-    }
+    // Локация + режим + сценарный день + состав + УДАЛЕНА + (мм:сс) — parseHeaderTail (storyDay.ts)
+    const tail = parseHeaderTail(locationAndTime, sceneNumber)
+    let location = tail.location.toUpperCase()
+    const time = tail.cleanTime.toUpperCase()
+    const manualDuration = tail.timingSec
+    const mode = tail.mode
+    const storyDay = tail.day
+    const omitted = tail.omitted
 
     // Разбиваем локацию на location + sublocation через точку: "Школа.Кабинет директора"
     let sublocation: string | undefined
@@ -151,6 +135,13 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       if (castText) {
         manualCast = castText.split(/[,;]+/).map((s: string) => normalizeCharName(s.trim())).filter(Boolean)
       }
+    }
+    // Состав из грязной шапки: «… ДЕНЬ 32. ОСИНА, ДИМКА (02:08)»
+    if (tail.tail) {
+      tail.tail.split(/[,;]+/).forEach((n: string) => {
+        const nm = normalizeCharName(n.trim())
+        if (nm) manualCast.push(nm)
+      })
     }
 
     // 2. Автоматический cast из sceneCharacter блоков внутри сцены
@@ -205,7 +196,7 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       }
     })
 
-    rawScenes.push({ sceneNumber, sceneId, sceneType, location, sublocation, time, cast, dialogCharacters, charCount, dialogLines, firstAction, firstText, manualDuration })
+    rawScenes.push({ sceneNumber, sceneId, sceneType, location, sublocation, time, mode, storyDay, omitted, cast, dialogCharacters, charCount, dialogLines, firstAction, firstText, manualDuration })
   })
 
   // === ПРОХОД 2: распределяем точное кол-во страниц по сценам ===
@@ -241,6 +232,9 @@ export function extractScenesFromDocument(options: ExtractScenesOptions): { scen
       location: raw.location,
       sublocation: raw.sublocation,
       time: raw.time,
+      mode: raw.mode,
+      storyDay: raw.storyDay,
+      omitted: raw.omitted,
       cast: raw.cast,
       dialogCharacters: raw.dialogCharacters,
       autoSynopsis,
