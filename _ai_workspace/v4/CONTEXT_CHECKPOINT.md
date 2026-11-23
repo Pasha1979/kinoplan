@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 16:35 · `main` · e170a78 fix(stats): лаги скролла — компоненты выне
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-23 23:01 · `main` · 67a5e76 chore: UI-проверка KinoPlan — workflow, ба
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
