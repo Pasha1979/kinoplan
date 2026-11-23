@@ -34,3 +34,5 @@ test-results/
 # T-92: генерируемые эталоны и бандл генератора
 scripts/.gen-etalons.cjs
 etalons/*.doc
+
+.playwright-mcp/
