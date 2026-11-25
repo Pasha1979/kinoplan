@@ -32,6 +32,7 @@ const TagsPage = lazy(() => import('./pages/Tags/TagsPage'))
 const FilesPage = lazy(() => import('./pages/Files/FilesPage'))
 const SchedulePage = lazy(() => import('./pages/Schedule/SchedulePage'))
 const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage'))
+const ButtonDemo = lazy(() => import('./pages/Demo/ButtonDemo'))
 
 // Loading fallback для Suspense
 function PageLoader() {
@@ -76,6 +77,7 @@ function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/demo" element={<ButtonDemo />} />
             <Route path="/project/:projectId" element={<ProjectLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="script" element={<ScriptPage />} />
