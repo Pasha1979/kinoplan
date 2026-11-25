@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-25 00:20 · `main` · a90299d feat: shadcn/ui инициализация + демо кнопк
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-25 00:48 · `main` · 00be2f2 feat: Storybook инициализация + stories дл
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

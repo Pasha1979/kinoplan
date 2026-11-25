@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-25 · `main` · a90299d feat: shadcn/ui инициализация + демо кнопк
+# HANDOFF (автоген) · 2026-11-25 · `main` · 00be2f2 feat: Storybook инициализация + stories дл
 
 Сделано:
+- 00be2f2 feat: Storybook инициализация + stories для Button
 - a90299d feat: shadcn/ui инициализация + демо кнопки
 - 016dc31 brain:sync — CI починен (Node 24), #118 зелёный
 - f0f8e19 fix(ci): Node 20 → 24 — undici@8 требует webidl.mark
-- de58cc9 docs: задача по футеру (локально, автосоздание)
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31
