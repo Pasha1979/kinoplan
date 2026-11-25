@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-25 · `main` · 016dc31 brain:sync — CI починен (Node 24), #118 зе
+# HANDOFF (автоген) · 2026-11-25 · `main` · a90299d feat: shadcn/ui инициализация + демо кнопк
 
 Сделано:
+- a90299d feat: shadcn/ui инициализация + демо кнопки
 - 016dc31 brain:sync — CI починен (Node 24), #118 зелёный
 - f0f8e19 fix(ci): Node 20 → 24 — undici@8 требует webidl.mark
 - de58cc9 docs: задача по футеру (локально, автосоздание)
-- 67a5e76 chore: UI-проверка KinoPlan — workflow, базовые скри
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31

@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-25 22:27 · `main` · f0f8e19 fix(ci): Node 20 → 24 — undici@8 требует w
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-25 00:20 · `main` · a90299d feat: shadcn/ui инициализация + демо кнопк
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

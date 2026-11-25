@@ -36,3 +36,6 @@ scripts/.gen-etalons.cjs
 etalons/*.doc
 
 .playwright-mcp/
+
+*storybook.log
+storybook-static

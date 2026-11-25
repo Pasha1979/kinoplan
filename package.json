@@ -36,7 +36,9 @@
     "vercel:cleanup": "node scripts/vercel-cleanup.mjs",
     "brain:add": "node scripts/brain/add.mjs",
     "brain:sync": "npm run brain:status && npm run brain:checkpoint && npm run brain:handoff && npm run brain:ideas && npm run brain:refs",
-    "prepare": "node scripts/hooks/install.mjs"
+    "prepare": "node scripts/hooks/install.mjs",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -85,6 +87,17 @@
     "typescript-eslint": "^8.59.2",
     "vercel": "^65.2.0",
     "vite": "^8.0.12",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "storybook": "^10.6.9",
+    "@storybook/react-vite": "^10.6.9",
+    "@chromatic-com/storybook": "latest",
+    "@storybook/addon-vitest": "^10.6.9",
+    "@storybook/addon-a11y": "^10.6.9",
+    "@storybook/addon-docs": "^10.6.9",
+    "@storybook/addon-mcp": "^10.6.9",
+    "eslint-plugin-storybook": "^10.6.9",
+    "@vitest/browser-playwright": "4.1.8",
+    "@vitest/coverage-v8": "4.1.8",
+    "playwright": "latest"
   }
 }
