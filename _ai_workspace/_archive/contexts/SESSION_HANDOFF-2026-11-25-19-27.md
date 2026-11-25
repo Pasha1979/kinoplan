@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-20 · `main` · 5723a6b help: ФАЗА 4 — тесты полноты + R-91 + идеи
+# HANDOFF (автоген) · 2026-11-25 · `main` · f0f8e19 fix(ci): Node 20 → 24 — undici@8 требует w
 
 Сделано:
-- 5723a6b help: ФАЗА 4 — тесты полноты + R-91 + идеи
-- a302fc6 help: ФАЗА 3 — контент по коду: Разбивка, docx, Ctrl
-- 6e28d60 fix(e2e+ux): флаки ПКМ-меню и boundingBox — scroll-г
-- 625f50f feat(help): фаза 2 — единый паспорт страницы
+- f0f8e19 fix(ci): Node 20 → 24 — undici@8 требует webidl.mark
+- de58cc9 docs: задача по футеру (локально, автосоздание)
+- 67a5e76 chore: UI-проверка KinoPlan — workflow, базовые скри
+- 3d492bb docs: зафиксированы GitHub и Context7 прецеденты
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31

@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-23 23:01 · `main` · 67a5e76 chore: UI-проверка KinoPlan — workflow, ба
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-25 22:27 · `main` · f0f8e19 fix(ci): Node 20 → 24 — undici@8 требует w
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
