@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-27 · `main` · 15294c8 brain: хвост хука после docs-коммита (hand
+# HANDOFF (автоген) · 2026-11-27 · `main` · b834f14 brain: auto-checkpoint хвост
 
 Сделано:
+- b834f14 brain: auto-checkpoint хвост
 - 15294c8 brain: хвост хука после docs-коммита (handoff)
 - 654e919 docs: мост DaVinci Resolve
 - cedd203 ci: GitHub Actions (test+build) и Dependabot
-- 39ee094 brain:sync — конец сессии
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31
