@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 00:29 · `main` · 15294c8 brain: хвост хука после docs-коммита (hand
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 00:57 · `main` · 61b68e3 docs: Fusion-титры через мост Resolve
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

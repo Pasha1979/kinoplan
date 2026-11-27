@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-27 · `main` · b834f14 brain: auto-checkpoint хвост
+# HANDOFF (автоген) · 2026-11-27 · `main` · 61b68e3 docs: Fusion-титры через мост Resolve
 
 Сделано:
-- b834f14 brain: auto-checkpoint хвост
-- 15294c8 brain: хвост хука после docs-коммита (handoff)
-- 654e919 docs: мост DaVinci Resolve
-- cedd203 ci: GitHub Actions (test+build) и Dependabot
+- 61b68e3 docs: Fusion-титры через мост Resolve
+- a06e17c docs: ffmpeg portable для захвата кадров
+- 770604b brain: handoff финал сессии
+- 98e88eb brain: auto-checkpoint хвост
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31
