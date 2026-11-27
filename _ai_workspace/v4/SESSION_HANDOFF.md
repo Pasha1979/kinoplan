@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-27 · `main` · 61b68e3 docs: Fusion-титры через мост Resolve
+# HANDOFF (автоген) · 2026-11-27 · `main` · 06f7e48 brain: синхронизация контекста и evidence 
 
 Сделано:
+- 06f7e48 brain: синхронизация контекста и evidence Resolve MC
 - 61b68e3 docs: Fusion-титры через мост Resolve
 - a06e17c docs: ffmpeg portable для захвата кадров
 - 770604b brain: handoff финал сессии
-- 98e88eb brain: auto-checkpoint хвост
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31
