@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-25 · `main` · 39ee094 brain:sync — конец сессии
+# HANDOFF (автоген) · 2026-11-27 · `main` · 654e919 docs: мост DaVinci Resolve
 
 Сделано:
+- 654e919 docs: мост DaVinci Resolve
+- cedd203 ci: GitHub Actions (test+build) и Dependabot
 - 39ee094 brain:sync — конец сессии
 - 00be2f2 feat: Storybook инициализация + stories для Button
-- a90299d feat: shadcn/ui инициализация + демо кнопки
-- 016dc31 brain:sync — CI починен (Node 24), #118 зелёный
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31
