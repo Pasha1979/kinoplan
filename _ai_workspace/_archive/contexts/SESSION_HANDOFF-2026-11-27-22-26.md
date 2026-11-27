@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-22 · `main` · e517445 brain: handoff — конец сессии
+# HANDOFF (автоген) · 2026-11-27 · `main` · 06f7e48 brain: синхронизация контекста и evidence 
 
 Сделано:
-- e517445 brain: handoff — конец сессии
-- 92a7a75 brain:sync — конец сессии (полировка справки P3)
-- e0a6dc2 help: мелкая полировка по аудиту (P3)
-- 1da3603 brain:sync — конец сессии (аудит справки, 4 блока)
+- 06f7e48 brain: синхронизация контекста и evidence Resolve MC
+- 61b68e3 docs: Fusion-титры через мост Resolve
+- a06e17c docs: ffmpeg portable для захвата кадров
+- 770604b brain: handoff финал сессии
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31

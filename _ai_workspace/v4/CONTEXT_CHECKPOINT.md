@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 00:57 · `main` · 61b68e3 docs: Fusion-титры через мост Resolve
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 01:26 · `main` · c5dd1fd docs: прецедент Windows-MCP whitelist
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
