@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 22:46 · `main` · e97c2cc Помощь: каркас сцен (подсказка), закладки 
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 01:26 · `main` · c5dd1fd docs: прецедент Windows-MCP whitelist
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

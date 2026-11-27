@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-27 · `main` · c5dd1fd docs: прецедент Windows-MCP whitelist
+# HANDOFF (автоген) · 2026-11-27 · `main` · 4efefbe brain: handoff хвост после Windows-MCP doc
 
 Сделано:
+- 4efefbe brain: handoff хвост после Windows-MCP docs
 - c5dd1fd docs: прецедент Windows-MCP whitelist
 - 31c55e8 brain: handoff хвост после синхронизации
 - 06f7e48 brain: синхронизация контекста и evidence Resolve MC
-- 61b68e3 docs: Fusion-титры через мост Resolve
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31

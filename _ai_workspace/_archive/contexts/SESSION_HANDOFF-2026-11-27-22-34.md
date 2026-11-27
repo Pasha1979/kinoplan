@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-22 · `main` · 7c0a69c brain: спека «Сценарные дни» зафиксирована
+# HANDOFF (автоген) · 2026-11-27 · `main` · c5dd1fd docs: прецедент Windows-MCP whitelist
 
 Сделано:
-- 7c0a69c brain: спека «Сценарные дни» зафиксирована (ЧАСТЬ 0)
-- e517445 brain: handoff — конец сессии
-- 92a7a75 brain:sync — конец сессии (полировка справки P3)
-- e0a6dc2 help: мелкая полировка по аудиту (P3)
+- c5dd1fd docs: прецедент Windows-MCP whitelist
+- 31c55e8 brain: handoff хвост после синхронизации
+- 06f7e48 brain: синхронизация контекста и evidence Resolve MC
+- 61b68e3 docs: Fusion-титры через мост Resolve
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31

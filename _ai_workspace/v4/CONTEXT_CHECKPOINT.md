@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 01:26 · `main` · c5dd1fd docs: прецедент Windows-MCP whitelist
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 01:34 · `main` · 4efefbe brain: handoff хвост после Windows-MCP doc
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
