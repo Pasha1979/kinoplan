@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 00:45 · `main` · a9c4ce7 feat(script): Блок D — авто-синопсис, закл
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-25 00:48 · `main` · 00be2f2 feat: Storybook инициализация + stories дл
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

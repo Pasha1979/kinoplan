@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-27 · `main` · 654e919 docs: мост DaVinci Resolve
+# HANDOFF (автоген) · 2026-11-27 · `main` · 15294c8 brain: хвост хука после docs-коммита (hand
 
 Сделано:
+- 15294c8 brain: хвост хука после docs-коммита (handoff)
 - 654e919 docs: мост DaVinci Resolve
 - cedd203 ci: GitHub Actions (test+build) и Dependabot
 - 39ee094 brain:sync — конец сессии
-- 00be2f2 feat: Storybook инициализация + stories для Button
 
 Дальше:
 1. Закрыто: ре-сверка архива + мозг A–F, I-82→I-31
